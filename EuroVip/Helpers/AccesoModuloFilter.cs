@@ -28,7 +28,8 @@ namespace EuroVip.Helpers
         {
             var http = ctx.HttpContext;
             var userName = http.User.Identity?.IsAuthenticated == true ? http.User.Identity.Name : null;
-            if (string.IsNullOrEmpty(userName)) { await next(); return; }
+            // La página de error no consulta la base: tiene que verse aunque la base esté caída.
+            if (string.IsNullOrEmpty(userName) || ctx.Controller is Controllers.ErrorController) { await next(); return; }
 
             var p = await _accesos.PermisosAsync(userName);
             if (!p.Existe || !p.Activo)

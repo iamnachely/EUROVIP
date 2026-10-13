@@ -1,25 +1,202 @@
-﻿@model ErrorViewModel
+@model ErrorViewModel
 @{
-    ViewData["Title"] = "Error";
+    // Página independiente (sin _Layout): tiene que verse aunque el error venga del menú, la sesión o la base de datos.
+    Layout = null;
+    var conSesion = User.Identity?.IsAuthenticated == true;
 }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>@Model.Titulo · Eurovip</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="~/css/eurovip.css" asp-append-version="true" />
+    <script>try { var t = localStorage.getItem('ev-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) { }</script>
+    <style>
+        /* Respaldo por si eurovip.css no carga */
+        :root { --e-ink: var(--ev-ink, #0B1215); --e-aqua: var(--ev-aqua, #74F2E6); --e-teal: var(--ev-teal, #2BD4C4);
+                --e-deep: var(--ev-deep, #0E8F86); --e-bg: var(--ev-bg, #E9FBF8); --e-surface: var(--ev-surface, #fff); --e-surface-2: var(--ev-surface-2, #F5FBFA);
+                --e-line: var(--ev-line, #E2EFED); --e-text: var(--ev-text, #0B1215); --e-muted: var(--ev-muted, #66807C); }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; min-height: 100%; }
+        body { min-height: 100vh; font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--e-text);
+               background: radial-gradient(900px 500px at 85% -10%, rgba(116,242,230,.45), transparent 60%),
+                           radial-gradient(700px 420px at -10% 110%, rgba(179,255,243,.5), transparent 60%), var(--e-bg);
+               display: grid; place-items: center; padding: 24px 16px; }
+        .er { width: 100%; max-width: 760px; }
+        .er-top { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+        .er-mark { width: 42px; height: 42px; border-radius: 14px; background: var(--e-ink); color: var(--e-aqua); display: grid; place-items: center; font-weight: 800; letter-spacing: -.5px; text-decoration: none; }
+        .er-brand { font-weight: 800; font-size: 19px; letter-spacing: -.5px; text-decoration: none; color: var(--e-text); }
+        .er-brand span { color: var(--e-deep); }
+        .er-top .sp { flex: 1; }
+        .er-chip { font-weight: 800; font-size: 12px; padding: 7px 12px; border-radius: 99px; background: var(--e-ink); color: var(--e-aqua); letter-spacing: .02em; }
+        .er-card { position: relative; overflow: hidden; border-radius: 32px; background: var(--e-surface); border: 1px solid var(--e-line);
+                   box-shadow: 0 1px 2px rgba(11,18,21,.04), 0 30px 80px -30px rgba(14,143,134,.35); padding: 34px 40px 28px; text-align: center; }
+        .er-num { position: absolute; right: -10px; top: -34px; font-size: 170px; font-weight: 800; letter-spacing: -8px; line-height: 1;
+                  color: transparent; -webkit-text-stroke: 2px var(--e-line); pointer-events: none; user-select: none; }
+        .er-ilus { position: relative; width: 220px; height: 170px; margin: 0 auto 8px; display: block; }
+        .er h1 { position: relative; margin: 6px 0 10px; font-size: clamp(26px, 4vw, 36px); font-weight: 800; letter-spacing: -1.2px; }
+        .er p.msg { position: relative; margin: 0 auto; max-width: 52ch; color: var(--e-muted); font-weight: 500; line-height: 1.6; font-size: 15.5px; }
+        .er-acts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 24px 0 6px; }
+        .er-btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 16px; font-weight: 800; font-size: 14.5px; font-family: inherit;
+                  text-decoration: none; cursor: pointer; border: 1.5px solid transparent; transition: transform .2s, box-shadow .2s, border-color .2s; }
+        .er-btn:hover { transform: translateY(-2px); }
+        .er-btn:focus-visible { outline: 3px solid var(--e-teal); outline-offset: 2px; }
+        .er-btn.pri { background: var(--e-ink); color: #fff; box-shadow: 0 12px 26px -12px rgba(11,18,21,.6); }
+        .er-btn.pri i { color: var(--e-aqua); }
+        .er-btn.sec { background: var(--e-surface-2); color: var(--e-text); border-color: var(--e-line); }
+        .er-btn.sec:hover { border-color: var(--e-teal); }
+        .er-ref { margin: 22px auto 0; display: inline-flex; align-items: center; gap: 10px; padding: 9px 10px 9px 14px; border-radius: 14px;
+                  background: var(--e-surface-2); border: 1px dashed var(--e-teal); font-size: 13px; font-weight: 600; color: var(--e-muted); }
+        .er-ref b { font: 800 14px ui-monospace, Consolas, monospace; color: var(--e-text); letter-spacing: 1px; }
+        .er-ref button { border: 0; background: var(--e-surface); border-radius: 9px; padding: 5px 9px; cursor: pointer; font-weight: 700; font-size: 12px; font-family: inherit; color: var(--e-deep); }
+        .er-pie { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--e-line); font-size: 13px; color: var(--e-muted); font-weight: 500; }
+        .er-pie b { color: var(--e-deep); }
+        .er-dev { margin-top: 18px; text-align: left; border-radius: 16px; background: #1B0F12; color: #FFD9DD; font-size: 12px; }
+        .er-dev summary { cursor: pointer; padding: 12px 14px; font-weight: 800; color: #FF9AA5; }
+        .er-dev pre { margin: 0; padding: 0 14px 14px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 11.5px/1.5 ui-monospace, Consolas, monospace; }
+        /* animaciones de las ilustraciones */
+        .flota { animation: flota 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+        .nube { animation: nube 9s linear infinite; }
+        .nube.b { animation-duration: 13s; animation-delay: -5s; }
+        .gira { animation: gira 6s linear infinite; transform-box: view-box; transform-origin: 110px 92px; }
+        .late { animation: late 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+        @@keyframes flota { 50% { transform: translateY(-8px) rotate(-2deg); } }
+        @@keyframes nube { from { transform: translateX(60px); } to { transform: translateX(-260px); } }
+        @@keyframes gira { to { transform: rotate(360deg); } }
+        @@keyframes late { 50% { transform: scale(1.15); } }
+        /* modo oscuro: lo que es "tinta" pasa a claro para que se vea */
+        :root[data-theme="dark"] .er-ilus [fill="#0B1215"] { fill: #E8FFFB; }
+        :root[data-theme="dark"] .er-ilus [stroke="#0B1215"] { stroke: #E8FFFB; }
+        :root[data-theme="dark"] .er-ilus [fill="#CFF7F1"] { fill: #1F3236; }
+        :root[data-theme="dark"] .er-mark, :root[data-theme="dark"] .er-chip, :root[data-theme="dark"] .er-btn.pri { background: var(--e-aqua); color: var(--e-ink); }
+        :root[data-theme="dark"] .er-btn.pri i { color: var(--e-ink); }
+        @@media (prefers-reduced-motion: reduce) { .flota, .nube, .gira, .late { animation: none; } }
+        @@media (max-width: 560px) { .er-card { padding: 26px 18px 22px; border-radius: 26px; } .er-num { font-size: 120px; top: -22px; } .er-btn { flex: 1; justify-content: center; } }
+    </style>
+</head>
+<body>
+    <main class="er">
+        <div class="er-top">
+            <a class="er-mark" href="/Home/Index" aria-label="Ir al inicio">EV</a>
+            <a class="er-brand" href="/Home/Index">Euro<span>vip</span></a>
+            <span class="sp"></span>
+            <span class="er-chip">Error @Model.Codigo</span>
+        </div>
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+        <section class="er-card">
+            <div class="er-num" aria-hidden="true">@Model.Codigo</div>
 
-@if (Model.ShowRequestId)
-{
-    <p>
-        <strong>Request ID:</strong> <code>@Model.RequestId</code>
-    </p>
-}
+            <svg class="er-ilus" viewBox="0 0 220 170" aria-hidden="true">
+                <defs>
+                    <linearGradient id="gAqua" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B3FFF3" /><stop offset=".55" stop-color="#74F2E6" /><stop offset="1" stop-color="#2BD4C4" /></linearGradient>
+                </defs>
+                <ellipse cx="110" cy="156" rx="70" ry="8" fill="#0B1215" opacity=".08" />
+                <g class="nube"><path d="M175 40a12 12 0 0 1 22-4 10 10 0 0 1 9 15h-36a8 8 0 0 1 5-11z" fill="#CFF7F1" /></g>
+                <g class="nube b"><path d="M150 112a9 9 0 0 1 17-3 8 8 0 0 1 7 11h-28a6 6 0 0 1 4-8z" fill="#CFF7F1" /></g>
+                @switch (Model.Dibujo)
+                {
+                    case "mapa":
+                        <g class="flota">
+                            <path d="M38 48l44-14 52 16 46-14v86l-46 14-52-16-44 14z" fill="url(#gAqua)" stroke="#0B1215" stroke-width="3" stroke-linejoin="round" />
+                            <path d="M82 34v86M134 50v86" stroke="#0B1215" stroke-width="3" opacity=".3" />
+                            <path d="M52 108c18-6 22-30 44-26s20 22 40 14 18-30 32-28" fill="none" stroke="#0B1215" stroke-width="3" stroke-dasharray="2 8" stroke-linecap="round" />
+                            <g class="late"><path d="M164 62c0-10 16-10 16 0 0 8-8 16-8 16s-8-8-8-16z" fill="#0B1215" /><circle cx="172" cy="62" r="3.5" fill="#74F2E6" /></g>
+                            <text x="98" y="76" font-size="26" font-weight="800" fill="#0B1215" font-family="Plus Jakarta Sans, sans-serif">?</text>
+                        </g>
+                        break;
+                    case "candado":
+                        <g class="flota">
+                            <path d="M80 72V56a30 30 0 0 1 60 0v16" fill="none" stroke="#0B1215" stroke-width="10" stroke-linecap="round" />
+                            <rect x="62" y="70" width="96" height="76" rx="18" fill="url(#gAqua)" stroke="#0B1215" stroke-width="3" />
+                            <circle cx="110" cy="102" r="10" fill="#0B1215" /><rect x="106" y="106" width="8" height="20" rx="4" fill="#0B1215" />
+                        </g>
+                        break;
+                    case "reloj":
+                        <g class="flota">
+                            <rect x="98" y="30" width="24" height="10" rx="4" fill="#0B1215" />
+                            <circle cx="110" cy="92" r="52" fill="url(#gAqua)" stroke="#0B1215" stroke-width="3" />
+                            <circle cx="110" cy="92" r="40" fill="#fff" opacity=".7" />
+                        </g>
+                        <g class="gira"><path d="M110 92V62" stroke="#0B1215" stroke-width="5" stroke-linecap="round" /></g>
+                        <path d="M110 92l18 10" stroke="#0E8F86" stroke-width="5" stroke-linecap="round" />
+                        <circle cx="110" cy="92" r="5" fill="#0B1215" />
+                        break;
+                    case "maleta":
+                        <g class="flota">
+                            <path d="M92 52v-8a8 8 0 0 1 8-8h20a8 8 0 0 1 8 8v8" fill="none" stroke="#0B1215" stroke-width="6" />
+                            <rect x="56" y="52" width="108" height="86" rx="18" fill="url(#gAqua)" stroke="#0B1215" stroke-width="3" />
+                            <path d="M86 52v86M134 52v86" stroke="#0B1215" stroke-width="3" opacity=".3" />
+                            <rect x="96" y="84" width="28" height="18" rx="5" fill="#0B1215" />
+                            <circle cx="76" cy="144" r="6" fill="#0B1215" /><circle cx="144" cy="144" r="6" fill="#0B1215" />
+                        </g>
+                        break;
+                    default:
+                        <g class="flota">
+                            <path d="M30 98c20-6 120-30 150-36 12-2 18 8 8 14-28 16-120 50-144 54-10 2-24-24-14-32z" fill="url(#gAqua)" stroke="#0B1215" stroke-width="3" stroke-linejoin="round" />
+                            <path d="M96 84l-30-40h16l44 32zM98 108l-4 34h12l20-44z" fill="#0B1215" />
+                            <path d="M40 98l-10-26h10l16 22z" fill="#0B1215" />
+                            <circle cx="150" cy="74" r="3.5" fill="#0B1215" /><circle cx="136" cy="78" r="3.5" fill="#0B1215" /><circle cx="122" cy="82" r="3.5" fill="#0B1215" />
+                        </g>
+                        <g class="late"><path d="M178 26l6 12 13 2-10 9 3 13-12-7-12 7 3-13-10-9 13-2z" fill="#0B1215" opacity=".85" /></g>
+                        break;
+                }
+            </svg>
 
-<h3>Development Mode</h3>
-<p>
-    Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
-</p>
-<p>
-    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
-    It can result in displaying sensitive information from exceptions to end users.
-    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-    and restarting the app.
-</p>
+            <h1>@Model.Titulo</h1>
+            <p class="msg">@Model.Mensaje</p>
+
+            <div class="er-acts">
+                @if (Model.Codigo == 401 || !conSesion)
+                {
+                    <a class="er-btn pri" href="/Auth/Login"><i class="bi bi-box-arrow-in-right"></i> Iniciar sesión</a>
+                }
+                else
+                {
+                    <a class="er-btn pri" href="/Home/Index"><i class="bi bi-house-door"></i> Volver al inicio</a>
+                }
+                <button type="button" class="er-btn sec" id="erAtras"><i class="bi bi-arrow-left"></i> Atrás</button>
+                @if (Model.PuedeReintentar)
+                {
+                    <button type="button" class="er-btn sec" id="erReintentar"><i class="bi bi-arrow-clockwise"></i> Reintentar</button>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Referencia))
+            {
+                <div class="er-ref">Código del error <b id="erRef">@Model.Referencia</b><button type="button" id="erCopiar"><i class="bi bi-copy"></i> Copiar</button></div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Detalle))
+            {
+                <details class="er-dev">
+                    <summary><i class="bi bi-bug"></i> Detalle técnico (solo se ve en desarrollo) · @Model.Ruta</summary>
+                    <pre>@Model.Detalle</pre>
+                </details>
+            }
+
+            <div class="er-pie">Si el problema persiste, contacta con el <b>Departamento de Informática</b> y diles el código del error.</div>
+        </section>
+    </main>
+    <script>
+        (function () {
+            var atras = document.getElementById('erAtras');
+            if (atras) atras.onclick = function () { if (history.length > 1) history.back(); else location.href = '/Home/Index'; };
+            var re = document.getElementById('erReintentar');
+            if (re) re.onclick = function () { location.reload(); };
+            var cp = document.getElementById('erCopiar');
+            if (cp) cp.onclick = function () {
+                var t = 'Eurovip · Error @Model.Codigo · código ' + document.getElementById('erRef').textContent + ' · ' + location.href;
+                (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(
+                    function () { cp.innerHTML = '<i class="bi bi-check2"></i> Copiado'; },
+                    function () { cp.textContent = 'Selecciónalo a mano'; });
+            };
+        })();
+    </script>
+</body>
+</html>

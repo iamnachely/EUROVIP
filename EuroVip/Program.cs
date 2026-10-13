@@ -85,11 +85,11 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+// Página de error de Eurovip para cualquier fallo (ErrorController). En desarrollo también, con el detalle técnico desplegable.
+app.UseExceptionHandler("/Error/500");
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
 if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
-}
 
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
@@ -103,7 +103,8 @@ app.UseAuthorization();
 // nombre, rol y foto. Se recargan desde Eurovip.usuario la primera vez que hacen falta.
 app.Use(async (ctx, next) =>
 {
-    if (ctx.User.Identity?.IsAuthenticated == true && ctx.Session.GetString("NombreUsuario") is null)
+    if (ctx.User.Identity?.IsAuthenticated == true && ctx.Session.GetString("NombreUsuario") is null
+        && !ctx.Request.Path.StartsWithSegments("/Error"))   // la página de error no debe depender de la base
     {
         var p = await ctx.RequestServices.GetRequiredService<EuroVip.Repositories.IPerfilRepository>().PerfilAsync(ctx.User.Identity.Name ?? "");
         if (p is not null)
