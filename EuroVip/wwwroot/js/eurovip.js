@@ -23,3 +23,35 @@
         if (e.key === 'Escape') document.body.classList.remove('ev-menu-open');
     });
 })();
+
+// Menú lateral: grupos plegables (recuerda cómo los dejó el usuario) y opción activa siempre a la vista
+(function () {
+    const clave = 'ev-menu-cerrados';
+    let cerrados = [];
+    try { cerrados = JSON.parse(localStorage.getItem(clave) || '[]'); } catch (e) { }
+    const guardar = () => { try { localStorage.setItem(clave, JSON.stringify(cerrados)); } catch (e) { } };
+
+    document.querySelectorAll('.ev-grupo').forEach(g => {
+        const id = g.dataset.grupo, btn = g.querySelector('.ev-nav-label');
+        const tieneActivo = !!g.querySelector('a.active');
+        const fijar = cerrar => { g.classList.toggle('cerrado', cerrar); btn.setAttribute('aria-expanded', String(!cerrar)); };
+        fijar(cerrados.includes(id) && !tieneActivo);
+        btn.addEventListener('click', () => {
+            const cerrar = !g.classList.contains('cerrado');
+            g.classList.add('animando');
+            fijar(cerrar);
+            setTimeout(() => g.classList.remove('animando'), 320);
+            cerrados = cerrados.filter(x => x !== id);
+            if (cerrar) cerrados.push(id);
+            guardar();
+        });
+    });
+
+    document.querySelectorAll('.ev-nav a.pronto').forEach(a => {
+        a.title = 'Próximamente';
+        a.addEventListener('click', e => e.preventDefault());
+    });
+
+    const activo = document.querySelector('.ev-sidebar-scroll a.active');
+    if (activo) activo.scrollIntoView({ block: 'nearest' });
+})();

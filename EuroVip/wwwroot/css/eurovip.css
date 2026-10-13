@@ -89,7 +89,7 @@ a { color: inherit; text-decoration: none; }
     flex-shrink: 0;
     background: var(--ev-grad);
     border-radius: var(--ev-r-xl);
-    padding: 28px 0 22px 18px;
+    padding: 22px 0 16px 18px;
     display: flex;
     flex-direction: column;
     color: var(--ev-ink);
@@ -103,7 +103,8 @@ a { color: inherit; text-decoration: none; }
     align-items: center;
     gap: 12px;
     padding: 0 18px 0 8px;
-    margin-bottom: 34px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
 }
 .ev-brand-mark {
     width: 42px; height: 42px;
@@ -127,16 +128,17 @@ a { color: inherit; text-decoration: none; }
 .ev-nav { list-style: none; margin: 0; padding: 0; }
 .ev-nav a {
     position: relative;
-    display: flex; align-items: center; gap: 14px;
-    padding: 12px 16px;
-    margin: 2px 0;
-    font-weight: 600; font-size: 14.5px;
-    border-radius: 16px 0 0 16px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 14px;
+    margin: 1px 0;
+    font-weight: 600; font-size: 14px;
+    border-radius: 14px 0 0 14px;
+    white-space: nowrap;
     color: var(--ev-ink);
     opacity: .78;
     transition: background .25s var(--ev-ease), opacity .2s, padding .25s var(--ev-ease);
 }
-.ev-nav a i { font-size: 18px; width: 22px; text-align: center; }
+.ev-nav a i { font-size: 17px; width: 22px; text-align: center; flex-shrink: 0; }
 .ev-nav a:hover { opacity: 1; background: rgba(255,255,255,.35); }
 
 /* Pestaña activa "recortada" que se funde con el panel (como la referencia Vitality) */
@@ -163,7 +165,7 @@ a { color: inherit; text-decoration: none; }
     background: var(--ev-ink); color: var(--ev-aqua);
 }
 
-.ev-sidebar-foot { margin-top: auto; padding-right: 18px; }
+.ev-sidebar-foot { flex-shrink: 0; padding: 12px 18px 0 0; }
 .ev-promo {
     background: rgba(255,255,255,.55);
     backdrop-filter: blur(10px);
@@ -470,3 +472,35 @@ button.ev-user[aria-expanded="true"] .ev-user-chev { transform: rotate(180deg); 
 .ev-menu-user form { margin: 4px 0 0; padding-top: 6px; border-top: 1px solid var(--ev-line); }
 .ev-menu-user .salir, .ev-menu-user .salir i { color: #B42318; }
 @media (prefers-reduced-motion: reduce) { .ev-pop, .ev-badge, #evBell.sonando i { animation: none !important; } }
+
+/* ---------- Menú lateral: zona desplazable + grupos plegables ---------- */
+.ev-sidebar-scroll {
+    flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 6px 0 10px;
+    scrollbar-width: thin; scrollbar-color: rgba(11,18,21,.25) transparent;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 22px), transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 22px), transparent 100%);
+}
+.ev-sidebar-scroll::-webkit-scrollbar { width: 6px; }
+.ev-sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(11,18,21,.22); border-radius: 99px; }
+.ev-sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+button.ev-nav-label {
+    display: flex; align-items: center; justify-content: space-between; width: calc(100% - 18px);
+    border: 0; background: transparent; cursor: pointer; color: var(--ev-ink);
+    font: 700 11px var(--ev-font); letter-spacing: .14em; text-transform: uppercase;
+    padding: 12px 8px 6px 10px; margin-top: 4px; border-radius: 10px; opacity: .6; transition: opacity .2s;
+}
+button.ev-nav-label:hover { opacity: 1; }
+button.ev-nav-label i { font-size: 11px; transition: transform .3s var(--ev-ease); }
+.ev-grupo.cerrado button.ev-nav-label i { transform: rotate(-90deg); }
+.ev-grupo .ev-nav { max-height: 640px; transition: max-height .3s var(--ev-ease); }
+.ev-grupo.animando .ev-nav, .ev-grupo.cerrado .ev-nav { overflow: hidden; }
+.ev-grupo.cerrado .ev-nav { max-height: 0; }
+.ev-nav a.pronto { opacity: .5; cursor: default; }
+.ev-nav a.pronto:hover { background: transparent; }
+.ev-sidebar-foot .ev-logout { padding: 10px; font-size: 13.5px; }
+@media (max-height: 720px) {
+    .ev-brand { margin-bottom: 6px; }
+    .ev-nav a { padding: 7px 14px; }
+    button.ev-nav-label { padding-top: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .ev-grupo .ev-nav, button.ev-nav-label i { transition: none; } }

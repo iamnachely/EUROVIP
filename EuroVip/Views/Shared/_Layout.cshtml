@@ -35,39 +35,43 @@
                 </div>
             </a>
 
-            <ul class="ev-nav">
-                <li><a asp-controller="Home" asp-action="Index" class="@Activo("Home")"><i class="bi bi-grid-1x2-fill"></i> Inicio</a></li>
-            </ul>
+            <nav class="ev-sidebar-scroll" id="evNavScroll" aria-label="Menú principal">
+                <ul class="ev-nav">
+                    <li><a asp-controller="Home" asp-action="Index" class="@Activo("Home")"><i class="bi bi-grid-1x2-fill"></i> Inicio</a></li>
+                </ul>
 
-            <div class="ev-nav-label">Cargas</div>
-            <ul class="ev-nav">
-                <li><a asp-controller="Hoteles" asp-action="Index" class="@Activo("Hoteles")"><i class="bi bi-building"></i> Hoteles</a></li>
-                <li><a asp-controller="Ofertas" asp-action="Index" class="@(Activo("Ofertas") != "" || Activo("CargaManual") != "" ? "active" : "")"><i class="bi bi-pencil-square"></i> Carga manual</a></li>
-                <li><a href="#"><i class="bi bi-compass"></i> Excursiones</a></li>
-                <li><a href="#"><i class="bi bi-car-front"></i> Traslados <span class="ev-pill">NEW</span></a></li>
-                <li><a asp-controller="Circuitos" asp-action="Index" class="@(Activo("Circuitos") != "" || Activo("CargaCircuitos") != "" ? "active" : "")"><i class="bi bi-signpost-split"></i> Circuitos</a></li>
-            </ul>
+                <div class="ev-grupo" data-grupo="cargas">
+                    <button type="button" class="ev-nav-label" aria-expanded="true"><span>Cargas</span><i class="bi bi-chevron-down"></i></button>
+                    <ul class="ev-nav">
+                        <li><a asp-controller="Hoteles" asp-action="Index" class="@Activo("Hoteles")"><i class="bi bi-building"></i> Hoteles</a></li>
+                        <li><a asp-controller="Ofertas" asp-action="Index" class="@(Activo("Ofertas") != "" || Activo("CargaManual") != "" ? "active" : "")"><i class="bi bi-pencil-square"></i> Carga manual</a></li>
+                        <li><a asp-controller="Circuitos" asp-action="Index" class="@(Activo("Circuitos") != "" || Activo("CargaCircuitos") != "" ? "active" : "")"><i class="bi bi-signpost-split"></i> Circuitos</a></li>
+                        <li><a href="#" class="pronto"><i class="bi bi-compass"></i> Excursiones <span class="ev-pill">PRONTO</span></a></li>
+                        <li><a href="#" class="pronto"><i class="bi bi-car-front"></i> Traslados <span class="ev-pill">PRONTO</span></a></li>
+                    </ul>
+                </div>
 
-            <div class="ev-nav-label">Web</div>
-            <ul class="ev-nav">
-                <li><a asp-controller="HomeWeb" asp-action="Index" class="@Activo("HomeWeb")"><i class="bi bi-window-sidebar"></i> Home de la web</a></li>
-                <li><a href="/HomeWeb/Index#carrusel"><i class="bi bi-images"></i> Carrusel (slider)</a></li>
-                <li><a asp-controller="ConsultarOferta" asp-action="Index" class="@Activo("ConsultarOferta")"><i class="bi bi-search-heart"></i> Consultar ofertas <span class="ev-pill">PRONTO</span></a></li>
-                <li><a asp-controller="Flyer" asp-action="Hub" class="@Activo("Flyer")"><i class="bi bi-file-earmark-richtext"></i> Flyers <span class="ev-pill">PRONTO</span></a></li>
-            </ul>
+                <div class="ev-grupo" data-grupo="web">
+                    <button type="button" class="ev-nav-label" aria-expanded="true"><span>Web</span><i class="bi bi-chevron-down"></i></button>
+                    <ul class="ev-nav">
+                        <li><a asp-controller="HomeWeb" asp-action="Index" class="@Activo("HomeWeb")"><i class="bi bi-window-sidebar"></i> Home de la web</a></li>
+                        <li><a href="/HomeWeb/Index#carrusel"><i class="bi bi-images"></i> Carrusel (slider)</a></li>
+                        <li><a asp-controller="ConsultarOferta" asp-action="Index" class="@Activo("ConsultarOferta")"><i class="bi bi-search-heart"></i> Consultar ofertas <span class="ev-pill">PRONTO</span></a></li>
+                        <li><a asp-controller="Flyer" asp-action="Hub" class="@Activo("Flyer")"><i class="bi bi-file-earmark-richtext"></i> Flyers <span class="ev-pill">PRONTO</span></a></li>
+                    </ul>
+                </div>
 
-            <div class="ev-nav-label">Administración</div>
-            <ul class="ev-nav">
-                <li><a asp-controller="Herramientas" asp-action="Index" class="@Activo("Herramientas")"><i class="bi bi-tools"></i> Herramientas</a></li>
-                <li><a href="#"><i class="bi bi-people"></i> Usuarios</a></li>
-                <li><a href="#"><i class="bi bi-shield-lock"></i> Accesos</a></li>
-            </ul>
+                <div class="ev-grupo" data-grupo="admin">
+                    <button type="button" class="ev-nav-label" aria-expanded="true"><span>Administración</span><i class="bi bi-chevron-down"></i></button>
+                    <ul class="ev-nav">
+                        <li><a asp-controller="Herramientas" asp-action="Index" class="@Activo("Herramientas")"><i class="bi bi-tools"></i> Herramientas</a></li>
+                        <li><a href="#" class="pronto"><i class="bi bi-people"></i> Usuarios <span class="ev-pill">PRONTO</span></a></li>
+                        <li><a href="#" class="pronto"><i class="bi bi-shield-lock"></i> Accesos <span class="ev-pill">PRONTO</span></a></li>
+                    </ul>
+                </div>
+            </nav>
 
             <div class="ev-sidebar-foot">
-                <div class="ev-promo">
-                    <b>✈ Vuelos opcionales</b>
-                    En Eurovip la carga manual y los circuitos se pueden guardar sin vuelo.
-                </div>
                 <form asp-controller="Auth" asp-action="Logout" method="post">
                     <button type="submit" class="ev-logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</button>
                 </form>
