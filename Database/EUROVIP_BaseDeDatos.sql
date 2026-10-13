@@ -2679,6 +2679,15 @@ GO
                  (tipo 'Usuario_*'). El próximo usuario nuevo tendrá número 4 o mayor.
                • ARodriguez (Superadministrador) no se tocó.
 
+   13/10/2026  Campañas: a pedido de la usuaria se dejan solo la 99 "General-DT" y la 17 (la usa
+               su circuito "Prueba": 14 salidas; decidió conservarla). Se borraron las otras 93
+               campañas (118 filas contando idiomas), copiadas de ViajeVDT. Antes se comprobó que
+               ninguna salida, alojamiento_circuito, inicio ni flyer las usaba.
+                   DELETE FROM Eurovip.campanya WHERE id_campanya NOT IN (99, 17);
+               Si hiciera falta recuperar alguna, se puede volver a copiar de ViajeVDT.dbo.campanya.
+               PENDIENTE (a confirmar con la usuaria): home_contenido (64 filas) y carrucelDestino
+               (27 filas) copiados de ViajeVDT siguen apuntando a campañas ya borradas.
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
