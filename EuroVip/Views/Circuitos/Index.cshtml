@@ -1,0 +1,537 @@
+@{
+    ViewData["Title"] = "Circuitos";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    /* Tarjetas de circuitos */
+    .cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+    .cx-card { display: flex; flex-direction: column; overflow: hidden; border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line);
+               transition: transform .35s var(--ev-ease), box-shadow .35s, border-color .3s; animation: uiFade .45s var(--ev-ease) both; animation-delay: calc(var(--n,0) * 40ms); }
+    .cx-card:hover { transform: translateY(-5px); box-shadow: var(--ev-shadow); border-color: var(--ev-aqua); }
+    .cx-img { position: relative; aspect-ratio: 16/9; background: var(--ev-grad); overflow: hidden; cursor: pointer; }
+    .cx-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ev-ease); }
+    .cx-card:hover .cx-img img { transform: scale(1.06); }
+    .cx-ph { position: absolute; inset: 0; display: grid; place-items: center; }
+    .cx-ph b { font-size: 46px; font-weight: 800; letter-spacing: -2px; color: var(--ev-ink); opacity: .85; }
+    .cx-ph svg { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 40%; }
+    .cx-top { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; gap: 6px; }
+    .cx-tag { font: 800 11px var(--ev-font); padding: 5px 10px; border-radius: 99px; background: rgba(255,255,255,.88); color: var(--ev-ink); display: inline-flex; gap: 5px; align-items: center; }
+    .cx-tag.dark { background: var(--ev-ink); color: var(--ev-aqua); }
+    .cx-precio { position: absolute; left: 12px; bottom: 12px; padding: 7px 12px; border-radius: 14px; background: var(--ev-ink); color: #fff; font-weight: 800; font-size: 15px; }
+    .cx-precio small { display: block; font-size: 10.5px; font-weight: 600; opacity: .7; }
+    .cx-body { padding: 16px 18px 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .cx-body h3 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.3px; }
+    .cx-body .cod { font: 700 12px var(--ev-font); color: var(--ev-muted); }
+    .cx-dest { font-size: 13px; color: var(--ev-text); font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .cx-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; }
+    .cx-stats div { background: var(--ev-surface-2); border-radius: 12px; padding: 8px 6px; text-align: center; }
+    .cx-stats b { display: block; font-size: 16px; font-weight: 800; }
+    .cx-stats small { font-size: 10.5px; color: var(--ev-muted); font-weight: 700; }
+    .cx-stats div.falta b { color: #D92D20; }
+    .cx-foot { display: flex; gap: 6px; padding: 10px 14px 14px; border-top: 1px dashed var(--ev-line); align-items: center; }
+    .cx-foot .ev-btn { margin-right: auto; }
+
+    /* Editor: itinerario */
+    .cx-day { border: 1.5px solid var(--ev-line); border-radius: 20px; padding: 16px; margin-bottom: 12px; background: var(--ev-surface); animation: uiFade .3s var(--ev-ease); }
+    .cx-day-h { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .cx-day-n { width: 42px; height: 42px; border-radius: 14px; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-weight: 800; flex-shrink: 0; line-height: 1; text-align: center; font-size: 11px; }
+    .cx-day-n b { display: block; font-size: 17px; }
+    .cx-day-h input { flex: 1; font-weight: 800 !important; }
+    .cx-hotcat { border: 1px solid var(--ev-line); border-radius: 18px; margin-bottom: 12px; overflow: hidden; }
+    .cx-hotcat h4 { margin: 0; padding: 12px 16px; background: var(--ev-surface-2); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .cx-hotcat h4 small { margin-left: auto; color: var(--ev-muted); }
+    .cx-hot { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--ev-line); animation: uiFade .3s var(--ev-ease); }
+    .cx-hot .th { width: 44px; height: 34px; border-radius: 9px; background: var(--ev-grad); overflow: hidden; display: grid; place-items: center; font-weight: 800; font-size: 12px; flex-shrink: 0; }
+    .cx-hot .th img { width: 100%; height: 100%; object-fit: cover; }
+    .cx-hot div { flex: 1; min-width: 0; }
+    .cx-hot b { display: block; font-size: 13.5px; }
+    .cx-hot small { color: var(--ev-muted); font-weight: 600; }
+    .cx-portada { margin-top: 10px; border-radius: 18px; overflow: hidden; height: 170px; background: var(--ev-grad); position: relative; }
+    .cx-portada img { width: 100%; height: 100%; object-fit: cover; }
+    .cx-noches { display: flex; align-items: center; gap: 8px; }
+    .cx-noches input { text-align: center; font-weight: 800 !important; font-size: 18px !important; }
+    .cx-progress { display: flex; gap: 6px; flex-wrap: wrap; }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="ui-hero ev-rise">
+    <i class="bi bi-signpost-split ui-hero-ico" aria-hidden="true"></i>
+    <div>
+        <span class="ev-chip dark"><i class="bi bi-signpost-split"></i> Fase 3 · Catálogo</span>
+        <h1>Circuitos</h1>
+        <p>Crea cada circuito con sus destinos, hoteles por categoría y su itinerario día a día. Después carga sus salidas (fechas y precios) con la versión que prefieras.</p>
+    </div>
+    <div class="ui-hero-acts">
+        <a class="ev-btn light" asp-controller="CargaCircuitos" asp-action="Express"><i class="bi bi-lightning-charge"></i> Carga Express</a>
+        <a class="ev-btn light" asp-controller="CargaCircuitos" asp-action="Clasica"><i class="bi bi-ui-checks"></i> Carga Clásica</a>
+        <button class="ev-btn" type="button" onclick="CX.nuevo()"><i class="bi bi-plus-lg"></i> Nuevo circuito</button>
+    </div>
+    <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+    </svg>
+</section>
+
+<div class="ui-toolbar">
+    <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar por nombre, código o destino…" /></label>
+    <select class="ui-select" id="fPais" title="País"><option value="">Todos los países</option></select>
+    <button class="ev-btn ghost sm" type="button" onclick="CX.categorias()"><i class="bi bi-tags"></i> Categorías</button>
+</div>
+
+<div id="cxLista"></div>
+
+<!-- ===================== EDITOR ===================== -->
+<aside class="ui-drawer" id="cxEditor" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-signpost-split"></i></div>
+        <div style="min-width:0"><h2 id="edTitulo">Nuevo circuito</h2><small id="edSub">Completa las pestañas; puedes guardar cuando quieras.</small></div>
+        <button class="ui-ibtn x" type="button" onclick="CX.cerrar()" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-dt">
+        <div class="ui-tabs" id="edTabs">
+            <button type="button" data-tab="tDatos" class="on"><i class="bi bi-card-text"></i> Datos</button>
+            <button type="button" data-tab="tDestinos"><i class="bi bi-geo-alt"></i> Destinos <span class="n" id="nDest">0</span></button>
+            <button type="button" data-tab="tHoteles"><i class="bi bi-building"></i> Hoteles <span class="n" id="nHot">0</span></button>
+            <button type="button" data-tab="tDias"><i class="bi bi-calendar3-week"></i> Itinerario <span class="n" id="nDias">0</span></button>
+            <button type="button" data-tab="tSalidas" id="tabSalidas"><i class="bi bi-airplane-engines"></i> Salidas <span class="n" id="nSal">0</span></button>
+        </div>
+    </div>
+    <div class="ui-db">
+        <!-- DATOS -->
+        <section class="ui-pane on" id="tDatos">
+            <div class="ui-row">
+                <div class="ui-f"><label for="edCodigo">Código único <em>letras, números y espacios</em></label><input id="edCodigo" maxlength="100" placeholder="Ej. Costa Rica Esencial"><span class="msg"></span></div>
+                <div class="ui-f"><label for="edNombre">Nombre del circuito <em>máx. 50</em></label><input id="edNombre" maxlength="50" placeholder="Ej. Costa Rica Esencial"><span class="msg"></span></div>
+            </div>
+            <div class="ui-row">
+                <div class="ui-f"><label for="edProveedor">Tour operador (proveedor)</label><input id="edProveedor" placeholder="Busca el tour operador…"><span class="msg"></span></div>
+                <div class="ui-f"><label for="edNoches">Noches</label>
+                    <div class="cx-noches">
+                        <button type="button" class="ui-ibtn" onclick="CX.noches(-1)"><i class="bi bi-dash-lg"></i></button>
+                        <input id="edNoches" type="number" min="1" max="60" value="7">
+                        <button type="button" class="ui-ibtn" onclick="CX.noches(1)"><i class="bi bi-plus-lg"></i></button>
+                    </div><span class="msg"></span>
+                </div>
+            </div>
+            <div class="ui-f"><label for="edCaratula">Imagen de portada <em>URL o nombre de archivo (opcional)</em></label><input id="edCaratula" maxlength="200" placeholder="https://photos.dominicanatours.com/imagenes/circuitos/CostaRicaEsencial.webp"><span class="msg"></span>
+                <div class="cx-portada" id="edPortada"></div>
+            </div>
+            <div class="ui-f"><label for="edResumen">Resumen del recorrido <em>opcional</em></label><textarea id="edResumen" placeholder="Ej. 7 noches recorriendo San José, Arenal y Manuel Antonio…"></textarea></div>
+        </section>
+
+        <!-- DESTINOS -->
+        <section class="ui-pane" id="tDestinos">
+            <div class="ui-note info"><i class="bi bi-info-circle"></i><div>Elige el país y busca los destinos que recorre el circuito. Se guardan en el orden en que los agregues.</div></div>
+            <div class="ui-row">
+                <div class="ui-f"><label>País</label><select id="edPais"></select></div>
+                <div class="ui-f"><label>Agregar destino</label><input id="edDestino" placeholder="Escribe un destino…"></div>
+            </div>
+            <div class="ui-chips" id="edDestinos"></div>
+        </section>
+
+        <!-- HOTELES -->
+        <section class="ui-pane" id="tHoteles">
+            <div class="ui-note info"><i class="bi bi-info-circle"></i><div>Agrega los hoteles que usa el circuito según la categoría (Standard, Superior…). Un mismo hotel puede estar en varias categorías.</div></div>
+            <div class="ui-row">
+                <div class="ui-f"><label>Categoría</label><select id="edCategoria"></select></div>
+                <div class="ui-f"><label>Buscar hotel <em>filtra por los destinos del circuito</em></label><input id="edHotel" placeholder="Nombre o número del hotel…"></div>
+            </div>
+            <label class="ui-switch" style="margin:-4px 0 14px"><input type="checkbox" id="edSoloDest" checked><span class="tr"></span> Solo hoteles de los destinos del circuito</label>
+            <div id="edHoteles"></div>
+        </section>
+
+        <!-- ITINERARIO -->
+        <section class="ui-pane" id="tDias">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+                <button type="button" class="ev-btn sm" onclick="CX.agregarDia()"><i class="bi bi-plus-lg"></i> Agregar día</button>
+                <button type="button" class="ev-btn ghost sm" onclick="CX.generarDias()"><i class="bi bi-magic"></i> Generar días según las noches</button>
+                <span class="ui-help" style="margin:0 0 0 auto">Los días se numeran solos. Usa las flechas para cambiar el orden.</span>
+            </div>
+            <datalist id="dlRegimen"></datalist>
+            <datalist id="dlTransporte"><option value="Vuelo"></option><option value="Autobús"></option><option value="Minibús"></option><option value="Barco"></option><option value="Tren"></option><option value="A pie"></option><option value="Crucero"></option></datalist>
+            <datalist id="dlAloj"><option value="Hotel"></option><option value="Crucero"></option><option value="Lodge"></option><option value="Resort"></option></datalist>
+            <div id="edDias"></div>
+        </section>
+
+        <!-- SALIDAS -->
+        <section class="ui-pane" id="tSalidas">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+                <a class="ev-btn sm" id="edCargarExpress" href="#"><i class="bi bi-lightning-charge"></i> Cargar salidas (Express)</a>
+                <a class="ev-btn ghost sm" id="edCargarClasica" href="#"><i class="bi bi-ui-checks"></i> Carga Clásica</a>
+            </div>
+            <div id="edSalidas"></div>
+        </section>
+    </div>
+    <div class="ui-df">
+        <button class="ev-btn ghost" type="button" id="edEliminar" hidden><i class="bi bi-trash3"></i> Eliminar</button>
+        <span class="hint" id="edHint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> para guardar</span>
+        <button class="ev-btn ghost" type="button" onclick="CX.cerrar()">Cancelar</button>
+        <button class="ev-btn" type="button" id="edGuardar" onclick="CX.guardar()"><i class="bi bi-check2-circle"></i> Guardar circuito</button>
+    </div>
+</aside>
+
+<!-- ===================== CATEGORÍAS ===================== -->
+<aside class="ui-drawer" id="cxCat" style="width:min(620px, calc(100vw - 24px))" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-tags"></i></div>
+        <div><h2>Categorías de hoteles</h2><small>Standard, Superior, Deluxe…</small></div>
+        <button class="ui-ibtn x" type="button" onclick="CX.cerrar()" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db">
+        <div class="ui-row" style="align-items:end">
+            <div class="ui-f"><label>Categoría <em>máx. 20</em></label><input id="catNombre" maxlength="20" placeholder="Ej. Superior"></div>
+            <div class="ui-f"><label>Descripción</label><input id="catDesc" maxlength="200" placeholder="Opcional"></div>
+        </div>
+        <input type="hidden" id="catOriginal">
+        <div style="display:flex;gap:8px;margin-bottom:18px">
+            <button class="ev-btn sm" type="button" onclick="CX.guardarCategoria()"><i class="bi bi-check2"></i> <span id="catBtn">Agregar</span></button>
+            <button class="ev-btn ghost sm" type="button" onclick="CX.limpiarCategoria()">Limpiar</button>
+        </div>
+        <div id="catLista"></div>
+    </div>
+</aside>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script>
+const CX = (() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    const ola = '<svg viewBox="0 0 200 60" preserveAspectRatio="none"><path d="M0 30 Q 25 18 50 30 T 100 30 T 150 30 T 200 30 V60 H0Z" fill="rgba(255,255,255,.55)"/><path d="M0 42 Q 25 32 50 42 T 100 42 T 150 42 T 200 42 V60 H0Z" fill="rgba(14,143,134,.35)"/></svg>';
+    const urlImagen = c => !c ? null : EV.esUrl(c) ? c : `https://photos.dominicanatours.com/imagenes/circuitos/${encodeURIComponent(c)}`;
+    const imagen = (c, nombre) => urlImagen(c)
+        ? `<img src="${esc(urlImagen(c))}" alt="" loading="lazy" data-ini="${esc(EV.iniciales(nombre))}" onerror="CX._sinImagen(this)">`
+        : `<div class="cx-ph"><b>${esc(EV.iniciales(nombre))}</b>${ola}</div>`;
+
+    const ed = $('#cxEditor');
+    const drawer = EV.drawer(ed);
+    const drawerCat = EV.drawer($('#cxCat'));
+    const tabs = EV.tabs($('#edTabs'));
+    let lista = [], estado = null, paises = [], categorias = [], regimenes = [];
+
+    // ======================= LISTA =======================
+    async function cargar() {
+        $('#cxLista').innerHTML = `<div class="cx-grid">${'<div class="ui-skel" style="height:360px"></div>'.repeat(3)}</div>`;
+        const q = $('#fQ').value.trim(), pais = $('#fPais').value;
+        try {
+            lista = await EV.api(`/Circuitos/Listar?q=${encodeURIComponent(q)}&pais=${encodeURIComponent(pais)}`);
+            pintar(q || pais);
+        } catch (e) { $('#cxLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar los circuitos</h3><p>${esc(e.message)}</p></div>`; }
+    }
+
+    function pintar(filtrando) {
+        if (!lista.length) {
+            $('#cxLista').innerHTML = `<div class="ui-empty"><i class="bi bi-signpost-split big"></i>
+                <h3>${filtrando ? 'No hay circuitos con ese filtro' : 'Todavía no hay circuitos'}</h3>
+                <p>${filtrando ? 'Prueba con otra búsqueda.' : 'Crea el primero aquí, o hazlo todo junto con la Carga Express.'}</p>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="ev-btn" onclick="CX.nuevo()"><i class="bi bi-plus-lg"></i> Nuevo circuito</button>
+                <a class="ev-btn ghost" href="/CargaCircuitos/Express"><i class="bi bi-lightning-charge"></i> Carga Express</a></div></div>`;
+            return;
+        }
+        $('#cxLista').innerHTML = `<div class="cx-grid">${lista.map((c, n) => `
+            <article class="cx-card" style="--n:${n}">
+                <div class="cx-img" onclick="CX.editar('${esc(c.codigo)}')">
+                    ${imagen(c.caratula, c.nombre)}
+                    <div class="cx-top"><span class="cx-tag dark"><i class="bi bi-moon-stars"></i> ${c.noches} noches</span>
+                        <span class="cx-tag">${esc(c.paises || '—')}</span></div>
+                    ${c.precioDesde != null ? `<div class="cx-precio"><small>desde</small>${EV.dinero(c.precioDesde)}</div>` : ''}
+                </div>
+                <div class="cx-body">
+                    <h3>${esc(c.nombre)}</h3>
+                    <span class="cod"><i class="bi bi-upc"></i> ${esc(c.codigo)} · ${esc(c.proveedor || c.id_Proveedor)}</span>
+                    <span class="cx-dest"><i class="bi bi-geo-alt"></i> ${esc(c.destinos || 'Sin destinos')}</span>
+                    <div class="cx-stats">
+                        <div class="${c.hoteles ? '' : 'falta'}"><b>${c.hoteles}</b><small>hoteles</small></div>
+                        <div class="${c.dias ? '' : 'falta'}"><b>${c.dias}</b><small>días</small></div>
+                        <div><b>${c.salidasActivas}</b><small>salidas</small></div>
+                        <div><b style="font-size:12px;line-height:19px">${c.proximaSalida ? EV.fecha(c.proximaSalida).replace(/ de /g, ' ') : '—'}</b><small>próxima</small></div>
+                    </div>
+                </div>
+                <div class="cx-foot">
+                    <a class="ev-btn sm aqua" href="/CargaCircuitos/Express?circuito=${encodeURIComponent(c.codigo)}"><i class="bi bi-lightning-charge"></i> Cargar salidas</a>
+                    <button class="ui-ibtn" title="Editar" onclick="CX.editar('${esc(c.codigo)}')"><i class="bi bi-pencil"></i></button>
+                    <button class="ui-ibtn danger" title="Eliminar" onclick="CX.eliminar('${esc(c.codigo)}')"><i class="bi bi-trash3"></i></button>
+                </div>
+            </article>`).join('')}</div>`;
+    }
+
+    // ======================= EDITOR =======================
+    const vacio = () => ({ codigoOriginal: null, codigo: '', nombre: '', id_Proveedor: '', proveedor: '', noches: 7, caratula: '', itinerario: '', destinos: [], hoteles: [], dias: [], salidas: [] });
+
+    async function abrirEditor(c) {
+        estado = c;
+        $('#edTitulo').textContent = c.codigoOriginal ? c.nombre : 'Nuevo circuito';
+        $('#edSub').textContent = c.codigoOriginal ? `Código ${c.codigoOriginal} · ${c.salidas.length} salidas cargadas` : 'Completa las pestañas; puedes guardar cuando quieras.';
+        $('#edCodigo').value = c.codigo; $('#edNombre').value = c.nombre;
+        $('#edProveedor').value = c.proveedor ? `${c.proveedor}` : ''; $('#edProveedor').dataset.valor = c.id_Proveedor || '';
+        $('#edNoches').value = c.noches; $('#edCaratula').value = c.caratula || ''; $('#edResumen').value = c.itinerario || '';
+        $('#edEliminar').hidden = !c.codigoOriginal;
+        $('#tabSalidas').hidden = !c.codigoOriginal;
+        $$('.ui-f.err', ed).forEach(f => { f.classList.remove('err'); const m = $('.msg', f); if (m) m.textContent = ''; });
+        portada(); pintarDestinos(); pintarHoteles(); pintarDias(); pintarSalidas();
+        tabs.ir('tDatos');
+        drawer.abrir();
+        setTimeout(() => $('#edCodigo').focus(), 350);
+    }
+
+    function nuevo() { abrirEditor(vacio()); }
+
+    async function editar(codigo) {
+        try {
+            const c = await EV.api('/Circuitos/Obtener?codigo=' + encodeURIComponent(codigo));
+            abrirEditor({ ...c, codigoOriginal: c.codigo });
+        } catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    function portada() {
+        const url = urlImagen($('#edCaratula').value.trim());
+        $('#edPortada').innerHTML = url ? `<img src="${esc(url)}" alt="" data-ini="${esc(EV.iniciales($('#edNombre').value))}" onerror="CX._sinImagen(this)">` : `<div class="cx-ph"><b>${esc(EV.iniciales($('#edNombre').value || 'Nuevo'))}</b>${ola}</div>`;
+    }
+
+    // ---- destinos ----
+    function pintarDestinos() {
+        $('#nDest').textContent = estado.destinos.length;
+        $('#edDestinos').innerHTML = estado.destinos.length
+            ? estado.destinos.map((d, i) => `<span class="ui-chip"><i class="bi bi-geo-alt-fill"></i> ${esc(d.id_Destino)} <small>${esc(d.id_Pais)}</small><button type="button" onclick="CX.quitarDestino(${i})" title="Quitar">✕</button></span>`).join('')
+            : '<div class="ui-empty" style="width:100%;padding:24px"><p style="margin:0">Aún no hay destinos. Busca uno arriba.</p></div>';
+    }
+
+    // ---- hoteles ----
+    function pintarHoteles() {
+        $('#nHot').textContent = estado.hoteles.length;
+        if (!estado.hoteles.length) { $('#edHoteles').innerHTML = '<div class="ui-empty" style="padding:24px"><p style="margin:0">Aún no hay hoteles. Elige la categoría y busca un hotel.</p></div>'; return; }
+        const grupos = {};
+        estado.hoteles.forEach((h, i) => (grupos[h.categoria] ||= []).push({ ...h, i }));
+        $('#edHoteles').innerHTML = Object.entries(grupos).map(([cat, hs]) => `
+            <div class="cx-hotcat"><h4><i class="bi bi-star"></i> ${esc(cat)}<small>${hs.length} hotel${hs.length > 1 ? 'es' : ''}</small></h4>
+            ${hs.map(h => `<div class="cx-hot"><span class="th">${h.caratula && EV.esUrl(h.caratula) ? `<img src="${esc(h.caratula)}" alt="" onerror="this.parentNode.textContent='${esc(EV.iniciales(h.nombre)).replace(/'/g, '')}'">` : esc(EV.iniciales(h.nombre))}</span>
+                <div><b>${esc(h.nombre || '#' + h.id_Alojamiento)}</b><small>#${h.id_Alojamiento} · ${esc(h.destino || '')} ${h.estrellas ? '· ' + esc(h.estrellas) : ''}</small></div>
+                <button type="button" class="ui-ibtn danger" onclick="CX.quitarHotel(${h.i})" title="Quitar"><i class="bi bi-x-lg"></i></button></div>`).join('')}</div>`).join('');
+    }
+
+    // ---- itinerario ----
+    function leerDias() {
+        estado.dias = $$('.cx-day', $('#edDias')).map((d, i) => ({
+            dia: i + 1, titulo: $('[data-k=titulo]', d).value, descripcion: $('[data-k=descripcion]', d).value, visitas: $('[data-k=visitas]', d).value,
+            regimen: $('[data-k=regimen]', d).value, transporte: $('[data-k=transporte]', d).value, tipo_Alojamiento: $('[data-k=aloj]', d).value, caratula: $('[data-k=caratula]', d).value
+        }));
+    }
+
+    function pintarDias() {
+        $('#nDias').textContent = estado.dias.length;
+        if (!estado.dias.length) { $('#edDias').innerHTML = '<div class="ui-empty" style="padding:24px"><p style="margin:0">Sin itinerario. Usa "Generar días según las noches" para empezar rápido.</p></div>'; return; }
+        $('#edDias').innerHTML = estado.dias.map((d, i) => `
+            <div class="cx-day">
+                <div class="cx-day-h">
+                    <span class="cx-day-n">Día<b>${i + 1}</b></span>
+                    <input class="ui-input" data-k="titulo" maxlength="200" placeholder="Título del día (ej. Llegada a San José)" value="${esc(d.titulo)}">
+                    <button type="button" class="ui-ibtn" onclick="CX.moverDia(${i},-1)" ${i === 0 ? 'disabled' : ''} title="Subir"><i class="bi bi-arrow-up"></i></button>
+                    <button type="button" class="ui-ibtn" onclick="CX.moverDia(${i},1)" ${i === estado.dias.length - 1 ? 'disabled' : ''} title="Bajar"><i class="bi bi-arrow-down"></i></button>
+                    <button type="button" class="ui-ibtn danger" onclick="CX.quitarDia(${i})" title="Quitar día"><i class="bi bi-trash3"></i></button>
+                </div>
+                <div class="ui-f"><textarea data-k="descripcion" placeholder="¿Qué se hace este día?">${esc(d.descripcion)}</textarea></div>
+                <div class="ui-row r4">
+                    <div class="ui-f"><label>Visitas</label><input data-k="visitas" value="${esc(d.visitas)}" placeholder="Templo, mercado…"></div>
+                    <div class="ui-f"><label>Régimen</label><input data-k="regimen" list="dlRegimen" maxlength="200" value="${esc(d.regimen)}" placeholder="Desayuno, MP…"></div>
+                    <div class="ui-f"><label>Transporte</label><input data-k="transporte" list="dlTransporte" maxlength="200" value="${esc(d.transporte)}"></div>
+                    <div class="ui-f"><label>Alojamiento</label><input data-k="aloj" list="dlAloj" maxlength="20" value="${esc(d.tipo_Alojamiento)}"></div>
+                </div>
+                <div class="ui-f" style="margin:0"><label>Imagen del día <em>URL opcional</em></label><input data-k="caratula" maxlength="200" value="${esc(d.caratula)}" placeholder="https://…"></div>
+            </div>`).join('');
+    }
+
+    // ---- salidas ----
+    function pintarSalidas() {
+        $('#nSal').textContent = estado.salidas.length;
+        $('#edCargarExpress').href = '/CargaCircuitos/Express?circuito=' + encodeURIComponent(estado.codigoOriginal || '');
+        $('#edCargarClasica').href = '/CargaCircuitos/Clasica?circuito=' + encodeURIComponent(estado.codigoOriginal || '');
+        if (!estado.salidas.length) { $('#edSalidas').innerHTML = '<div class="ui-empty" style="padding:24px"><i class="bi bi-calendar-plus big"></i><h3>Sin salidas cargadas</h3><p>Carga fechas y precios con la Carga Express o la Clásica.</p></div>'; return; }
+        $('#edSalidas').innerHTML = `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Salida</th><th>Regreso</th><th>Campaña</th><th>Categoría</th><th>Origen</th><th>Vuelo</th><th class="num">Precio web</th><th>Activa</th><th></th></tr></thead><tbody>
+            ${estado.salidas.map(s => `<tr>
+                <td>${s.id_Servicio}</td><td><b>${EV.fecha(s.desde)}</b></td><td>${EV.fecha(s.hasta)}</td><td>${esc(s.campanya || '#' + s.id_Campanya)}</td>
+                <td>${esc(s.categoria || '')}</td><td>${esc(s.origen || '—')}</td><td>${s.vuelos ? `<span class="ui-chip dark">${s.vuelos} vuelos</span>` : '<span class="ui-chip ghost">Sin vuelo</span>'}</td>
+                <td class="num">${EV.dinero(s.precioWeb, s.id_Moneda)}</td>
+                <td><label class="ui-switch"><input type="checkbox" ${s.activo ? 'checked' : ''} onchange="CX.estadoSalida(${s.id_Servicio}, this)"><span class="tr"></span></label></td>
+                <td><button class="ui-ibtn danger" title="Eliminar salida" onclick="CX.eliminarSalida(${s.id_Servicio})"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
+            </tbody></table></div>`;
+    }
+
+    // ---- guardar ----
+    async function guardar() {
+        leerDias();
+        $$('.ui-f.err', ed).forEach(f => f.classList.remove('err'));
+        const dto = {
+            CodigoOriginal: estado.codigoOriginal, Codigo: $('#edCodigo').value.trim(), Nombre: $('#edNombre').value.trim(),
+            Id_Proveedor: $('#edProveedor').dataset.valor || '', Noches: parseInt($('#edNoches').value, 10) || 0,
+            Caratula: $('#edCaratula').value.trim() || null, Itinerario: $('#edResumen').value.trim() || null,
+            Destinos: estado.destinos.map(d => ({ Id_Destino: d.id_Destino, Id_Pais: d.id_Pais })),
+            Hoteles: estado.hoteles.map(h => ({ Id_Alojamiento: h.id_Alojamiento, Categoria: h.categoria })),
+            Dias: estado.dias.filter(d => d.titulo.trim()).map(d => ({ Titulo: d.titulo.trim(), Descripcion: d.descripcion, Visitas: d.visitas, Regimen: d.regimen, Transporte: d.transporte, Tipo_Alojamiento: d.tipo_Alojamiento, Caratula: d.caratula }))
+        };
+        const errores = [];
+        const marcar = (id, msg, tab) => { const f = $(id).closest('.ui-f'); f.classList.add('err'); const m = $('.msg', f); if (m) m.textContent = msg; errores.push([tab, msg]); };
+        if (!/^[A-Za-z0-9 ]+$/.test(dto.Codigo)) marcar('#edCodigo', 'Solo letras, números y espacios', 'tDatos');
+        if (!dto.Nombre) marcar('#edNombre', 'Escribe el nombre', 'tDatos');
+        else if (!/^[\p{L}\p{M}\p{N}' ]+$/u.test(dto.Nombre)) marcar('#edNombre', 'Sin guiones ni símbolos', 'tDatos');
+        if (!dto.Id_Proveedor) marcar('#edProveedor', 'Elige el tour operador de la lista', 'tDatos');
+        if (dto.Noches < 1 || dto.Noches > 60) marcar('#edNoches', 'Entre 1 y 60 noches', 'tDatos');
+        if (!dto.Destinos.length) errores.push(['tDestinos', 'Agrega al menos un destino']);
+        $$('#edTabs button').forEach(b => b.classList.toggle('err', errores.some(e => e[0] === b.dataset.tab)));
+        if (errores.length) { tabs.ir(errores[0][0]); EV.toast(errores[0][1], 'err'); return; }
+
+        const btn = $('#edGuardar'), html = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Guardando…';
+        try {
+            const r = await EV.post('/Circuitos/Guardar', dto);
+            EV.toast(r.mensaje);
+            drawer.cerrar();
+            await cargar();
+        } catch (e) {
+            EV.toast(e.message, 'err');
+        } finally { btn.disabled = false; btn.innerHTML = html; }
+    }
+
+    // ---- eliminar ----
+    async function eliminar(codigo) {
+        let c = lista.find(x => x.codigo === codigo) || (estado?.codigoOriginal === codigo ? { nombre: estado.nombre, salidas: estado.salidas.length } : { nombre: codigo, salidas: 0 });
+        const conSalidas = c.salidas > 0;
+        const ok = await EV.confirmar({
+            titulo: '¿Eliminar este circuito?', peligro: true, si: 'Sí, eliminar',
+            texto: `Se eliminará <b>${esc(c.nombre)}</b> con sus destinos, hoteles e itinerario${conSalidas ? ` y <b>${c.salidas} salidas cargadas</b>` : ''}. No se puede deshacer.`,
+            escribir: conSalidas ? 'ELIMINAR' : null
+        });
+        if (!ok) return;
+        try { const r = await EV.post('/Circuitos/Eliminar?codigo=' + encodeURIComponent(codigo)); EV.toast(r.mensaje); drawer.cerrar(); cargar(); }
+        catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    // ======================= CATEGORÍAS =======================
+    async function cargarCategorias() {
+        categorias = await EV.api('/Circuitos/Categorias');
+        $('#edCategoria').innerHTML = categorias.map(c => `<option value="${esc(c.categoria)}">${esc(c.categoria)}${c.descripcion && c.descripcion !== c.categoria ? ' · ' + esc(c.descripcion) : ''}</option>`).join('');
+        $('#catLista').innerHTML = `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Categoría</th><th>Descripción</th><th></th></tr></thead><tbody>
+            ${categorias.map(c => `<tr><td><b>${esc(c.categoria)}</b></td><td>${esc(c.descripcion || '')}</td>
+                <td style="white-space:nowrap;text-align:right"><button class="ui-ibtn" onclick="CX.editarCategoria('${esc(c.categoria)}')"><i class="bi bi-pencil"></i></button>
+                <button class="ui-ibtn danger" onclick="CX.eliminarCategoria('${esc(c.categoria)}')"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}</tbody></table></div>`;
+    }
+
+    // ======================= INICIO =======================
+    async function iniciar() {
+        [paises, regimenes] = await Promise.all([EV.api('/Circuitos/Paises'), EV.api('/Circuitos/Regimenes')]);
+        await cargarCategorias();
+        $('#fPais').innerHTML += paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
+        $('#edPais').innerHTML = paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
+        $('#dlRegimen').innerHTML = regimenes.map(r => `<option value="${esc(r.texto)}"></option>`).join('');
+
+        $('#fQ').addEventListener('input', EV.debounce(cargar, 300));
+        $('#fPais').addEventListener('change', cargar);
+        $('#edCaratula').addEventListener('input', EV.debounce(portada, 300));
+        $('#edNombre').addEventListener('input', EV.debounce(portada, 250));
+        $('#edNombre').addEventListener('input', () => { if (!estado.codigoOriginal && !$('#edCodigo').dataset.tocado) $('#edCodigo').value = $('#edNombre').value.replace(/[^\p{L}\p{N} ]/gu, '').normalize('NFD').replace(/[̀-ͯ]/g, ''); });
+        $('#edCodigo').addEventListener('input', () => $('#edCodigo').dataset.tocado = '1');
+
+        // Disponibilidad en vivo de código y nombre
+        const revisar = EV.debounce(async () => {
+            const cod = $('#edCodigo').value.trim(), nom = $('#edNombre').value.trim();
+            if (!cod && !nom) return;
+            try {
+                const r = await EV.api(`/Circuitos/Disponible?codigo=${encodeURIComponent(cod)}&nombre=${encodeURIComponent(nom)}&excepto=${encodeURIComponent(estado?.codigoOriginal || '')}`);
+                const pon = (id, ocupado, txt) => { const f = $(id).closest('.ui-f'); f.classList.toggle('err', ocupado); $('.msg', f).textContent = ocupado ? txt : ''; };
+                pon('#edCodigo', r.codigoOcupado, 'Ese código ya existe'); pon('#edNombre', r.nombreOcupado, 'Ese nombre ya existe');
+            } catch { }
+        }, 450);
+        $('#edCodigo').addEventListener('input', revisar);
+        $('#edNombre').addEventListener('input', revisar);
+
+        EV.picker($('#edProveedor'), {
+            url: q => `/Circuitos/Proveedores?tipo=Tour%20Operador&q=${q}`, limpiar: false,
+            map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-briefcase' }),
+            onSelect: m => { $('#edProveedor').dataset.valor = m.valor; $('#edProveedor').closest('.ui-f').classList.remove('err'); }
+        });
+        $('#edProveedor').addEventListener('input', () => $('#edProveedor').dataset.valor = '');
+
+        EV.picker($('#edDestino'), {
+            url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#edPais').value)}&q=${q}`,
+            map: x => ({ valor: x.valor, texto: x.texto, sub: x.extra2 || x.extra, icono: 'bi-geo-alt' }),
+            onSelect: (m, raw) => {
+                if (estado.destinos.some(d => d.id_Destino === raw.valor && d.id_Pais === raw.extra)) { EV.toast('Ese destino ya está en el circuito.', 'info'); return; }
+                estado.destinos.push({ id_Destino: raw.valor, id_Pais: raw.extra, pais: raw.extra2 }); pintarDestinos();
+            }
+        });
+
+        EV.picker($('#edHotel'), {
+            url: q => {
+                const dests = estado.destinos;
+                const filtro = $('#edSoloDest').checked && dests.length === 1 ? `&destino=${encodeURIComponent(dests[0].id_Destino)}` : $('#edSoloDest').checked && dests.length ? `&pais=${encodeURIComponent(dests[0].id_Pais)}` : '';
+                return `/Circuitos/Hoteles?q=${q}${filtro}`;
+            },
+            map: x => ({ valor: x.id_Alojamiento, texto: x.nombre, sub: `${x.destino} · ${x.estrellas || ''}`, img: EV.esUrl(x.caratula) ? x.caratula : null, icono: 'bi-building' }),
+            onSelect: (m, raw) => {
+                const cat = $('#edCategoria').value;
+                if (estado.hoteles.some(h => h.id_Alojamiento === raw.id_Alojamiento && h.categoria === cat)) { EV.toast('Ese hotel ya está en esa categoría.', 'info'); return; }
+                estado.hoteles.push({ ...raw, categoria: cat }); pintarHoteles();
+            }
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { drawer.cerrar(); drawerCat.cerrar(); }
+            if (drawer.abierto() && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); guardar(); }
+        });
+
+        await cargar();
+        const p = new URLSearchParams(location.search);
+        if (p.get('nuevo') === '1') nuevo();
+        if (p.get('editar')) editar(p.get('editar'));
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+
+    return {
+        nuevo, editar, guardar, eliminar, cerrar: () => { drawer.cerrar(); drawerCat.cerrar(); },
+        noches: d => { const i = $('#edNoches'); i.value = Math.min(60, Math.max(1, (parseInt(i.value, 10) || 7) + d)); },
+        quitarDestino: i => { estado.destinos.splice(i, 1); pintarDestinos(); },
+        quitarHotel: i => { estado.hoteles.splice(i, 1); pintarHoteles(); },
+        agregarDia: () => { leerDias(); estado.dias.push({ titulo: '', descripcion: '', visitas: '', regimen: '', transporte: '', tipo_Alojamiento: '', caratula: '' }); pintarDias(); $$('.cx-day [data-k=titulo]').pop()?.focus(); },
+        generarDias: async () => {
+            leerDias();
+            const total = (parseInt($('#edNoches').value, 10) || 7) + 1;
+            if (estado.dias.some(d => d.titulo) && !await EV.confirmar({ titulo: '¿Generar los días?', texto: `Se completará hasta el día ${total}. Los días que ya escribiste se mantienen.`, si: 'Generar' })) return;
+            const dest = estado.destinos.map(d => d.id_Destino);
+            for (let i = estado.dias.length; i < total; i++)
+                estado.dias.push({ titulo: i === 0 ? `Llegada a ${dest[0] || 'destino'}` : i === total - 1 ? `Regreso desde ${dest[dest.length - 1] || 'destino'}` : `Día en ${dest[Math.min(dest.length - 1, Math.floor(i * dest.length / total))] || 'destino'}`, descripcion: '', visitas: '', regimen: '', transporte: i === 0 || i === total - 1 ? 'Vuelo' : '', tipo_Alojamiento: i === total - 1 ? '' : 'Hotel', caratula: '' });
+            pintarDias();
+        },
+        moverDia: (i, d) => { leerDias(); const x = estado.dias.splice(i, 1)[0]; estado.dias.splice(i + d, 0, x); pintarDias(); },
+        quitarDia: i => { leerDias(); estado.dias.splice(i, 1); pintarDias(); },
+        estadoSalida: async (id, inp) => {
+            try { const r = await EV.post(`/Circuitos/EstadoSalida?id=${id}&activo=${inp.checked}`); EV.toast(r.mensaje); cargar(); }
+            catch (e) { inp.checked = !inp.checked; EV.toast(e.message, 'err'); }
+        },
+        eliminarSalida: async id => {
+            if (!await EV.confirmar({ titulo: '¿Eliminar esta salida?', texto: `La salida #${id} se borra con sus vuelos, tasas y notas.`, peligro: true, si: 'Eliminar salida' })) return;
+            try { const r = await EV.post('/Circuitos/EliminarSalida?id=' + id); EV.toast(r.mensaje); estado.salidas = estado.salidas.filter(s => s.id_Servicio !== id); pintarSalidas(); cargar(); }
+            catch (e) { EV.toast(e.message, 'err'); }
+        },
+        categorias: () => { CX.limpiarCategoria(); drawerCat.abrir(); },
+        limpiarCategoria: () => { $('#catNombre').value = ''; $('#catDesc').value = ''; $('#catOriginal').value = ''; $('#catBtn').textContent = 'Agregar'; },
+        editarCategoria: c => { const x = categorias.find(k => k.categoria === c); $('#catNombre').value = x.categoria; $('#catDesc').value = x.descripcion || ''; $('#catOriginal').value = x.categoria; $('#catBtn').textContent = 'Guardar cambios'; $('#catNombre').focus(); },
+        guardarCategoria: async () => {
+            const dto = { Categoria: $('#catNombre').value.trim(), Descripcion: $('#catDesc').value.trim() || null, Original: $('#catOriginal').value || null };
+            if (!dto.Categoria) { EV.toast('Escribe la categoría.', 'err'); return; }
+            try { const r = await EV.post('/Circuitos/GuardarCategoria', dto); EV.toast(r.mensaje); CX.limpiarCategoria(); cargarCategorias(); }
+            catch (e) { EV.toast(e.message, 'err'); }
+        },
+        eliminarCategoria: async c => {
+            if (!await EV.confirmar({ titulo: '¿Eliminar categoría?', texto: `Se eliminará <b>${esc(c)}</b> si no está en uso.`, peligro: true, si: 'Eliminar' })) return;
+            try { const r = await EV.post('/Circuitos/EliminarCategoria?categoria=' + encodeURIComponent(c)); EV.toast(r.mensaje); cargarCategorias(); }
+            catch (e) { EV.toast(e.message, 'err'); }
+        },
+        _sinImagen: img => { const d = document.createElement('div'); d.className = 'cx-ph'; d.innerHTML = '<b></b>' + ola; d.firstChild.textContent = img.dataset.ini || ''; img.replaceWith(d); }
+    };
+})();
+</script>
+}

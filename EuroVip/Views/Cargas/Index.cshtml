@@ -1,0 +1,183 @@
+@{
+    ViewData["Title"] = "Cargas";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .cg-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+    .cg-kpi { display: flex; align-items: center; gap: 12px; padding: 16px 18px; }
+    .cg-kpi i { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-size: 18px; background: var(--ev-mint); flex-shrink: 0; }
+    .cg-kpi b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.6px; line-height: 1.1; }
+    .cg-kpi small { color: var(--ev-muted); font-weight: 600; font-size: 12.5px; }
+    .cg-est { display: inline-flex; align-items: center; gap: 6px; font: 800 11.5px var(--ev-font); padding: 5px 10px; border-radius: 99px; white-space: nowrap; }
+    .cg-est.ok { background: #DCFCE7; color: #166534; }
+    .cg-est.err { background: #FEE4E2; color: #B42318; }
+    .cg-est.run { background: #FEF3C7; color: #92400E; }
+    .cg-est.otro { background: var(--ev-surface-2); color: var(--ev-muted); }
+    .cg-row { cursor: pointer; }
+    .cg-tipo { font-weight: 800; }
+    .cg-sub { color: var(--ev-muted); font-size: 12px; font-weight: 600; }
+    .cg-pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+    .cg-pager small { color: var(--ev-muted); font-weight: 600; }
+    .cg-pages { display: flex; gap: 6px; }
+    .cg-pages button { min-width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--ev-line); background: var(--ev-surface); font: 700 13px var(--ev-font); color: var(--ev-text); cursor: pointer; }
+    .cg-pages button.on { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+    .cg-pages button:disabled { opacity: .4; cursor: default; }
+    .cg-dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .cg-dl div { padding: 14px 16px; border-radius: 16px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); min-width: 0; }
+    .cg-dl dt { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ev-muted); font-weight: 700; }
+    .cg-dl dd { margin: 5px 0 0; font-weight: 800; word-break: break-word; }
+    .cg-dl .w { grid-column: 1 / -1; }
+    @@media (max-width: 1200px) { .cg-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @@media (max-width: 700px) { .cg-kpis, .cg-dl { grid-template-columns: 1fr 1fr; } }
+</style>
+}
+
+<section class="ui-hero ev-rise">
+    <i class="bi bi-cloud-arrow-up ui-hero-ico" aria-hidden="true"></i>
+    <div>
+        <span class="ev-chip dark"><i class="bi bi-clock-history"></i> Historial</span>
+        <h1>Cargas</h1>
+        <p>Todas las cargas hechas en el BackOffice: quién, cuándo, qué se cargó, cuántas salidas creó y si terminó bien. Toca una fila para ver su detalle.</p>
+    </div>
+    <div class="ui-hero-acts">
+        <a class="ev-btn light" asp-controller="Circuitos" asp-action="Index"><i class="bi bi-signpost-split"></i> Circuitos</a>
+        <a class="ev-btn" href="#" id="cgExportar"><i class="bi bi-filetype-csv"></i> Exportar CSV</a>
+    </div>
+    <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+    </svg>
+</section>
+
+<section class="cg-kpis">
+    <div class="ev-card cg-kpi ev-rise d1"><i class="bi bi-collection"></i><div><b id="kTotal">—</b><small>Cargas en total</small></div></div>
+    <div class="ev-card cg-kpi ev-rise d2"><i class="bi bi-check-circle" style="background:#DCFCE7;color:#166534"></i><div><b id="kOk">—</b><small>Terminaron bien</small></div></div>
+    <div class="ev-card cg-kpi ev-rise d3"><i class="bi bi-exclamation-octagon" style="background:#FEE4E2;color:#B42318"></i><div><b id="kErr">—</b><small>Para revisar</small></div></div>
+    <div class="ev-card cg-kpi ev-rise d4"><i class="bi bi-airplane-engines" style="background:var(--ev-ink);color:var(--ev-aqua)"></i><div><b id="kSal">—</b><small>Salidas creadas</small></div></div>
+    <div class="ev-card cg-kpi ev-rise d4"><i class="bi bi-calendar-day"></i><div><b id="kHoy">—</b><small>Cargas hoy</small></div></div>
+</section>
+
+<div class="ui-toolbar">
+    <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar por usuario, circuito, origen, código o nº de carga…" /></label>
+    <div class="ui-chips" id="fEstado">
+        <button type="button" class="ui-pick on" data-v="">Todas</button>
+        <button type="button" class="ui-pick" data-v="Correcto"><i class="bi bi-check-circle"></i> Correctas</button>
+        <button type="button" class="ui-pick" data-v="Revisar"><i class="bi bi-exclamation-octagon"></i> Para revisar</button>
+        <button type="button" class="ui-pick" data-v="En proceso"><i class="bi bi-hourglass-split"></i> En proceso</button>
+    </div>
+    <select class="ui-select" id="fTipo"><option value="">Todos los tipos</option></select>
+    <input class="ui-select" type="date" id="fDesde" title="Desde" style="background-image:none;padding-right:12px">
+    <input class="ui-select" type="date" id="fHasta" title="Hasta" style="background-image:none;padding-right:12px">
+</div>
+
+<div id="cgLista"></div>
+<div class="cg-pager" id="cgPager" hidden><small id="cgRango"></small><div class="cg-pages" id="cgPages"></div></div>
+
+<aside class="ui-drawer" id="cgDet" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-cloud-arrow-up"></i></div>
+        <div style="min-width:0"><h2 id="dTitulo">Carga</h2><small id="dSub"></small></div>
+        <button class="ui-ibtn x" type="button" onclick="CG.cerrar()" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="dBody"></div>
+</aside>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script>
+const CG = (() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    const st = { q: '', estado: '', tipo: '', desde: '', hasta: '', pagina: 1 };
+    const drawer = EV.drawer($('#cgDet'));
+    let tiposCargados = false;
+
+    const estado = e => e === 'Correcto' ? '<span class="cg-est ok"><i class="bi bi-check-circle-fill"></i> Correcto</span>'
+        : e === 'Revisar' ? '<span class="cg-est err"><i class="bi bi-exclamation-octagon-fill"></i> Para revisar</span>'
+        : e === 'En proceso' ? '<span class="cg-est run"><i class="bi bi-hourglass-split"></i> En proceso</span>'
+        : `<span class="cg-est otro"><i class="bi bi-dash-circle"></i> ${esc(e || 'Sin estado')}</span>`;
+    const fh = d => d ? new Date(d).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    const params = () => new URLSearchParams({ q: st.q, estado: st.estado, tipo: st.tipo, desde: st.desde, hasta: st.hasta, pagina: st.pagina, tam: 20 });
+
+    async function cargar() {
+        $('#cgLista').innerHTML = '<div class="ui-skel" style="height:320px"></div>';
+        try {
+            const d = await EV.api('/Cargas/Listar?' + params());
+            $('#kTotal').textContent = d.kpis.total; $('#kOk').textContent = d.kpis.correctas; $('#kErr').textContent = d.kpis.conErrores;
+            $('#kSal').textContent = EV.fmt(d.kpis.salidasCreadas); $('#kHoy').textContent = d.kpis.hoy;
+            if (!tiposCargados) { $('#fTipo').innerHTML += d.tipos.map(t => `<option>${esc(t)}</option>`).join(''); tiposCargados = true; }
+            pintar(d);
+        } catch (e) { $('#cgLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar el historial</h3><p>${esc(e.message)}</p></div>`; }
+    }
+
+    function pintar(d) {
+        if (!d.items.length) {
+            $('#cgLista').innerHTML = `<div class="ui-empty"><i class="bi bi-cloud-arrow-up big"></i><h3>${st.q || st.estado || st.tipo || st.desde || st.hasta ? 'No hay cargas con esos filtros' : 'Todavía no hay cargas'}</h3><p>Cuando cargues salidas de circuitos aparecerán aquí.</p></div>`;
+            $('#cgPager').hidden = true; return;
+        }
+        $('#cgLista').innerHTML = `<div class="ui-table-wrap"><table class="ui-table"><thead><tr>
+            <th>Nº</th><th>Fecha</th><th>Tipo</th><th>Usuario</th><th>Circuito / destino</th><th>Origen</th><th>Fechas de salida</th><th class="num">Salidas</th><th>Estado</th></tr></thead><tbody>
+            ${d.items.map(c => `<tr class="cg-row" data-id="${c.id}" tabindex="0">
+                <td><b>#${c.id}</b></td><td>${fh(c.fecha_Hora)}</td>
+                <td><span class="cg-tipo">${esc(c.tipo_Carga)}</span></td><td>${esc(c.usuario)}</td>
+                <td>${esc(c.destino || '—')}<div class="cg-sub">${esc(c.codigo_Oferta || '')}</div></td><td>${esc(c.origen || '—')}</td>
+                <td>${c.fecha_Inicio ? EV.fecha(c.fecha_Inicio.slice(0, 10)) + (c.fecha_Fin && c.fecha_Fin !== c.fecha_Inicio ? ' → ' + EV.fecha(c.fecha_Fin.slice(0, 10)) : '') : '—'}</td>
+                <td class="num">${c.registros_Insertados ?? '—'}${c.estatus === 'Correcto' && c.salidasVivas !== c.registros_Insertados ? `<div class="cg-sub">${c.salidasVivas} siguen cargadas</div>` : ''}</td>
+                <td>${estado(c.estatus)}</td></tr>`).join('')}
+            </tbody></table></div>`;
+        const desde = (d.pagina - 1) * d.tam + 1, hasta = Math.min(d.pagina * d.tam, d.total), pags = Math.ceil(d.total / d.tam);
+        $('#cgPager').hidden = false;
+        $('#cgRango').textContent = `Mostrando ${desde}–${hasta} de ${d.total} carga${d.total === 1 ? '' : 's'}`;
+        $('#cgPages').innerHTML = pags <= 1 ? '' :
+            `<button ${d.pagina === 1 ? 'disabled' : ''} data-p="${d.pagina - 1}"><i class="bi bi-chevron-left"></i></button>` +
+            Array.from({ length: pags }, (_, i) => i + 1).filter(n => n === 1 || n === pags || Math.abs(n - d.pagina) <= 1)
+                .map((n, i, a) => (i && n - a[i - 1] > 1 ? '<button disabled>…</button>' : '') + `<button class="${n === d.pagina ? 'on' : ''}" data-p="${n}">${n}</button>`).join('') +
+            `<button ${d.pagina === pags ? 'disabled' : ''} data-p="${d.pagina + 1}"><i class="bi bi-chevron-right"></i></button>`;
+    }
+
+    async function ver(id) {
+        try {
+            const { carga: c, salidas } = await EV.api('/Cargas/Detalle?id=' + id);
+            $('#dTitulo').textContent = `Carga #${c.id} · ${c.tipo_Carga}`;
+            $('#dSub').textContent = `${fh(c.fecha_Hora)} · ${c.usuario}`;
+            const dur = c.fecha_Hora_Fin ? Math.max(0, Math.round((new Date(c.fecha_Hora_Fin) - new Date(c.fecha_Hora)) / 1000)) : null;
+            const fila = (t, v, w) => `<div class="${w ? 'w' : ''}"><dt>${t}</dt><dd>${v == null || v === '' ? '<span style="color:var(--ev-muted)">—</span>' : v}</dd></div>`;
+            $('#dBody').innerHTML = `
+                <div class="ui-note ${c.estatus === 'Correcto' ? 'ok' : c.estatus === 'Revisar' ? 'err' : 'warn'}"><i class="bi bi-${c.estatus === 'Correcto' ? 'check-circle-fill' : c.estatus === 'Revisar' ? 'exclamation-octagon' : 'hourglass-split'}"></i><div><b>${esc(c.estatus || 'Sin estado')}</b><br>${esc(c.mensaje || '')}</div></div>
+                <dl class="cg-dl">
+                    ${fila('Circuito / destino', esc(c.destino))}${fila('Origen', esc(c.origen))}${fila('Campañas', esc(c.campanyas))}
+                    ${fila('Primera salida', c.fecha_Inicio ? EV.fecha(c.fecha_Inicio.slice(0, 10)) : null)}${fila('Última salida', c.fecha_Fin ? EV.fecha(c.fecha_Fin.slice(0, 10)) : null)}${fila('Noches', c.noches)}
+                    ${fila('Salidas creadas', c.registros_Insertados)}${fila('Siguen cargadas hoy', c.salidasVivas)}${fila('Duración', dur != null ? dur + ' s' : null)}
+                    ${fila('Código de carga', `<code>${esc(c.codigo_Oferta || '')}</code>`, true)}${fila('Equipo (IP)', esc(c.ip))}
+                </dl>
+                <div class="ui-sec-t"><span><i class="bi bi-airplane-engines"></i></span> Salidas de esta carga <small>${salidas.length}</small></div>
+                ${salidas.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Circuito</th><th>Salida</th><th>Campaña</th><th>Vuelo</th><th class="num">Precio web</th><th>Activa</th></tr></thead><tbody>
+                    ${salidas.map(s => `<tr><td>${s.id_Servicio}</td><td>${esc(s.nombre || '')}</td><td><b>${s.desde ? EV.fecha(s.desde.slice(0, 10)) : '—'}</b></td><td>${esc(s.campanya || '')}</td>
+                        <td>${s.vuelos ? `<span class="ui-chip dark">${s.vuelos}</span>` : '<span class="ui-chip ghost">No</span>'}</td><td class="num">${EV.dinero(s.precioWeb, s.id_Moneda)}</td>
+                        <td>${s.activo ? '<span class="cg-est ok"><i class="bi bi-check"></i> Sí</span>' : '<span class="cg-est otro">No</span>'}</td></tr>`).join('')}</tbody></table></div>`
+                    : '<div class="ui-empty" style="padding:22px"><p style="margin:0">Esta carga no tiene salidas vigentes (no se creó nada o ya se eliminaron).</p></div>'}`;
+            drawer.abrir();
+        } catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    function iniciar() {
+        $('#fQ').addEventListener('input', EV.debounce(e => { st.q = e.target.value.trim(); st.pagina = 1; cargar(); }, 300));
+        $$('#fEstado [data-v]').forEach(b => b.addEventListener('click', () => { $$('#fEstado .ui-pick').forEach(x => x.classList.toggle('on', x === b)); st.estado = b.dataset.v; st.pagina = 1; cargar(); }));
+        $('#fTipo').addEventListener('change', e => { st.tipo = e.target.value; st.pagina = 1; cargar(); });
+        $('#fDesde').addEventListener('change', e => { st.desde = e.target.value; st.pagina = 1; cargar(); });
+        $('#fHasta').addEventListener('change', e => { st.hasta = e.target.value; st.pagina = 1; cargar(); });
+        $('#cgLista').addEventListener('click', e => { const r = e.target.closest('[data-id]'); if (r) ver(+r.dataset.id); });
+        $('#cgLista').addEventListener('keydown', e => { const r = e.target.closest('[data-id]'); if (r && e.key === 'Enter') ver(+r.dataset.id); });
+        $('#cgPages').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b && !b.disabled) { st.pagina = +b.dataset.p; cargar(); } });
+        $('#cgExportar').addEventListener('click', e => { e.preventDefault(); location.href = '/Cargas/Exportar?' + params(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') drawer.cerrar(); });
+        cargar();
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+    return { cerrar: () => drawer.cerrar() };
+})();
+</script>
+}

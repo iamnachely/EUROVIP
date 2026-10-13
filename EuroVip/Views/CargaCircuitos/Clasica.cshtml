@@ -1,0 +1,506 @@
+@{
+    ViewData["Title"] = "Carga Clásica de circuitos";
+    var circuitoInicial = ViewData["Circuito"] as string;
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .cl-wrap { margin-top: 20px; }
+    .cl-panel { background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 26px; padding: 26px 28px; margin-top: 14px; }
+    .cl-bar {
+        position: sticky; bottom: 14px; z-index: 30; margin-top: 18px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        padding: 14px 16px; border-radius: 20px; background: color-mix(in srgb, var(--ev-ink) 94%, transparent); color: #fff; box-shadow: var(--ev-shadow-lg);
+    }
+    .cl-bar .info { margin-right: auto; font-weight: 700; font-size: 14px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+    .cl-bar .info span { opacity: .75; font-weight: 600; }
+    .cl-bar .info b { color: var(--ev-aqua); }
+    .cl-det { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 6px 0 16px; }
+    .cl-det div { padding: 12px 14px; border-radius: 14px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); min-width: 0; }
+    .cl-det dt { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--ev-muted); font-weight: 700; }
+    .cl-det dd { margin: 4px 0 0; font-weight: 800; font-size: 14px; }
+    .cl-save { display: flex; gap: 18px; align-items: center; margin-top: 8px; padding: 20px 22px; border-radius: 22px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); }
+    .cl-save > i { font-size: 36px; color: var(--ev-deep); }
+    .cl-save p { margin: 4px 0 0; color: var(--ev-muted); font-weight: 600; font-size: 13.5px; }
+    .cl-drop { border: 2px dashed var(--ev-line); border-radius: 24px; padding: 34px 20px; text-align: center; cursor: pointer; transition: all .25s; background: var(--ev-surface-2); }
+    .cl-drop:hover, .cl-drop.over { border-color: var(--ev-teal); background: var(--ev-grad-soft); }
+    .cl-drop i { font-size: 44px; color: var(--ev-teal); display: block; margin-bottom: 8px; }
+    .cl-est { font: 800 11px var(--ev-font); padding: 4px 9px; border-radius: 99px; white-space: nowrap; }
+    .cl-est.found { background: #DCFCE7; color: #166534; }
+    .cl-est.multiple { background: #FEF3C7; color: #92400E; }
+    .cl-est.not_found { background: #FEE4E2; color: #B42318; }
+    .cl-sinvuelo { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border-radius: 20px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); margin-bottom: 18px; }
+    .cl-sinvuelo i.big { font-size: 34px; color: var(--ev-deep); }
+    @@media (max-width: 1000px) { .cl-save { flex-direction: column; align-items: flex-start; } .cl-det { grid-template-columns: 1fr 1fr; } }
+    .cl-wrap { padding-bottom: 10px; }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="ui-hero ev-rise">
+    <i class="bi bi-ui-checks ui-hero-ico" aria-hidden="true"></i>
+    <div>
+        <span class="ev-chip dark"><i class="bi bi-ui-checks"></i> Versión 2 · Tal cual BackTiTan</span>
+        <h1>Carga Clásica de circuitos</h1>
+        <p>Como en BackTiTan (CargarCircuito/Index2): INICIO con los datos del circuito, VUELOS (opcional) y CARGAR EXCEL con los hoteles, las fechas y los precios. Revisa el formulario y guarda.</p>
+    </div>
+    <div class="ui-hero-acts">
+        <a class="ev-btn light" asp-controller="CargaCircuitos" asp-action="Express"><i class="bi bi-lightning-charge"></i> Ir a la Express</a>
+        <a class="ev-btn light" asp-controller="Circuitos" asp-action="Index"><i class="bi bi-signpost-split"></i> Catálogo</a>
+    </div>
+    <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+    </svg>
+</section>
+
+<div class="cl-wrap">
+    <div class="ui-tabs" id="clTabs">
+        <button type="button" data-tab="pInicio" class="on"><i class="bi bi-house"></i> INICIO</button>
+        <button type="button" data-tab="pVuelos"><i class="bi bi-airplane"></i> VUELOS <span class="n" id="nVuelos">no</span></button>
+        <button type="button" data-tab="pExcel"><i class="bi bi-file-earmark-excel"></i> CARGAR EXCEL <span class="n" id="nFechas">0</span></button>
+    </div>
+
+    <!-- ===================== INICIO ===================== -->
+    <section class="cl-panel ui-pane on" id="pInicio">
+        <div class="ui-sec">
+            <div class="ui-sec-t"><span>1</span> Datos de la oferta</div>
+            <div class="ui-row r4">
+                <div class="ui-f"><label>Código servicio</label>
+                    <div style="display:flex;gap:6px"><input id="iCodigo" maxlength="30" placeholder="Se genera solo"><button type="button" class="ui-ibtn" title="Generar código" onclick="CL.generarCodigo()"><i class="bi bi-arrow-repeat"></i></button></div></div>
+                <div class="ui-f"><label>Tipo servicio</label><input value="CIRCUITO" readonly tabindex="-1" style="font-weight:800"></div>
+                <div class="ui-f"><label>Idioma</label><input value="ES · Español" readonly tabindex="-1" style="font-weight:800"></div>
+                <div class="ui-f"><label>Divisa</label><select id="iDivisa"></select></div>
+            </div>
+            <div class="ui-row r3">
+                <div class="ui-f"><label>ID del circuito</label><input id="iCircuito" placeholder="Busca el circuito…"><span class="msg"></span></div>
+                <div class="ui-f"><label>Selecciona proveedor <em>por defecto el del circuito</em></label><input id="iProveedor" placeholder="Tour operador…"></div>
+                <div class="ui-f"><label>Noches</label><input id="iNoches" type="number" min="1" max="60" value="7"><span class="msg"></span></div>
+            </div>
+            <div id="iDetalle"></div>
+            <div class="ui-row r3">
+                <div class="ui-f"><label>País de origen</label><select id="iPaisOrigen"></select></div>
+                <div class="ui-f"><label>Selecciona origen</label><input id="iOrigen" placeholder="Ciudad de salida…"><span class="msg"></span></div>
+                <div class="ui-f"><label>Categoría de alojamientos</label><select id="iCategoria"></select><span class="msg"></span></div>
+            </div>
+        </div>
+        <div class="ui-sec">
+            <div class="ui-sec-t"><span>2</span> Campañas <small>una salida por fecha × campaña</small></div>
+            <div id="iCampanyas"></div>
+        </div>
+        <div class="ui-sec">
+            <div class="ui-sec-t"><span>3</span> Suplementos <small>se guardan en cada salida</small></div>
+            <div id="iSuplementos"></div>
+        </div>
+        <div class="ui-sec">
+            <details>
+                <summary style="cursor:pointer;font-weight:800"><i class="bi bi-journal-text"></i> Información para el usuario (notas) <em style="font-style:normal;color:var(--ev-muted);font-weight:600">opcional</em></summary>
+                <div class="ui-row" style="margin-top:12px">
+                    <div class="ui-f"><label>Incluye</label><textarea id="nIncluye"></textarea></div>
+                    <div class="ui-f"><label>No incluye</label><textarea id="nNoIncluye"></textarea></div>
+                </div>
+                <div class="ui-row">
+                    <div class="ui-f"><label>Nota / condiciones</label><textarea id="nNota"></textarea></div>
+                    <div class="ui-f"><label>Documentación</label><textarea id="nDocs"></textarea></div>
+                </div>
+            </details>
+        </div>
+        <div class="ui-note info" style="margin:0"><i class="bi bi-info-circle"></i><div>Los <b>hoteles, fechas y precios</b> del circuito se cargan desde la pestaña <b>CARGAR EXCEL</b>.</div>
+            <button type="button" class="ev-btn sm" style="margin-left:auto" onclick="CL.ir('pExcel')">Ir a CARGAR EXCEL <i class="bi bi-arrow-right"></i></button></div>
+    </section>
+
+    <!-- ===================== VUELOS ===================== -->
+    <section class="cl-panel ui-pane" id="pVuelos">
+        <div class="cl-sinvuelo">
+            <i class="bi bi-bus-front big"></i>
+            <div style="flex:1"><b style="font-size:16px">No completar datos de vuelo (opcional)</b><div style="color:var(--ev-muted);font-weight:600;font-size:13.5px">En Eurovip el vuelo es opcional. Desmarca si este circuito lleva vuelo.</div></div>
+            <label class="ui-switch"><input type="checkbox" id="vSin" checked><span class="tr"></span></label>
+        </div>
+        <div id="vBloque" hidden>
+            <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-airplane"></i></span> Segmentos de ida</div><div id="vIda"></div></div>
+            <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-airplane" style="transform:scaleX(-1)"></i></span> Segmentos de vuelta</div><div id="vVuelta"></div></div>
+        </div>
+    </section>
+
+    <!-- ===================== CARGAR EXCEL (como /CargarCircuito/Index2) ===================== -->
+    <section class="cl-panel ui-pane" id="pExcel">
+        <label class="cl-drop" id="xDrop">
+            <i class="bi bi-file-earmark-spreadsheet"></i>
+            <b style="font-size:16px">Arrastra aquí el Excel del circuito o haz clic para elegirlo</b>
+            <div style="color:var(--ev-muted);font-weight:600;font-size:13px;margin-top:4px">Formato .xlsx · hoteles en la columna A y fechas + precios totales. Aerolínea, Tasa y Segmentos se detectan por su etiqueta.</div>
+            <input type="file" id="xArchivo" accept=".xlsx,.xlsm" hidden>
+        </label>
+        <div id="xAvisos" style="margin-top:14px"></div>
+
+        <!-- Datos generales del circuito -->
+        <div class="ui-sec" id="xDatos" hidden style="margin-top:18px">
+            <div class="ui-sec-t"><span><i class="bi bi-airplane"></i></span> Datos generales del circuito <small>detectados del Excel · puedes editarlos</small></div>
+            <div class="ui-row r4">
+                <div class="ui-f"><label>Aerolínea</label><input id="xAerolinea" placeholder="Ej. IBEROJET"></div>
+                <div class="ui-f"><label>Tasa <em>se pone en todas las filas</em></label><div class="ui-money"><b class="sim">€</b><input type="number" id="xTasa" min="0" step="0.01" placeholder="0"></div></div>
+                <div class="ui-f"><label>Segmento 1</label><input id="xSeg1" placeholder="Ej. MADRID - SAN JOSE"></div>
+                <div class="ui-f"><label>Segmento 2</label><input id="xSeg2" placeholder="Ej. SAN JOSE - MADRID"></div>
+            </div>
+            <button type="button" class="ev-btn ghost sm" onclick="CL.aplicarDatos()"><i class="bi bi-arrow-down-circle"></i> Aplicar tasa a las fechas y aerolínea/horarios a VUELOS</button>
+        </div>
+
+        <!-- Hoteles -->
+        <div class="ui-sec" id="xHotelesSec" hidden>
+            <div class="ui-sec-t"><span><i class="bi bi-buildings"></i></span> Hoteles del circuito <small id="xHotelesCount"></small></div>
+            <div id="xHoteles"></div>
+        </div>
+
+        <!-- Fechas y precios -->
+        <div class="ui-sec" id="xFechasSec" hidden>
+            <div class="ui-sec-t"><span><i class="bi bi-calendar3"></i></span> Fechas y precios <small>cada fila es una salida · Total − Tasa = Base · hasta = desde + noches</small></div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                <button type="button" class="ev-btn ghost sm" onclick="CL.fila()"><i class="bi bi-plus-lg"></i> Agregar fila</button>
+                <button type="button" class="ev-btn ghost sm" onclick="CL.tasasTodas()"><i class="bi bi-arrow-down-square"></i> Copiar tasas de la 1ª fila a todas</button>
+                <button type="button" class="ev-btn ghost sm" onclick="CL.limpiarFilas()"><i class="bi bi-eraser"></i> Vaciar</button>
+            </div>
+            <div class="ui-table-wrap" style="max-height:460px;overflow:auto"><table class="ui-table" id="tPrecios">
+                <thead><tr><th style="width:44px">#</th><th>Fecha desde</th><th>Fecha hasta</th><th style="width:150px">Tasas</th><th style="width:170px">Precio total</th><th class="num">Precio base</th><th style="width:52px"></th></tr></thead>
+                <tbody></tbody>
+            </table></div>
+        </div>
+
+        <div class="cl-save" id="xGuardarSec" hidden>
+            <i class="bi bi-cloud-upload"></i>
+            <div style="flex:1"><b style="font-size:16px">Guardar circuito desde Excel</b>
+                <p>Se cargan las salidas con los datos de INICIO + VUELOS + los hoteles y fechas de esta pestaña. Todo junto: si algo falla, no se guarda nada. Solo se usan los hoteles elegidos.</p></div>
+            <button type="button" class="ev-btn" onclick="CL.guardarTodo()"><i class="bi bi-floppy"></i> Guardar circuito</button>
+        </div>
+        <div id="xVacio" class="ui-empty" style="margin-top:18px"><i class="bi bi-signpost-split big"></i><h3>Carga el Excel del circuito</h3><p>Aquí aparecerán los datos generales, los hoteles y las fechas con sus precios.</p></div>
+    </section>
+
+    <div id="clRevision" style="margin-top:14px"></div>
+
+    <div class="cl-bar">
+        <div class="info"><span>Circuito</span> <b id="bCirc">—</b> <span>Salidas</span> <b id="bSal">0</b> <span>Vuelo</span> <b id="bVue">No</b></div>
+        <button type="button" class="ev-btn aqua" id="bRevisar"><i class="bi bi-search"></i> REVISAR FORMULARIO</button>
+        <button type="button" class="ev-btn light" id="bGuardar" disabled><i class="bi bi-cloud-arrow-up"></i> GUARDAR</button>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script>
+const CL = (() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    let cat, campanyas, suplementos, vIda, vVuelta, circuito = null, hotelesExcel = [], excelLeido = false, revisado = false;
+    const tb = $('#tPrecios tbody');
+
+    const noches = () => parseInt($('#iNoches').value, 10) || 0;
+    const moneda = () => $('#iDivisa').value;
+    const invalidar = () => { revisado = false; $('#bGuardar').disabled = true; barra(); };
+
+    // ================= FECHAS Y PRECIOS (tabla de la pestaña CARGAR EXCEL) =================
+    function fila(desde = '', tasas = '', total = '') {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td data-k="n" style="font-weight:800;color:var(--ev-muted)"></td><td><input type="date" data-k="desde" value="${desde}" min="${EV.hoy()}"></td><td data-k="hasta">—</td>
+            <td><div class="ui-money"><b class="sim">${EV.simbolo(moneda())}</b><input type="number" data-k="tasas" min="0" step="0.01" value="${tasas}"></div></td>
+            <td><div class="ui-money"><b class="sim">${EV.simbolo(moneda())}</b><input type="number" data-k="total" min="0" step="1" value="${total}"></div></td>
+            <td class="num" data-k="base">—</td>
+            <td><button type="button" class="ui-ibtn danger" title="Quitar fila"><i class="bi bi-x-lg"></i></button></td>`;
+        tr.querySelector('button').onclick = () => { tr.remove(); recalcular(); };
+        tb.appendChild(tr);
+        recalcular();
+        return tr;
+    }
+
+    function filas() {
+        return [...tb.children].map(tr => ({
+            tr, desde: $('[data-k=desde]', tr).value,
+            tasas: parseFloat($('[data-k=tasas]', tr).value) || 0, total: parseFloat($('[data-k=total]', tr).value) || 0
+        }));
+    }
+
+    function recalcular() {
+        const n = noches();
+        filas().forEach(f => {
+            $('[data-k=hasta]', f.tr).textContent = f.desde && n ? EV.fecha(EV.sumarDias(f.desde, n)) : '—';
+            const base = f.total - f.tasas;
+            const bad = f.total > 0 && base < cat.minimo;
+            const celda = $('[data-k=base]', f.tr);
+            celda.innerHTML = f.total > 0 ? `${EV.fmt(base)}${bad ? ' <i class="bi bi-exclamation-triangle" title="Menor al mínimo"></i>' : ''}` : '—';
+            celda.style.color = bad ? '#D92D20' : '';
+            const descuadre = suplementos && Math.abs(f.tasas - suplementos.total()) > 0.009;
+            const inTasas = $('[data-k=tasas]', f.tr);
+            inTasas.style.borderColor = descuadre ? '#F79009' : '';
+            inTasas.title = descuadre ? `Los suplementos suman ${EV.fmt(suplementos.total(), 2)}: iguala las tasas` : '';
+            f.tr.classList.toggle('bad', bad || (f.desde && !(f.total > 0)));
+        });
+        [...tb.children].forEach((tr, i) => $('[data-k=n]', tr).textContent = i + 1);
+        $('#nFechas').textContent = filas().filter(f => f.desde).length;
+        const hay = excelLeido || tb.children.length > 0;
+        ['#xDatos', '#xHotelesSec', '#xFechasSec', '#xGuardarSec'].forEach(id => $(id).hidden = !hay);
+        $('#xVacio').hidden = hay;
+        invalidar();
+    }
+
+    // ================= CIRCUITO =================
+    async function elegirCircuito(codigo) {
+        try {
+            circuito = await EV.api('/Circuitos/Obtener?codigo=' + encodeURIComponent(codigo));
+            $('#iCircuito').value = `${circuito.codigo} — ${circuito.nombre}`;
+            $('#iCircuito').closest('.ui-f').classList.remove('err');
+            $('#iNoches').value = circuito.noches;
+            $('#iProveedor').value = circuito.proveedor || circuito.id_Proveedor; $('#iProveedor').dataset.valor = circuito.id_Proveedor;
+            const cats = [...new Set(circuito.hoteles.map(h => h.categoria))];
+            if (cats.length) $('#iCategoria').value = cats[0];
+            $('#iDetalle').innerHTML = `<dl class="cl-det">
+                <div><dt>Noches</dt><dd>${circuito.noches}</dd></div>
+                <div><dt>Destinos</dt><dd>${circuito.destinos.map(d => esc(d.id_Destino)).join(' · ') || '—'}</dd></div>
+                <div><dt>Hoteles</dt><dd>${circuito.hoteles.length ? cats.map(c => `${esc(c)} (${circuito.hoteles.filter(h => h.categoria === c).length})`).join(', ') : 'Sin hoteles'}</dd></div>
+                <div><dt>Salidas cargadas</dt><dd>${circuito.salidas.length}</dd></div></dl>`;
+            recalcular();
+        } catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    // ================= CARGAR EXCEL (como /CargarCircuito/Index2: datos generales + hoteles + fechas) =================
+    async function leerExcel(archivo) {
+        if (!archivo) return;
+        if ((excelLeido || tb.children.length) && !await EV.confirmar({ titulo: '¿Cargar otro Excel?', texto: 'Se reemplazan los hoteles, fechas y precios de esta pestaña.', si: 'Reemplazar' })) return;
+        const fd = new FormData(); fd.append('archivo', archivo);
+        $('#xAvisos').innerHTML = '<div class="ui-note info"><span class="ui-spin"></span><div>Leyendo el Excel…</div></div>';
+        try {
+            const r = await EV.post('/CargaCircuitos/LeerExcel', fd);
+            excelLeido = true;
+            hotelesExcel = r.hoteles.map(h => ({ ...h, elegido: h.id_Alojamiento ? { id: h.id_Alojamiento, nombre: h.nombre } : null }));
+            // datos generales (editables)
+            $('#xAerolinea').value = r.aerolinea || ''; $('#xAerolinea').dataset.valor = r.aerolineaId || '';
+            $('#xTasa').value = r.tasa ?? '';
+            $('#xSeg1').value = r.segmento1 || ''; $('#xSeg2').value = r.segmento2 || '';
+            // fechas y precios directo a la tabla
+            const hoy = EV.hoy(); let pasadas = 0;
+            tb.innerHTML = '';
+            r.fechas.forEach(f => { const d = f.fecha.slice(0, 10); if (d <= hoy) { pasadas++; return; } fila(d, r.tasa ?? '', f.precio); });
+            pintarHoteles();
+            aplicarDatos(true);
+            const avisos = [...r.avisos]; if (pasadas) avisos.push(`Se omitieron ${pasadas} fechas pasadas.`);
+            $('#xAvisos').innerHTML = `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div><b>${esc(archivo.name)}</b>: ${hotelesExcel.length} hoteles (${hotelesExcel.filter(h => h.elegido).length} encontrados) · ${tb.children.length} fechas con precio.</div></div>
+                ${avisos.length ? `<div class="ui-note warn" style="margin-top:8px"><i class="bi bi-exclamation-triangle"></i><div>${avisos.map(esc).join('<br>')}</div></div>` : ''}`;
+            recalcular();
+        } catch (e) { $('#xAvisos').innerHTML = `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>${esc(e.message)}</div></div>`; }
+        finally { $('#xArchivo').value = ''; }
+    }
+
+    function pintarHoteles() {
+        const estado = { found: 'Encontrado', multiple: 'Varios: elige', not_found: 'No encontrado' };
+        $('#xHotelesCount').textContent = `${hotelesExcel.filter(h => h.elegido).length} de ${hotelesExcel.length} elegidos · solo se cargan los elegidos`;
+        $('#xHoteles').innerHTML = hotelesExcel.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th style="width:35%">Nombre en el Excel</th><th>Hotel en Eurovip</th><th style="width:140px">Estado</th></tr></thead><tbody>
+            ${hotelesExcel.map((h, i) => `<tr><td>${esc(h.texto)}</td><td>
+                ${h.elegido ? `<b>${esc(h.elegido.nombre)}</b> <small style="color:var(--ev-muted)">#${h.elegido.id}</small> <button type="button" class="ui-ibtn" data-cambiar="${i}" title="Cambiar"><i class="bi bi-pencil"></i></button>`
+                : h.estado === 'multiple' ? `<select data-h="${i}"><option value="">— Selecciona un hotel —</option>${h.candidatos.map(c => `<option value="${esc(c.valor)}" data-n="${esc(c.texto)}">${esc(c.texto)} · ${esc(c.extra || '')}</option>`).join('')}</select>`
+                : `<input data-hb="${i}" placeholder="Busca y elige el hotel…">`}</td>
+                <td><span class="cl-est ${h.elegido ? 'found' : h.estado}">${h.elegido ? (h.estado === 'found' ? 'Encontrado' : 'Elegido') : estado[h.estado]}</span></td></tr>`).join('')}
+            </tbody></table></div>` : '<div class="ui-note warn"><i class="bi bi-exclamation-triangle"></i><div>El Excel no trae hoteles. Se cargarán las salidas con los hoteles que ya tenga el circuito.</div></div>';
+        $$('#xHoteles [data-h]').forEach(s => s.addEventListener('change', () => { const o = s.selectedOptions[0]; hotelesExcel[+s.dataset.h].elegido = s.value ? { id: +s.value, nombre: o.dataset.n } : null; pintarHoteles(); invalidar(); }));
+        $$('#xHoteles [data-hb]').forEach(inp => EV.picker(inp, {
+            url: q => `/Circuitos/Hoteles?q=${q}`, limpiar: false,
+            map: x => ({ valor: x.id_Alojamiento, texto: x.nombre, sub: `${x.destino} · #${x.id_Alojamiento}`, icono: 'bi-building' }),
+            onSelect: (m, raw) => { hotelesExcel[+inp.dataset.hb].elegido = { id: raw.id_Alojamiento, nombre: raw.nombre }; pintarHoteles(); invalidar(); }
+        }));
+        $$('#xHoteles [data-cambiar]').forEach(b => b.onclick = () => { const h = hotelesExcel[+b.dataset.cambiar]; h.elegido = null; if (h.estado === 'found') h.estado = 'not_found'; pintarHoteles(); invalidar(); });
+    }
+
+    // Tasa del Excel → todas las filas + suplemento "Tasas de Origen"
+    function aplicarTasa() {
+        const v = $('#xTasa').value;
+        if (v === '') return;
+        filas().forEach(f => $('[data-k=tasas]', f.tr).value = v);
+        const t = cat.tasas.find(x => /tasas de origen/i.test(x.texto));
+        const tr = [...$$('#iSuplementos tbody tr')].find(x => x.querySelector('[data-o]').value === t?.valor);
+        if (tr) tr.querySelector('[data-v]').value = v; else if (t) suplementos.agregar(t.valor, v);
+        if (Math.abs(suplementos.total() - parseFloat(v)) > 0.009) EV.toast(`Ojo: los suplementos de INICIO suman ${EV.fmt(suplementos.total(), 2)} y la tasa es ${EV.fmt(parseFloat(v), 2)}.`, 'info');
+        recalcular();
+    }
+
+    // Aerolínea + horarios "HH:MM - HH:MM" de los segmentos → pestaña VUELOS
+    function aplicarDatos(silencioso) {
+        aplicarTasa();
+        const horas = s => (s || '').match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+        const h1 = horas($('#xSeg1').value), h2 = horas($('#xSeg2').value), aer = $('#xAerolinea').dataset.valor;
+        if (aer && (h1 || h2)) {
+            $('#vSin').checked = false; $('#vSin').dispatchEvent(new Event('change'));
+            vIda.limpiar(); vVuelta.limpiar();
+            vIda.agregar({ aerolinea: aer, aerolineaTexto: $('#xAerolinea').value, horaSalida: h1?.[1].padStart(5, '0'), horaLlegada: h1?.[2].padStart(5, '0') });
+            vVuelta.agregar({ aerolinea: aer, aerolineaTexto: $('#xAerolinea').value, horaSalida: h2?.[1].padStart(5, '0'), horaLlegada: h2?.[2].padStart(5, '0') });
+            EV.toast('Vuelos preparados: completa los aeropuertos en la pestaña VUELOS.', 'info');
+        } else if (!silencioso) EV.toast(aer ? 'Tasa aplicada. Los segmentos no traen horarios "HH:MM - HH:MM".' : 'Tasa aplicada. Elige la aerolínea de la lista para pasar los vuelos.', 'info');
+        invalidar();
+    }
+
+    // ================= ENVIAR =================
+    function armarDto() {
+        const notas = [['Incluye', '#nIncluye'], ['No incluye', '#nNoIncluye'], ['Condiciones', '#nNota'], ['Documentación', '#nDocs']]
+            .map(([t, id]) => ({ Tipo: t, Texto: $(id).value.trim() })).filter(n => n.Texto);
+        const conVuelo = !$('#vSin').checked;
+        return {
+            Modo: excelLeido ? 'excel' : 'clasica', CodigoCircuito: circuito?.codigo || null, CodigoServicio: $('#iCodigo').value.trim() || null,
+            Id_Proveedor: $('#iProveedor').dataset.valor || null, Noches: noches() || null,
+            Categoria: $('#iCategoria').value, Divisa: moneda(), Origen: $('#iOrigen').dataset.valor || '', Id_Pais_Origen: $('#iPaisOrigen').value,
+            Campanyas: campanyas.datos().map(c => ({ Id_Campanya: parseInt(c.opcion, 10), Descuento: c.valor })),
+            Suplementos: suplementos.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor })),
+            Salidas: filas().filter(f => f.desde).map(f => ({ Desde: f.desde, PrecioTotal: f.total, Tasas: f.tasas })),
+            Hoteles: hotelesExcel.filter(h => h.elegido).map(h => ({ Id_Alojamiento: h.elegido.id, Categoria: $('#iCategoria').value })),
+            ConVuelo: conVuelo, VuelosIda: conVuelo ? vIda.datos() : [], VuelosVuelta: conVuelo ? vVuelta.datos() : [],
+            Notas: notas, PublicarEnWeb: true
+        };
+    }
+
+    function validarLocal() {
+        const err = [];
+        $$('.ui-f.err').forEach(f => f.classList.remove('err'));
+        const marca = (id, msg, tab) => { const f = $(id).closest('.ui-f'); f.classList.add('err'); const m = $('.msg', f); if (m) m.textContent = msg; err.push([tab, msg]); };
+        if (!circuito) marca('#iCircuito', 'Elige el circuito', 'pInicio');
+        if (!$('#iOrigen').dataset.valor) marca('#iOrigen', 'Elige el origen de la lista', 'pInicio');
+        if (noches() < 1) marca('#iNoches', 'Noches inválidas', 'pInicio');
+        if (!campanyas.datos().length) err.push(['pInicio', 'Agrega al menos una campaña']);
+        const fs = filas().filter(f => f.desde);
+        if (!fs.length) err.push(['pExcel', 'Carga el Excel con las fechas y precios (o agrega filas)']);
+        if (fs.some(f => !(f.total > 0))) err.push(['pExcel', 'Hay fechas sin precio total']);
+        if (!$('#vSin').checked) {
+            if (!vIda.cantidad() || !vVuelta.cantidad()) err.push(['pVuelos', 'Con vuelo: agrega al menos un segmento de ida y uno de vuelta']);
+            vIda.validar().concat(vVuelta.validar()).forEach(m => err.push(['pVuelos', m]));
+        }
+        $$('#clTabs button').forEach(b => b.classList.toggle('err', err.some(e => e[0] === b.dataset.tab)));
+        return err;
+    }
+
+    async function revisar() {
+        const local = validarLocal();
+        if (local.length) {
+            $('#clRevision').innerHTML = `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>Revisa esto:<ul>${local.map(e => `<li>${esc(e[1])}</li>`).join('')}</ul></div></div>`;
+            tabs.ir(local[0][0]); EV.toast(local[0][1], 'err'); return false;
+        }
+        const btn = $('#bRevisar'), html = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Revisando…';
+        try {
+            const r = await EV.post('/CargaCircuitos/Validar', armarDto());
+            revisado = r.ok;
+            $('#bGuardar').disabled = !r.ok;
+            $('#clRevision').innerHTML = r.ok
+                ? `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div>Formulario correcto. Al guardar se crearán <b>${r.servicios}</b> salidas. Ya puedes pulsar <b>GUARDAR</b>.</div></div>`
+                : `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>Revisa esto:<ul>${r.errores.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div></div>`;
+            if (r.ok) EV.toast('Formulario revisado: todo bien.'); else EV.toast(r.errores[0], 'err');
+            return r.ok;
+        } catch (e) { EV.toast(e.message, 'err'); }
+        finally { btn.disabled = false; btn.innerHTML = html; $('#bGuardar').disabled = !revisado; }
+    }
+
+    async function guardar() {
+        if (!revisado) { EV.toast('Primero revisa el formulario.', 'err'); return; }
+        const dto = armarDto();
+        const total = dto.Salidas.length * Math.max(1, dto.Campanyas.length);
+        if (!await EV.confirmar({ titulo: `¿Guardar ${total} salidas?`, texto: `Se cargarán en <b>${esc(circuito.nombre)}</b>. Si algo falla no se guarda nada.`, si: 'Sí, guardar', icono: 'cloud-arrow-up' })) return;
+        const btn = $('#bGuardar'), html = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Guardando…';
+        try {
+            const r = await EV.post('/CargaCircuitos/Guardar', dto);
+            EV.confeti();
+            $('#clRevision').innerHTML = `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div><b>${esc(r.mensaje)}</b><br>Código ${esc(r.codigo)} · salidas #${r.ids[0]}–#${r.ids[r.ids.length - 1]} · registro #${r.logId}.
+                <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><a class="ev-btn sm" href="/Circuitos/Index?editar=${encodeURIComponent(circuito.codigo)}">Ver salidas del circuito</a><a class="ev-btn ghost sm" href="/CargaCircuitos/Clasica">Nueva carga</a></div></div></div>`;
+            revisado = false;
+            EV.toast(r.mensaje);
+            $('#clRevision').scrollIntoView({ behavior: 'smooth' });
+        } catch (e) {
+            const lista = e.data?.errores || [e.message];
+            $('#clRevision').innerHTML = `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>No se guardó nada:<ul>${lista.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>`;
+            EV.toast(lista[0], 'err');
+        } finally { btn.innerHTML = html; btn.disabled = !revisado; }
+    }
+
+    function barra() {
+        $('#bCirc').textContent = circuito ? circuito.nombre : '—';
+        const n = filas().filter(f => f.desde).length * Math.max(1, campanyas?.datos().length || 1);
+        $('#bSal').textContent = n;
+        const conVuelo = !$('#vSin').checked;
+        $('#bVue').textContent = conVuelo ? `Sí (${vIda?.cantidad() || 0}+${vVuelta?.cantidad() || 0})` : 'No';
+        $('#nVuelos').textContent = conVuelo ? 'sí' : 'no';
+    }
+
+    // ================= INICIO =================
+    const tabs = EV.tabs($('#clTabs'));
+
+    async function iniciar() {
+        cat = await EVC.catalogos();
+        $('#iDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)}</option>`).join('');
+        $('#iPaisOrigen').innerHTML = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
+        $('#iPaisOrigen').value = 'ES';
+        $('#iCategoria').innerHTML = cat.categorias.map(c => `<option>${esc(c.categoria)}</option>`).join('');
+
+        campanyas = EVC.filas($('#iCampanyas'), { opciones: cat.campanyas.map(c => ({ ...c, extra: '#' + c.valor })), etiqueta: 'Campaña', valorEtiqueta: 'Porcentaje %', sufijo: '%', onChange: invalidar, placeholder: 'Elige la campaña…' });
+        const circ = cat.campanyas.find(c => /circuito/i.test(c.texto));
+        campanyas.agregar(circ?.valor || '', 0);
+        suplementos = EVC.filas($('#iSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento', valorEtiqueta: 'Valor', sufijo: '€', onChange: () => recalcular(), placeholder: 'Elige el suplemento…' });
+        const tOrigen = cat.tasas.find(x => /tasas de origen/i.test(x.texto));
+        if (tOrigen) suplementos.agregar(tOrigen.valor, '');
+
+        vIda = EVC.vuelos($('#vIda'), { tipo: 'ida', onChange: invalidar });
+        vVuelta = EVC.vuelos($('#vVuelta'), { tipo: 'vuelta', onChange: invalidar });
+
+        // pickers
+        EV.picker($('#iCircuito'), {
+            url: q => `/Circuitos/Listar?q=${q}`, limpiar: false, min: 0,
+            map: x => ({ valor: x.codigo, texto: `${x.codigo} — ${x.nombre}`, sub: `${x.noches} noches`, icono: 'bi-signpost-split' }),
+            onSelect: m => elegirCircuito(m.valor)
+        });
+        EV.picker($('#iProveedor'), { url: q => `/Circuitos/Proveedores?tipo=Tour%20Operador&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-briefcase' }), onSelect: m => { $('#iProveedor').dataset.valor = m.valor; invalidar(); } });
+        EV.picker($('#iOrigen'), {
+            url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#iPaisOrigen').value)}&q=${q}`, limpiar: false,
+            map: x => ({ valor: x.valor, texto: x.texto, sub: x.extra2, icono: 'bi-geo' }),
+            onSelect: m => { $('#iOrigen').dataset.valor = m.valor; $('#iOrigen').closest('.ui-f').classList.remove('err'); invalidar(); }
+        });
+        $('#iOrigen').addEventListener('input', () => $('#iOrigen').dataset.valor = '');
+        $('#iPaisOrigen').addEventListener('change', () => { $('#iOrigen').value = ''; $('#iOrigen').dataset.valor = ''; invalidar(); });
+
+        // eventos
+        $('#iNoches').addEventListener('input', recalcular);
+        $('#iDivisa').addEventListener('change', () => { $$('.sim').forEach(x => x.textContent = EV.simbolo(moneda())); invalidar(); });
+        ['#iCategoria', '#iCodigo'].forEach(id => $(id).addEventListener('change', invalidar));
+        tb.addEventListener('input', recalcular);
+        tb.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.k === 'total') { e.preventDefault(); const u = filas().pop(); fila(u?.desde ? EV.sumarDias(u.desde, 7) : '', u?.tasas || '', ''); $$('[data-k=desde]', tb).pop()?.focus(); } });
+        $('#vSin').addEventListener('change', () => {
+            $('#vBloque').hidden = $('#vSin').checked;
+            if (!$('#vSin').checked && !vIda.cantidad()) { vIda.agregar(); vVuelta.agregar(); }
+            invalidar();
+        });
+        document.addEventListener('input', e => { if (e.target.closest('#pInicio, #pVuelos')) invalidar(); });
+
+        // excel
+        const drop = $('#xDrop');
+        $('#xArchivo').addEventListener('change', e => leerExcel(e.target.files[0]));
+        ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+        ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+        drop.addEventListener('drop', e => leerExcel(e.dataTransfer.files[0]));
+
+        $('#bRevisar').onclick = revisar;
+        $('#bGuardar').onclick = guardar;
+        $('#xTasa').addEventListener('change', aplicarTasa);
+        EV.picker($('#xAerolinea'), { url: q => `/Circuitos/Proveedores?tipo=Aerolinea&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-airplane' }), onSelect: m => { $('#xAerolinea').dataset.valor = m.valor; } });
+        $('#xAerolinea').addEventListener('input', () => $('#xAerolinea').dataset.valor = '');
+
+        CL.generarCodigo();
+        const inicial = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(circuitoInicial));
+        if (inicial) await elegirCircuito(inicial);
+        recalcular();
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+
+    return {
+        ir: id => tabs.ir(id),
+        fila: () => { const u = filas().pop(); fila(u?.desde ? EV.sumarDias(u.desde, 7) : '', u ? u.tasas : ($('#xTasa').value || ''), ''); $$('[data-k=desde]', tb).pop()?.focus(); },
+        generarCodigo: async () => { try { const r = await EV.api('/CargaCircuitos/CodigoServicio'); $('#iCodigo').value = r.codigo; } catch { } },
+        aplicarDatos,
+        guardarTodo: async () => { if (await revisar()) guardar(); },
+        tasasTodas: () => { const fs = filas(); if (!fs.length) return; const t = $('[data-k=tasas]', fs[0].tr).value; fs.forEach(f => $('[data-k=tasas]', f.tr).value = t); recalcular(); },
+        limpiarFilas: async () => { if (await EV.confirmar({ titulo: '¿Vaciar las fechas?', texto: 'Se quitan todas las filas de esta carga (no afecta lo guardado).', si: 'Vaciar', peligro: true })) { tb.innerHTML = ''; recalcular(); } }
+    };
+})();
+</script>
+}

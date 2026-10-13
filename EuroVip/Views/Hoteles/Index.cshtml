@@ -1,0 +1,1052 @@
+@model HotelesPaginaViewModel
+@{
+    ViewData["Title"] = "Carga de Hoteles";
+    var paises = new (string Codigo, string Nombre)[]
+    {
+        ("DO", "República Dominicana"), ("ES", "España"), ("PT", "Portugal"), ("IT", "Italia"), ("FR", "Francia"),
+        ("RO", "Rumanía"), ("US", "Estados Unidos"), ("MX", "México"), ("CU", "Cuba"), ("CO", "Colombia"),
+        ("AR", "Argentina"), ("DE", "Alemania"), ("GB", "Reino Unido"), ("CH", "Suiza")
+    };
+    var regimenes = new[] { "Todo Incluido", "Solo Habitación", "Alojamiento y Desayuno", "Media Pensión", "Pensión Completa" };
+    var ciudades = new[] { "Madrid", "Barcelona", "Málaga", "Valencia", "Bilbao", "Lisboa", "Oporto", "Roma", "Milán", "París", "Bucarest", "Santo Domingo", "Punta Cana" };
+}
+
+@section Styles {
+<style>
+    /* ===================== HERO ===================== */
+    .hx-hero {
+        position: relative; overflow: hidden; border-radius: var(--ev-r-xl);
+        background: var(--ev-grad); padding: 28px 32px 34px; color: var(--ev-ink);
+        display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end;
+    }
+    .hx-hero h1 { font-size: clamp(26px, 3vw, 36px); font-weight: 800; letter-spacing: -1.2px; margin: 10px 0 6px; }
+    .hx-hero p { margin: 0; opacity: .75; font-weight: 500; max-width: 60ch; }
+    .hx-hero .ev-btn { padding: 15px 22px; font-size: 15px; }
+    .hx-hero-waves { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; pointer-events: none; opacity: .5; }
+    .hx-hero-waves g { animation: hxWave 6s linear infinite; }
+    .hx-hero-waves g + g { animation-duration: 4s; animation-direction: reverse; opacity: .6; }
+    @@keyframes hxWave { to { transform: translateX(-120px); } }
+    .hx-hero-ico {
+        position: absolute; right: 230px; top: -20px; font-size: 150px; opacity: .12; pointer-events: none;
+        animation: hxFloat 7s ease-in-out infinite;
+    }
+    @@keyframes hxFloat { 50% { transform: translateY(14px) rotate(-4deg); } }
+
+    .hx-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+    .hx-stat { display: flex; align-items: center; gap: 12px; padding: 16px 18px; }
+    .hx-stat i { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-size: 18px; background: var(--ev-mint); }
+    .hx-stat:nth-child(2) i { background: #DCFCE7; color: #15803D; }
+    .hx-stat:nth-child(3) i { background: #F1F5F9; color: #64748B; }
+    .hx-stat:nth-child(4) i { background: var(--ev-ink); color: var(--ev-aqua); }
+    .hx-stat b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.6px; line-height: 1.1; }
+    .hx-stat small { color: var(--ev-muted); font-weight: 600; font-size: 12.5px; }
+
+    /* ===================== TOOLBAR ===================== */
+    .hx-toolbar {
+        position: sticky; top: 12px; z-index: 20; margin: 22px 0 18px;
+        display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+        padding: 12px; border-radius: 20px;
+        background: color-mix(in srgb, var(--ev-surface) 82%, transparent);
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--ev-line); box-shadow: var(--ev-shadow);
+    }
+    .hx-search {
+        flex: 1 1 260px; min-width: 200px; display: flex; align-items: center; gap: 10px;
+        background: var(--ev-surface-2); border: 1.5px solid var(--ev-line); border-radius: 14px; padding: 0 12px;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .hx-search:focus-within { border-color: var(--ev-teal); box-shadow: 0 0 0 4px rgba(116,242,230,.35); background: var(--ev-surface); }
+    .hx-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; padding: 11px 0; font: 500 14px var(--ev-font); color: var(--ev-text); }
+    .hx-search kbd { font: 700 11px var(--ev-font); border: 1px solid var(--ev-line); border-radius: 6px; padding: 1px 6px; color: var(--ev-muted); background: var(--ev-surface); }
+    .hx-clear { border: 0; background: transparent; color: var(--ev-muted); cursor: pointer; display: none; }
+
+    .hx-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .hx-chip {
+        border: 1.5px solid var(--ev-line); background: var(--ev-surface); color: var(--ev-text);
+        font: 700 12.5px var(--ev-font); padding: 8px 12px; border-radius: 99px; cursor: pointer;
+        transition: background .2s, border-color .2s, transform .15s;
+    }
+    .hx-chip:hover { border-color: var(--ev-aqua); }
+    .hx-chip:active { transform: scale(.96); }
+    .hx-chip.on { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+
+    .hx-seg { display: inline-flex; background: var(--ev-surface-2); border: 1px solid var(--ev-line); border-radius: 14px; padding: 3px; }
+    .hx-seg button { border: 0; background: transparent; font: 700 12.5px var(--ev-font); color: var(--ev-muted); padding: 7px 12px; border-radius: 11px; cursor: pointer; transition: background .2s, color .2s; }
+    .hx-seg button.on { background: var(--ev-surface); color: var(--ev-text); box-shadow: 0 2px 8px -2px rgba(11,18,21,.15); }
+
+    .hx-select {
+        appearance: none; border: 1.5px solid var(--ev-line); background: var(--ev-surface) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'><path fill='%2366807C' d='M1.6 5.3 8 11.7l6.4-6.4-1.1-1.1L8 9.5 2.7 4.2z'/></svg>") no-repeat right 12px center;
+        font: 600 13px var(--ev-font); color: var(--ev-text); padding: 9px 34px 9px 12px; border-radius: 12px; cursor: pointer;
+    }
+    .hx-spacer { flex: 1 0 0; }
+
+    /* ===================== GRID DE TARJETAS ===================== */
+    .hx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 18px; }
+    .hx-card {
+        position: relative; display: flex; flex-direction: column; overflow: hidden;
+        background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 24px;
+        transition: transform .35s var(--ev-ease), box-shadow .35s var(--ev-ease), border-color .3s;
+        animation: hxIn .5s var(--ev-ease) both; animation-delay: calc(var(--n, 0) * 45ms);
+    }
+    .hx-card:hover { transform: translateY(-5px); box-shadow: var(--ev-shadow); border-color: var(--ev-aqua); }
+    .hx-card.off { opacity: .72; }
+    .hx-card.off .hx-img { filter: grayscale(.7); }
+    @@keyframes hxIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+
+    .hx-img { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--ev-grad); cursor: pointer; transition: filter .3s; }
+    .hx-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ev-ease); }
+    .hx-card:hover .hx-img img { transform: scale(1.06); }
+    .hx-ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ev-ink); }
+    .hx-ph b { font-size: 44px; font-weight: 800; letter-spacing: -2px; opacity: .85; }
+    .hx-ph svg { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 40%; }
+    .hx-img-top { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; gap: 6px; }
+    .hx-tag { font: 800 11px var(--ev-font); padding: 5px 9px; border-radius: 99px; background: rgba(255,255,255,.85); backdrop-filter: blur(6px); color: var(--ev-ink); display: inline-flex; gap: 5px; align-items: center; }
+    .hx-tag.vis { background: #DCFCE7; color: #166534; }
+    .hx-tag.ocu { background: #F1F5F9; color: #475569; }
+    .hx-price {
+        position: absolute; left: 12px; bottom: 12px; padding: 7px 12px; border-radius: 14px;
+        background: var(--ev-ink); color: #fff; font-weight: 800; font-size: 15px; letter-spacing: -.3px;
+        box-shadow: 0 10px 24px -10px rgba(11,18,21,.7);
+    }
+    .hx-price small { font-weight: 600; font-size: 10.5px; opacity: .7; display: block; letter-spacing: 0; }
+
+    .hx-body { padding: 16px 18px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .hx-body h3 { margin: 0; font-size: 16.5px; font-weight: 800; letter-spacing: -.3px; line-height: 1.25; }
+    .hx-reg { align-self: flex-start; font: 700 11.5px var(--ev-font); padding: 4px 9px; border-radius: 8px; background: var(--ev-mint); color: var(--ev-ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hx-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--ev-muted); font-weight: 600; }
+    .hx-meta span { display: inline-flex; align-items: center; gap: 5px; }
+
+    .hx-foot { display: flex; align-items: center; gap: 6px; padding: 10px 14px 14px; border-top: 1px dashed var(--ev-line); }
+    .hx-ibtn {
+        width: 36px; height: 36px; border-radius: 12px; border: 1px solid var(--ev-line); background: var(--ev-surface);
+        display: grid; place-items: center; cursor: pointer; color: var(--ev-text); transition: background .2s, color .2s, transform .15s;
+    }
+    .hx-ibtn:hover { background: var(--ev-mint); }
+    .hx-ibtn.danger:hover { background: #FEE4E2; color: #B42318; }
+    .hx-ibtn:active { transform: scale(.92); }
+
+    /* Interruptor visible/oculto */
+    .hx-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font: 700 12px var(--ev-font); color: var(--ev-muted); margin-right: auto; user-select: none; }
+    .hx-switch input { display: none; }
+    .hx-switch .tr { width: 40px; height: 24px; border-radius: 99px; background: #CBD5E1; position: relative; transition: background .25s; }
+    .hx-switch .tr::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .3s var(--ev-ease); }
+    .hx-switch input:checked + .tr { background: var(--ev-teal); }
+    .hx-switch input:checked + .tr::after { transform: translateX(16px); }
+    .hx-switch.busy { pointer-events: none; opacity: .6; }
+
+    /* ===================== TABLA ===================== */
+    .hx-table-wrap { overflow-x: auto; border: 1px solid var(--ev-line); border-radius: 20px; background: var(--ev-surface); }
+    .hx-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .hx-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ev-muted); padding: 12px 14px; background: var(--ev-surface-2); position: sticky; top: 0; white-space: nowrap; }
+    .hx-table td { padding: 10px 14px; border-top: 1px solid var(--ev-line); vertical-align: middle; }
+    .hx-table tr { animation: hxIn .4s var(--ev-ease) both; animation-delay: calc(var(--n, 0) * 30ms); }
+    .hx-table tbody tr:hover { background: var(--ev-surface-2); }
+    .hx-thumb { width: 54px; height: 40px; border-radius: 10px; object-fit: cover; background: var(--ev-grad); display: grid; place-items: center; font-weight: 800; font-size: 14px; color: var(--ev-ink); }
+    .hx-name { font-weight: 800; }
+    .hx-table td:nth-child(2) { min-width: 200px; }
+    .hx-table td:nth-child(5), .hx-table td:nth-child(6) { white-space: nowrap; }
+    .hx-acts { display: flex; gap: 6px; justify-content: flex-end; }
+
+    /* ===================== ESTADOS: CARGANDO / VACÍO ===================== */
+    .hx-skel { border-radius: 24px; overflow: hidden; border: 1px solid var(--ev-line); background: var(--ev-surface); }
+    .hx-skel div { background: linear-gradient(90deg, var(--ev-surface-2) 0%, var(--ev-line) 50%, var(--ev-surface-2) 100%); background-size: 200% 100%; animation: hxSk 1.2s linear infinite; }
+    .hx-skel .a { aspect-ratio: 16 / 10; }
+    .hx-skel .l { height: 14px; margin: 14px 18px 0; border-radius: 6px; }
+    .hx-skel .l.s { width: 50%; margin-bottom: 18px; }
+    @@keyframes hxSk { to { background-position: -200% 0; } }
+
+    .hx-empty { text-align: center; padding: 50px 20px; border: 2px dashed var(--ev-line); border-radius: 28px; background: var(--ev-surface-2); }
+    .hx-empty .ill { width: 220px; max-width: 70%; margin: 0 auto 14px; display: block; }
+    .hx-empty h3 { font-weight: 800; letter-spacing: -.4px; margin: 0 0 6px; }
+    .hx-empty p { color: var(--ev-muted); margin: 0 0 18px; }
+    .hx-empty .ill .b { animation: hBob 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+    @@keyframes hBob { 50% { transform: translateY(4px) rotate(3deg); } }
+
+    /* ===================== PAGINACIÓN ===================== */
+    .hx-pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+    .hx-pager small { color: var(--ev-muted); font-weight: 600; }
+    .hx-pages { display: flex; gap: 6px; }
+    .hx-pages button { min-width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--ev-line); background: var(--ev-surface); font: 700 13px var(--ev-font); color: var(--ev-text); cursor: pointer; }
+    .hx-pages button.on { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+    .hx-pages button:disabled { opacity: .4; cursor: default; }
+
+    /* ===================== DRAWER (formulario / detalle) ===================== */
+    .hx-backdrop { position: fixed; inset: 0; background: rgba(11,18,21,.38); backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 90; }
+    .hx-backdrop.open { opacity: 1; pointer-events: auto; }
+    .hx-drawer {
+        position: fixed; top: 12px; right: 12px; bottom: 12px; width: min(900px, calc(100vw - 24px)); z-index: 100;
+        background: var(--ev-surface); border-radius: 28px; box-shadow: var(--ev-shadow-lg);
+        display: flex; flex-direction: column; transform: translateX(110%); transition: transform .45s var(--ev-ease);
+    }
+    .hx-drawer.open { transform: none; }
+    .hx-dh { display: flex; align-items: center; gap: 14px; padding: 24px 34px 18px; border-bottom: 1px solid var(--ev-line); }
+    .hx-dh h2 { margin: 0; font-size: 23px; font-weight: 800; letter-spacing: -.6px; }
+    .hx-dh small { color: var(--ev-muted); font-weight: 600; font-size: 14px; }
+    .hx-dh .x { margin-left: auto; }
+    .hx-db { flex: 1; overflow-y: auto; padding: 24px 34px 32px; }
+    .hx-df { padding: 18px 34px; border-top: 1px solid var(--ev-line); display: flex; gap: 12px; align-items: center; }
+    .hx-df .hint { color: var(--ev-muted); font-size: 12px; font-weight: 600; margin-right: auto; }
+
+    /* Vista previa en vivo */
+    .hx-preview { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; padding: 16px; border-radius: 22px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); margin-bottom: 26px; align-items: center; }
+    .hx-preview .pi { position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 4 / 3; background: var(--ev-grad); }
+    .hx-preview .pi img { width: 100%; height: 100%; object-fit: cover; }
+    .hx-preview .pi .hx-ph b { font-size: 40px; }
+    .hx-preview h4 { margin: 4px 0 8px; font-weight: 800; font-size: 21px; letter-spacing: -.5px; word-break: break-word; }
+    .hx-preview .pp { font-weight: 800; font-size: 26px; letter-spacing: -.6px; margin-top: 10px; }
+    .hx-preview .pp small { font-size: 11px; color: var(--ev-muted); font-weight: 600; }
+    .hx-live { font: 800 10px var(--ev-font); letter-spacing: .12em; color: var(--ev-deep); display: inline-flex; align-items: center; gap: 6px; }
+    .hx-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #22C55E; animation: hxBlink 1.4s infinite; }
+    @@keyframes hxBlink { 50% { opacity: .2; } }
+
+    /* Secciones del formulario */
+    .hx-sec { margin-bottom: 26px; padding-bottom: 6px; }
+    .hx-sec + .hx-sec { border-top: 1px dashed var(--ev-line); padding-top: 22px; }
+    .hx-sec-t { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 16px; margin-bottom: 16px; }
+    .hx-sec-t span { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--ev-ink); color: var(--ev-aqua); font-size: 13px; }
+    .hx-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .hx-row.r3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .hx-f { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; min-width: 0; }
+    .hx-f label { font-size: 13.5px; font-weight: 700; display: flex; justify-content: space-between; gap: 6px; }
+    .hx-f label em { font-style: normal; color: var(--ev-muted); font-weight: 600; }
+    .hx-f input, .hx-f select, .hx-f textarea {
+        width: 100%; border: 1.5px solid var(--ev-line); background: var(--ev-surface-2); color: var(--ev-text);
+        border-radius: 14px; padding: 13px 14px; font: 500 15px var(--ev-font); outline: 0;
+        transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .hx-f select { appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'><path fill='%2366807C' d='M1.6 5.3 8 11.7l6.4-6.4-1.1-1.1L8 9.5 2.7 4.2z'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    .hx-f textarea { resize: vertical; min-height: 96px; }
+    .hx-f input:focus, .hx-f select:focus, .hx-f textarea:focus { border-color: var(--ev-teal); background: var(--ev-surface); box-shadow: 0 0 0 4px rgba(116,242,230,.35); }
+    .hx-f.err input, .hx-f.err select, .hx-f.err textarea { border-color: #F04438; background: #FFFBFA; }
+    .hx-f .msg { color: #D92D20; font-size: 12px; font-weight: 600; min-height: 0; }
+    .hx-money { position: relative; }
+    .hx-money input { padding-left: 34px; font-weight: 800; }
+    .hx-money b { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ev-muted); }
+    .hx-qchips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .hx-qchips { gap: 8px; }
+    .hx-qchips button { border: 1px dashed var(--ev-line); background: var(--ev-surface); border-radius: 99px; padding: 7px 13px; font: 700 12.5px var(--ev-font); cursor: pointer; color: var(--ev-text); }
+    .hx-qchips button:hover { border-style: solid; border-color: var(--ev-teal); background: var(--ev-mint); }
+    .hx-vis { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-radius: 18px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    .hx-vis b { display: block; font-size: 14px; }
+    .hx-vis small { color: var(--ev-muted); font-weight: 600; }
+
+    /* Detalle */
+    .hx-det-img { border-radius: 24px; overflow: hidden; aspect-ratio: 21 / 9; position: relative; background: var(--ev-grad); margin-bottom: 22px; }
+    .hx-det-img img { width: 100%; height: 100%; object-fit: cover; }
+    .hx-det-img .hx-ph b { font-size: 64px; }
+    .hx-dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0; }
+    .hx-dl div { padding: 16px 18px; border-radius: 16px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); min-width: 0; }
+    .hx-dl dt { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ev-muted); font-weight: 700; }
+    .hx-dl dd { margin: 6px 0 0; font-weight: 700; font-size: 15px; word-break: break-word; }
+    .hx-dl .w { grid-column: 1 / -1; }
+
+    /* ===================== MODAL CONFIRMAR ===================== */
+    .hx-modal { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; pointer-events: none; }
+    .hx-modal .box {
+        width: min(540px, 100%); background: var(--ev-surface); border-radius: 28px; padding: 34px 36px; text-align: center;
+        box-shadow: var(--ev-shadow-lg); transform: scale(.92); opacity: 0; transition: transform .3s var(--ev-ease), opacity .25s;
+    }
+    .hx-modal.open { pointer-events: auto; }
+    .hx-modal.open .box { transform: none; opacity: 1; }
+    .hx-modal .ico { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 20px; display: grid; place-items: center; font-size: 28px; background: #FEE4E2; color: #D92D20; animation: hxShake .5s .2s; }
+    @@keyframes hxShake { 25% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } 75% { transform: rotate(-4deg); } }
+    .hx-modal h3 { margin: 0 0 6px; font-weight: 800; letter-spacing: -.4px; }
+    .hx-modal p { color: var(--ev-muted); margin: 0 0 20px; }
+    .hx-modal .acts { display: flex; flex-direction: column; gap: 8px; }
+    .hx-modal .acts .ev-btn { justify-content: center; }
+    .ev-btn.red { background: #D92D20; }
+    .ev-btn.ghost { background: var(--ev-surface-2); color: var(--ev-text); border: 1px solid var(--ev-line); }
+    .ev-btn.ghost:hover { color: var(--ev-text); }
+    .ev-btn[disabled] { opacity: .7; pointer-events: none; }
+    .hx-spin { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: hSpin .7s linear infinite; display: inline-block; }
+    @@keyframes hSpin { to { transform: rotate(360deg); } }
+
+    /* ===================== TOASTS ===================== */
+    .hx-toasts { position: fixed; right: 20px; bottom: 20px; z-index: 200; display: flex; flex-direction: column; gap: 10px; }
+    .hx-toast {
+        display: flex; align-items: center; gap: 12px; min-width: 280px; max-width: 420px;
+        padding: 14px 16px; border-radius: 16px; background: var(--ev-ink); color: #fff; box-shadow: var(--ev-shadow-lg);
+        font-weight: 600; font-size: 14px; animation: hxToast .4s var(--ev-ease) both;
+    }
+    .hx-toast i { font-size: 18px; color: var(--ev-aqua); }
+    .hx-toast.err i { color: #FDA29B; }
+    .hx-toast button { margin-left: auto; border: 0; background: rgba(255,255,255,.12); color: var(--ev-aqua); font: 800 12.5px var(--ev-font); padding: 6px 10px; border-radius: 10px; cursor: pointer; }
+    .hx-toast.out { animation: hxToastOut .3s ease forwards; }
+    @@keyframes hxToast { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
+    @@keyframes hxToastOut { to { opacity: 0; transform: translateX(30px); } }
+
+    @@media (max-width: 1100px) { .hx-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hx-hero-ico { display: none; } }
+    @@media (max-width: 900px) {
+        .hx-dh, .hx-df { padding-left: 22px; padding-right: 22px; }
+        .hx-db { padding: 18px 22px 24px; }
+        .hx-preview { grid-template-columns: 160px minmax(0, 1fr); }
+        .hx-dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @@media (max-width: 700px) {
+        .hx-hero { grid-template-columns: 1fr; }
+        .hx-row, .hx-row.r3 { grid-template-columns: 1fr; }
+        .hx-preview { grid-template-columns: 1fr; }
+        .hx-toolbar { position: static; }
+    }
+    @@media (prefers-reduced-motion: reduce) { .hx-card, .hx-table tr, .hx-hero-waves g, .hx-hero-ico, .hx-empty .ill .b { animation: none !important; } }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<!-- ===================== HERO ===================== -->
+<section class="hx-hero ev-rise">
+    <i class="bi bi-building hx-hero-ico" aria-hidden="true"></i>
+    <div>
+        <span class="ev-chip dark"><i class="bi bi-building"></i> Fase 2 · Vitrina de la web</span>
+        <h1>Carga de Hoteles</h1>
+        <p>Publica hoteles en la web de Eurovip: nombre, régimen, precio desde, imagen y la sección donde aparecen. Todo lo que cargues aquí se guarda en la vitrina (<b>inicio</b>).</p>
+    </div>
+    <button class="ev-btn" type="button" onclick="HX.nuevo()"><i class="bi bi-plus-lg"></i> Nuevo hotel</button>
+    <svg class="hx-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+    </svg>
+</section>
+
+<section class="hx-stats">
+    <div class="ev-card hx-stat ev-rise d1"><i class="bi bi-buildings"></i><div><b id="stTotal">@Model.Estadisticas.Total</b><small>Hoteles cargados</small></div></div>
+    <div class="ev-card hx-stat ev-rise d2"><i class="bi bi-eye"></i><div><b id="stVis">@Model.Estadisticas.Visibles</b><small>Visibles en la web</small></div></div>
+    <div class="ev-card hx-stat ev-rise d3"><i class="bi bi-eye-slash"></i><div><b id="stOcu">@Model.Estadisticas.Ocultos</b><small>Ocultos</small></div></div>
+    <div class="ev-card hx-stat ev-rise d4"><i class="bi bi-tags"></i><div><b id="stProm">@(Model.Estadisticas.PrecioPromedio is null ? "—" : Math.Round(Model.Estadisticas.PrecioPromedio.Value).ToString("N0"))</b><small>Precio medio desde</small></div></div>
+</section>
+
+<!-- ===================== TOOLBAR ===================== -->
+<div class="hx-toolbar">
+    <label class="hx-search">
+        <i class="bi bi-search"></i>
+        <input id="fQ" type="search" placeholder="Buscar hotel, origen, régimen o número…" autocomplete="off" />
+        <button class="hx-clear" id="fQClear" type="button" aria-label="Limpiar"><i class="bi bi-x-circle-fill"></i></button>
+        <kbd>/</kbd>
+    </label>
+
+    <span class="hx-chip on" title="Los hoteles de Eurovip se cargan solo en español" style="cursor:default"><i class="bi bi-translate"></i> Español · ES</span>
+
+    <div class="hx-seg" id="fEstado">
+        <button type="button" class="on" data-v="">Todos</button>
+        <button type="button" data-v="1"><i class="bi bi-eye"></i> Visibles</button>
+        <button type="button" data-v="0"><i class="bi bi-eye-slash"></i> Ocultos</button>
+    </div>
+
+    <select class="hx-select" id="fContenedor" title="Sección de la web">
+        <option value="">Todas las secciones</option>
+    </select>
+
+    <select class="hx-select" id="fOrden" title="Ordenar">
+        <option value="recientes">Más recientes</option>
+        <option value="nombre">Nombre A–Z</option>
+        <option value="precio_asc">Precio: menor a mayor</option>
+        <option value="precio_desc">Precio: mayor a menor</option>
+        <option value="posicion">Posición en la web</option>
+    </select>
+
+    <span class="hx-spacer"></span>
+
+    <div class="hx-seg" id="fVista" title="Vista">
+        <button type="button" class="on" data-v="grid" aria-label="Tarjetas"><i class="bi bi-grid-3x2-gap"></i></button>
+        <button type="button" data-v="tabla" aria-label="Tabla"><i class="bi bi-list-ul"></i></button>
+    </div>
+</div>
+
+<!-- ===================== RESULTADOS ===================== -->
+<div id="hxResultados"></div>
+<div class="hx-pager" id="hxPager" hidden>
+    <small id="hxRango"></small>
+    <div class="hx-pages" id="hxPages"></div>
+</div>
+
+<!-- ===================== DRAWER: FORMULARIO ===================== -->
+<div class="hx-backdrop" id="hxBackdrop"></div>
+
+<aside class="hx-drawer" id="hxForm" aria-hidden="true">
+    <div class="hx-dh">
+        <div class="ev-module-icon" style="width:44px;height:44px"><i class="bi bi-building-add" id="frmIcon"></i></div>
+        <div><h2 id="frmTitulo">Nuevo hotel</h2><small id="frmSub">Completa los datos y mira la vista previa en vivo.</small></div>
+        <button class="hx-ibtn x" type="button" onclick="HX.cerrar()" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <form class="hx-db" id="frm" novalidate autocomplete="off">
+        <input type="hidden" name="Id_Servicio" />
+
+        <!-- Vista previa en vivo -->
+        <div class="hx-preview">
+            <div class="pi" id="pvImg"></div>
+            <div>
+                <span class="hx-live">VISTA PREVIA</span>
+                <h4 id="pvNombre">Nombre del hotel</h4>
+                <span class="hx-reg" id="pvReg">Régimen</span>
+                <div class="hx-meta" style="margin-top:8px"><span id="pvRuta"><i class="bi bi-airplane"></i> Origen → DO</span></div>
+                <div class="pp" id="pvPrecio">— <small>desde</small></div>
+            </div>
+        </div>
+
+        <!-- 1. Hotel -->
+        <div class="hx-sec">
+            <div class="hx-sec-t"><span>1</span> El hotel</div>
+            <div class="hx-f">
+                <label for="Id_Destino">Nombre del hotel <em>obligatorio</em></label>
+                <input id="Id_Destino" name="Id_Destino" maxlength="150" placeholder="Ej. Hotel Riu Palace Bávaro" />
+                <span class="msg"></span>
+            </div>
+            <div class="hx-f">
+                <label for="Descripcion">Régimen / descripción <em>obligatorio</em></label>
+                <div class="hx-qchips">
+                    @foreach (var r in regimenes)
+                    {
+                        <button type="button" data-reg="@r">@r</button>
+                    }
+                </div>
+                <textarea id="Descripcion" name="Descripcion" maxlength="2000" placeholder="Ej. Todo Incluido — frente a la playa de Bávaro"></textarea>
+                <span class="msg"></span>
+            </div>
+            <div class="hx-f">
+                <label for="CaratulaDestino">Imagen de portada <em>URL (opcional)</em></label>
+                <input id="CaratulaDestino" name="CaratulaDestino" maxlength="300" placeholder="https://photos.dominicanatours.com/imagenes/hotel/…/1.jpg" />
+                <span class="msg"></span>
+            </div>
+        </div>
+
+        <!-- 2. Precio y campaña -->
+        <div class="hx-sec">
+            <div class="hx-sec-t"><span>2</span> Precio y campaña</div>
+            <div class="hx-row">
+                <div class="hx-f">
+                    <label>Idioma <em>fijo</em></label>
+                    <input value="ES · Español" readonly tabindex="-1" style="font-weight:700;cursor:default" title="Los hoteles de Eurovip se cargan solo en español" />
+                    <span class="msg"></span>
+                </div>
+                <div class="hx-f">
+                    <label for="Id_Campanya">Campaña</label>
+                    <select id="Id_Campanya" name="Id_Campanya"><option value="">Cargando…</option></select>
+                    <span class="msg"></span>
+                </div>
+            </div>
+            <div class="hx-row r3">
+                <div class="hx-f">
+                    <label for="PrecioWeb">Precio desde</label>
+                    <div class="hx-money"><b id="mSim">€</b><input id="PrecioWeb" name="PrecioWeb" type="number" min="0" step="1" placeholder="0" /></div>
+                    <span class="msg"></span>
+                </div>
+                <div class="hx-f">
+                    <label for="Id_Moneda">Moneda</label>
+                    <select id="Id_Moneda" name="Id_Moneda">
+                        @foreach (var m in Model.Monedas)
+                        {
+                            <option value="@m.Codigo">@m.Codigo · @m.Nombre</option>
+                        }
+                    </select>
+                    <span class="msg"></span>
+                </div>
+                <div class="hx-f">
+                    <label for="Noches">Noches <em>opcional</em></label>
+                    <input id="Noches" name="Noches" type="number" min="1" max="60" placeholder="7" />
+                    <span class="msg"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Viaje -->
+        <div class="hx-sec">
+            <div class="hx-sec-t"><span>3</span> Origen y destino</div>
+            <div class="hx-row">
+                <div class="hx-f">
+                    <label for="Id_Pais_Origen">País de salida</label>
+                    <select id="Id_Pais_Origen" name="Id_Pais_Origen">
+                        @foreach (var p in paises)
+                        {
+                            <option value="@p.Codigo" selected="@(p.Codigo == "ES")">@p.Codigo · @p.Nombre</option>
+                        }
+                    </select>
+                    <span class="msg"></span>
+                </div>
+                <div class="hx-f">
+                    <label for="Origen">Ciudad de salida</label>
+                    <input id="Origen" name="Origen" maxlength="30" list="dlCiudades" placeholder="Ej. Madrid" />
+                    <datalist id="dlCiudades">
+                        @foreach (var c in ciudades)
+                        {
+                            <option value="@c"></option>
+                        }
+                    </datalist>
+                    <span class="msg"></span>
+                </div>
+            </div>
+            <div class="hx-row r3">
+                <div class="hx-f">
+                    <label for="Id_PaisDestino">País destino</label>
+                    <select id="Id_PaisDestino" name="Id_PaisDestino">
+                        @foreach (var p in paises)
+                        {
+                            <option value="@p.Codigo" selected="@(p.Codigo == "DO")">@p.Codigo · @p.Nombre</option>
+                        }
+                    </select>
+                    <span class="msg"></span>
+                </div>
+                <div class="hx-f">
+                    <label for="Latitud">Latitud <em>opcional</em></label>
+                    <input id="Latitud" name="Latitud" maxlength="50" placeholder="18.6823" />
+                    <span class="msg"></span>
+                </div>
+                <div class="hx-f">
+                    <label for="Longitud">Longitud <em>opcional</em></label>
+                    <input id="Longitud" name="Longitud" maxlength="50" placeholder="-68.4116" />
+                    <span class="msg"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Publicación -->
+        <div class="hx-sec">
+            <div class="hx-sec-t"><span>4</span> Publicación en la web</div>
+            <div class="hx-row">
+                <div class="hx-f">
+                    <label for="Id_Contenedor">Sección de la web</label>
+                    <select id="Id_Contenedor" name="Id_Contenedor"><option value="">Sin sección</option></select>
+                    <span class="msg"></span>
+                </div>
+                <div class="hx-f">
+                    <label for="Posicion_Destino">Posición en la sección</label>
+                    <input id="Posicion_Destino" name="Posicion_Destino" type="number" min="0" max="9999" placeholder="1 = primero" />
+                    <span class="msg"></span>
+                </div>
+            </div>
+            <div class="hx-vis">
+                <div><b>Visible en la web</b><small>Si lo apagas, se guarda pero no se muestra.</small></div>
+                <label class="hx-switch" style="margin:0"><input type="checkbox" id="Estado" name="Estado" checked /><span class="tr"></span></label>
+            </div>
+            <div class="hx-f" style="margin-top:12px">
+                <label for="Notas">Notas internas <em>opcional</em></label>
+                <textarea id="Notas" name="Notas" maxlength="1000" placeholder="Solo para el equipo, no se publica."></textarea>
+                <span class="msg"></span>
+            </div>
+        </div>
+    </form>
+
+    <div class="hx-df">
+        <span class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> para guardar</span>
+        <button class="ev-btn ghost" type="button" onclick="HX.cerrar()">Cancelar</button>
+        <button class="ev-btn" type="button" id="btnGuardar" onclick="HX.guardar()"><i class="bi bi-check2-circle"></i> Guardar hotel</button>
+    </div>
+</aside>
+
+<!-- ===================== DRAWER: DETALLE ===================== -->
+<aside class="hx-drawer" id="hxDet" aria-hidden="true">
+    <div class="hx-dh">
+        <div class="ev-module-icon" style="width:44px;height:44px"><i class="bi bi-building"></i></div>
+        <div style="min-width:0"><h2 id="detTitulo">Hotel</h2><small id="detSub"></small></div>
+        <button class="hx-ibtn x" type="button" onclick="HX.cerrar()" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="hx-db" id="detBody"></div>
+    <div class="hx-df">
+        <button class="ev-btn ghost" type="button" id="detEliminar"><i class="bi bi-trash3"></i> Eliminar</button>
+        <span style="margin-left:auto"></span>
+        <button class="ev-btn" type="button" id="detEditar"><i class="bi bi-pencil"></i> Editar</button>
+    </div>
+</aside>
+
+<!-- ===================== MODAL ELIMINAR ===================== -->
+<div class="hx-modal" id="hxModal" role="dialog" aria-modal="true">
+    <div class="box">
+        <div class="ico"><i class="bi bi-trash3"></i></div>
+        <h3>¿Eliminar este hotel?</h3>
+        <p id="mdTexto"></p>
+        <div class="acts">
+            <button class="ev-btn red" type="button" id="mdSi"><i class="bi bi-trash3"></i> Sí, eliminar definitivamente</button>
+            <button class="ev-btn ghost" type="button" id="mdOcultar"><i class="bi bi-eye-slash"></i> Mejor ocultarlo de la web</button>
+            <button class="ev-btn ghost" type="button" id="mdNo">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div class="hx-toasts" id="hxToasts"></div>
+
+@section Scripts {
+<script>
+const HX = (() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const token = $('input[name="__RequestVerificationToken"]').value;
+    const esc = s => (s ?? '').toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const simbolo = m => ({ EUR: '€', USD: 'US$', DOP: 'RD$' }[m] || m || '€');
+    const fmt = n => n == null ? '—' : Math.round(n).toLocaleString('es-ES');
+    const iniciales = t => (t || '?').replace(/^hotel\s+/i, '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    const esUrl = s => /^https?:\/\//i.test(s || '');
+    const olaSvg = '<svg viewBox="0 0 200 60" preserveAspectRatio="none"><path d="M0 30 Q 25 18 50 30 T 100 30 T 150 30 T 200 30 V60 H0Z" fill="rgba(255,255,255,.55)"/><path d="M0 42 Q 25 32 50 42 T 100 42 T 150 42 T 200 42 V60 H0Z" fill="rgba(14,143,134,.35)"/></svg>';
+    const imagen = (h, alt) => esUrl(h.caratulaDestino)
+        ? `<img src="${esc(h.caratulaDestino)}" alt="${esc(alt)}" data-ini="${esc(iniciales(alt))}" loading="lazy" onerror="HX._sinImagen(this)">`
+        : `<div class="hx-ph"><b>${esc(iniciales(alt))}</b>${olaSvg}</div>`;
+
+    // Hoteles solo en ES: no hay filtro de idioma, el servidor lo fija.
+    const estado = { q: '', estado: '', contenedor: '', orden: 'recientes', pagina: 1, vista: localStorageGet('hx-vista') || 'grid' };
+    let ultimos = [];
+    let editandoId = null;
+
+    function localStorageGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+    function localStorageSet(k, v) { try { localStorage.setItem(k, v); } catch { } }
+
+    // ---------------- API ----------------
+    async function api(url, opts = {}) {
+        const r = await fetch(url, {
+            ...opts,
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token, ...(opts.headers || {}) }
+        });
+        let data = null;
+        try { data = await r.json(); } catch { }
+        if (!r.ok) throw Object.assign(new Error(data?.mensaje || 'Algo salió mal.'), { data, status: r.status });
+        return data;
+    }
+
+    // ---------------- LISTADO ----------------
+    async function cargar() {
+        pintarSkeleton();
+        const p = new URLSearchParams({ q: estado.q, estado: estado.estado, contenedor: estado.contenedor, orden: estado.orden, pagina: estado.pagina, tam: estado.vista === 'grid' ? 12 : 20 });
+        try {
+            const d = await api('/Hoteles/Listar?' + p);
+            ultimos = d.items;
+            pintarResultados(d);
+            pintarStats(d.stats);
+        } catch (e) {
+            $('#hxResultados').innerHTML = `<div class="hx-empty"><h3>No pudimos cargar los hoteles</h3><p>${esc(e.message)}</p><button class="ev-btn" onclick="HX.recargar()"><i class="bi bi-arrow-clockwise"></i> Reintentar</button></div>`;
+        }
+    }
+
+    function pintarSkeleton() {
+        const n = estado.vista === 'grid' ? 6 : 4;
+        $('#hxResultados').innerHTML = `<div class="hx-grid">${Array.from({ length: n }, () => '<div class="hx-skel"><div class="a"></div><div class="l"></div><div class="l s"></div></div>').join('')}</div>`;
+    }
+
+    function pintarStats(s) {
+        if (!s) return;
+        animarNumero($('#stTotal'), s.total);
+        animarNumero($('#stVis'), s.visibles);
+        animarNumero($('#stOcu'), s.ocultos);
+        $('#stProm').textContent = s.precioPromedio == null ? '—' : fmt(s.precioPromedio);
+    }
+
+    function animarNumero(el, fin) {
+        const ini = parseInt(el.textContent.replace(/\D/g, ''), 10) || 0;
+        if (ini === fin) return;
+        const t0 = performance.now();
+        const paso = t => { const p = Math.min((t - t0) / 600, 1); el.textContent = Math.round(ini + (fin - ini) * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(paso); };
+        requestAnimationFrame(paso);
+    }
+
+    function pintarResultados(d) {
+        const cont = $('#hxResultados');
+        if (!d.items.length) {
+            const filtrando = estado.q || estado.estado !== '' || estado.contenedor;
+            cont.innerHTML = `
+                <div class="hx-empty">
+                    <svg class="ill" viewBox="0 0 240 120" aria-hidden="true">
+                        <rect x="0" y="80" width="240" height="40" rx="10" fill="#74F2E6" opacity=".5"/>
+                        <path d="M0 92 q20 -8 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 V120 H0Z" fill="#2BD4C4" opacity=".6"/>
+                        <g class="b"><rect x="80" y="30" width="80" height="54" rx="8" fill="#0B1215"/><rect x="92" y="42" width="14" height="12" rx="2" fill="#74F2E6"/><rect x="113" y="42" width="14" height="12" rx="2" fill="#74F2E6"/><rect x="134" y="42" width="14" height="12" rx="2" fill="#74F2E6"/><rect x="112" y="62" width="16" height="22" rx="2" fill="#B3FFF3"/><path d="M76 34 L120 10 L164 34Z" fill="#2BD4C4"/></g>
+                        <circle cx="200" cy="26" r="14" fill="#FFE08A"/>
+                    </svg>
+                    <h3>${filtrando ? 'No hay hoteles con esos filtros' : 'Todavía no hay hoteles cargados'}</h3>
+                    <p>${filtrando ? 'Prueba con otra búsqueda o limpia los filtros.' : 'Carga el primero y aparecerá aquí con su vista previa.'}</p>
+                    ${filtrando ? '<button class="ev-btn ghost" onclick="HX.limpiar()"><i class="bi bi-funnel"></i> Limpiar filtros</button>' : '<button class="ev-btn" onclick="HX.nuevo()"><i class="bi bi-plus-lg"></i> Cargar primer hotel</button>'}
+                </div>`;
+            $('#hxPager').hidden = true;
+            return;
+        }
+
+        cont.innerHTML = estado.vista === 'grid' ? vistaGrid(d.items) : vistaTabla(d.items);
+        pintarPager(d);
+    }
+
+    function vistaGrid(items) {
+        return `<div class="hx-grid">${items.map((h, n) => `
+            <article class="hx-card ${h.estado ? '' : 'off'}" style="--n:${n}" data-id="${h.id_Servicio}">
+                <div class="hx-img" onclick="HX.ver(${h.id_Servicio})">
+                    ${imagen(h, h.id_Destino)}
+                    <div class="hx-img-top">
+                        <span class="hx-tag ${h.estado ? 'vis' : 'ocu'}"><i class="bi bi-${h.estado ? 'eye' : 'eye-slash'}"></i> ${h.estado ? 'Visible' : 'Oculto'}</span>
+                        <span class="hx-tag">${esc(h.id_Idioma)} · #${h.id_Servicio}</span>
+                    </div>
+                    ${h.precioWeb != null ? `<div class="hx-price"><small>desde</small>${fmt(h.precioWeb)} ${simbolo(h.id_Moneda)}</div>` : ''}
+                </div>
+                <div class="hx-body">
+                    <h3>${esc(h.id_Destino)}</h3>
+                    <span class="hx-reg" title="${esc(h.descripcion)}">${esc(h.descripcion)}</span>
+                    <div class="hx-meta">
+                        <span><i class="bi bi-airplane"></i> ${esc(h.origen)} → ${esc(h.id_PaisDestino)}</span>
+                        ${h.contenedor ? `<span><i class="bi bi-grid"></i> ${esc(h.contenedor)}${h.posicion_Destino != null ? ' · #' + h.posicion_Destino : ''}</span>` : ''}
+                        ${h.nombre_Campanya ? `<span><i class="bi bi-megaphone"></i> ${esc(h.nombre_Campanya)}</span>` : ''}
+                    </div>
+                </div>
+                <div class="hx-foot">
+                    <label class="hx-switch" title="Mostrar u ocultar en la web">
+                        <input type="checkbox" ${h.estado ? 'checked' : ''} onchange="HX.estado(${h.id_Servicio}, this)"><span class="tr"></span> Web
+                    </label>
+                    <button class="hx-ibtn" title="Ver" onclick="HX.ver(${h.id_Servicio})"><i class="bi bi-eye"></i></button>
+                    <button class="hx-ibtn" title="Editar" onclick="HX.editar(${h.id_Servicio})"><i class="bi bi-pencil"></i></button>
+                    <button class="hx-ibtn danger" title="Eliminar" onclick="HX.eliminar(${h.id_Servicio})"><i class="bi bi-trash3"></i></button>
+                </div>
+            </article>`).join('')}</div>`;
+    }
+
+    function vistaTabla(items) {
+        return `<div class="hx-table-wrap"><table class="hx-table">
+            <thead><tr><th></th><th>Hotel</th><th>Régimen</th><th>Precio</th><th>Ruta</th><th>Sección</th><th>Web</th><th></th></tr></thead>
+            <tbody>${items.map((h, n) => `
+                <tr style="--n:${n}">
+                    <td>${esUrl(h.caratulaDestino) ? `<img class="hx-thumb" src="${esc(h.caratulaDestino)}" alt="" data-ini="${esc(iniciales(h.id_Destino))}" loading="lazy" onerror="HX._sinMini(this)">` : `<div class="hx-thumb">${esc(iniciales(h.id_Destino))}</div>`}</td>
+                    <td><div class="hx-name">${esc(h.id_Destino)}</div><small style="color:var(--ev-muted)">#${h.id_Servicio}${h.nombre_Campanya ? ' · ' + esc(h.nombre_Campanya) : ''}</small></td>
+                    <td><span class="hx-reg">${esc(h.descripcion)}</span></td>
+                    <td><b>${h.precioWeb != null ? fmt(h.precioWeb) + ' ' + simbolo(h.id_Moneda) : '—'}</b></td>
+                    <td>${esc(h.origen)} → ${esc(h.id_PaisDestino)}</td>
+                    <td>${esc(h.contenedor || '—')}${h.posicion_Destino != null ? ' · #' + h.posicion_Destino : ''}</td>
+                    <td><label class="hx-switch"><input type="checkbox" ${h.estado ? 'checked' : ''} onchange="HX.estado(${h.id_Servicio}, this)"><span class="tr"></span></label></td>
+                    <td><div class="hx-acts">
+                        <button class="hx-ibtn" title="Ver" onclick="HX.ver(${h.id_Servicio})"><i class="bi bi-eye"></i></button>
+                        <button class="hx-ibtn" title="Editar" onclick="HX.editar(${h.id_Servicio})"><i class="bi bi-pencil"></i></button>
+                        <button class="hx-ibtn danger" title="Eliminar" onclick="HX.eliminar(${h.id_Servicio})"><i class="bi bi-trash3"></i></button>
+                    </div></td>
+                </tr>`).join('')}</tbody></table></div>`;
+    }
+
+    function pintarPager(d) {
+        $('#hxPager').hidden = false;
+        const desde = (d.pagina - 1) * d.tam + 1, hasta = Math.min(d.pagina * d.tam, d.total);
+        $('#hxRango').textContent = `Mostrando ${desde}–${hasta} de ${d.total} hotel${d.total === 1 ? '' : 'es'}`;
+        if (d.paginas <= 1) { $('#hxPages').innerHTML = ''; return; }
+        const nums = [];
+        for (let i = 1; i <= d.paginas; i++) if (i === 1 || i === d.paginas || Math.abs(i - d.pagina) <= 1) nums.push(i); else if (nums[nums.length - 1] !== '…') nums.push('…');
+        $('#hxPages').innerHTML =
+            `<button ${d.pagina === 1 ? 'disabled' : ''} onclick="HX.pagina(${d.pagina - 1})" aria-label="Anterior"><i class="bi bi-chevron-left"></i></button>` +
+            nums.map(n => n === '…' ? '<button disabled>…</button>' : `<button class="${n === d.pagina ? 'on' : ''}" onclick="HX.pagina(${n})">${n}</button>`).join('') +
+            `<button ${d.pagina === d.paginas ? 'disabled' : ''} onclick="HX.pagina(${d.pagina + 1})" aria-label="Siguiente"><i class="bi bi-chevron-right"></i></button>`;
+    }
+
+    // ---------------- FILTROS ----------------
+    function grupo(sel, clave, alCambiar) {
+        $$(sel + ' [data-v]').forEach(b => b.addEventListener('click', () => {
+            $$(sel + ' [data-v]').forEach(x => x.classList.remove('on'));
+            b.classList.add('on');
+            estado[clave] = b.dataset.v;
+            estado.pagina = 1;
+            alCambiar?.(b.dataset.v);
+            if (clave === 'vista') localStorageSet('hx-vista', b.dataset.v);
+            cargar();
+        }));
+    }
+
+    async function cargarFiltroContenedores() {
+        const lista = await api('/Hoteles/Contenedores');
+        $('#fContenedor').innerHTML = '<option value="">Todas las secciones</option>' + lista.map(c => `<option value="${c.id_Contenedor}">${esc(c.nombre)}</option>`).join('');
+    }
+
+    // ---------------- FORMULARIO ----------------
+    const frm = $('#frm');
+    const campo = n => frm.elements[n];
+
+    async function cargarCombos(campanya, contenedor) {
+        const [camps, conts] = await Promise.all([api('/Hoteles/Campanyas'), api('/Hoteles/Contenedores')]);
+        campo('Id_Campanya').innerHTML = camps.length
+            ? '<option value="">Elige una campaña…</option>' + camps.map(c => `<option value="${c.id_Campanya}">${esc(c.nombre)} (#${c.id_Campanya})</option>`).join('')
+            : '<option value="">No hay campañas en español</option>';
+        campo('Id_Contenedor').innerHTML = '<option value="">Sin sección</option>' + conts.map(c => `<option value="${c.id_Contenedor}">${esc(c.nombre)} · posición ${c.posicion}</option>`).join('');
+
+        if (campanya != null) campo('Id_Campanya').value = campanya;
+        if (contenedor != null) campo('Id_Contenedor').value = contenedor;
+        else {
+            // Por defecto: la sección "HOTEL" del idioma, si existe
+            const hotel = conts.find(c => c.nombre.trim().toUpperCase() === 'HOTEL');
+            if (hotel) campo('Id_Contenedor').value = hotel.id_Contenedor;
+        }
+    }
+
+    function limpiarErrores() { $$('.hx-f.err', frm).forEach(f => { f.classList.remove('err'); $('.msg', f).textContent = ''; }); }
+
+    function marcarError(nombre, msg) {
+        const el = campo(nombre); if (!el) return;
+        const f = el.closest('.hx-f'); f.classList.add('err'); $('.msg', f).textContent = msg;
+    }
+
+    function preview() {
+        const nombre = campo('Id_Destino').value.trim() || 'Nombre del hotel';
+        const reg = campo('Descripcion').value.trim() || 'Régimen';
+        const img = campo('CaratulaDestino').value.trim();
+        const precio = campo('PrecioWeb').value;
+        const moneda = campo('Id_Moneda').value;
+        $('#pvNombre').textContent = nombre;
+        $('#pvReg').textContent = reg.length > 60 ? reg.slice(0, 60) + '…' : reg;
+        $('#pvRuta').innerHTML = `<i class="bi bi-airplane"></i> ${esc(campo('Origen').value || 'Origen')} (${esc(campo('Id_Pais_Origen').value)}) → ${esc(campo('Id_PaisDestino').value)}`;
+        $('#pvPrecio').innerHTML = precio ? `${fmt(+precio)} ${simbolo(moneda)} <small>desde${campo('Noches').value ? ' · ' + campo('Noches').value + ' noches' : ''}</small>` : '— <small>sin precio</small>';
+        $('#mSim').textContent = simbolo(moneda);
+        const pi = $('#pvImg');
+        const actual = pi.dataset.src || '';
+        if (actual !== img || !pi.innerHTML) { pi.dataset.src = img; pi.innerHTML = imagen({ caratulaDestino: img }, nombre); }
+        else if (!esUrl(img)) { const b = $('.hx-ph b', pi); if (b) b.textContent = iniciales(nombre); }
+    }
+
+    function abrir(id) {
+        $('#hxBackdrop').classList.add('open');
+        const d = $('#' + id); d.classList.add('open'); d.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function cerrar() {
+        $$('.hx-drawer.open').forEach(d => { d.classList.remove('open'); d.setAttribute('aria-hidden', 'true'); });
+        $('#hxBackdrop').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    async function nuevo() {
+        editandoId = null;
+        frm.reset();
+        campo('Id_Servicio').value = '';
+        campo('Estado').checked = true;
+        limpiarErrores();
+        $('#frmTitulo').textContent = 'Nuevo hotel';
+        $('#frmSub').textContent = 'Completa los datos y mira la vista previa en vivo.';
+        $('#frmIcon').className = 'bi bi-building-add';
+        $('#btnGuardar').innerHTML = '<i class="bi bi-check2-circle"></i> Guardar hotel';
+        $('#pvImg').innerHTML = '';
+        abrir('hxForm');
+        await cargarCombos();
+        preview();
+        setTimeout(() => campo('Id_Destino').focus(), 350);
+    }
+
+    async function editar(id) {
+        cerrar();
+        try {
+            const h = await api('/Hoteles/Obtener?id=' + id);
+            editandoId = id;
+            frm.reset();
+            limpiarErrores();
+            const set = (n, v) => { if (campo(n)) campo(n).value = v ?? ''; };
+            set('Id_Servicio', h.id_Servicio); set('Id_Destino', h.id_Destino); set('Descripcion', h.descripcion);
+            set('CaratulaDestino', h.caratulaDestino); set('PrecioWeb', h.precioWeb != null ? Math.round(h.precioWeb) : '');
+            set('Id_Moneda', (h.id_Moneda || '').trim()); set('Noches', h.noches); set('Id_Pais_Origen', (h.id_Pais_Origen || '').trim());
+            set('Origen', h.origen); set('Id_PaisDestino', (h.id_PaisDestino || '').trim()); set('Latitud', h.latitud); set('Longitud', h.longitud);
+            set('Posicion_Destino', h.posicion_Destino); set('Notas', h.notas);
+            campo('Estado').checked = h.estado !== false;
+            $('#frmTitulo').textContent = 'Editar hotel';
+            $('#frmSub').textContent = `#${h.id_Servicio} · los cambios se ven en la vista previa`;
+            $('#frmIcon').className = 'bi bi-pencil-square';
+            $('#btnGuardar').innerHTML = '<i class="bi bi-check2-circle"></i> Guardar cambios';
+            $('#pvImg').innerHTML = '';
+            abrir('hxForm');
+            await cargarCombos(h.id_Campanya, h.id_Contenedor ?? '');
+            preview();
+        } catch (e) { toast(e.message, 'err'); }
+    }
+
+    async function guardar() {
+        limpiarErrores();
+        const v = n => campo(n).value.trim();
+        const num = n => v(n) === '' ? null : Number(v(n));
+        const dto = {
+            Id_Servicio: editandoId,
+            Id_Destino: v('Id_Destino'), Descripcion: v('Descripcion'), CaratulaDestino: v('CaratulaDestino') || null,
+            Id_Idioma: 'ES', Id_Campanya: num('Id_Campanya'), Id_Moneda: v('Id_Moneda'),
+            PrecioWeb: num('PrecioWeb'), Noches: num('Noches'),
+            Id_Pais_Origen: v('Id_Pais_Origen'), Origen: v('Origen'), Id_PaisDestino: v('Id_PaisDestino'),
+            Latitud: v('Latitud') || null, Longitud: v('Longitud') || null,
+            Id_Contenedor: num('Id_Contenedor'), Posicion_Destino: num('Posicion_Destino'),
+            Estado: campo('Estado').checked, Notas: v('Notas') || null
+        };
+
+        // Validación amigable en el navegador (el servidor vuelve a validar)
+        const faltan = [];
+        if (!dto.Id_Destino) faltan.push(['Id_Destino', 'Escribe el nombre del hotel']);
+        if (!dto.Descripcion) faltan.push(['Descripcion', 'Elige un régimen o escribe una descripción']);
+        if (!dto.Id_Campanya) faltan.push(['Id_Campanya', 'Elige la campaña']);
+        if (!dto.Origen) faltan.push(['Origen', 'Escribe la ciudad de salida']);
+        if (dto.CaratulaDestino && !esUrl(dto.CaratulaDestino)) faltan.push(['CaratulaDestino', 'Debe empezar por http:// o https://']);
+        if (dto.PrecioWeb != null && dto.PrecioWeb < 0) faltan.push(['PrecioWeb', 'El precio no puede ser negativo']);
+        if (faltan.length) {
+            faltan.forEach(([n, m]) => marcarError(n, m));
+            campo(faltan[0][0]).focus();
+            toast('Revisa los campos marcados en rojo.', 'err');
+            return;
+        }
+
+        const btn = $('#btnGuardar'); const html = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<span class="hx-spin"></span> Guardando…';
+        try {
+            const r = await api('/Hoteles/Guardar', { method: 'POST', body: JSON.stringify(dto) });
+            cerrar();
+            toast(r.mensaje, 'ok');
+            if (!editandoId) { estado.pagina = 1; estado.orden = 'recientes'; $('#fOrden').value = 'recientes'; }
+            await cargar();
+            const card = document.querySelector(`[data-id="${r.id}"]`);
+            card?.animate([{ boxShadow: '0 0 0 0 rgba(116,242,230,.9)' }, { boxShadow: '0 0 0 14px rgba(116,242,230,0)' }], { duration: 1200, iterations: 2 });
+        } catch (e) {
+            if (e.data?.errores) Object.entries(e.data.errores).forEach(([k, m]) => marcarError(k.replace(/^\$\./, ''), m));
+            toast(e.message, 'err');
+        } finally {
+            btn.disabled = false; btn.innerHTML = html;
+        }
+    }
+
+    // ---------------- DETALLE ----------------
+    async function ver(id) {
+        try {
+            const h = await api('/Hoteles/Obtener?id=' + id);
+            $('#detTitulo').textContent = h.id_Destino;
+            $('#detSub').textContent = `#${h.id_Servicio} · ${h.estado === false ? 'Oculto' : 'Visible en la web'}`;
+            const fila = (t, v, w) => `<div class="${w ? 'w' : ''}"><dt>${t}</dt><dd>${v == null || v === '' ? '<span style="color:var(--ev-muted)">—</span>' : esc(v)}</dd></div>`;
+            const camp = ultimos.find(x => x.id_Servicio === id)?.nombre_Campanya;
+            $('#detBody').innerHTML = `
+                <div class="hx-det-img">${imagen(h, h.id_Destino)}${h.precioWeb != null ? `<div class="hx-price"><small>desde</small>${fmt(h.precioWeb)} ${simbolo(h.id_Moneda)}</div>` : ''}</div>
+                <dl class="hx-dl">
+                    ${fila('Régimen / descripción', h.descripcion, true)}
+                    ${fila('Idioma', h.id_Idioma)}${fila('Campaña', camp ? `${camp} (#${h.id_Campanya})` : '#' + h.id_Campanya)}
+                    ${fila('Salida', `${h.origen} (${h.id_Pais_Origen})`)}${fila('Destino', h.id_PaisDestino)}
+                    ${fila('Sección web', h.contenedor ? `${h.contenedor} · posición ${h.posicion_Contenedor ?? '—'}` : null)}${fila('Posición en la sección', h.posicion_Destino)}
+                    ${fila('Noches', h.noches)}${fila('Moneda', h.id_Moneda)}
+                    ${fila('Latitud', h.latitud)}${fila('Longitud', h.longitud)}
+                    ${fila('Imagen', h.caratulaDestino, true)}
+                    ${fila('Notas internas', h.notas, true)}
+                </dl>
+                ${h.latitud && h.longitud ? `<a class="ev-btn ghost" style="margin-top:14px" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${encodeURIComponent(h.latitud + ',' + h.longitud)}"><i class="bi bi-geo-alt"></i> Ver en el mapa</a>` : ''}`;
+            $('#detEditar').onclick = () => editar(id);
+            $('#detEliminar').onclick = () => eliminar(id);
+            abrir('hxDet');
+        } catch (e) { toast(e.message, 'err'); }
+    }
+
+    // ---------------- ESTADO ----------------
+    async function cambiarEstado(id, input, silencioso) {
+        const sw = input?.closest('.hx-switch'); sw?.classList.add('busy');
+        try {
+            const r = await api('/Hoteles/CambiarEstado?id=' + id, { method: 'POST' });
+            if (input) input.checked = r.estado;
+            const card = document.querySelector(`.hx-card[data-id="${id}"]`);
+            if (card) {
+                card.classList.toggle('off', !r.estado);
+                const tag = $('.hx-tag', card);
+                tag.className = 'hx-tag ' + (r.estado ? 'vis' : 'ocu');
+                tag.innerHTML = `<i class="bi bi-${r.estado ? 'eye' : 'eye-slash'}"></i> ${r.estado ? 'Visible' : 'Oculto'}`;
+            }
+            const it = ultimos.find(x => x.id_Servicio === id); if (it) it.estado = r.estado;
+            if (!silencioso) toast(r.mensaje, 'ok', { texto: 'Deshacer', accion: () => cambiarEstado(id, input, true).then(refrescarStats) });
+            refrescarStats();
+        } catch (e) {
+            if (input) input.checked = !input.checked;
+            toast(e.message, 'err');
+        } finally { sw?.classList.remove('busy'); }
+    }
+
+    async function refrescarStats() {
+        pintarStats(await api('/Hoteles/Estadisticas'));
+    }
+
+    // ---------------- ELIMINAR ----------------
+    function eliminar(id) {
+        const h = ultimos.find(x => x.id_Servicio === id);
+        $('#mdTexto').innerHTML = `Vas a eliminar <b>${esc(h?.id_Destino || '#' + id)}</b>. Esta acción no se puede deshacer.<br>Si solo quieres que no salga en la web, es mejor ocultarlo.`;
+        $('#mdOcultar').hidden = h ? !h.estado : false;
+        const modal = $('#hxModal');
+        modal.classList.add('open');
+        $('#hxBackdrop').classList.add('open');
+        const cerrarModal = () => { modal.classList.remove('open'); if (!$('.hx-drawer.open')) $('#hxBackdrop').classList.remove('open'); };
+        $('#mdNo').onclick = cerrarModal;
+        $('#mdOcultar').onclick = async () => { cerrarModal(); cerrar(); const inp = document.querySelector(`[data-id="${id}"] .hx-switch input`); await cambiarEstado(id, inp); };
+        $('#mdSi').onclick = async () => {
+            const b = $('#mdSi'); const html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="hx-spin"></span> Eliminando…';
+            try {
+                const r = await api('/Hoteles/Eliminar?id=' + id, { method: 'POST' });
+                cerrarModal(); cerrar();
+                const card = document.querySelector(`.hx-card[data-id="${id}"]`);
+                if (card) await card.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.9) translateY(10px)' }], { duration: 300, fill: 'forwards' }).finished;
+                toast(r.mensaje, 'ok');
+                cargar();
+            } catch (e) { toast(e.message, 'err'); }
+            finally { b.disabled = false; b.innerHTML = html; }
+        };
+        setTimeout(() => $('#mdNo').focus(), 50);
+    }
+
+    // ---------------- TOASTS ----------------
+    function toast(msg, tipo = 'ok', accion) {
+        const t = document.createElement('div');
+        t.className = 'hx-toast' + (tipo === 'err' ? ' err' : '');
+        t.innerHTML = `<i class="bi bi-${tipo === 'err' ? 'exclamation-octagon' : 'check-circle-fill'}"></i><span>${esc(msg)}</span>`;
+        if (accion) {
+            const b = document.createElement('button'); b.textContent = accion.texto;
+            b.onclick = () => { accion.accion(); quitar(); };
+            t.appendChild(b);
+        }
+        $('#hxToasts').appendChild(t);
+        const quitar = () => { t.classList.add('out'); setTimeout(() => t.remove(), 300); };
+        setTimeout(quitar, accion ? 6000 : 3800);
+    }
+
+    // ---------------- INICIO ----------------
+    function iniciar() {
+        let deb;
+        const q = $('#fQ');
+        q.addEventListener('input', () => {
+            $('#fQClear').style.display = q.value ? 'block' : 'none';
+            clearTimeout(deb);
+            deb = setTimeout(() => { estado.q = q.value.trim(); estado.pagina = 1; cargar(); }, 300);
+        });
+        $('#fQClear').addEventListener('click', () => { q.value = ''; q.dispatchEvent(new Event('input')); q.focus(); });
+        cargarFiltroContenedores();
+        grupo('#fEstado', 'estado');
+        grupo('#fVista', 'vista');
+        $$('#fVista [data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === estado.vista));
+        $('#fOrden').addEventListener('change', e => { estado.orden = e.target.value; estado.pagina = 1; cargar(); });
+        $('#fContenedor').addEventListener('change', e => { estado.contenedor = e.target.value; estado.pagina = 1; cargar(); });
+
+        // Formulario: vista previa en vivo + combos por idioma
+        frm.addEventListener('input', e => { e.target.closest('.hx-f')?.classList.remove('err'); preview(); });
+        frm.addEventListener('change', preview);
+        $$('[data-reg]').forEach(b => b.addEventListener('click', () => {
+            const d = campo('Descripcion');
+            const actual = d.value.trim();
+            const regs = $$('[data-reg]').map(x => x.dataset.reg);
+            const resto = regs.reduce((t, r) => t.startsWith(r) ? t.slice(r.length).replace(/^\s*[—-]\s*/, '') : t, actual);
+            d.value = resto ? `${b.dataset.reg} — ${resto}` : b.dataset.reg;
+            d.dispatchEvent(new Event('input', { bubbles: true }));
+        }));
+
+        $('#hxBackdrop').addEventListener('click', () => { if (!$('#hxModal').classList.contains('open')) cerrar(); });
+
+        document.addEventListener('keydown', e => {
+            const formAbierto = $('#hxForm').classList.contains('open');
+            if (e.key === 'Escape') { if ($('#hxModal').classList.contains('open')) $('#mdNo').click(); else cerrar(); }
+            if (formAbierto && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); guardar(); }
+            if (e.key === '/' && !/input|textarea|select/i.test(document.activeElement.tagName)) { e.preventDefault(); q.focus(); }
+        });
+
+        cargar();
+        if (new URLSearchParams(location.search).get('nuevo') === '1') nuevo();
+    }
+
+    document.addEventListener('DOMContentLoaded', iniciar);
+
+    return {
+        nuevo, editar, ver, guardar, cerrar, eliminar,
+        estado: (id, input) => cambiarEstado(id, input),
+        pagina: n => { estado.pagina = n; cargar(); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+        recargar: cargar,
+        limpiar: () => { $('#fQ').value = ''; $('#fQClear').style.display = 'none'; Object.assign(estado, { q: '', estado: '', contenedor: '', pagina: 1 }); $$('#fEstado [data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === '')); $('#fContenedor').value = ''; cargar(); },
+        // Si la URL de la imagen no carga, se muestra el placeholder con iniciales
+        _sinImagen: img => {
+            const d = document.createElement('div');
+            d.className = 'hx-ph';
+            d.innerHTML = '<b></b>' + olaSvg;
+            d.firstChild.textContent = img.dataset.ini || '';
+            img.replaceWith(d);
+        },
+        _sinMini: img => {
+            const d = document.createElement('div');
+            d.className = 'hx-thumb';
+            d.textContent = img.dataset.ini || '';
+            img.replaceWith(d);
+        }
+    };
+})();
+</script>
+}

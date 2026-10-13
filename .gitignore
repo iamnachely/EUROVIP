@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+*.user
+Logs/
+publish/
+# Secretos locales (cadena de conexión con password)
+appsettings.Local.json

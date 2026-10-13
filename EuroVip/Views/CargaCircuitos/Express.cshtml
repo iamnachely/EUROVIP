@@ -1,0 +1,567 @@
+@{
+    ViewData["Title"] = "Carga Express de circuitos";
+    var circuitoInicial = ViewData["Circuito"] as string;
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .xp { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; margin-top: 20px; align-items: start; }
+    .xp-panel { background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 26px; padding: 26px 28px; min-height: 420px; }
+    .xp-panel h2 { margin: 0 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
+    .xp-panel > .sub { color: var(--ev-muted); margin: 0 0 20px; font-weight: 500; }
+    .xp-nav { display: flex; gap: 10px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--ev-line); align-items: center; }
+    .xp-nav .sp { flex: 1; }
+    .xp-circs { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; max-height: 430px; overflow-y: auto; padding: 4px; }
+    .xp-circ { text-align: left; border: 1.5px solid var(--ev-line); border-radius: 18px; background: var(--ev-surface); cursor: pointer; padding: 0; overflow: hidden; font: inherit; color: inherit; transition: all .25s var(--ev-ease); }
+    .xp-circ:hover { border-color: var(--ev-aqua); transform: translateY(-2px); }
+    .xp-circ.on { border-color: var(--ev-teal); box-shadow: 0 0 0 4px rgba(116,242,230,.35); }
+    .xp-circ .im { height: 84px; background: var(--ev-grad); position: relative; display: grid; place-items: center; font-weight: 800; font-size: 26px; overflow: hidden; }
+    .xp-circ .im img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .xp-circ .tx { padding: 10px 12px; }
+    .xp-circ b { display: block; font-size: 14px; }
+    .xp-circ small { color: var(--ev-muted); font-weight: 600; font-size: 12px; display: block; }
+    .xp-sel { display: flex; gap: 14px; align-items: center; padding: 16px; border-radius: 20px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); margin-top: 16px; }
+    .xp-sel .ico { width: 54px; height: 54px; border-radius: 16px; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-size: 24px; flex-shrink: 0; }
+    .xp-gen { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 12px; align-items: end; padding: 16px; border-radius: 20px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); margin-bottom: 16px; }
+    .xp-gen .ui-f { margin: 0; }
+    .xp-dias { display: flex; gap: 4px; margin-top: 10px; flex-wrap: wrap; }
+    .xp-dias .ui-pick { padding: 6px 11px; }
+    .xp-break { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13.5px; font-weight: 700; padding: 12px 14px; border-radius: 14px; background: var(--ev-surface-2); margin-top: 6px; }
+    .xp-break span { padding: 5px 10px; border-radius: 10px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
+    .xp-break .eq { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+    .xp-notas .nota { display: grid; grid-template-columns: 200px minmax(0,1fr) auto; gap: 10px; margin-bottom: 10px; align-items: start; }
+    @@media (max-width: 1250px) { .xp { grid-template-columns: 1fr; } .ui-summary { position: static; } }
+    @@media (max-width: 1500px) { .xp-gen { grid-template-columns: repeat(3, minmax(0, 1fr)); } .xp-gen .ui-f:nth-child(4) { grid-column: 1 / -1; } .xp-gen > .ev-btn { grid-column: 1 / -1; justify-content: center; } }
+    @@media (max-width: 900px) { .xp-gen { grid-template-columns: 1fr 1fr; } .xp-notas .nota { grid-template-columns: 1fr; } }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="ui-hero ev-rise">
+    <i class="bi bi-lightning-charge ui-hero-ico" aria-hidden="true"></i>
+    <div>
+        <span class="ev-chip dark"><i class="bi bi-lightning-charge"></i> Versión 1 · Todo junto</span>
+        <h1>Carga Express de circuitos</h1>
+        <p>En 5 pasos: elige o crea el circuito, marca las fechas en el calendario, pon precio y campaña, decide si lleva vuelo y listo. A la derecha ves en vivo lo que se va a crear.</p>
+    </div>
+    <div class="ui-hero-acts">
+        <a class="ev-btn light" asp-controller="CargaCircuitos" asp-action="Clasica"><i class="bi bi-ui-checks"></i> Ir a la Clásica</a>
+        <a class="ev-btn light" asp-controller="Circuitos" asp-action="Index"><i class="bi bi-signpost-split"></i> Catálogo</a>
+    </div>
+    <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+    </svg>
+</section>
+
+<div class="xp" id="xpApp">
+    <div>
+        <nav class="ui-steps" id="xpSteps">
+            <button type="button" class="ui-step on" data-p="1"><span class="b">1</span><span><b>Circuito</b><small>elegir o crear</small></span></button>
+            <button type="button" class="ui-step" data-p="2"><span class="b">2</span><span><b>Fechas y precios</b><small>calendario</small></span></button>
+            <button type="button" class="ui-step" data-p="3"><span class="b">3</span><span><b>Comercial</b><small>campaña, tasas</small></span></button>
+            <button type="button" class="ui-step" data-p="4"><span class="b">4</span><span><b>Vuelo</b><small>opcional</small></span></button>
+            <button type="button" class="ui-step" data-p="5"><span class="b">5</span><span><b>Confirmar</b><small>notas y cargar</small></span></button>
+        </nav>
+
+        <!-- PASO 1 -->
+        <section class="xp-panel ui-pane on" data-paso="1">
+            <h2>¿Qué circuito vas a cargar?</h2>
+            <p class="sub">Elige uno del catálogo o créalo aquí mismo en un minuto.</p>
+            <div class="ui-row" style="margin-bottom:16px">
+                <button type="button" class="ui-opt on" data-modo="existente"><span class="ico"><i class="bi bi-collection"></i></span><span><b>Usar un circuito existente</b><small>Ya está en el catálogo</small></span></button>
+                <button type="button" class="ui-opt" data-modo="nuevo"><span class="ico"><i class="bi bi-plus-lg"></i></span><span><b>Crear circuito nuevo</b><small>Se crea junto con la carga</small></span></button>
+            </div>
+
+            <div id="xpExistente">
+                <label class="ui-search" style="margin-bottom:12px"><i class="bi bi-search"></i><input id="xpBuscar" type="search" placeholder="Buscar circuito por nombre, código o destino…"></label>
+                <div class="xp-circs" id="xpCircs"></div>
+                <div id="xpElegido"></div>
+            </div>
+
+            <div id="xpNuevo" hidden>
+                <div class="ui-row">
+                    <div class="ui-f"><label>Nombre del circuito <em>máx. 50</em></label><input id="nNombre" maxlength="50" placeholder="Ej. Joyas de Quisqueya"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Código único</label><input id="nCodigo" maxlength="100" placeholder="Se llena solo"><span class="msg"></span></div>
+                </div>
+                <div class="ui-row r3">
+                    <div class="ui-f"><label>Tour operador</label><input id="nProveedor" placeholder="Busca el tour operador…"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Noches</label><input id="nNoches" type="number" min="1" max="60" value="7"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Imagen <em>URL opcional</em></label><input id="nCaratula" maxlength="200" placeholder="https://…"></div>
+                </div>
+                <div class="ui-row">
+                    <div class="ui-f"><label>País de los destinos</label><select id="nPais"></select></div>
+                    <div class="ui-f"><label>Agregar destinos</label><input id="nDestino" placeholder="Escribe un destino…"><span class="msg"></span></div>
+                </div>
+                <div class="ui-chips" id="nDestinos" style="margin-bottom:16px"></div>
+                <details>
+                    <summary style="cursor:pointer;font-weight:800;margin-bottom:12px"><i class="bi bi-building"></i> Hoteles del circuito <em style="font-style:normal;color:var(--ev-muted);font-weight:600">(opcional, también se pueden agregar después)</em></summary>
+                    <div class="ui-row">
+                        <div class="ui-f"><label>Categoría</label><select id="nCatHotel"></select></div>
+                        <div class="ui-f"><label>Buscar hotel</label><input id="nHotel" placeholder="Nombre del hotel…"></div>
+                    </div>
+                    <div class="ui-chips" id="nHoteles"></div>
+                </details>
+            </div>
+            <div class="xp-nav"><span class="sp"></span><button type="button" class="ev-btn" data-sig>Siguiente: fechas <i class="bi bi-arrow-right"></i></button></div>
+        </section>
+
+        <!-- PASO 2 -->
+        <section class="xp-panel ui-pane" data-paso="2">
+            <h2>Fechas de salida y precio</h2>
+            <p class="sub">Genera varias fechas de una vez o toca los días en el calendario. El precio es lo que paga el cliente (incluye tasas).</p>
+            <div class="xp-gen">
+                <div class="ui-f"><label>Desde</label><input type="date" id="gDesde"></div>
+                <div class="ui-f"><label>Hasta</label><input type="date" id="gHasta"></div>
+                <div class="ui-f"><label>Precio total</label><div class="ui-money"><b class="sim">€</b><input type="number" id="gPrecio" min="0" step="1" placeholder="1290"></div></div>
+                <div class="ui-f"><label>Solo los días</label><div class="xp-dias" id="gDias">
+                    @foreach (var (d, i) in new[] { ("L", 1), ("M", 2), ("X", 3), ("J", 4), ("V", 5), ("S", 6), ("D", 0) })
+                    {
+                        <button type="button" class="ui-pick on" data-d="@i">@d</button>
+                    }
+                </div></div>
+                <button type="button" class="ev-btn" onclick="XP.generar()"><i class="bi bi-calendar-plus"></i> Agregar</button>
+            </div>
+            <div id="xpCal"></div>
+            <div style="display:flex;gap:10px;align-items:center;margin:18px 0 10px;flex-wrap:wrap">
+                <b style="font-size:15px"><span id="xpNumSal">0</span> salidas</b>
+                <span class="sp" style="flex:1"></span>
+                <div class="ui-money" style="width:150px"><b class="sim">€</b><input class="ui-input" type="number" id="xpTodas" placeholder="Precio para todas" style="padding:9px 10px 9px 30px"></div>
+                <button type="button" class="ev-btn ghost sm" onclick="XP.precioTodas()">Aplicar a todas</button>
+                <button type="button" class="ev-btn ghost sm" onclick="XP.limpiarSalidas()"><i class="bi bi-eraser"></i> Quitar todas</button>
+            </div>
+            <div id="xpTabla"></div>
+            <div class="xp-nav"><button type="button" class="ev-btn ghost" data-ant><i class="bi bi-arrow-left"></i> Atrás</button><span class="sp"></span><button type="button" class="ev-btn" data-sig>Siguiente: comercial <i class="bi bi-arrow-right"></i></button></div>
+        </section>
+
+        <!-- PASO 3 -->
+        <section class="xp-panel ui-pane" data-paso="3">
+            <h2>Datos comerciales</h2>
+            <p class="sub">Categoría de hoteles, desde dónde se vende, campañas y suplementos.</p>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>A</span> Categoría de hoteles</div>
+                <div class="ui-chips" id="cCategorias"></div>
+            </div>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>B</span> Origen de venta y moneda</div>
+                <div class="ui-row r3">
+                    <div class="ui-f"><label>País de origen</label><select id="cPaisOrigen"></select></div>
+                    <div class="ui-f"><label>Ciudad de origen</label><input id="cOrigen" placeholder="Ej. Madrid"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Moneda</label><select id="cDivisa"></select></div>
+                </div>
+            </div>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>C</span> Campañas <small>se crea una salida por cada fecha × campaña</small></div>
+                <div id="cCampanyas"></div>
+            </div>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>D</span> Suplementos y tasas <small>van incluidos en el precio total</small></div>
+                <div id="cSuplementos"></div>
+                <div class="xp-break" id="cDesglose"></div>
+            </div>
+            <div class="xp-nav"><button type="button" class="ev-btn ghost" data-ant><i class="bi bi-arrow-left"></i> Atrás</button><span class="sp"></span><button type="button" class="ev-btn" data-sig>Siguiente: vuelo <i class="bi bi-arrow-right"></i></button></div>
+        </section>
+
+        <!-- PASO 4 -->
+        <section class="xp-panel ui-pane" data-paso="4">
+            <h2>¿El circuito incluye vuelo?</h2>
+            <p class="sub">En Eurovip el vuelo es opcional. Si no lleva, se vende solo terrestre.</p>
+            <div class="ui-row" style="margin-bottom:18px">
+                <button type="button" class="ui-opt on" data-vuelo="no"><span class="ico"><i class="bi bi-bus-front"></i></span><span><b>Sin vuelo</b><small>Solo terrestre (recomendado si no hay vuelo fijo)</small></span></button>
+                <button type="button" class="ui-opt" data-vuelo="si"><span class="ico"><i class="bi bi-airplane"></i></span><span><b>Con vuelo</b><small>Ida y vuelta con sus horarios</small></span></button>
+            </div>
+            <div id="xpVuelos" hidden>
+                <div class="ui-note info"><i class="bi bi-info-circle"></i><div>Las fechas de los vuelos se calculan solas: la ida sale el día de la salida y la vuelta el último día del circuito. Si un vuelo llega de madrugada se pasa al día siguiente.</div></div>
+                <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-airplane"></i></span> Vuelos de ida</div><div id="vIda"></div></div>
+                <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-airplane" style="transform:scaleX(-1)"></i></span> Vuelos de vuelta</div><div id="vVuelta"></div></div>
+            </div>
+            <div class="xp-nav"><button type="button" class="ev-btn ghost" data-ant><i class="bi bi-arrow-left"></i> Atrás</button><span class="sp"></span><button type="button" class="ev-btn" data-sig>Siguiente: confirmar <i class="bi bi-arrow-right"></i></button></div>
+        </section>
+
+        <!-- PASO 5 -->
+        <section class="xp-panel ui-pane" data-paso="5">
+            <h2>Notas y confirmación</h2>
+            <p class="sub">Agrega lo que incluye y no incluye (opcional) y revisa antes de cargar.</p>
+            <div class="ui-sec xp-notas">
+                <div class="ui-sec-t"><span><i class="bi bi-journal-text"></i></span> Notas <small>se guardan en cada salida</small></div>
+                <div id="xpNotas"></div>
+                <div class="ui-chips">
+                    <button type="button" class="ui-pick" onclick="XP.nota('Incluye')">+ Incluye</button>
+                    <button type="button" class="ui-pick" onclick="XP.nota('No incluye')">+ No incluye</button>
+                    <button type="button" class="ui-pick" onclick="XP.nota('Condiciones')">+ Condiciones</button>
+                    <button type="button" class="ui-pick" onclick="XP.nota('Importante')">+ Importante</button>
+                </div>
+            </div>
+            <label class="ui-switch" style="margin-bottom:18px"><input type="checkbox" id="xpPublicar" checked><span class="tr"></span> Actualizar la vitrina web de circuitos al terminar</label>
+            <div id="xpRevision"></div>
+            <div class="xp-nav">
+                <button type="button" class="ev-btn ghost" data-ant><i class="bi bi-arrow-left"></i> Atrás</button><span class="sp"></span>
+                <button type="button" class="ev-btn ghost" id="xpRevisar"><i class="bi bi-search"></i> Revisar</button>
+                <button type="button" class="ev-btn" id="xpCargar"><i class="bi bi-rocket-takeoff"></i> Cargar salidas</button>
+            </div>
+        </section>
+
+        <!-- ÉXITO -->
+        <section class="xp-panel ui-pane" data-paso="ok"><div class="ui-success" id="xpOk"></div></section>
+    </div>
+
+    <!-- RESUMEN EN VIVO -->
+    <aside class="ui-summary" id="xpResumen"></aside>
+</div>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script>
+const XP = (() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    const S = {
+        paso: 1, modo: 'existente', circuito: null, circuitos: [],
+        nuevo: { destinos: [], hoteles: [] },
+        salidas: new Map(),           // fecha ISO → precio total
+        categoria: '', conVuelo: false, notas: []
+    };
+    let cat, campanyas, suplementos, vIda, vVuelta, cal;
+
+    // ===================== NAVEGACIÓN =====================
+    const noches = () => S.modo === 'nuevo' ? (parseInt($('#nNoches').value, 10) || 0) : (S.circuito?.noches || 0);
+    const nombreCircuito = () => S.modo === 'nuevo' ? $('#nNombre').value.trim() : S.circuito?.nombre;
+
+    function ir(p) {
+        S.paso = p;
+        $$('[data-paso]').forEach(x => x.classList.toggle('on', String(x.dataset.paso) === String(p)));
+        $$('#xpSteps .ui-step').forEach(b => { const n = +b.dataset.p; b.classList.toggle('on', n === p); b.classList.toggle('done', p === 'ok' || n < p); });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (p === 2) cal.pintar();
+        resumen();
+    }
+
+    function validarPaso(p) {
+        const err = [];
+        const marca = (id, msg) => { const f = $(id).closest('.ui-f'); f.classList.add('err'); const m = $('.msg', f); if (m) m.textContent = msg; err.push(msg); };
+        $$(`[data-paso="${p}"] .ui-f.err`).forEach(f => f.classList.remove('err'));
+        if (p === 1) {
+            if (S.modo === 'existente' && !S.circuito) err.push('Elige un circuito de la lista.');
+            if (S.modo === 'nuevo') {
+                if (!$('#nNombre').value.trim()) marca('#nNombre', 'Escribe el nombre');
+                else if (!/^[\p{L}\p{M}\p{N}' ]+$/u.test($('#nNombre').value.trim())) marca('#nNombre', 'Sin guiones ni símbolos');
+                if (!/^[A-Za-z0-9 ]+$/.test($('#nCodigo').value.trim())) marca('#nCodigo', 'Solo letras, números y espacios');
+                if (!$('#nProveedor').dataset.valor) marca('#nProveedor', 'Elige el tour operador de la lista');
+                const n = noches(); if (n < 1 || n > 60) marca('#nNoches', 'Entre 1 y 60');
+                if (!S.nuevo.destinos.length) marca('#nDestino', 'Agrega al menos un destino');
+            }
+        }
+        if (p === 2) {
+            if (!S.salidas.size) err.push('Agrega al menos una fecha de salida.');
+            const sinPrecio = [...S.salidas.values()].filter(v => !(v > 0)).length;
+            if (sinPrecio) err.push(`Hay ${sinPrecio} fecha${sinPrecio > 1 ? 's' : ''} sin precio.`);
+            const bajas = [...S.salidas.values()].filter(v => v > 0 && v - suplementos.total() < cat.minimo).length;
+            if (bajas) err.push(`${bajas} salida${bajas > 1 ? 's quedan' : ' queda'} con precio base menor al mínimo (${EV.fmt(cat.minimo)}).`);
+        }
+        if (p === 3) {
+            if (!S.categoria) err.push('Elige la categoría de hoteles.');
+            if (!$('#cOrigen').dataset.valor) marca('#cOrigen', 'Elige la ciudad de la lista');
+            if (!campanyas.datos().length) err.push('Agrega al menos una campaña.');
+            const ts = suplementos.datos().map(x => x.opcion); if (new Set(ts).size !== ts.length) err.push('Hay suplementos repetidos.');
+        }
+        if (p === 4 && S.conVuelo) {
+            if (!vIda.cantidad()) err.push('Agrega al menos un vuelo de ida.');
+            if (!vVuelta.cantidad()) err.push('Agrega al menos un vuelo de vuelta.');
+            err.push(...vIda.validar(), ...vVuelta.validar());
+        }
+        $(`#xpSteps [data-p="${p}"]`)?.classList.toggle('err', err.length > 0);
+        if (err.length) EV.toast(err[0], 'err');
+        return err.length === 0;
+    }
+
+    // ===================== PASO 1: CIRCUITO =====================
+    async function cargarCircuitos() {
+        const q = $('#xpBuscar').value.trim();
+        S.circuitos = await EV.api('/Circuitos/Listar?q=' + encodeURIComponent(q));
+        const img = c => !c.caratula ? '' : `<img src="${esc(EV.esUrl(c.caratula) ? c.caratula : 'https://photos.dominicanatours.com/imagenes/circuitos/' + c.caratula)}" alt="" onerror="this.remove()">`;
+        $('#xpCircs').innerHTML = S.circuitos.length ? S.circuitos.map(c => `
+            <button type="button" class="xp-circ ${S.circuito?.codigo === c.codigo ? 'on' : ''}" data-c="${esc(c.codigo)}">
+                <div class="im">${esc(EV.iniciales(c.nombre))}${img(c)}</div>
+                <div class="tx"><b>${esc(c.nombre)}</b><small>${c.noches} noches · ${esc(c.paises || '')}</small><small>${esc(c.destinos || '')}</small></div>
+            </button>`).join('')
+            : `<div class="ui-empty" style="grid-column:1/-1"><p>${q ? 'Sin resultados.' : 'No hay circuitos todavía.'}</p><button type="button" class="ev-btn sm" onclick="XP.modo('nuevo')"><i class="bi bi-plus-lg"></i> Crear uno nuevo aquí</button></div>`;
+    }
+
+    async function elegir(codigo) {
+        const c = await EV.api('/Circuitos/Obtener?codigo=' + encodeURIComponent(codigo));
+        S.circuito = c;
+        $$('.xp-circ').forEach(b => b.classList.toggle('on', b.dataset.c === codigo));
+        const cats = [...new Set(c.hoteles.map(h => h.categoria))];
+        $('#xpElegido').innerHTML = `<div class="xp-sel"><span class="ico"><i class="bi bi-signpost-split"></i></span><div style="min-width:0">
+            <b style="font-size:16px">${esc(c.nombre)}</b><div style="color:var(--ev-muted);font-weight:600;font-size:13px">${c.noches} noches · ${esc(c.proveedor || c.id_Proveedor)} · ${c.destinos.map(d => esc(d.id_Destino)).join(' · ')}</div>
+            <div class="ui-chips" style="margin-top:8px"><span class="ui-chip ghost">${c.hoteles.length} hoteles</span><span class="ui-chip ghost">${c.dias.length} días de itinerario</span><span class="ui-chip ghost">${c.salidas.length} salidas cargadas</span>${cats.map(x => `<span class="ui-chip">${esc(x)}</span>`).join('')}</div></div></div>`;
+        if (!S.categoria && cats.length) { S.categoria = cats[0]; pintarCategorias(); }
+        resumen();
+    }
+
+    function pintarNuevo() {
+        $('#nDestinos').innerHTML = S.nuevo.destinos.map((d, i) => `<span class="ui-chip"><i class="bi bi-geo-alt-fill"></i> ${esc(d.id_Destino)} <small>${esc(d.id_Pais)}</small><button type="button" onclick="XP.quitarDestino(${i})">✕</button></span>`).join('');
+        $('#nHoteles').innerHTML = S.nuevo.hoteles.map((h, i) => `<span class="ui-chip ghost"><i class="bi bi-building"></i> ${esc(h.nombre)} <small>${esc(h.categoria)}</small><button type="button" onclick="XP.quitarHotel(${i})">✕</button></span>`).join('');
+        resumen();
+    }
+
+    // ===================== PASO 2: SALIDAS =====================
+    function pintarSalidas() {
+        const n = noches();
+        const lista = [...S.salidas.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+        $('#xpNumSal').textContent = lista.length;
+        const base = suplementos.total();
+        $('#xpTabla').innerHTML = !lista.length ? '<div class="ui-empty" style="padding:22px"><p style="margin:0">Sin fechas. Usa el generador o toca días en el calendario.</p></div>' :
+            `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Salida</th><th>Regreso</th><th style="width:170px">Precio total</th><th class="num">Precio base</th><th></th></tr></thead><tbody>
+            ${lista.map(([f, p]) => { const b = (p || 0) - base; const bad = p > 0 && b < cat.minimo; return `<tr class="${!(p > 0) || bad ? 'bad' : ''}">
+                <td><b>${EV.fechaCorta(f)}</b> <small style="color:var(--ev-muted)">${f.slice(0, 4)}</small></td><td>${n ? EV.fechaCorta(EV.sumarDias(f, n)) : '—'}</td>
+                <td><div class="ui-money"><b>${EV.simbolo($('#cDivisa').value)}</b><input type="number" min="0" step="1" value="${p || ''}" data-f="${f}"></div></td>
+                <td class="num" style="color:${bad ? '#D92D20' : 'inherit'}">${p > 0 ? EV.fmt(b) : '—'}${bad ? ' <i class="bi bi-exclamation-triangle" title="Menor al mínimo"></i>' : ''}</td>
+                <td><button type="button" class="ui-ibtn danger" data-quitar="${f}" title="Quitar"><i class="bi bi-x-lg"></i></button></td></tr>`; }).join('')}</tbody></table></div>`;
+        resumen();
+    }
+
+    // ===================== PASO 3: COMERCIAL =====================
+    function pintarCategorias() {
+        $('#cCategorias').innerHTML = cat.categorias.map(c => `<button type="button" class="ui-pick ${S.categoria === c.categoria ? 'on' : ''}" data-cat="${esc(c.categoria)}"><i class="bi bi-star"></i> ${esc(c.categoria)}</button>`).join('');
+        resumen();
+    }
+
+    function desglose() {
+        const precios = [...S.salidas.values()].filter(x => x > 0);
+        const ejemplo = precios.length ? Math.min(...precios) : 0;
+        const t = suplementos.total();
+        const m = $('#cDivisa').value;
+        $('#cDesglose').innerHTML = `<i class="bi bi-calculator"></i> Ejemplo con la salida más barata:
+            <span>Base ${EV.dinero(ejemplo - t, m)}</span> + <span>Tasas ${EV.dinero(t, m)}</span> = <span class="eq">Cliente paga ${EV.dinero(ejemplo, m)}</span>`;
+    }
+
+    // ===================== NOTAS =====================
+    function pintarNotas() {
+        $('#xpNotas').innerHTML = S.notas.map((n, i) => `<div class="nota">
+            <select class="ui-input" data-i="${i}" data-k="tipo">${['Incluye', 'No incluye', 'Condiciones', 'Importante', 'Documentación', 'Oferta'].map(t => `<option ${t === n.tipo ? 'selected' : ''}>${t}</option>`).join('')}</select>
+            <textarea class="ui-input" data-i="${i}" data-k="texto" rows="2" placeholder="Escribe la nota…">${esc(n.texto)}</textarea>
+            <button type="button" class="ui-ibtn danger" onclick="XP.quitarNota(${i})"><i class="bi bi-trash3"></i></button></div>`).join('');
+    }
+
+    // ===================== RESUMEN =====================
+    function resumen() {
+        const fechas = [...S.salidas.keys()].sort();
+        const precios = [...S.salidas.values()].filter(x => x > 0);
+        const camps = campanyas ? campanyas.datos() : [];
+        const total = fechas.length * Math.max(1, camps.length);
+        const m = $('#cDivisa')?.value || 'EUR';
+        const n = noches();
+        $('#xpResumen').innerHTML = `
+            <span class="mini">SE VAN A CREAR</span>
+            <div class="big">${total}</div>
+            <div class="mini">salida${total === 1 ? '' : 's'} (${fechas.length} fecha${fechas.length === 1 ? '' : 's'} × ${Math.max(1, camps.length)} campaña${camps.length === 1 ? '' : 's'})</div>
+            <dl>
+                <div><dt>Circuito</dt><dd>${esc(nombreCircuito() || '—')}${S.modo === 'nuevo' && nombreCircuito() ? ' <span class="ui-chip" style="font-size:10px;padding:2px 8px">nuevo</span>' : ''}</dd></div>
+                <div><dt>Noches</dt><dd>${n || '—'}</dd></div>
+                <div><dt>Primera salida</dt><dd>${fechas.length ? EV.fecha(fechas[0]) : '—'}</dd></div>
+                <div><dt>Última salida</dt><dd>${fechas.length ? EV.fecha(fechas[fechas.length - 1]) : '—'}</dd></div>
+                <div><dt>Precio</dt><dd>${precios.length ? (Math.min(...precios) === Math.max(...precios) ? EV.dinero(precios[0], m) : `${EV.dinero(Math.min(...precios), m)} – ${EV.dinero(Math.max(...precios), m)}`) : '—'}</dd></div>
+                <div><dt>Categoría</dt><dd>${esc(S.categoria || '—')}</dd></div>
+                <div><dt>Origen</dt><dd>${esc($('#cOrigen')?.dataset.valor || '—')}</dd></div>
+                <div><dt>Campañas</dt><dd>${camps.length ? camps.map(c => esc(cat.campanyas.find(x => x.valor === c.opcion)?.texto || c.opcion) + (c.valor ? ` (-${c.valor}%)` : '')).join('<br>') : '—'}</dd></div>
+                <div><dt>Vuelo</dt><dd>${S.conVuelo ? `<i class="bi bi-airplane"></i> ${vIda?.cantidad() || 0} ida · ${vVuelta?.cantidad() || 0} vuelta` : '<i class="bi bi-bus-front"></i> Sin vuelo'}</dd></div>
+            </dl>`;
+        if (S.paso === 3) desglose();
+    }
+
+    // ===================== ENVIAR =====================
+    function armarDto() {
+        const camps = campanyas.datos();
+        const dto = {
+            Modo: 'express',
+            CodigoCircuito: S.modo === 'existente' ? S.circuito?.codigo : null,
+            NuevoCircuito: S.modo === 'nuevo' ? {
+                Codigo: $('#nCodigo').value.trim(), Nombre: $('#nNombre').value.trim(), Id_Proveedor: $('#nProveedor').dataset.valor || '',
+                Noches: noches(), Caratula: $('#nCaratula').value.trim() || null,
+                Destinos: S.nuevo.destinos.map(d => ({ Id_Destino: d.id_Destino, Id_Pais: d.id_Pais })),
+                Hoteles: S.nuevo.hoteles.map(h => ({ Id_Alojamiento: h.id_Alojamiento, Categoria: h.categoria })), Dias: []
+            } : null,
+            Categoria: S.categoria, Divisa: $('#cDivisa').value, Origen: $('#cOrigen').dataset.valor || '', Id_Pais_Origen: $('#cPaisOrigen').value,
+            Noches: noches() || null,
+            Campanyas: camps.map(c => ({ Id_Campanya: parseInt(c.opcion, 10), Descuento: c.valor })),
+            Suplementos: suplementos.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor })),
+            Salidas: [...S.salidas.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([f, p]) => ({ Desde: f, PrecioTotal: p || 0 })),
+            ConVuelo: S.conVuelo, VuelosIda: S.conVuelo ? vIda.datos() : [], VuelosVuelta: S.conVuelo ? vVuelta.datos() : [],
+            Notas: S.notas.filter(n => n.texto.trim()).map(n => ({ Tipo: n.tipo, Texto: n.texto })),
+            PublicarEnWeb: $('#xpPublicar').checked
+        };
+        return dto;
+    }
+
+    async function revisar() {
+        for (const p of [1, 2, 3, 4]) if (!validarPaso(p)) { ir(p); return false; }
+        const btn = $('#xpRevisar'), html = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Revisando…';
+        try {
+            const r = await EV.post('/CargaCircuitos/Validar', armarDto());
+            $('#xpRevision').innerHTML = r.ok
+                ? `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div>Todo correcto. Se van a crear <b>${r.servicios}</b> salidas.</div></div>`
+                : `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>Antes de cargar corrige esto:<ul>${r.errores.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div></div>`;
+            return r.ok;
+        } catch (e) { EV.toast(e.message, 'err'); return false; }
+        finally { btn.disabled = false; btn.innerHTML = html; }
+    }
+
+    async function cargarTodo() {
+        if (!await revisar()) return;
+        const dto = armarDto();
+        const total = dto.Salidas.length * Math.max(1, dto.Campanyas.length);
+        if (!await EV.confirmar({ titulo: `¿Cargar ${total} salidas?`, texto: `Se crearán <b>${total}</b> salidas de <b>${esc(nombreCircuito())}</b>${dto.NuevoCircuito ? ' y el circuito nuevo' : ''}. Si algo falla, no se guarda nada.`, si: 'Sí, cargar', icono: 'rocket-takeoff' })) return;
+        const btn = $('#xpCargar'), html = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Cargando…';
+        try {
+            const r = await EV.post('/CargaCircuitos/Guardar', dto);
+            $('#xpOk').innerHTML = `<div class="ring"><i class="bi bi-check-lg"></i></div><h2>${esc(r.mensaje)}</h2>
+                <p style="color:var(--ev-muted);margin:0 0 22px">Código de carga <b>${esc(r.codigo)}</b> · salidas #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro de carga #${r.logId}</p>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+                    <a class="ev-btn" href="/Circuitos/Index?editar=${encodeURIComponent(dto.CodigoCircuito || dto.NuevoCircuito.Codigo)}"><i class="bi bi-eye"></i> Ver el circuito</a>
+                    <a class="ev-btn ghost" href="/CargaCircuitos/Express"><i class="bi bi-arrow-repeat"></i> Hacer otra carga</a></div>`;
+            ir('ok');
+            EV.confeti();
+        } catch (e) {
+            const lista = e.data?.errores || [e.message];
+            $('#xpRevision').innerHTML = `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>No se cargó nada:<ul>${lista.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>`;
+            EV.toast(lista[0], 'err');
+        } finally { btn.disabled = false; btn.innerHTML = html; }
+    }
+
+    // ===================== INICIO =====================
+    async function iniciar() {
+        cat = await EVC.catalogos();
+        // selects
+        $('#cDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)} · ${esc(m.texto)}</option>`).join('');
+        const paisesHtml = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
+        $('#nPais').innerHTML = paisesHtml; $('#cPaisOrigen').innerHTML = paisesHtml; $('#cPaisOrigen').value = 'ES';
+        $('#nCatHotel').innerHTML = cat.categorias.map(c => `<option>${esc(c.categoria)}</option>`).join('');
+        $$('.sim').forEach(x => x.textContent = EV.simbolo($('#cDivisa').value));
+
+        campanyas = EVC.filas($('#cCampanyas'), { opciones: cat.campanyas.map(c => ({ ...c, extra: '#' + c.valor })), etiqueta: 'Campaña', valorEtiqueta: 'Descuento %', sufijo: '%', onChange: resumen, placeholder: 'Elige la campaña…' });
+        const circ = cat.campanyas.find(c => /circuito/i.test(c.texto)) || cat.campanyas.find(c => /CIRCUITO/i.test(c.extra || ''));
+        campanyas.agregar(circ?.valor || '', 0);
+        suplementos = EVC.filas($('#cSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento / tasa', valorEtiqueta: 'Importe', sufijo: '€', onChange: () => { pintarSalidas(); desglose(); }, placeholder: 'Elige el suplemento…' });
+
+        vIda = EVC.vuelos($('#vIda'), { tipo: 'ida', onChange: resumen });
+        vVuelta = EVC.vuelos($('#vVuelta'), { tipo: 'vuelta', onChange: resumen });
+
+        cal = EVC.calendario($('#xpCal'), {
+            obtener: () => S.salidas,
+            alternar: f => { if (S.salidas.has(f)) S.salidas.delete(f); else S.salidas.set(f, parseFloat($('#gPrecio').value) || 0); cal.pintar(); pintarSalidas(); }
+        });
+
+        // generador: valores por defecto
+        const hoy = new Date(); hoy.setDate(hoy.getDate() + 7);
+        $('#gDesde').value = EV.iso(hoy); const h2 = new Date(hoy); h2.setMonth(h2.getMonth() + 2); $('#gHasta').value = EV.iso(h2);
+
+        // eventos paso 1
+        $$('[data-modo]').forEach(b => b.addEventListener('click', () => XP.modo(b.dataset.modo)));
+        $('#xpBuscar').addEventListener('input', EV.debounce(cargarCircuitos, 300));
+        $('#xpCircs').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) elegir(b.dataset.c); });
+        $('#nNombre').addEventListener('input', () => { if (!$('#nCodigo').dataset.tocado) $('#nCodigo').value = $('#nNombre').value.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9 ]/g, ''); resumen(); });
+        $('#nCodigo').addEventListener('input', () => $('#nCodigo').dataset.tocado = '1');
+        $('#nNoches').addEventListener('input', () => { pintarSalidas(); });
+        EV.picker($('#nProveedor'), { url: q => `/Circuitos/Proveedores?tipo=Tour%20Operador&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-briefcase' }), onSelect: m => $('#nProveedor').dataset.valor = m.valor });
+        $('#nProveedor').addEventListener('input', () => $('#nProveedor').dataset.valor = '');
+        EV.picker($('#nDestino'), {
+            url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#nPais').value)}&q=${q}`,
+            map: x => ({ valor: x.valor, texto: x.texto, sub: x.extra2, icono: 'bi-geo-alt' }),
+            onSelect: (m, raw) => { if (!S.nuevo.destinos.some(d => d.id_Destino === raw.valor)) S.nuevo.destinos.push({ id_Destino: raw.valor, id_Pais: raw.extra }); $('#nDestino').closest('.ui-f').classList.remove('err'); pintarNuevo(); }
+        });
+        EV.picker($('#nHotel'), {
+            url: q => `/Circuitos/Hoteles?q=${q}${S.nuevo.destinos.length ? '&pais=' + encodeURIComponent(S.nuevo.destinos[0].id_Pais) : ''}`,
+            map: x => ({ valor: x.id_Alojamiento, texto: x.nombre, sub: x.destino, icono: 'bi-building' }),
+            onSelect: (m, raw) => { const c = $('#nCatHotel').value; if (!S.nuevo.hoteles.some(h => h.id_Alojamiento === raw.id_Alojamiento && h.categoria === c)) S.nuevo.hoteles.push({ ...raw, categoria: c }); if (!S.categoria) { S.categoria = c; pintarCategorias(); } pintarNuevo(); }
+        });
+
+        // eventos paso 2
+        $$('#gDias .ui-pick').forEach(b => b.addEventListener('click', () => b.classList.toggle('on')));
+        $('#xpTabla').addEventListener('input', e => { const i = e.target.closest('[data-f]'); if (i) { S.salidas.set(i.dataset.f, parseFloat(i.value) || 0); cal.pintar(); resumen(); } });
+        $('#xpTabla').addEventListener('change', () => pintarSalidas());
+        $('#xpTabla').addEventListener('click', e => { const b = e.target.closest('[data-quitar]'); if (b) { S.salidas.delete(b.dataset.quitar); cal.pintar(); pintarSalidas(); } });
+
+        // eventos paso 3
+        pintarCategorias();
+        $('#cCategorias').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b) { S.categoria = b.dataset.cat; pintarCategorias(); } });
+        $('#cDivisa').addEventListener('change', () => { $$('.sim').forEach(x => x.textContent = EV.simbolo($('#cDivisa').value)); pintarSalidas(); desglose(); });
+        $('#cPaisOrigen').addEventListener('change', () => { $('#cOrigen').value = ''; $('#cOrigen').dataset.valor = ''; resumen(); });
+        EV.picker($('#cOrigen'), {
+            url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#cPaisOrigen').value)}&q=${q}`, limpiar: false,
+            map: x => ({ valor: x.valor, texto: x.texto, sub: x.extra2, icono: 'bi-geo' }),
+            onSelect: m => { $('#cOrigen').dataset.valor = m.valor; $('#cOrigen').closest('.ui-f').classList.remove('err'); resumen(); }
+        });
+        $('#cOrigen').addEventListener('input', () => { $('#cOrigen').dataset.valor = ''; resumen(); });
+
+        // eventos paso 4
+        $$('[data-vuelo]').forEach(b => b.addEventListener('click', () => {
+            S.conVuelo = b.dataset.vuelo === 'si';
+            $$('[data-vuelo]').forEach(x => x.classList.toggle('on', x === b));
+            $('#xpVuelos').hidden = !S.conVuelo;
+            if (S.conVuelo && !vIda.cantidad()) { vIda.agregar(); vVuelta.agregar(); }
+            resumen();
+        }));
+
+        // eventos paso 5
+        $('#xpNotas').addEventListener('input', e => { const x = e.target.closest('[data-i]'); if (x) S.notas[+x.dataset.i][x.dataset.k] = x.value; });
+        $('#xpRevisar').onclick = revisar;
+        $('#xpCargar').onclick = cargarTodo;
+
+        // navegación
+        $$('[data-sig]').forEach(b => b.addEventListener('click', () => { if (validarPaso(S.paso)) ir(S.paso + 1); }));
+        $$('[data-ant]').forEach(b => b.addEventListener('click', () => ir(S.paso - 1)));
+        $$('#xpSteps .ui-step').forEach(b => b.addEventListener('click', () => {
+            const dest = +b.dataset.p; if (S.paso === 'ok') return;
+            if (dest < S.paso) return ir(dest);
+            for (let p = S.paso; p < dest; p++) if (!validarPaso(p)) return ir(p);
+            ir(dest);
+        }));
+
+        await cargarCircuitos();
+        const inicial = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(circuitoInicial));
+        if (inicial) await elegir(inicial);
+        pintarSalidas();
+        resumen();
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+
+    return {
+        modo: m => {
+            S.modo = m;
+            $$('[data-modo]').forEach(x => x.classList.toggle('on', x.dataset.modo === m));
+            $('#xpExistente').hidden = m !== 'existente'; $('#xpNuevo').hidden = m !== 'nuevo';
+            if (m === 'nuevo') setTimeout(() => $('#nNombre').focus(), 50);
+            pintarSalidas();
+        },
+        generar: () => {
+            const d = $('#gDesde').value, h = $('#gHasta').value, precio = parseFloat($('#gPrecio').value) || 0;
+            const dias = $$('#gDias .ui-pick.on').map(b => +b.dataset.d);
+            if (!d || !h || h < d) { EV.toast('Revisa el rango de fechas.', 'err'); return; }
+            if (!dias.length) { EV.toast('Elige al menos un día de la semana.', 'err'); return; }
+            const hoy = EV.hoy(); let n = 0;
+            for (let f = d; f <= h; f = EV.sumarDias(f, 1)) {
+                if (f < hoy) continue;
+                if (!dias.includes(new Date(f + 'T00:00:00').getDay())) continue;
+                if (S.salidas.size + n >= 400) break;
+                S.salidas.set(f, precio || S.salidas.get(f) || 0); n++;
+            }
+            cal.pintar(); pintarSalidas();
+            EV.toast(n ? `Se agregaron ${n} fechas.` : 'No había fechas en ese rango con esos días.', n ? 'ok' : 'info');
+        },
+        precioTodas: () => { const p = parseFloat($('#xpTodas').value); if (!(p > 0)) { EV.toast('Escribe el precio.', 'err'); return; } for (const k of S.salidas.keys()) S.salidas.set(k, p); cal.pintar(); pintarSalidas(); },
+        limpiarSalidas: async () => { if (!S.salidas.size) return; if (await EV.confirmar({ titulo: '¿Quitar todas las fechas?', texto: `Se quitarán ${S.salidas.size} fechas de esta carga (no afecta lo ya guardado).`, si: 'Quitar todas', peligro: true })) { S.salidas.clear(); cal.pintar(); pintarSalidas(); } },
+        quitarDestino: i => { S.nuevo.destinos.splice(i, 1); pintarNuevo(); },
+        quitarHotel: i => { S.nuevo.hoteles.splice(i, 1); pintarNuevo(); },
+        nota: t => { S.notas.push({ tipo: t, texto: '' }); pintarNotas(); $$('#xpNotas textarea').pop()?.focus(); },
+        quitarNota: i => { S.notas.splice(i, 1); pintarNotas(); }
+    };
+})();
+</script>
+}

@@ -1,0 +1,435 @@
+@{
+    ViewData["Title"] = "Carga Express de ofertas";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .xp { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; margin-top: 20px; align-items: start; }
+    .xp-panel { background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 26px; padding: 26px 28px; min-height: 420px; }
+    .xp-panel h2 { margin: 0 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
+    .xp-panel > .sub { color: var(--ev-muted); margin: 0 0 20px; font-weight: 500; }
+    .xp-nav { display: flex; gap: 10px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--ev-line); align-items: center; }
+    .xp-nav .sp { flex: 1; }
+    .xp-hoteles { display: grid; gap: 14px; }
+    .xp-gen { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto; gap: 12px; align-items: end; padding: 16px; border-radius: 20px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); margin-bottom: 16px; }
+    .xp-gen .ui-f { margin: 0; }
+    .xp-dias { display: flex; gap: 4px; flex-wrap: wrap; }
+    .xp-dias .ui-pick { padding: 6px 11px; }
+    .xp-break { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13.5px; font-weight: 700; padding: 12px 14px; border-radius: 14px; background: var(--ev-surface-2); margin-top: 6px; }
+    .xp-break span { padding: 5px 10px; border-radius: 10px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
+    .xp-break .eq { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+    .xp-notas .nota { display: grid; grid-template-columns: 200px minmax(0,1fr) auto; gap: 10px; margin-bottom: 10px; align-items: start; }
+    .xp-add { width: 100%; border: 2px dashed var(--ev-line); border-radius: 20px; background: var(--ev-surface-2); padding: 18px; font: 800 14px var(--ev-font); color: var(--ev-text); cursor: pointer; transition: all .25s var(--ev-ease); }
+    .xp-add:hover { border-color: var(--ev-teal); background: var(--ev-grad-soft); }
+    @@media (max-width: 1250px) { .xp { grid-template-columns: 1fr; } .ui-summary { position: static; } }
+    @@media (max-width: 1500px) { .xp-gen { grid-template-columns: repeat(3, minmax(0, 1fr)); } .xp-gen .ui-f:nth-child(5) { grid-column: 1 / -1; } .xp-gen > .ev-btn { grid-column: 1 / -1; justify-content: center; } }
+    @@media (max-width: 900px) { .xp-gen { grid-template-columns: 1fr 1fr; } .xp-notas .nota { grid-template-columns: 1fr; } }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="ui-hero ev-rise">
+    <i class="bi bi-lightning-charge ui-hero-ico" aria-hidden="true"></i>
+    <div>
+        <span class="ev-chip dark"><i class="bi bi-lightning-charge"></i> Versión 1 · Todo junto</span>
+        <h1>Carga Express de ofertas</h1>
+        <p>En 5 pasos: elige los hoteles, marca las fechas y pon los precios en una sola tabla, completa los datos comerciales, decide si lleva vuelo y listo. A la derecha ves en vivo lo que se va a crear.</p>
+    </div>
+    <div class="ui-hero-acts">
+        <a class="ev-btn light" asp-controller="CargaManual" asp-action="Clasica"><i class="bi bi-ui-checks"></i> Ir a la Clásica</a>
+        <a class="ev-btn light" asp-controller="Ofertas" asp-action="Index"><i class="bi bi-list-ul"></i> Ver ofertas</a>
+    </div>
+    <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+    </svg>
+</section>
+
+<div class="xp">
+    <div>
+        <nav class="ui-steps" id="xpSteps">
+            <button type="button" class="ui-step on" data-p="1"><span class="b">1</span><span><b>Hoteles</b><small>régimen y habitaciones</small></span></button>
+            <button type="button" class="ui-step" data-p="2"><span class="b">2</span><span><b>Fechas y precios</b><small>una tabla</small></span></button>
+            <button type="button" class="ui-step" data-p="3"><span class="b">3</span><span><b>Comercial</b><small>proveedor, campaña</small></span></button>
+            <button type="button" class="ui-step" data-p="4"><span class="b">4</span><span><b>Vuelo</b><small>opcional</small></span></button>
+            <button type="button" class="ui-step" data-p="5"><span class="b">5</span><span><b>Confirmar</b><small>notas y cargar</small></span></button>
+        </nav>
+
+        <!-- PASO 1 -->
+        <section class="xp-panel ui-pane on" data-paso="1">
+            <h2>¿Qué hoteles vas a cargar?</h2>
+            <p class="sub">Agrega uno o varios. De cada hotel elige el régimen y marca las habitaciones que se venden (la primera es la base; las demás pueden llevar suplemento).</p>
+            <div class="xp-hoteles" id="xpHoteles"></div>
+            <button type="button" class="xp-add" id="xpAddHotel" style="margin-top:14px"><i class="bi bi-plus-circle"></i> Agregar otro hotel</button>
+            <div class="xp-nav"><span class="sp"></span><button type="button" class="ev-btn" data-sig>Siguiente: fechas y precios <i class="bi bi-arrow-right"></i></button></div>
+        </section>
+
+        <!-- PASO 2 -->
+        <section class="xp-panel ui-pane" data-paso="2">
+            <h2>Fechas de entrada y precios</h2>
+            <p class="sub">Genera varias fechas de una vez o toca los días en el calendario. Luego completa la tabla: cada columna es un hotel. El precio es lo que paga el cliente (incluye tasas). Vacío = ese hotel no se vende esa fecha.</p>
+            <div class="xp-gen">
+                <div class="ui-f"><label>Desde</label><input type="date" id="gDesde"></div>
+                <div class="ui-f"><label>Hasta</label><input type="date" id="gHasta"></div>
+                <div class="ui-f"><label>Noches</label><input type="number" id="gNoches" min="1" max="60" value="7"><span class="msg"></span></div>
+                <div class="ui-f"><label>Precio total <em>opcional</em></label><div class="ui-money"><b class="sim">€</b><input type="number" id="gPrecio" min="0" step="1" placeholder="1290"></div></div>
+                <div class="ui-f"><label>Solo los días</label><div class="xp-dias" id="gDias">
+                    @foreach (var (d, i) in new[] { ("L", 1), ("M", 2), ("X", 3), ("J", 4), ("V", 5), ("S", 6), ("D", 0) })
+                    {
+                        <button type="button" class="ui-pick @(i == 6 ? "on" : "")" data-d="@i">@d</button>
+                    }
+                </div></div>
+                <button type="button" class="ev-btn" onclick="XP.generar()"><i class="bi bi-calendar-plus"></i> Agregar</button>
+            </div>
+            <div id="xpCal"></div>
+            <div style="display:flex;gap:10px;align-items:center;margin:18px 0 10px;flex-wrap:wrap">
+                <b style="font-size:15px"><span id="xpNumFechas">0</span> fechas</b>
+                <span class="sp" style="flex:1"></span>
+                <div class="ui-money" style="width:150px"><b class="sim">€</b><input class="ui-input" type="number" id="xpTodas" placeholder="Precio para todo" style="padding:9px 10px 9px 30px"></div>
+                <button type="button" class="ev-btn ghost sm" onclick="XP.precioTodas()">Aplicar a toda la tabla</button>
+                <button type="button" class="ev-btn ghost sm" onclick="XP.limpiarFechas()"><i class="bi bi-eraser"></i> Quitar todas</button>
+            </div>
+            <div id="xpMatriz"></div>
+            <div class="xp-nav"><button type="button" class="ev-btn ghost" data-ant><i class="bi bi-arrow-left"></i> Atrás</button><span class="sp"></span><button type="button" class="ev-btn" data-sig>Siguiente: comercial <i class="bi bi-arrow-right"></i></button></div>
+        </section>
+
+        <!-- PASO 3 -->
+        <section class="xp-panel ui-pane" data-paso="3">
+            <h2>Datos comerciales</h2>
+            <p class="sub">Quién la vende, desde dónde, en qué campañas y qué suplementos lleva.</p>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>A</span> Oferta</div>
+                <div class="ui-row r3">
+                    <div class="ui-f"><label>Proveedor <em>tour operador</em></label><input id="cProveedor" placeholder="Busca el proveedor…"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Nombre de la oferta <em>opcional</em></label><input id="cNombre" maxlength="50" placeholder="Ej. Punta Cana verano"></div>
+                    <div class="ui-f"><label>Moneda</label><select id="cDivisa"></select></div>
+                </div>
+            </div>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>B</span> Origen de venta</div>
+                <div class="ui-row">
+                    <div class="ui-f"><label>País de origen</label><select id="cPaisOrigen"></select></div>
+                    <div class="ui-f"><label>Ciudad de origen</label><input id="cOrigen" placeholder="Ej. Madrid"><span class="msg"></span></div>
+                </div>
+            </div>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>C</span> Campañas <small>se crea una oferta por cada hotel × fecha × campaña</small></div>
+                <div id="cCampanyas"></div>
+            </div>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>D</span> Suplementos y tasas <small>van incluidos en el precio total</small></div>
+                <div id="cSuplementos"></div>
+                <div class="xp-break" id="cDesglose"></div>
+            </div>
+            <div class="xp-nav"><button type="button" class="ev-btn ghost" data-ant><i class="bi bi-arrow-left"></i> Atrás</button><span class="sp"></span><button type="button" class="ev-btn" data-sig>Siguiente: vuelo <i class="bi bi-arrow-right"></i></button></div>
+        </section>
+
+        <!-- PASO 4 -->
+        <section class="xp-panel ui-pane" data-paso="4">
+            <h2>¿La oferta incluye vuelo?</h2>
+            <p class="sub">En Eurovip el vuelo es opcional. Si no lleva, se vende solo hotel.</p>
+            <div class="ui-row" style="margin-bottom:18px">
+                <button type="button" class="ui-opt on" data-vuelo="no"><span class="ico"><i class="bi bi-building"></i></span><span><b>Sin vuelo</b><small>Solo hotel</small></span></button>
+                <button type="button" class="ui-opt" data-vuelo="si"><span class="ico"><i class="bi bi-airplane"></i></span><span><b>Con vuelo</b><small>Ida y vuelta con sus horarios</small></span></button>
+            </div>
+            <div id="xpVuelos" hidden>
+                <div class="ui-note info"><i class="bi bi-info-circle"></i><div>Las fechas de los vuelos se calculan solas: la ida sale el día de entrada al hotel y la vuelta el día de salida. Si un vuelo llega de madrugada se pasa al día siguiente.</div></div>
+                <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-airplane"></i></span> Vuelos de ida</div><div id="vIda"></div></div>
+                <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-airplane" style="transform:scaleX(-1)"></i></span> Vuelos de vuelta</div><div id="vVuelta"></div></div>
+            </div>
+            <div class="xp-nav"><button type="button" class="ev-btn ghost" data-ant><i class="bi bi-arrow-left"></i> Atrás</button><span class="sp"></span><button type="button" class="ev-btn" data-sig>Siguiente: confirmar <i class="bi bi-arrow-right"></i></button></div>
+        </section>
+
+        <!-- PASO 5 -->
+        <section class="xp-panel ui-pane" data-paso="5">
+            <h2>Notas y confirmación</h2>
+            <p class="sub">Agrega lo que incluye y no incluye (opcional) y revisa antes de cargar.</p>
+            <div class="ui-sec xp-notas">
+                <div class="ui-sec-t"><span><i class="bi bi-journal-text"></i></span> Notas <small>se guardan en cada oferta</small></div>
+                <div id="xpNotas"></div>
+                <div class="ui-chips">
+                    <button type="button" class="ui-pick" onclick="XP.nota('Incluye')">+ Incluye</button>
+                    <button type="button" class="ui-pick" onclick="XP.nota('No incluye')">+ No incluye</button>
+                    <button type="button" class="ui-pick" onclick="XP.nota('Condiciones')">+ Condiciones</button>
+                    <button type="button" class="ui-pick" onclick="XP.nota('Importante')">+ Importante</button>
+                </div>
+            </div>
+            <label class="ui-switch" style="margin-bottom:18px"><input type="checkbox" id="xpPublicar" checked><span class="tr"></span> Actualizar la vitrina web de hoteles al terminar</label>
+            <div id="xpRevision"></div>
+            <div class="xp-nav">
+                <button type="button" class="ev-btn ghost" data-ant><i class="bi bi-arrow-left"></i> Atrás</button><span class="sp"></span>
+                <button type="button" class="ev-btn ghost" id="xpRevisar"><i class="bi bi-search"></i> Revisar</button>
+                <button type="button" class="ev-btn" id="xpCargar"><i class="bi bi-rocket-takeoff"></i> Cargar ofertas</button>
+            </div>
+        </section>
+
+        <!-- ÉXITO -->
+        <section class="xp-panel ui-pane" data-paso="ok"><div class="ui-success" id="xpOk"></div></section>
+    </div>
+
+    <!-- RESUMEN EN VIVO -->
+    <aside class="ui-summary" id="xpResumen"></aside>
+</div>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script>
+const XP = (() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    const S = { paso: 1, conVuelo: false, notas: [], bloques: [], uid: 0 };
+    let cat, campanyas, suplementos, vIda, vVuelta, cal, mx;
+
+    const noches = () => parseInt($('#gNoches').value, 10) || 0;
+    const moneda = () => $('#cDivisa').value || 'EUR';
+    const hoteles = () => S.bloques.filter(b => b.comp.hotel()).map(b => ({ uid: b.uid, nombre: b.comp.hotel().nombre }));
+    const servicios = () => hoteles().reduce((s, h) => s + mx.salidas(h.uid).length, 0) * Math.max(1, campanyas?.datos().length || 0);
+
+    // ===================== NAVEGACIÓN =====================
+    function ir(p) {
+        S.paso = p;
+        $$('[data-paso]').forEach(x => x.classList.toggle('on', String(x.dataset.paso) === String(p)));
+        $$('#xpSteps .ui-step').forEach(b => { const n = +b.dataset.p; b.classList.toggle('on', n === p); b.classList.toggle('done', p === 'ok' || n < p); });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (p === 2) { cal.pintar(); mx.pintar(); }
+        if (p === 3) desglose();
+        resumen();
+    }
+
+    function validarPaso(p) {
+        const err = [];
+        const marca = (id, msg) => { const f = $(id).closest('.ui-f'); f.classList.add('err'); const m = $('.msg', f); if (m) m.textContent = msg; err.push(msg); };
+        $$(`[data-paso="${p}"] .ui-f.err`).forEach(f => f.classList.remove('err'));
+        if (p === 1) {
+            if (!S.bloques.length) err.push('Agrega al menos un hotel.');
+            S.bloques.forEach(b => err.push(...b.comp.validar()));
+            const ids = hoteles().map(h => S.bloques.find(b => b.uid === h.uid).comp.datos()).map(d => d.Id_Alojamiento + '|' + d.Id_Regimen);
+            if (new Set(ids).size !== ids.length) err.push('Hay un hotel repetido con el mismo régimen.');
+        }
+        if (p === 2) {
+            const n = noches(); if (n < 1 || n > 60) marca('#gNoches', 'Entre 1 y 60');
+            err.push(...mx.errores());
+        }
+        if (p === 3) {
+            if (!$('#cProveedor').dataset.valor) marca('#cProveedor', 'Elige el proveedor de la lista');
+            if (!$('#cOrigen').dataset.valor) marca('#cOrigen', 'Elige la ciudad de la lista');
+            if (!campanyas.datos().length) err.push('Agrega al menos una campaña.');
+            const cs = campanyas.datos().map(x => x.opcion); if (new Set(cs).size !== cs.length) err.push('Hay campañas repetidas.');
+            const ts = suplementos.datos().map(x => x.opcion); if (new Set(ts).size !== ts.length) err.push('Hay suplementos repetidos.');
+        }
+        if (p === 4 && S.conVuelo) {
+            if (!vIda.cantidad()) err.push('Agrega al menos un vuelo de ida.');
+            if (!vVuelta.cantidad()) err.push('Agrega al menos un vuelo de vuelta.');
+            err.push(...vIda.validar(), ...vVuelta.validar());
+        }
+        $(`#xpSteps [data-p="${p}"]`)?.classList.toggle('err', err.length > 0);
+        if (err.length) EV.toast(err[0], 'err');
+        return err.length === 0;
+    }
+
+    // ===================== PASO 1: HOTELES =====================
+    function agregarHotel() {
+        const uid = 'h' + (++S.uid);
+        const comp = EVC.hotelOferta($('#xpHoteles'), {
+            regimenes: cat.regimenes,
+            onChange: () => { if (S.paso === 2) mx.pintar(); resumen(); },
+            onQuitar: () => { S.bloques = S.bloques.filter(b => b.uid !== uid); mx.quitarHotel(uid); }
+        });
+        S.bloques.push({ uid, comp });
+        setTimeout(() => $('[data-k=hotel]', comp.el).focus(), 50);
+        resumen();
+    }
+
+    // ===================== PASO 3: COMERCIAL =====================
+    function desglose() {
+        const precios = mx.precios();
+        const ejemplo = precios.length ? Math.min(...precios) : 0;
+        const t = suplementos.total(), m = moneda();
+        $('#cDesglose').innerHTML = `<i class="bi bi-calculator"></i> Ejemplo con el precio más bajo:
+            <span>Base ${EV.dinero(ejemplo - t, m)}</span> + <span>Tasas ${EV.dinero(t, m)}</span> = <span class="eq">Cliente paga ${EV.dinero(ejemplo, m)}</span>
+            ${precios.length && ejemplo - t < cat.minimo ? `<span style="background:#FEE4E2;color:#B42318;border-color:#FECDCA"><i class="bi bi-exclamation-triangle"></i> base menor al mínimo (${EV.fmt(cat.minimo)})</span>` : ''}`;
+    }
+
+    // ===================== NOTAS =====================
+    function pintarNotas() {
+        $('#xpNotas').innerHTML = S.notas.map((n, i) => `<div class="nota">
+            <select class="ui-input" data-i="${i}" data-k="tipo">${['Incluye', 'No incluye', 'Condiciones', 'Importante', 'Documentación', 'Oferta'].map(t => `<option ${t === n.tipo ? 'selected' : ''}>${t}</option>`).join('')}</select>
+            <textarea class="ui-input" data-i="${i}" data-k="texto" rows="2" placeholder="Escribe la nota…">${esc(n.texto)}</textarea>
+            <button type="button" class="ui-ibtn danger" onclick="XP.quitarNota(${i})"><i class="bi bi-trash3"></i></button></div>`).join('');
+    }
+
+    // ===================== RESUMEN =====================
+    function resumen() {
+        if (!mx) return;
+        const fechas = mx.fechas(), precios = mx.precios(), hs = hoteles();
+        const camps = campanyas ? campanyas.datos() : [];
+        const total = servicios(), m = moneda(), n = noches();
+        $('#xpNumFechas').textContent = fechas.length;
+        $('#xpResumen').innerHTML = `
+            <span class="mini">SE VAN A CREAR</span>
+            <div class="big">${total}</div>
+            <div class="mini">oferta${total === 1 ? '' : 's'} (${hs.length} hotel${hs.length === 1 ? '' : 'es'} × fechas con precio × ${Math.max(1, camps.length)} campaña${camps.length === 1 ? '' : 's'})</div>
+            <dl>
+                <div><dt>Hoteles</dt><dd>${hs.length ? hs.map(h => esc(h.nombre)).join('<br>') : '—'}</dd></div>
+                <div><dt>Noches</dt><dd>${n || '—'}</dd></div>
+                <div><dt>Primera entrada</dt><dd>${fechas.length ? EV.fecha(fechas[0]) : '—'}</dd></div>
+                <div><dt>Última entrada</dt><dd>${fechas.length ? EV.fecha(fechas[fechas.length - 1]) : '—'}</dd></div>
+                <div><dt>Precio</dt><dd>${precios.length ? (Math.min(...precios) === Math.max(...precios) ? EV.dinero(precios[0], m) : `${EV.dinero(Math.min(...precios), m)} – ${EV.dinero(Math.max(...precios), m)}`) : '—'}</dd></div>
+                <div><dt>Proveedor</dt><dd>${esc($('#cProveedor')?.dataset.valor ? $('#cProveedor').value : '—')}</dd></div>
+                <div><dt>Origen</dt><dd>${esc($('#cOrigen')?.dataset.valor || '—')}</dd></div>
+                <div><dt>Campañas</dt><dd>${camps.length ? camps.map(c => esc(cat.campanyas.find(x => x.valor === c.opcion)?.texto || c.opcion) + (c.valor ? ` (-${c.valor}%)` : '')).join('<br>') : '—'}</dd></div>
+                <div><dt>Vuelo</dt><dd>${S.conVuelo ? `<i class="bi bi-airplane"></i> ${vIda?.cantidad() || 0} ida · ${vVuelta?.cantidad() || 0} vuelta` : '<i class="bi bi-building"></i> Sin vuelo'}</dd></div>
+            </dl>`;
+        if (S.paso === 3) desglose();
+    }
+
+    // ===================== ENVIAR =====================
+    function armarDto() {
+        return {
+            Modo: 'express',
+            Id_Proveedor: $('#cProveedor').dataset.valor || '', Nombre: $('#cNombre').value.trim() || null,
+            Noches: noches(), Divisa: moneda(), Origen: $('#cOrigen').dataset.valor || '', Id_Pais_Origen: $('#cPaisOrigen').value,
+            Hoteles: hoteles().map(h => ({ ...S.bloques.find(b => b.uid === h.uid).comp.datos(), Salidas: mx.salidas(h.uid) })),
+            Campanyas: campanyas.datos().map(c => ({ Id_Campanya: parseInt(c.opcion, 10), Descuento: c.valor })),
+            Suplementos: suplementos.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor })),
+            ConVuelo: S.conVuelo, VuelosIda: S.conVuelo ? vIda.datos() : [], VuelosVuelta: S.conVuelo ? vVuelta.datos() : [],
+            Notas: S.notas.filter(n => n.texto.trim()).map(n => ({ Tipo: n.tipo, Texto: n.texto })),
+            PublicarEnWeb: $('#xpPublicar').checked
+        };
+    }
+
+    async function revisar() {
+        for (const p of [1, 2, 3, 4]) if (!validarPaso(p)) { ir(p); return false; }
+        const btn = $('#xpRevisar'), html = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Revisando…';
+        try {
+            const r = await EV.post('/CargaManual/Validar', armarDto());
+            $('#xpRevision').innerHTML = r.ok
+                ? `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div>Todo correcto. Se van a crear <b>${r.servicios}</b> ofertas.</div></div>`
+                : `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>Antes de cargar corrige esto:<ul>${r.errores.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div></div>`;
+            return r.ok;
+        } catch (e) { EV.toast(e.message, 'err'); return false; }
+        finally { btn.disabled = false; btn.innerHTML = html; }
+    }
+
+    async function cargarTodo() {
+        if (!await revisar()) return;
+        const dto = armarDto(), total = servicios();
+        if (!await EV.confirmar({ titulo: `¿Cargar ${total} ofertas?`, texto: `Se crearán <b>${total}</b> ofertas en <b>${dto.Hoteles.length}</b> hotel${dto.Hoteles.length === 1 ? '' : 'es'}. Si algo falla, no se guarda nada.`, si: 'Sí, cargar', icono: 'rocket-takeoff' })) return;
+        const btn = $('#xpCargar'), html = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Cargando…';
+        try {
+            const r = await EV.post('/CargaManual/Guardar', dto);
+            $('#xpOk').innerHTML = `<div class="ring"><i class="bi bi-check-lg"></i></div><h2>${esc(r.mensaje)}</h2>
+                <p style="color:var(--ev-muted);margin:0 0 22px">Código de carga <b>${esc(r.codigo)}</b> · ofertas #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro de carga #${r.logId}</p>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+                    <a class="ev-btn" href="/Ofertas/Index"><i class="bi bi-eye"></i> Ver las ofertas</a>
+                    <a class="ev-btn ghost" href="/CargaManual/Express"><i class="bi bi-arrow-repeat"></i> Hacer otra carga</a></div>`;
+            ir('ok');
+            EV.confeti();
+        } catch (e) {
+            const lista = e.data?.errores || [e.message];
+            $('#xpRevision').innerHTML = `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>No se cargó nada:<ul>${lista.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>`;
+            EV.toast(lista[0], 'err');
+        } finally { btn.disabled = false; btn.innerHTML = html; }
+    }
+
+    // ===================== INICIO =====================
+    async function iniciar() {
+        cat = await EVC.catalogos();
+        $('#cDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)} · ${esc(m.texto)}</option>`).join('');
+        $('#cPaisOrigen').innerHTML = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
+        $('#cPaisOrigen').value = 'ES';
+        $$('.sim').forEach(x => x.textContent = EV.simbolo(moneda()));
+
+        mx = EVC.matriz($('#xpMatriz'), { hoteles, noches, moneda, tasas: () => suplementos ? suplementos.total() : 0, minimo: cat.minimo, onChange: () => { cal.pintar(); resumen(); } });
+        cal = EVC.calendario($('#xpCal'), {
+            obtener: () => mx.mapa(),
+            alternar: f => { if (mx.tiene(f)) mx.quitar(f); else { mx.agregar(f, parseFloat($('#gPrecio').value) || 0); mx.pintar(); } cal.pintar(); resumen(); }
+        });
+
+        campanyas = EVC.filas($('#cCampanyas'), { opciones: cat.campanyas.map(c => ({ ...c, extra: '#' + c.valor })), etiqueta: 'Campaña', valorEtiqueta: 'Descuento %', sufijo: '%', onChange: resumen, placeholder: 'Elige la campaña…' });
+        const hot = cat.campanyas.find(c => c.texto === 'DTGeneral') || cat.campanyas.find(c => /general/i.test(c.texto));
+        campanyas.agregar(hot?.valor || '', 0);
+        suplementos = EVC.filas($('#cSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento / tasa', valorEtiqueta: 'Importe', sufijo: '€', onChange: () => { desglose(); resumen(); }, placeholder: 'Elige el suplemento…' });
+
+        vIda = EVC.vuelos($('#vIda'), { tipo: 'ida', onChange: resumen });
+        vVuelta = EVC.vuelos($('#vVuelta'), { tipo: 'vuelta', onChange: resumen });
+
+        // generador: próximo sábado en 7 días, 2 meses
+        const hoy = new Date(); hoy.setDate(hoy.getDate() + 7);
+        $('#gDesde').value = EV.iso(hoy); const h2 = new Date(hoy); h2.setMonth(h2.getMonth() + 2); $('#gHasta').value = EV.iso(h2);
+
+        // eventos
+        $('#xpAddHotel').onclick = agregarHotel;
+        $$('#gDias .ui-pick').forEach(b => b.addEventListener('click', () => b.classList.toggle('on')));
+        $('#gNoches').addEventListener('input', () => { mx.pintar(); resumen(); });
+        $('#cDivisa').addEventListener('change', () => { $$('.sim').forEach(x => x.textContent = EV.simbolo(moneda())); mx.pintar(); desglose(); resumen(); });
+        $('#cPaisOrigen').addEventListener('change', () => { $('#cOrigen').value = ''; $('#cOrigen').dataset.valor = ''; resumen(); });
+        EV.picker($('#cProveedor'), {
+            url: q => `/Circuitos/Proveedores?tipo=Tour%20Operador&q=${q}`, limpiar: false,
+            map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-briefcase' }),
+            onSelect: m => { $('#cProveedor').dataset.valor = m.valor; $('#cProveedor').closest('.ui-f').classList.remove('err'); resumen(); }
+        });
+        $('#cProveedor').addEventListener('input', () => { $('#cProveedor').dataset.valor = ''; resumen(); });
+        EV.picker($('#cOrigen'), {
+            url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#cPaisOrigen').value)}&q=${q}`, limpiar: false,
+            map: x => ({ valor: x.valor, texto: x.texto, sub: x.extra2, icono: 'bi-geo' }),
+            onSelect: m => { $('#cOrigen').dataset.valor = m.valor; $('#cOrigen').closest('.ui-f').classList.remove('err'); resumen(); }
+        });
+        $('#cOrigen').addEventListener('input', () => { $('#cOrigen').dataset.valor = ''; resumen(); });
+
+        $$('[data-vuelo]').forEach(b => b.addEventListener('click', () => {
+            S.conVuelo = b.dataset.vuelo === 'si';
+            $$('[data-vuelo]').forEach(x => x.classList.toggle('on', x === b));
+            $('#xpVuelos').hidden = !S.conVuelo;
+            if (S.conVuelo && !vIda.cantidad()) { vIda.agregar(); vVuelta.agregar(); }
+            resumen();
+        }));
+
+        $('#xpNotas').addEventListener('input', e => { const x = e.target.closest('[data-i]'); if (x) S.notas[+x.dataset.i][x.dataset.k] = x.value; });
+        $('#xpRevisar').onclick = revisar;
+        $('#xpCargar').onclick = cargarTodo;
+
+        $$('[data-sig]').forEach(b => b.addEventListener('click', () => { if (validarPaso(S.paso)) ir(S.paso + 1); }));
+        $$('[data-ant]').forEach(b => b.addEventListener('click', () => ir(S.paso - 1)));
+        $$('#xpSteps .ui-step').forEach(b => b.addEventListener('click', () => {
+            const dest = +b.dataset.p; if (S.paso === 'ok') return;
+            if (dest < S.paso) return ir(dest);
+            for (let p = S.paso; p < dest; p++) if (!validarPaso(p)) return ir(p);
+            ir(dest);
+        }));
+
+        agregarHotel();
+        resumen();
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+
+    return {
+        generar: () => {
+            const d = $('#gDesde').value, h = $('#gHasta').value, precio = parseFloat($('#gPrecio').value) || 0;
+            const dias = $$('#gDias .ui-pick.on').map(b => +b.dataset.d);
+            if (!d || !h || h < d) { EV.toast('Revisa el rango de fechas.', 'err'); return; }
+            if (!dias.length) { EV.toast('Elige al menos un día de la semana.', 'err'); return; }
+            const hoy = EV.hoy(); let n = 0;
+            for (let f = d; f <= h; f = EV.sumarDias(f, 1)) {
+                if (f <= hoy || mx.tiene(f)) continue;
+                if (!dias.includes(new Date(f + 'T00:00:00').getDay())) continue;
+                if (mx.fechas().length >= 200) break;
+                mx.agregar(f, precio); n++;
+            }
+            mx.pintar(); cal.pintar(); resumen();
+            EV.toast(n ? `Se agregaron ${n} fechas.` : 'No había fechas nuevas en ese rango con esos días.', n ? 'ok' : 'info');
+        },
+        precioTodas: () => { const p = parseFloat($('#xpTodas').value); if (!(p > 0)) { EV.toast('Escribe el precio.', 'err'); return; } mx.todas(p); },
+        limpiarFechas: async () => { if (!mx.fechas().length) return; if (await EV.confirmar({ titulo: '¿Quitar todas las fechas?', texto: `Se quitarán ${mx.fechas().length} fechas de esta carga (no afecta lo ya guardado).`, si: 'Quitar todas', peligro: true })) mx.limpiar(); },
+        nota: t => { S.notas.push({ tipo: t, texto: '' }); pintarNotas(); $$('#xpNotas textarea').pop()?.focus(); },
+        quitarNota: i => { S.notas.splice(i, 1); pintarNotas(); }
+    };
+})();
+</script>
+}

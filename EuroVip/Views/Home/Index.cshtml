@@ -1,0 +1,519 @@
+@model HomeViewModel
+@{
+    ViewData["Title"] = "Inicio";
+    var ci = System.Globalization.CultureInfo.InvariantCulture;
+    var primerNombre = Model.NombreUsuario.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+    var hora = DateTime.Now.Hour;
+    var saludo = hora < 12 ? "Buenos días" : hora < 19 ? "Buenas tardes" : "Buenas noches";
+    var momento = hora < 12 ? "dia" : hora < 19 ? "tarde" : "noche";
+    var iconoMomento = momento switch { "dia" => "bi-sun-fill", "tarde" => "bi-cloud-sun-fill", _ => "bi-moon-stars-fill" };
+    var nombreBonito = new System.Globalization.CultureInfo("es-ES").TextInfo.ToTitleCase(primerNombre.ToLowerInvariant());
+
+    // Avance del proyecto Eurovip (fase 1 = base + login + home)
+    const int fasesTotales = 6;
+    const int fasesHechas = 4;
+    var pct = (int)Math.Round(fasesHechas * 100.0 / fasesTotales);
+    const double radio = 62;
+    var circ = 2 * Math.PI * radio;
+    var offset = circ * (1 - pct / 100.0);
+
+    // Ola periódica: desplazar el grupo exactamente 1 período (120) = loop perfecto.
+    string Ola(double y, double amp)
+    {
+        var sb = new System.Text.StringBuilder(string.Format(ci, "M-240 {0} ", y));
+        for (var x = -240; x < 840; x += 120)
+            sb.Append(string.Format(ci, "q30 {0} 60 0 t60 0 ", -amp));
+        sb.Append("L840 320 L-240 320 Z");
+        return sb.ToString();
+    }
+    const string Hoja = "M0 0 C 30 -26, 80 -30, 128 4 C 100 -6, 80 -4, 64 0 L 74 10 L 54 3 L 60 13 L 40 4 L 42 13 L 24 4 C 16 4, 6 4, 0 6 Z";
+    var angulos = new[] { -50, -20, 10, 36 };
+}
+
+@section Styles {
+    <style>
+        @@property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+        /* ---------- Hero con escena caribe ---------- */
+        .ev-hero { min-height: 280px; isolation: isolate; }
+        .h-scene {
+            position: absolute; top: 0; bottom: 0; right: 0; width: 64%; z-index: 0; pointer-events: none;
+            -webkit-mask: linear-gradient(90deg, transparent 0%, #000 22%);
+                    mask: linear-gradient(90deg, transparent 0%, #000 22%);
+        }
+        .h-scene svg { width: 100%; height: 100%; display: block; }
+        .ev-hero-content { z-index: 1; }
+
+        .h-sun    { animation: hSun 5s ease-in-out infinite; transform-origin: 400px 182px; }
+        .h-glow   { animation: hGlow 5s ease-in-out infinite; }
+        .h-rays   { animation: hSpin 60s linear infinite; transform-origin: 400px 182px; }
+        .h-w1     { animation: hWave 7s linear infinite; }
+        .h-w2     { animation: hWave 5s linear infinite reverse; }
+        .h-w3     { animation: hWave 3.6s linear infinite; }
+        .h-shim rect { animation: hShim 2.4s ease-in-out infinite; }
+        .h-shim rect:nth-child(2n) { animation-delay: -1s; }
+        .h-boat   { animation: hSail 38s linear infinite -12s; }
+        .h-bob    { animation: hBob 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+        .h-palm   { animation: hPalm 4.6s ease-in-out infinite; transform-origin: 590px 330px; }
+        .h-crown  { animation: hCrown 3.2s ease-in-out infinite; transform-origin: 540px 120px; }
+        .h-plane  { animation: hPlane 22s linear infinite -4s; }
+        .h-banner { animation: hBanner .8s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: right center; }
+        .h-c1     { animation: hDrift 46s linear infinite; }
+        .h-c2     { animation: hDrift 64s linear infinite -30s; }
+        .h-gull   { animation: hFlap .5s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+        .h-gulls  { animation: hGulls 26s linear infinite; }
+
+        @@keyframes hSun { 50% { transform: scale(1.07); } }
+        @@keyframes hGlow { 50% { opacity: .7; } }
+        @@keyframes hSpin { to { transform: rotate(360deg); } }
+        @@keyframes hWave { to { transform: translateX(-120px); } }
+        @@keyframes hShim { 0%, 100% { opacity: .15; } 50% { opacity: .9; } }
+        @@keyframes hSail { from { transform: translateX(-120px); } to { transform: translateX(720px); } }
+        @@keyframes hBob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(3px) rotate(3deg); } }
+        @@keyframes hPalm { 50% { transform: rotate(1.8deg); } }
+        @@keyframes hCrown { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(5deg); } }
+        @@keyframes hPlane { from { transform: translateX(-380px); } to { transform: translateX(900px); } }
+        @@keyframes hBanner { from { transform: skewY(-3deg); } to { transform: skewY(3deg) scaleY(1.04); } }
+        @@keyframes hDrift { from { transform: translateX(-200px); } to { transform: translateX(800px); } }
+        @@keyframes hFlap { to { transform: scaleY(.4); } }
+        @@keyframes hGulls { from { transform: translate(-80px, 0); } 50% { transform: translate(300px, -14px); } to { transform: translate(720px, 6px); } }
+
+        /* Burbujas de luz subiendo en el hero */
+        .h-bubbles { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        .h-bubbles i {
+            position: absolute; bottom: -30px; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,255,255,.15));
+            animation: hRise linear infinite;
+        }
+        @@keyframes hRise { from { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: .9; } to { transform: translateY(-340px) scale(1.1); opacity: 0; } }
+
+        /* Mano que saluda */
+        .h-wave-hand { display: inline-block; transform-origin: 70% 70%; animation: hHand 2.6s ease-in-out infinite; }
+        @@keyframes hHand { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(16deg); } 20%, 40% { transform: rotate(-8deg); } }
+
+        /* ===== Saludo animado ===== */
+        .g-title { position: relative; display: flex; flex-direction: column; gap: 2px; padding-left: 0; }
+        .g-line { display: block; white-space: nowrap; }
+        .g-sp { display: inline-block; width: .28em; }
+
+        /* Cada letra: entra cayendo con rebote y luego salta en ola cada 4.5 s */
+        .g-l {
+            display: inline-block;
+            animation:
+                gIn .75s cubic-bezier(.2,.9,.3,1.45) both,
+                gWave 4.5s ease-in-out infinite;
+            animation-delay: calc(var(--i) * 45ms), calc(1.4s + var(--i) * 65ms);
+        }
+        @@keyframes gIn {
+            from { opacity: 0; transform: translateY(-.9em) rotate(-14deg) scale(.5); filter: blur(6px); }
+            to   { opacity: 1; transform: none; filter: none; }
+        }
+        @@keyframes gWave {
+            0%, 14%, 100% { transform: none; }
+            5%  { transform: translateY(-.22em) rotate(-5deg) scale(1.08); }
+            9%  { transform: translateY(.04em) rotate(2deg); }
+        }
+
+        /* Nombre: color en ola (negro → aqua) + subrayado que se dibuja */
+        .g-name { position: relative; width: max-content; padding-bottom: 8px; }
+        .g-name .g-l {
+            animation:
+                gIn .75s cubic-bezier(.2,.9,.3,1.45) both,
+                gWave 4.5s ease-in-out infinite,
+                gColor 3s ease-in-out infinite;
+            animation-delay: calc(var(--i) * 45ms), calc(1.4s + var(--i) * 65ms), calc(var(--i) * 140ms);
+        }
+        @@keyframes gColor { 0%, 100% { color: #0B1215; } 50% { color: #0E8F86; text-shadow: 0 6px 18px rgba(14,143,134,.35); } }
+        .g-underline { position: absolute; left: 0; right: 2.2em; bottom: -4px; width: calc(100% - 1.6em); height: 14px; overflow: visible; }
+        .g-underline path {
+            fill: none; stroke: #74F2E6; stroke-width: 5; stroke-linecap: round;
+            stroke-dasharray: 320; stroke-dashoffset: 320;
+            animation: gDraw 4.5s ease-in-out 1s infinite;
+        }
+        @@keyframes gDraw { 0% { stroke-dashoffset: 320; } 35%, 75% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -320; } }
+
+        /* Ícono según la hora */
+        .g-icon {
+            position: absolute; left: -2px; top: -44px;
+            width: 34px; height: 34px; border-radius: 11px;
+            display: grid; place-items: center; font-size: 17px;
+            background: var(--ev-ink); color: #FFE08A;
+            box-shadow: 0 10px 24px -10px rgba(11,18,21,.6);
+            animation: gIconIn .6s cubic-bezier(.2,.9,.3,1.4) both, hFloat 3.4s ease-in-out 1s infinite;
+        }
+        .g-icon-dia i   { animation: hSpin 10s linear infinite; display: inline-block; }
+        .g-icon-tarde i { animation: gTilt 3s ease-in-out infinite; display: inline-block; }
+        .g-icon-noche i { animation: gTilt 4s ease-in-out infinite; display: inline-block; }
+        @@keyframes gIconIn { from { opacity: 0; transform: scale(.3) rotate(-90deg); } to { opacity: 1; transform: none; } }
+        @@keyframes gTilt { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+        .g-star {
+            position: absolute; width: 6px; height: 6px; background: #FFE08A;
+            clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+            animation: gTwinkle 1.8s ease-in-out infinite; animation-delay: var(--d);
+        }
+        @@keyframes gTwinkle { 0%, 100% { opacity: .2; transform: scale(.5); } 50% { opacity: 1; transform: scale(1.3); } }
+        .ev-hero-content > .ev-chip { margin-bottom: 44px; }
+
+        /* KPIs: ícono flotando */
+        .ev-kpi { transition: transform .3s var(--ev-ease), box-shadow .3s; }
+        .ev-kpi:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
+        .ev-kpi-icon { animation: hFloat 4s ease-in-out infinite; }
+        .ev-kpi:nth-child(2) .ev-kpi-icon { animation-delay: -1s; }
+        .ev-kpi:nth-child(3) .ev-kpi-icon { animation-delay: -2s; }
+        .ev-kpi:nth-child(4) .ev-kpi-icon { animation-delay: -3s; }
+        @@keyframes hFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+        /* Módulos: borde con brillo girando + ícono que flota + inclinación 3D */
+        .ev-module { transform-style: preserve-3d; will-change: transform; }
+        .ev-module::before {
+            content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none;
+            background: conic-gradient(from var(--ang), transparent 0 60%, #74F2E6 75%, #2BD4C4 85%, transparent 100%);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude;
+            opacity: 0; transition: opacity .3s;
+            animation: hAng 3s linear infinite;
+        }
+        .ev-module:hover::before { opacity: 1; }
+        @@keyframes hAng { to { --ang: 360deg; } }
+        .ev-module:hover .ev-module-icon { animation: hIcon 1.4s ease-in-out infinite; }
+        @@keyframes hIcon { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-5px) rotate(-6deg); } 60% { transform: translateY(-2px) rotate(4deg); } }
+
+        /* Anillo que se dibuja + paso actual que late */
+        .h-ring-arc { stroke-dashoffset: var(--circ); animation: hRing 1.8s cubic-bezier(.2,.8,.2,1) .4s forwards; }
+        @@keyframes hRing { to { stroke-dashoffset: var(--off); } }
+        .ev-step.now { position: relative; }
+        .ev-step.now::after {
+            content: ""; position: absolute; inset: -4px; border-radius: 13px; border: 2px solid var(--ev-aqua);
+            animation: hPulse 1.8s ease-out infinite;
+        }
+        @@keyframes hPulse { from { transform: scale(.85); opacity: 1; } to { transform: scale(1.35); opacity: 0; } }
+
+        /* Tarjeta de BD con olas suaves */
+        .h-db { position: relative; overflow: hidden; }
+        .h-db svg { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 46px; opacity: .35; }
+
+        .ev-home > div { min-width: 0; }
+
+        /* Pantallas medianas/chicas: la escena pasa debajo del texto como un "video" a lo ancho */
+        @@media (max-width: 1100px) {
+            .ev-hero { display: block; padding-bottom: 0; }
+            .h-scene {
+                position: relative; width: auto; height: 190px; margin: 22px -36px 0;
+                -webkit-mask: none; mask: none;
+            }
+            .h-scene svg { height: 100%; }
+        }
+        @@media (prefers-reduced-motion: reduce) {
+            .h-scene *, .h-bubbles i, .h-wave-hand, .g-l, .g-icon, .g-icon i, .g-star, .g-underline path, .ev-kpi-icon, .ev-module::before, .ev-step.now::after, .h-db * { animation: none !important; }
+            .h-ring-arc { stroke-dashoffset: var(--off); animation: none; }
+        }
+    </style>
+}
+
+<div class="ev-home">
+    <div>
+        <!-- Hero -->
+        <section class="ev-hero ev-rise">
+            <div class="h-bubbles" aria-hidden="true">
+                @{
+                    var burbujas = new[] { (8, 10, 9.0, 0.0), (18, 6, 7.0, -2.0), (30, 14, 11.0, -5.0), (44, 8, 8.0, -1.0), (56, 5, 6.0, -3.5), (70, 12, 10.0, -6.0), (84, 7, 7.5, -4.0), (92, 10, 9.5, -0.5) };
+                }
+                @foreach (var (izq, tam, dur, delay) in burbujas)
+                {
+                    <i style="left:@(izq)%;width:@(tam)px;height:@(tam)px;animation-duration:@(dur.ToString(ci))s;animation-delay:@(delay.ToString(ci))s"></i>
+                }
+            </div>
+
+            <div class="h-scene" aria-hidden="true">
+                <svg viewBox="0 0 640 300" preserveAspectRatio="xMaxYMax slice">
+                    <defs>
+                        <linearGradient id="hSea" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="#5FE3D6" /><stop offset="1" stop-color="#0E8F86" />
+                        </linearGradient>
+                        <radialGradient id="hSunG">
+                            <stop offset="0" stop-color="#FFFFFF" /><stop offset=".5" stop-color="#FFF7E4" /><stop offset="1" stop-color="#FFF7E4" stop-opacity="0" />
+                        </radialGradient>
+                        <clipPath id="hClipSea"><rect x="0" y="196" width="640" height="104" /></clipPath>
+                    </defs>
+
+                    <g class="h-rays" opacity=".3">
+                        @for (var r = 0; r < 18; r++)
+                        {
+                            <path d="M400 182 L392 -260 L408 -260 Z" fill="#FFFFFF" transform="rotate(@(r * 20) 400 182)" />
+                        }
+                    </g>
+                    <circle class="h-glow" cx="400" cy="182" r="80" fill="url(#hSunG)" />
+                    <circle class="h-sun" cx="400" cy="182" r="30" fill="#FFFDF5" />
+
+                    <g class="h-c1" fill="#fff" opacity=".85"><ellipse cx="120" cy="60" rx="56" ry="12" /><ellipse cx="146" cy="50" rx="30" ry="15" /></g>
+                    <g class="h-c2" fill="#fff" opacity=".65"><ellipse cx="380" cy="96" rx="44" ry="9" /><ellipse cx="398" cy="89" rx="22" ry="11" /></g>
+
+                    <!-- Avioneta con pancarta -->
+                    <g class="h-plane">
+                        <g transform="translate(0 40)">
+                            <line x1="-8" y1="1" x2="-34" y2="3" stroke="#0B1215" stroke-width="1" />
+                            <g class="h-banner">
+                                <rect x="-190" y="-8" width="156" height="22" rx="3" fill="#fff" stroke="#0B1215" stroke-width="1" />
+                                <rect x="-190" y="-8" width="6" height="22" fill="#002D62" /><rect x="-184" y="-8" width="6" height="22" fill="#CE1126" />
+                                <text x="-109" y="7" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" font-weight="800" fill="#0B1215">¡Vende el Caribe!</text>
+                            </g>
+                            <g fill="#0B1215">
+                                <path d="M-8 -2 L18 -3 Q 27 0 18 4 L-8 3 Z" /><path d="M4 -1 L-2 -13 L4 -13 L11 -1 Z" />
+                                <path d="M4 3 L-2 14 L4 14 L11 3 Z" /><path d="M-7 -1 L-12 -8 L-8 -8 L-3 -1 Z" />
+                            </g>
+                        </g>
+                    </g>
+
+                    <!-- Gaviotas -->
+                    <g class="h-gulls">
+                        <g transform="translate(0 120)" fill="none" stroke="#0B1215" stroke-width="1.6" stroke-linecap="round">
+                            <path class="h-gull" d="M0 6 Q 5 0 10 6 Q 15 0 20 6" />
+                            <path class="h-gull" d="M28 -4 Q 32 -9 36 -4 Q 40 -9 44 -4" style="animation-delay:.2s" />
+                        </g>
+                    </g>
+
+                    <!-- Isla -->
+                    <path d="M440 198 C 470 186, 520 184, 560 192 C 580 195, 600 194, 620 198 Z" fill="#4FBFB4" />
+                    <path d="M490 189 l2 -14 l2 14z M530 187 l2 -16 l2 16z" fill="#3AA79C" />
+
+                    <!-- Mar -->
+                    <rect y="196" width="640" height="104" fill="url(#hSea)" />
+                    <g class="h-shim" fill="#fff">
+                        <rect x="380" y="204" width="40" height="2" rx="1" /><rect x="364" y="214" width="72" height="2" rx="1" />
+                        <rect x="386" y="226" width="30" height="2" rx="1" /><rect x="350" y="240" width="100" height="2.5" rx="1" />
+                    </g>
+                    <g clip-path="url(#hClipSea)">
+                        <g class="h-w1"><path d="@Ola(222, 3)" fill="#43DCCE" opacity=".55" /></g>
+                        <g class="h-w2"><path d="@Ola(248, 4)" fill="#1CB8AA" opacity=".55" /></g>
+                        <g class="h-w3"><path d="@Ola(274, 5)" fill="#159E93" opacity=".6" /></g>
+                    </g>
+
+                    <!-- Velero -->
+                    <g class="h-boat">
+                        <g transform="translate(0 214)">
+                            <g class="h-bob">
+                                <path d="M-18 0 L18 0 L13 7 L-13 7 Z" fill="#0B1215" />
+                                <path d="M0 -1 L0 -38" stroke="#0B1215" stroke-width="1.6" />
+                                <path d="M2 -36 L2 -4 L22 -4 Z" fill="#fff" /><path d="M-2 -30 L-2 -4 L-16 -4 Z" fill="#E8FFFB" />
+                                <path d="M0 -38 L8 -36 L0 -34 Z" fill="#CE1126" />
+                            </g>
+                        </g>
+                    </g>
+
+                    <!-- Arena + palmera -->
+                    <path d="M470 300 C 520 282, 580 276, 640 280 L640 300 Z" fill="#FBEBC8" />
+                    <path d="M480 296 C 530 280, 585 274, 640 278" stroke="#fff" stroke-width="3" fill="none" opacity=".8" />
+                    <g class="h-palm">
+                        <path d="M590 330 C 586 250, 566 170, 540 120" stroke="#0B1215" stroke-width="10" fill="none" stroke-linecap="round" />
+                        <path d="M590 330 C 586 250, 566 170, 540 120" stroke="#2E4642" stroke-width="10" fill="none" stroke-dasharray="2 7" />
+                        <g class="h-crown">
+                            <g transform="translate(540 120)" fill="#0E3B37">
+                                @foreach (var a in angulos) { <path d="@Hoja" transform="rotate(@a)" /> }
+                                @foreach (var a in angulos) { <path d="@Hoja" transform="scale(-1 1) rotate(@a)" /> }
+                                <path d="@Hoja" transform="rotate(-90) scale(.7)" />
+                                <circle cx="-4" cy="7" r="6" fill="#5B3A1E" /><circle cx="6" cy="8" r="5" fill="#6E4826" />
+                            </g>
+                        </g>
+                    </g>
+                </svg>
+            </div>
+
+            <div class="ev-hero-content">
+                <span class="ev-chip dark"><i class="bi bi-calendar3"></i> @DateTime.Now.ToString("dddd d 'de' MMMM", new System.Globalization.CultureInfo("es-ES"))</span>
+                <h1 class="g-title" aria-label="@saludo, @nombreBonito">
+                    <span class="g-icon g-icon-@momento" aria-hidden="true">
+                        <i class="bi @iconoMomento"></i>
+                        @if (momento == "noche")
+                        {
+                            <b class="g-star" style="--d:0s;top:-6px;left:-8px"></b>
+                            <b class="g-star" style="--d:.7s;top:4px;right:-10px"></b>
+                            <b class="g-star" style="--d:1.3s;bottom:-4px;left:2px"></b>
+                        }
+                    </span>
+                    <span class="g-line" aria-hidden="true">
+                        @{ var n = 0; }
+                        @foreach (var c in saludo + ",")
+                        {
+                            if (c == ' ') { <span class="g-sp"></span> }
+                            else { <span class="g-l" style="--i:@(n++)">@c</span> }
+                        }
+                    </span>
+                    <span class="g-line g-name" aria-hidden="true">
+                        @foreach (var c in nombreBonito)
+                        {
+                            if (c == ' ') { <span class="g-sp"></span> }
+                            else { <span class="g-l" style="--i:@(n++)">@c</span> }
+                        }
+                        <span class="h-wave-hand">👋</span>
+                        <svg class="g-underline" viewBox="0 0 300 20" preserveAspectRatio="none">
+                            <path d="M4 12 C 40 2, 70 20, 110 10 S 180 2, 220 12 S 280 18, 296 8" />
+                        </svg>
+                    </span>
+                </h1>
+                <p>Este es el BackOffice de Eurovip. Carga hoteles, excursiones, traslados y circuitos por toda República Dominicana — los vuelos son opcionales.</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <a href="#cargas" class="ev-btn"><i class="bi bi-plus-lg"></i> Nueva carga</a>
+                    <a href="#" class="ev-btn light"><i class="bi bi-signpost-split"></i> Circuitos</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- KPIs -->
+        <section class="ev-kpis">
+            <div class="ev-card ev-kpi ev-rise d1">
+                <div class="ev-kpi-icon"><i class="bi bi-people-fill"></i></div>
+                <div><div class="ev-kpi-value" data-count="@Model.UsuariosActivos">0</div><div class="ev-kpi-label">Usuarios activos</div></div>
+            </div>
+            <div class="ev-card ev-kpi ev-rise d2">
+                <div class="ev-kpi-icon"><i class="bi bi-ui-checks-grid"></i></div>
+                <div><div class="ev-kpi-value" data-count="@Model.ModulosConAcceso">0</div><div class="ev-kpi-label">Tus módulos</div></div>
+            </div>
+            <div class="ev-card ev-kpi ev-rise d3">
+                <div class="ev-kpi-icon"><i class="bi bi-database"></i></div>
+                <div><div class="ev-kpi-value" data-count="@Model.TablasEurovip">0</div><div class="ev-kpi-label">Tablas esquema Eurovip</div></div>
+            </div>
+            <div class="ev-card ev-kpi ev-rise d4">
+                <div class="ev-kpi-icon"><i class="bi bi-airplane"></i></div>
+                <div><div class="ev-kpi-value">Opc.</div><div class="ev-kpi-label">Vuelos en cargas</div></div>
+            </div>
+        </section>
+
+        <!-- Módulos de carga -->
+        <div class="ev-section-title" id="cargas">
+            <h2>Módulos de carga</h2>
+            <span class="ev-chip ghost"><i class="bi bi-hand-index"></i> Todo manual</span>
+        </div>
+        <section class="ev-grid">
+            @{ var i = 0; }
+            @foreach (var m in Model.ModulosCarga)
+            {
+                <a href="@m.Url" class="ev-module ev-rise d@(Math.Min(++i, 4))" data-tilt>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                        <div class="ev-module-icon"><i class="bi @m.Icono"></i></div>
+                        @if (!string.IsNullOrEmpty(m.Etiqueta))
+                        {
+                            <span class="ev-chip @(m.Etiqueta == "Vuelo opcional" ? "dark" : m.Etiqueta == "Fase 2" ? "ghost" : "")">@if (m.Disponible) { <i class="bi bi-check-circle-fill"></i> }@m.Etiqueta</span>
+                        }
+                    </div>
+                    <div>
+                        <h3>@m.Titulo</h3>
+                        <p>@m.Descripcion</p>
+                    </div>
+                    <div class="ev-module-foot">
+                        @if (m.Disponible)
+                        {
+                            <small style="color:var(--ev-deep);font-weight:800">Abrir</small>
+                        }
+                        else
+                        {
+                            <small style="color:var(--ev-muted);font-weight:600">Próximamente</small>
+                        }
+                        <span class="ev-module-go"><i class="bi bi-arrow-right"></i></span>
+                    </div>
+                </a>
+            }
+        </section>
+
+        <!-- Administración -->
+        <div class="ev-section-title">
+            <h2>Administración</h2>
+        </div>
+        <section class="ev-grid">
+            @foreach (var m in Model.ModulosAdministracion)
+            {
+                <a href="@m.Url" class="ev-module ev-card-soft" data-tilt>
+                    <div style="display:flex;align-items:center;gap:14px">
+                        <div class="ev-module-icon" style="background:var(--ev-ink);color:var(--ev-aqua)"><i class="bi @m.Icono"></i></div>
+                        <div><h3>@m.Titulo</h3><p>@m.Descripcion</p></div>
+                    </div>
+                </a>
+            }
+        </section>
+    </div>
+
+    <!-- Rail derecho -->
+    <aside class="ev-rail">
+        <div class="ev-card ev-rise d2">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <b style="font-size:15px">Avance del proyecto</b>
+                <span class="ev-chip ghost">@DateTime.Now.ToString("MMM yyyy", new System.Globalization.CultureInfo("es-ES"))</span>
+            </div>
+            <div class="ev-ring">
+                <svg width="150" height="150" viewBox="0 0 150 150">
+                    <defs>
+                        <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#74F2E6" />
+                            <stop offset="1" stop-color="#2BD4C4" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="75" cy="75" r="@radio" fill="none" stroke="var(--ev-surface-2)" stroke-width="14" />
+                    <circle class="h-ring-arc" cx="75" cy="75" r="@radio" fill="none" stroke="url(#ringGrad)" stroke-width="14" stroke-linecap="round"
+                            stroke-dasharray="@circ.ToString("0.##", ci)"
+                            style="--circ:@circ.ToString("0.##", ci);--off:@offset.ToString("0.##", ci)" />
+                </svg>
+                <div class="ev-ring-label"><div><b data-count="@pct" data-suffix="%">0%</b><small>Fase @fasesHechas de @fasesTotales</small></div></div>
+            </div>
+        </div>
+
+        <div class="ev-card ev-rise d3">
+            <b style="font-size:15px;display:block;margin-bottom:6px">Hoja de ruta</b>
+            <ul class="ev-timeline">
+                <li><span class="ev-step done"><i class="bi bi-check-lg"></i></span><div><b>Base, Login y Home</b><small>Esquema Eurovip + usuarios</small></div></li>
+                <li><span class="ev-step done"><i class="bi bi-check-lg"></i></span><div><b>Carga de Hoteles</b><small>Vitrina de la web (inicio)</small></div></li>
+                <li><span class="ev-step done"><i class="bi bi-check-lg"></i></span><div><b>Carga Manual</b><small>Ofertas de hotel Express y Clásica</small></div></li>
+                <li><span class="ev-step now">4</span><div><b>Excursiones y Traslados</b><small>Servicios por destino</small></div></li>
+                <li><span class="ev-step done"><i class="bi bi-check-lg"></i></span><div><b>Circuitos</b><small>Catálogo + carga Express y Clásica</small></div></li>
+                <li><span class="ev-step">6</span><div><b>Administración</b><small>Usuarios, accesos, catálogos</small></div></li>
+            </ul>
+        </div>
+
+        <div class="ev-card ev-rise d4 h-db" style="background:var(--ev-ink);color:#fff;border-color:var(--ev-ink)">
+            <span class="ev-chip" style="margin-bottom:12px"><i class="bi bi-database-check"></i> Base de datos</span>
+            <div style="font-weight:800;font-size:18px;letter-spacing:-.3px">TropitoursVDT · Eurovip</div>
+            <small style="opacity:.7">Servidor 93 · réplica de estructura ViajeVDT (10.10.10.29)</small>
+            <svg viewBox="0 0 320 46" preserveAspectRatio="none" aria-hidden="true">
+                <g class="h-w1"><path d="M-240 20 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L360 46 L-240 46 Z" fill="#74F2E6" /></g>
+            </svg>
+        </div>
+    </aside>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const reducir = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            // Contadores que suben desde 0
+            document.querySelectorAll('[data-count]').forEach(function (el) {
+                const fin = parseInt(el.dataset.count, 10) || 0;
+                const suf = el.dataset.suffix || '';
+                if (reducir || fin === 0) { el.textContent = fin + suf; return; }
+                const dur = 1400, ini = performance.now() + 300;
+                function paso(t) {
+                    const p = Math.min(Math.max((t - ini) / dur, 0), 1);
+                    const e = 1 - Math.pow(1 - p, 3);
+                    el.textContent = Math.round(fin * e) + suf;
+                    if (p < 1) requestAnimationFrame(paso);
+                }
+                requestAnimationFrame(paso);
+            });
+
+            // Inclinación 3D suave de las tarjetas siguiendo el mouse
+            if (!reducir) {
+                document.querySelectorAll('[data-tilt]').forEach(function (card) {
+                    // La animación de entrada (evRise) deja fijado "transform"; se quita al terminar para permitir la inclinación.
+                    card.addEventListener('animationend', function (e) {
+                        if (e.target === card && e.animationName === 'evRise') card.classList.remove('ev-rise', 'd1', 'd2', 'd3', 'd4');
+                    });
+                    card.addEventListener('mousemove', function (e) {
+                        const r = card.getBoundingClientRect();
+                        const x = (e.clientX - r.left) / r.width - .5;
+                        const y = (e.clientY - r.top) / r.height - .5;
+                        card.style.transform = 'perspective(700px) rotateX(' + (-y * 7) + 'deg) rotateY(' + (x * 9) + 'deg) translateY(-4px)';
+                    });
+                    card.addEventListener('mouseleave', function () { card.style.transform = ''; });
+                });
+            }
+        })();
+    </script>
+}

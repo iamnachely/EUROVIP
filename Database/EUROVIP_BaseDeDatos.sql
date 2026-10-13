@@ -1,0 +1,1866 @@
+﻿/* ##########################################################################################
+   EUROVIP — REGISTRO ÚNICO DE BASE DE DATOS
+   ##########################################################################################
+
+   ¿Qué es este archivo?
+   ---------------------
+   Aquí se anota TODO lo que se crea o se cambia en la base de datos para Eurovip
+   (la nueva página de Dominicana Tours para vender viajes a República Dominicana).
+   Cada cambio tiene: número, fecha, una explicación sencilla y el script SQL.
+
+   ¿Dónde vive la base de datos?
+   -----------------------------
+   - Servidor ........ 93
+   - Base de datos ... TropitoursVDT
+   - Esquema ......... Eurovip   ← todas las tablas de Eurovip van aquí, nunca en "dbo".
+                                   Así no se mezclan con las tablas de Tropitours.
+
+   ¿De dónde se copian las tablas?
+   -------------------------------
+   Cuando una tabla se "replica", se toma como modelo la base ViajeVDT del servidor 10.10.10.29.
+   En ese servidor NO se cambia nada: solo se mira cómo está hecha la tabla y se crea igual aquí.
+
+   ¿Cómo se usa?
+   -------------
+   El archivo completo se puede ejecutar de arriba a abajo en SSMS sobre el servidor 93.
+   Si algo ya existe, se salta (no rompe nada ni duplica).
+
+   ÍNDICE
+   ------
+   CAMBIO 1  (12/10/2026)  Se creó el espacio "Eurovip" dentro de la base de datos.
+   CAMBIO 2  (12/10/2026)  Se creó la tabla de ROLES (tipos de usuario).
+   CAMBIO 3  (12/10/2026)  Se creó la tabla de USUARIOS (para iniciar sesión).
+   CAMBIO 4  (12/10/2026)  Se creó la tabla de MÓDULOS del sistema (pantallas/secciones).
+   CAMBIO 5  (12/10/2026)  Se creó la tabla de PERMISOS (qué módulo ve cada usuario).
+   CAMBIO 6  (12/10/2026)  Se cargó el primer usuario: Nachely Rodríguez (Superadministrador).
+   --- FASE 2: CARGA DE HOTELES ---
+   CAMBIO 7  (12/10/2026)  Tabla de IDIOMAS / mercados (+ 7 filas).
+   CAMBIO 8  (12/10/2026)  Tabla de TIPOS DE SERVICIO (+ 5 filas).
+   CAMBIO 9  (12/10/2026)  Tabla de MONEDAS (+ EUR).
+   CAMBIO 10 (12/10/2026)  Tabla de CAMPAÑAS (+ 126 filas).
+   CAMBIO 11 (12/10/2026)  Tabla de CONTENEDORES / secciones de la web (+ 48 filas).
+   CAMBIO 12 (12/10/2026)  Tabla INICIO: vitrina de la web, aquí se cargan los HOTELES.
+   CAMBIO 13 (12/10/2026)  Tabla de AUDITORÍA: historial de quién cambió qué.
+   --- FASE 3: CIRCUITOS ---
+   CAMBIO 14 (12/10/2026)  PAÍSES (142) y DESTINOS (7.320, copia masiva) — solo ES.
+   CAMBIO 15 (12/10/2026)  HOTELES: tipo_alojamiento + alojamiento (9.563, copia masiva).
+   CAMBIO 16 (12/10/2026)  PROVEEDORES, AEROPUERTOS, RÉGIMEN, TASAS y CATEGORÍAS.
+   CAMBIO 17 (12/10/2026)  CONFIGURACIÓN: precio base mínimo = 300.
+   CAMBIO 18 (12/10/2026)  CATÁLOGO DE CIRCUITOS: circuito, destinos, itinerario, hoteles.
+   CAMBIO 19 (12/10/2026)  CARGA DE CIRCUITOS: servicio, salidas, vuelos (opcional), tasas, notas, logs.
+   CAMBIO 20 (12/10/2026)  FUNCIONES de cálculo (precio web, vitrina con o sin vuelo).
+   CAMBIO 21 (12/10/2026)  PROCEDIMIENTOS de carga en esquema Eurovip.
+   --- FASE 4: CARGA MANUAL DE OFERTAS ---
+   CAMBIO 22 (13/10/2026)  TIPOS DE HABITACIÓN (15.877) y HABITACIONES DE CADA HOTEL (129.943).
+   CAMBIO 23 (13/10/2026)  DETALLE DE HOTEL y PRECIO POR HABITACIÓN de cada salida (+ origen de venta).
+   CAMBIO 24 (13/10/2026)  VITRINA WEB DE HOTELES (alojamiento_destino).
+   CAMBIO 25 (13/10/2026)  FUNCIONES y PROCEDIMIENTOS de la carga manual (vitrina con o sin vuelo).
+   BITÁCORA de cambios de datos puntuales (al final).
+   ########################################################################################## */
+
+USE TropitoursVDT;
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 1 — 12/10/2026 — Espacio "Eurovip" dentro de la base de datos
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: se creó el esquema "Eurovip". Es como una carpeta dentro de TropitoursVDT
+   donde se guardan solo las tablas de Eurovip, separadas de las de Tropitours (dbo).
+   ========================================================================================== */
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'Eurovip')
+    EXEC('CREATE SCHEMA Eurovip AUTHORIZATION dbo');
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 2 — 12/10/2026 — Tabla de ROLES
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: se creó la tabla donde se guardan los tipos de usuario
+   (por ejemplo: Superadministrador, Usuario).
+   Copiada de: ViajeVDT.dbo.rol (servidor 10.10.10.29).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.rol', 'U') IS NULL
+CREATE TABLE Eurovip.rol (
+    codigoRol varchar(50) NULL          -- nombre del rol
+);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 3 — 12/10/2026 — Tabla de USUARIOS (inicio de sesión)
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: se creó la tabla con las personas que pueden entrar al BackOffice de Eurovip.
+   Se usa en la pantalla de "Iniciar sesión" y en "Crear usuario".
+   La contraseña NUNCA se guarda en texto: se guarda cifrada (columna "clave").
+   Copiada de: ViajeVDT.dbo.usuario (servidor 10.10.10.29).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.usuario', 'U') IS NULL
+CREATE TABLE Eurovip.usuario (
+    codigoUsuario    int IDENTITY(1,1) NOT NULL,   -- número interno del usuario
+    nombre           varchar(50)  NOT NULL,
+    apellido         varchar(50)  NOT NULL,
+    telefono         varchar(15)  NULL,
+    clave            varchar(max) NOT NULL,        -- contraseña cifrada
+    imagen           varchar(100) NULL,            -- foto de perfil
+    activo           bit          NOT NULL,        -- 1 = puede entrar, 0 = bloqueado
+    rol              varchar(30)  NULL,            -- tipo de usuario
+    email            varchar(50)  NOT NULL,        -- correo con el que inicia sesión
+    userName         varchar(15)  NOT NULL,        -- nombre de usuario corto
+    Auth2FAValidator bit          NULL,
+    Auth2FACode      int          NULL,
+    SecurityStamp    varchar(50)  NULL,            -- sello de seguridad de la sesión
+    correoAD         varchar(70)  NULL,
+    contrasena       varchar(max) NULL,
+    CONSTRAINT PK_Eurovip_usuario PRIMARY KEY CLUSTERED (codigoUsuario)
+);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 4 — 12/10/2026 — Tabla de MÓDULOS del sistema
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: se creó la lista de secciones del BackOffice (Hoteles, Circuitos, etc.)
+   a las que se les puede dar o quitar acceso.
+   Copiada de: ViajeVDT.dbo.UsuarioAcceso (servidor 10.10.10.29).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.UsuarioAcceso', 'U') IS NULL
+CREATE TABLE Eurovip.UsuarioAcceso (
+    id_modulo     int IDENTITY(1,1) NOT NULL,     -- número del módulo
+    nombre_modulo nvarchar(200) NOT NULL,         -- nombre que se ve en pantalla
+    Categoria     nvarchar(200) NULL,             -- grupo del menú
+    CONSTRAINT PK_Eurovip_UsuarioAcceso PRIMARY KEY CLUSTERED (id_modulo)
+);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 5 — 12/10/2026 — Tabla de PERMISOS por usuario
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: se creó la tabla que dice qué módulos puede usar cada usuario
+   (acceso = 1 sí puede, 0 no puede). Está enlazada con la tabla de módulos (cambio 4).
+   Copiada de: ViajeVDT.dbo.UsuarioModulos (servidor 10.10.10.29).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.UsuarioModulos', 'U') IS NULL
+CREATE TABLE Eurovip.UsuarioModulos (
+    id        int IDENTITY(1,1) NOT NULL,
+    usuario   nvarchar(100) NOT NULL,                                                      -- userName del usuario
+    acceso    bit NOT NULL CONSTRAINT DF_Eurovip_UsuarioModulos_acceso DEFAULT ((0)),      -- 1 = tiene acceso
+    id_modulo int NOT NULL,                                                                -- módulo (cambio 4)
+    CONSTRAINT PK_Eurovip_UsuarioModulos PRIMARY KEY CLUSTERED (id),
+    CONSTRAINT FK_Eurovip_UsuarioModulos_UsuarioAcceso FOREIGN KEY (id_modulo)
+        REFERENCES Eurovip.UsuarioAcceso (id_modulo)
+);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 6 — 12/10/2026 — Primer usuario: Nachely Rodríguez
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: se copió el usuario "ARodriguez" (Nachely Rodríguez, Superadministrador)
+   desde la tabla de usuarios de Tropitours (TropitoursVDT.dbo.usuario) para poder
+   entrar a Eurovip. Antes se había creado una cuenta de prueba "Nachely" con el mismo
+   correo desde la pantalla de registro; esa se borró para que no quedaran dos iguales.
+   ========================================================================================== */
+SET XACT_ABORT ON;
+BEGIN TRAN;
+
+    -- Quitar la cuenta de prueba creada desde "Crear usuario" (mismo correo)
+    DELETE FROM Eurovip.usuario
+    WHERE userName = 'Nachely' AND email = 'nachely.rodriguez@dominicanatours.net';
+
+    -- Copiar ARodriguez desde Tropitours (solo si todavía no está)
+    IF NOT EXISTS (SELECT 1 FROM Eurovip.usuario WHERE userName = 'ARodriguez')
+    INSERT INTO Eurovip.usuario (nombre, apellido, telefono, clave, imagen, activo, rol, email, userName,
+                                 Auth2FAValidator, Auth2FACode, SecurityStamp, correoAD, contrasena)
+    SELECT nombre, apellido, telefono, clave, imagen, activo, rol, email, userName,
+           Auth2FAValidator, Auth2FACode, SecurityStamp, correoAD, contrasena
+    FROM dbo.usuario
+    WHERE userName = 'ARodriguez';
+
+COMMIT;
+GO
+
+
+/* ##########################################################################################
+   FASE 2 — CARGA DE HOTELES  (12/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para cargar hoteles se usa la tabla "inicio": es la VITRINA de la página web.
+   Cada fila es un producto publicado (un hotel, una oferta, un circuito…) con su precio
+   "desde", su imagen, su destino y el lugar donde aparece en la web (contenedor + posición).
+   Los hoteles se guardan con tipo_servicio = 'HOTEL'.
+   Para que funcione se necesitan también sus catálogos: idiomas, tipos de servicio, monedas,
+   campañas y contenedores. Todo se copió de ViajeVDT (10.10.10.29) sin tocar ese servidor.
+   ########################################################################################## */
+
+
+/* ==========================================================================================
+   CAMBIO 7 — 12/10/2026 — Tabla de IDIOMAS (mercados)
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: lista de idiomas/mercados de la web (ES español, US inglés, FR francés…).
+   Cada hotel publicado pertenece a un idioma.
+   Copiada de: ViajeVDT.dbo.idioma (estructura + sus 7 filas).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.idioma', 'U') IS NULL
+CREATE TABLE Eurovip.idioma (
+    id_idioma char(2)     NOT NULL,   -- código (ES, US, FR…)
+    nombre    varchar(20) NOT NULL,   -- nombre visible
+    CONSTRAINT PK_Eurovip_idioma PRIMARY KEY CLUSTERED (id_idioma)
+);
+GO
+-- Datos copiados de ViajeVDT (no duplica si ya existen)
+INSERT INTO Eurovip.idioma (id_idioma, nombre)
+SELECT v.id_idioma, v.nombre FROM (VALUES
+    (N'ES', N'ESPAÑOL'),
+    (N'EX', N'EXCURSIVO'),
+    (N'FR', N'FRANCES'),
+    (N'IT', N'ITALIANO'),
+    (N'PT', N'PORTUGUES'),
+    (N'RO', N'RUMANO'),
+    (N'US', N'INGLES')
+) v (id_idioma, nombre)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.idioma t WHERE t.id_idioma = v.id_idioma);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 8 — 12/10/2026 — Tabla de TIPOS DE SERVICIO
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: tipos de producto que se venden (Oferta, Circuito, Combinado, Excursión,
+   Traslado) con su precio mínimo de referencia.
+   Copiada de: ViajeVDT.dbo.tipo_servicio (estructura + sus 5 filas).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.tipo_servicio', 'U') IS NULL
+CREATE TABLE Eurovip.tipo_servicio (
+    id_tipo_servicio varchar(20)  NOT NULL,   -- código del tipo
+    descripcion      varchar(100) NOT NULL,
+    precio_minimo    money        NOT NULL,   -- precio mínimo de referencia
+    CONSTRAINT PK_Eurovip_tipo_servicio PRIMARY KEY CLUSTERED (id_tipo_servicio)
+);
+GO
+-- Datos copiados de ViajeVDT (no duplica si ya existen)
+INSERT INTO Eurovip.tipo_servicio (id_tipo_servicio, descripcion, precio_minimo)
+SELECT v.id_tipo_servicio, v.descripcion, v.precio_minimo FROM (VALUES
+    (N'Circuito', N'Tres o más hoteles', 800.0000),
+    (N'Combinado', N'Dos Hoteles', 600.0000),
+    (N'Excursion', N'Excursiones - servicio extras', 200.0000),
+    (N'Oferta', N'Servicios hoteleros', 700.0000),
+    (N'Traslado', N'Traslado - servicio', 2000.0000)
+) v (id_tipo_servicio, descripcion, precio_minimo)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.tipo_servicio t WHERE t.id_tipo_servicio = v.id_tipo_servicio);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 9 — 12/10/2026 — Tabla de MONEDAS
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: monedas en las que se publica el precio (hoy solo EUR, igual que ViajeVDT).
+   Copiada de: ViajeVDT.dbo.moneda (estructura + su fila).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.moneda', 'U') IS NULL
+CREATE TABLE Eurovip.moneda (
+    id_moneda char(3)     NOT NULL,   -- código (EUR)
+    nombre    varchar(20) NOT NULL,
+    CONSTRAINT PK_Eurovip_moneda PRIMARY KEY CLUSTERED (id_moneda)
+);
+GO
+-- Datos copiados de ViajeVDT (no duplica si ya existen)
+INSERT INTO Eurovip.moneda (id_moneda, nombre)
+SELECT v.id_moneda, v.nombre FROM (VALUES
+    (N'EUR', N'EURO')
+) v (id_moneda, nombre)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.moneda t WHERE t.id_moneda = v.id_moneda);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 10 — 12/10/2026 — Tabla de CAMPAÑAS
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: campañas comerciales (Verano, Navidad, General…). Cada hotel publicado
+   pertenece a una campaña. Está enlazada con idiomas (cambio 7) y tipos de servicio (cambio 8).
+   Copiada de: ViajeVDT.dbo.campanya (estructura + sus 126 filas).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.campanya', 'U') IS NULL
+CREATE TABLE Eurovip.campanya (
+    id_campanya      smallint     NOT NULL,   -- número de campaña
+    id_idioma        char(2)      NOT NULL,   -- idioma (cambio 7)
+    id_tipo_servicio varchar(20)  NOT NULL,   -- tipo de servicio (cambio 8)
+    nombre           varchar(30)  NOT NULL,
+    descripcion      varchar(max) NULL,
+    CONSTRAINT PK_Eurovip_campanya PRIMARY KEY CLUSTERED (id_campanya, id_idioma),
+    CONSTRAINT FK_Eurovip_campanya_idioma        FOREIGN KEY (id_idioma)        REFERENCES Eurovip.idioma (id_idioma),
+    CONSTRAINT FK_Eurovip_campanya_tipo_servicio FOREIGN KEY (id_tipo_servicio) REFERENCES Eurovip.tipo_servicio (id_tipo_servicio)
+);
+GO
+-- Datos copiados de ViajeVDT (no duplica si ya existen)
+INSERT INTO Eurovip.campanya (id_campanya, id_idioma, id_tipo_servicio, nombre, descripcion)
+SELECT v.id_campanya, v.id_idioma, v.id_tipo_servicio, v.nombre, v.descripcion FROM (VALUES
+    (14, N'ES', N'OFERTA', N'DTBaleares', N'Su clima suave con más de 300 días de sol al año, sus bellísimos paisajes y playas, su amplísima oferta cultural, sus posibilidades de ocio o relax y la hospitalidad de sus habitantes las han convertido en un lugar cosmopolita visitado desde todos los lugares del planeta, a veces para pasar vacaciones, y a veces para quedarse para siempre.'),
+    (15, N'ES', N'OFERTA', N'DTCanarias', N'Sobre las azules y refrescantes aguas del océano Atlántico, las Islas Canarias , también conocidas con "Las Islas Afortunadas", exhiben toda la magia de un archipiélago único en el mundo por su diversidad y riqueza subtropical; todo un universo del que disfrutar en un clima primaveral que se prolonga 12 meses al año.El Hierro, La Palma, La Gomera, Tenerife, Gran Canaria, Fuerteventura y Lanzarote, todas ellas espectaculares y muy diferentes, seducen al visitante con una excepcional oferta turística en la que encontrará los mejores alojamientos y una propuesta cultural y de ocio de la mayor calidad.Inmensas dunas blancas y aguas cristalinas, paisajes de aspecto lunar, bosques selváticos, recónditas calas de brillante arena negra, volcanes, extensas playas doradas… y todo el sabor de pueblos que han sabido conservar su patrimonio histórico y cultural con fiestas populares de gran arraigo y una gastronomía tan sencilla como exquisita.'),
+    (15, N'PT', N'OFERTA', N'DTIlhasCanarias', N'Sobre as azuis e refrescantes, águas do Océano Atlantico, as Ilhas Canarias, também conhecidas como “ As Ilhas com Sorte” , nos mostram toda a sua magia num arquipélogo único em um mundo com tanta diversidade e riqueza sub-tropical, Todo um universo de que pode disfrutar num clima primaveral que esta 12 meses ao ano. O Hierro, Palma, Gomera, Tenerife, Gran Canaria, Fuerteventura e Lanzarote, todos destinos espetaculares e super diferentes, seduzem ao visitante que com uma ecepcional oferta turística, na qual encontra os melhores alojamentos e uma proposta cultural e ócio de mayor qualidade. Imensas dunas blancas e águas cristalinas, paisagens de aspecto lunar, bosques selvagens, pequenas praias escondidas com brillante areia negra, vulcoes, extensas praias douradas… e todo com o sabor de povos que souberam conservar o seu patrimonio histórico, cultural com festas populares de grande arraigo e uma gastronomia tao simples como exótica.'),
+    (16, N'ES', N'COMBINADO', N'DTCombinados', N'<p>Si quieres hacerlo todo en tus vacaciones pero no sabes c&oacute;mo, aqu&iacute; te proponemos varias opciones para que disfrutes tanto de la playa, el sol y la fiesta como de la cultura, la gente y la ciudad del destino, nada m&aacute;s completo para tus vacaciones!</p>
+'),
+    (16, N'EX', N'COMBINADO', N'EXCombinados', N'EXCombinados'),
+    (16, N'FR', N'COMBINADO', N'FRCombinados', N'FRCombinados'),
+    (16, N'IT', N'COMBINADO', N'ITCombinados', N'ITCombinados'),
+    (16, N'PT', N'COMBINADO', N'PTCombinados', N'<p>Se voc&ecirc; quiser fazer tudo nas suas f&eacute;rias, mas nao sabe como, aqu&iacute; te fazemos a proposta de varias op&ccedil;oes para que possa aproveitar tanto da praia , do sol e da festa cultural, da gente e da cidade de destino, nada mais completo para as suas f&eacute;rias!&quot;</p>
+
+<p>&quot;</p>
+'),
+    (16, N'RO', N'COMBINADO', N'ROCombinados', N'ROCombinados'),
+    (16, N'US', N'COMBINADO', N'USCombinados', N'USCombinados'),
+    (17, N'ES', N'CIRCUITO', N'DTCircuitos', N'Qué mejor forma que conocer un destino, otro país, otra forma de vida que ¡recorriéndolo!, déjate llevar por los guías especializados en los destinos y conoce los mejores rincones del mundo. No lo dejes escapar.'),
+    (17, N'EX', N'CIRCUITO', N'EXCircuitos', NULL),
+    (17, N'FR', N'CIRCUITO', N'FRCircuitos', NULL),
+    (17, N'IT', N'CIRCUITO', N'ITCircuitos', NULL),
+    (17, N'PT', N'CIRCUITO', N'DTPTCircuitos', N'Qual é a melhor maneira de conhecer uma cidade em outro país, outra forma de vida, que deixando-se levar por guias especializados, os quais conhecem os melhores lugares do mundo. Nao deixe escapar esta oportunidade.'),
+    (17, N'RO', N'CIRCUITO', N'ROCircuitos', NULL),
+    (17, N'US', N'CIRCUITO', N'USCircuitos', NULL),
+    (91, N'ES', N'OFERTA', N'DTDirectoBCN', NULL),
+    (91, N'PT', N'OFERTA', N'DTDirectoBCN-PT', NULL),
+    (95, N'ES', N'OFERTA', N'DTInvierno', NULL),
+    (95, N'PT', N'OFERTA', N'DTInverno', NULL),
+    (99, N'ES', N'Oferta', N'General-DT', N'DT'),
+    (199, N'EX', N'Oferta', N'General-EX', N'EX'),
+    (299, N'FR', N'Oferta', N'General-FR', N'FR'),
+    (399, N'US', N'Oferta', N'General-US', N'US'),
+    (922, N'IT', N'Oferta', N'General-IT', N'IT'),
+    (991, N'PT', N'Oferta', N'General-PT', N'PT'),
+    (992, N'RO', N'Oferta', N'General-RO', N'RO'),
+    (1035, N'ES', N'OFERTA', N'Especial Navidad DT-PT', N'
+<p>En esta sección de ofertas les ofrecemos una selección de los mejores destinos al mejor precio del mercado. Porque como de costumbre, nos sentimos comprometidos con hacer de su viaje  de Navidad y Fin de Año una experiencia inolvidable. <strong>Viaja con VDT.</strong></p>
+<p>
+<br />
+</p>
+'),
+    (1035, N'EX', N'OFERTA', N'Especial Navidad DT-PT', N'
+<p>En esta sección de ofertas les ofrecemos una selección de los mejores destinos al mejor precio del mercado. Porque como de costumbre, nos sentimos comprometidos con hacer de su viaje  de Navidad y Fin de Año una experiencia inolvidable. <strong>Viaja con VDT.</strong></p>
+<p>
+<br />
+</p>
+'),
+    (1035, N'FR', N'OFERTA', N'Spécial Noël DT-PT', N'
+<p>Dans cette section, nous proposons une sélection propose les meilleurs hôtels meilleur prix du marché. Parce que, comme d''habitude, nous nous engageons à rendre votre séjour à Noël et Nouvel An une expérience inoubliable. <strong>Voyage avec VDT.</strong></p>
+<p>
+<br />
+</p>
+'),
+    (1035, N'IT', N'OFERTA', N'Speciale Natale DT-PT', N'
+<p>In questa sezione vi proponiamo una selezione offre le migliori proposte miglior prezzo di mercato. Perché, come al solito, ci siamo impegnati per rendere il vostro viaggio a Natale e Capodanno un''esperienza indimenticabile. <strong>Viaggiare con VDT.</strong></p>
+<p>
+<br />
+</p>
+'),
+    (1035, N'PT', N'OFERTA', N'Especial de Natal DT-PT', N'
+<div>Nesta seção, oferecemos uma seleção oferece as melhores escolhas para melhor preço do mercado. Porque, como de costume, temos o compromisso de fazer a sua viagem de Natal e Ano Novo uma experiência inesquecível. <strong>Viaje com VDT.</strong></div>
+<div>
+<strong>
+</strong> </div>
+<div>
+<br />
+</div>
+'),
+    (1035, N'RO', N'OFERTA', N'Speciala de Craciun DT-PT', N'
+<p>În aceasta sec?iune va oferim o selec?ie ofera cele mai bune ponturi pentru cel mai bun pret pe pia?a. Deoarece, ca de obicei, ne-am angajat pentru a face calatoria dvs. de Craciun ?i de Anul Nou o experienta de neuitat. <strong>Calatorii cu VDT.</strong></p>
+<p>
+<br />
+</p>
+'),
+    (1035, N'US', N'OFERTA', N'Special Christmas DT-PT', N'
+<p>In this section we offer a selection offers the best picks for best market price. Because as usual, we are committed to make your trip to Christmas and New Year an unforgettable experience. <strong>Travel with VDT.</strong></p>
+<p>
+<br />
+</p>
+'),
+    (1114, N'PT', N'Oferta', N'BalearesPT', N'...'),
+    (1199, N'PT', N'OFERTA', N'GeralDT-PT', N'
+
+
+
+
+
+<p>&quot;</p>
+'),
+    (1230, N'ES', N'OFERTA', N'DTVerano', N'<p>Arena o asfalto..? Nosotros te lo ponemos f&aacute;cil, elijas el destino que elijas este verano te garantizamos el mejor precio. No esperes a que te lo cuenten, se t&uacute; el primero en contarlo...&nbsp;</p>
+
+<div>&nbsp;</div>
+
+<div><strong>Reserva YA tus vacaciones de VERANO!</strong></div>
+'),
+    (1230, N'PT', N'OFERTA', N'DTVerao', N'<p>Areia ou asfalto..? Deixamos f&aacute;cil, seja o que seja, o destino que escolhas, este ver&atilde;o garantimos o mejor pre&ccedil;o. N&atilde;o esperes que te digam depois, seja tu o primeiro em contar...</p>
+
+<div>&nbsp;
+<div><strong>Reserva J&Aacute; tuas f&eacute;rias de VER&Atilde;O!&nbsp;</strong></div>
+
+<div>&nbsp;</div>
+
+<div>&nbsp;</div>
+</div>
+
+<p>&quot;</p>
+'),
+    (1721, N'US', N'OFERTA', N'DTCANARIAS34', N'222'),
+    (3164, N'ES', N'OFERTA', N'Especial Los Cabos DT-PT', NULL),
+    (3164, N'PT', N'OFERTA', N'Especial Los Cabos DT-PT', NULL),
+    (3166, N'ES', N'OFERTA', N'DTEspecialFiestas', NULL),
+    (3166, N'PT', N'OFERTA', N'DTEspecialFestas', NULL),
+    (3167, N'ES', N'OFERTA', N'DTDestinosEspeciales', NULL),
+    (3167, N'PT', N'OFERTA', N'DTDestinosEspeciais', NULL),
+    (3168, N'ES', N'OFERTA', N'DTFestivos', NULL),
+    (3168, N'PT', N'OFERTA', N'DTFestivosPT', NULL),
+    (3170, N'ES', N'OFERTA', N'DTGeneral', NULL),
+    (3170, N'PT', N'OFERTA', N'DTGeralPT', NULL),
+    (3171, N'ES', N'OFERTA', N'No usar BF ES', NULL),
+    (3171, N'PT', N'OFERTA', N'No usar BF PT', NULL),
+    (8131, N'PT', N'OFERTA', N'DTBlueMonday-PT', NULL),
+    (8132, N'ES', N'OFERTA', N'DT Bahía Príncipe', NULL),
+    (8132, N'PT', N'OFERTA', N'DT Bahía Príncipe PT', NULL),
+    (8133, N'ES', N'OFERTA', N'Navidad', NULL),
+    (8133, N'PT', N'OFERTA', N'Natal', NULL),
+    (8134, N'ES', N'OFERTA', N'Luxury', NULL),
+    (8134, N'PT', N'OFERTA', N'LuxuryPT', NULL),
+    (8142, N'ES', N'Oferta', N'IT-General', N'IT-General'),
+    (8146, N'PT', N'Oferta', N'Canarias-PT', N'Canarias-PT'),
+    (8153, N'ES', N'Oferta', N'Vuelo Directo Barcelona', N'...'),
+    (8154, N'FR', N'Oferta', N'FRBaleares', N'...'),
+    (8155, N'US', N'Oferta', N'USBaleares', N'...'),
+    (8156, N'IT', N'Oferta', N'ITBaleares', N'...'),
+    (8157, N'PT', N'Oferta', N'PTBaleares', N'...'),
+    (8158, N'RO', N'Oferta', N'ROBaleares', N'...'),
+    (8160, N'ES', N'Oferta', N'Newblue Oferta DT', N'.'),
+    (8161, N'EX', N'Oferta', N'Newblue Oferta EX', N'.'),
+    (8162, N'FR', N'Oferta', N'Newblue Oferta FR', N'.'),
+    (8163, N'US', N'Oferta', N'Newblue Oferta US', N'.'),
+    (8164, N'IT', N'Oferta', N'Newblue Oferta IT', N'.'),
+    (8167, N'RO', N'Oferta', N'Newblue Oferta RO', N'.'),
+    (8168, N'PT', N'Oferta', N'Newblue Oferta PT', N'.'),
+    (8171, N'IT', N'Oferta', N'IT-DatosDuplicados', N'it'),
+    (8172, N'ES', N'Oferta', N'Inmediato.ES', N'.'),
+    (8173, N'EX', N'Oferta', N'Inmediato.EX', N'.'),
+    (8174, N'FR', N'Oferta', N'Inmediato.FR', N'.'),
+    (8175, N'US', N'Oferta', N'Inmediato.US', N'.'),
+    (8176, N'IT', N'Oferta', N'Inmediato.IT', N'.'),
+    (8177, N'PT', N'Oferta', N'Inmediato.PT', N'.'),
+    (8178, N'RO', N'Oferta', N'Inmediato.RO', N'.'),
+    (8179, N'ES', N'Oferta', N'Navidad-ES', N'.'),
+    (8180, N'EX', N'Oferta', N'Navidad-EX', N'.'),
+    (8181, N'FR', N'Oferta', N'Navidad-FR', N'.'),
+    (8182, N'US', N'Oferta', N'Navidad-US', N'.'),
+    (8183, N'IT', N'Oferta', N'Navidad-IT', N'.'),
+    (8184, N'PT', N'Oferta', N'Navidad-PT', N'.'),
+    (8185, N'RO', N'Oferta', N'Navidad-RO', N'.'),
+    (8186, N'FR', N'Oferta', N'p', N'p'),
+    (8187, N'ES', N'Oferta', N'Black-ES', N'.'),
+    (8188, N'EX', N'Oferta', N'Black-EX', N'.'),
+    (8189, N'FR', N'Oferta', N'Black-FR', N'.'),
+    (8190, N'US', N'Oferta', N'Black-US', N'.'),
+    (8191, N'IT', N'Oferta', N'Black-IT', N'.'),
+    (8192, N'PT', N'Oferta', N'Black-PT', N'.'),
+    (8193, N'RO', N'Oferta', N'Black-RO', N'.'),
+    (8194, N'RO', N'Oferta', N'p1', N'p1'),
+    (8195, N'ES', N'Oferta', N'SemanaS.DT', N'.'),
+    (8196, N'EX', N'Oferta', N'SemanaS.EX', N'.')
+) v (id_campanya, id_idioma, id_tipo_servicio, nombre, descripcion)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.campanya t WHERE t.id_campanya = v.id_campanya AND t.id_idioma = v.id_idioma);
+INSERT INTO Eurovip.campanya (id_campanya, id_idioma, id_tipo_servicio, nombre, descripcion)
+SELECT v.id_campanya, v.id_idioma, v.id_tipo_servicio, v.nombre, v.descripcion FROM (VALUES
+    (8197, N'FR', N'Oferta', N'SemanaS.FR', N'.'),
+    (8198, N'US', N'Oferta', N'SemanaS.US', N'.'),
+    (8199, N'IT', N'Oferta', N'SemanaS.IT', N'.'),
+    (8200, N'PT', N'Oferta', N'SemanaS.PT', N'.'),
+    (8201, N'RO', N'Oferta', N'SemanaS.RO', N'.'),
+    (8202, N'ES', N'Oferta', N'SliderZanzibar-ES', N'SliderZanzibar-ES'),
+    (8203, N'EX', N'Oferta', N'SliderZanzibar-EX', NULL),
+    (8204, N'FR', N'Oferta', N'SliderZanzibar-FR', NULL),
+    (8205, N'US', N'Oferta', N'SliderZanzibar-US', NULL),
+    (8206, N'IT', N'Oferta', N'SliderZanzibar-IT', NULL),
+    (8207, N'PT', N'Oferta', N'SliderZanzibar-PT', NULL),
+    (8208, N'RO', N'Oferta', N'SliderZanzibar-RO', NULL),
+    (8209, N'ES', N'Oferta', N'BonoExcursivo-ES', NULL),
+    (8210, N'EX', N'Oferta', N'BonoExcursivo-EX', NULL),
+    (8211, N'FR', N'Oferta', N'BonoExcursivo-FR', NULL),
+    (8212, N'US', N'Oferta', N'BonoExcursivo-US', NULL),
+    (8213, N'IT', N'Oferta', N'BonoExcursivo-IT', NULL),
+    (8214, N'PT', N'Oferta', N'BonoExcursivo-PT', NULL),
+    (8215, N'RO', N'Oferta', N'BonoExcursivo-RO', NULL),
+    (8216, N'ES', N'Oferta', N'Verano-ES', NULL),
+    (8217, N'EX', N'Oferta', N'Verano-EX', NULL),
+    (8218, N'FR', N'Oferta', N'Verano-FR', NULL),
+    (8219, N'US', N'Oferta', N'Verano-US', NULL),
+    (8220, N'IT', N'Oferta', N'Verano-IT', NULL),
+    (8221, N'PT', N'Oferta', N'Verano-PT', NULL),
+    (8222, N'RO', N'Oferta', N'Verano-RO', NULL)
+) v (id_campanya, id_idioma, id_tipo_servicio, nombre, descripcion)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.campanya t WHERE t.id_campanya = v.id_campanya AND t.id_idioma = v.id_idioma);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 11 — 12/10/2026 — Tabla de CONTENEDORES (secciones de la web)
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: los bloques de la página web donde se muestran los productos
+   (CARIBE, AMÉRICA, HOTEL, CIRCUITO…), con su orden (posición) por idioma.
+   Copiada de: ViajeVDT.dbo.contenedores (estructura + sus 48 filas, con los mismos números).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.contenedores', 'U') IS NULL
+CREATE TABLE Eurovip.contenedores (
+    id_contenedor int IDENTITY(1,1) NOT NULL,
+    nombre        varchar(255) NOT NULL,                                          -- nombre de la sección
+    posicion      int          NOT NULL,                                          -- orden en la web
+    estado        bit          NOT NULL,                                          -- 1 = visible
+    id_idioma     varchar(2)   NULL CONSTRAINT DF_Eurovip_contenedores_idioma DEFAULT ('es'),
+    CONSTRAINT PK_Eurovip_contenedores PRIMARY KEY CLUSTERED (id_contenedor)
+);
+GO
+-- Datos copiados de ViajeVDT (no duplica si ya existen)
+SET IDENTITY_INSERT Eurovip.contenedores ON;
+INSERT INTO Eurovip.contenedores (id_contenedor, nombre, posicion, estado, id_idioma)
+SELECT v.id_contenedor, v.nombre, v.posicion, v.estado, v.id_idioma FROM (VALUES
+    (1, N'CARIBE', 1, 1, N'es'),
+    (2, N'COMBINADO', 3, 1, N'es'),
+    (5, N'ISLAS', 6, 1, N'es'),
+    (6, N'AFRICA / ASIA / EUROPA', 7, 1, N'es'),
+    (9, N'CIRCUITO', 5, 1, N'es'),
+    (10, N'AMÉRICA', 2, 1, N'es'),
+    (11, N'CARIBBEAN', 1, 1, N'us'),
+    (12, N'AMERICA', 2, 1, N'us'),
+    (13, N'COMBINED', 3, 1, N'us'),
+    (14, N'CIRCUIT', 4, 1, N'us'),
+    (15, N'SPANISH ISLANDS', 5, 1, N'us'),
+    (16, N'AFRICA / ASIA / EUROPE', 6, 1, N'us'),
+    (17, N'CARAÏBES', 1, 1, N'fr'),
+    (18, N'AMÉRIQUE', 2, 1, N'fr'),
+    (19, N'COMBINÉ', 3, 1, N'fr'),
+    (20, N'CIRCUIT', 4, 1, N'fr'),
+    (21, N'ÎLES ESPAGNOLES', 5, 1, N'fr'),
+    (22, N'AFRIQUE / ASIE / EUROPE', 6, 1, N'fr'),
+    (23, N'CARAÍBAS', 1, 1, N'pt'),
+    (24, N'AMÉRICA', 2, 1, N'pt'),
+    (25, N'COMBINADO', 3, 1, N'pt'),
+    (26, N'CIRCUITO', 4, 1, N'pt'),
+    (27, N'ILHAS ESPANHOLAS', 5, 1, N'pt'),
+    (28, N'ÁFRICA / ÁSIA / EUROPA', 6, 1, N'pt'),
+    (29, N'CARAIBE', 1, 1, N'ro'),
+    (30, N'AMERICA', 2, 1, N'ro'),
+    (31, N'COMBINAT', 3, 1, N'ro'),
+    (32, N'CIRCUIT', 4, 1, N'ro'),
+    (33, N'INSULE SPANIOLE', 5, 1, N'ro'),
+    (34, N'AFRICA / ASIA / EUROPA', 6, 1, N'ro'),
+    (35, N'CARAIBI', 1, 1, N'it'),
+    (36, N'AMERICA', 2, 1, N'it'),
+    (37, N'COMBINATO', 3, 1, N'it'),
+    (38, N'CIRCUITO', 4, 1, N'it'),
+    (39, N'ISOLE SPAGNOLE', 5, 1, N'it'),
+    (40, N'AFRICA / ASIA / EUROPA', 6, 1, N'it'),
+    (41, N'CARIBE', 1, 1, N'ex'),
+    (42, N'AMÉRICA', 2, 1, N'ex'),
+    (43, N'COMBINADO', 3, 1, N'ex'),
+    (44, N'CIRCUITO', 4, 1, N'ex'),
+    (45, N'ISLAS', 5, 1, N'ex'),
+    (46, N'AFRICA / ASIA / EUROPA', 6, 1, N'ex'),
+    (47, N'HOTEL', 4, 1, N'es'),
+    (48, N'HOTEL', 7, 1, N'us'),
+    (49, N'HOTEL', 7, 1, N'fr'),
+    (50, N'HOTEL', 7, 1, N'pt'),
+    (51, N'HOTEL', 7, 1, N'ro'),
+    (52, N'HOTEL', 7, 1, N'it')
+) v (id_contenedor, nombre, posicion, estado, id_idioma)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.contenedores t WHERE t.id_contenedor = v.id_contenedor);
+SET IDENTITY_INSERT Eurovip.contenedores OFF;
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 12 — 12/10/2026 — Tabla INICIO (vitrina de la web — aquí se cargan los HOTELES)
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: se creó igual que ViajeVDT.dbo.inicio. La pantalla "Carga de Hoteles" del
+   BackOffice guarda aquí cada hotel (tipo_servicio = 'HOTEL'): nombre, precio desde,
+   imagen, campaña, idioma, origen/destino y en qué sección de la web aparece.
+   Se agregó un índice para buscar rápido por tipo de servicio e idioma.
+   Copiada de: ViajeVDT.dbo.inicio (solo estructura, empieza vacía).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.inicio', 'U') IS NULL
+CREATE TABLE Eurovip.inicio (
+    id_servicio         int           NOT NULL,   -- número del producto publicado
+    id_idioma           char(2)       NOT NULL,   -- idioma/mercado (cambio 7)
+    tipo_servicio       varchar(20)   NOT NULL,   -- HOTEL, OFERTA, CIRCUITO…
+    id_campanya         smallint      NOT NULL,   -- campaña (cambio 10)
+    id_moneda           char(3)       NOT NULL,   -- moneda (cambio 9)
+    id_pais_origen      char(2)       NOT NULL,   -- país de salida (ES, PT…)
+    origen              varchar(30)   NOT NULL,   -- ciudad de salida
+    id_paisDestino      char(2)       NOT NULL,   -- país de destino (DO = Rep. Dominicana)
+    id_destino          varchar(1500) NOT NULL,   -- en hoteles: nombre del hotel
+    caratulaDestino     varchar(300)  NULL,       -- imagen de portada (URL)
+    descripcion         varchar(max)  NOT NULL,   -- texto (ej. régimen: Todo Incluido)
+    latitud             varchar(50)   NULL,       -- ubicación en el mapa
+    longitud            varchar(50)   NULL,
+    precioWeb           money         NULL,       -- precio "desde" que se ve en la web
+    id_contenedor       int           NULL,       -- sección de la web (cambio 11)
+    contenedor          varchar(30)   NULL,       -- nombre de la sección
+    posicion_contenedor int           NULL,       -- orden de la sección
+    posicion_destino    int           NULL,       -- orden del hotel dentro de la sección
+    estado              bit           NULL,       -- 1 = visible en la web, 0 = oculto
+    notas               nvarchar(1000) NULL,
+    noches              int           NULL,
+    CONSTRAINT PK_Eurovip_inicio PRIMARY KEY CLUSTERED (id_servicio)
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_inicio_tipo_idioma' AND object_id = OBJECT_ID('Eurovip.inicio'))
+    CREATE NONCLUSTERED INDEX IX_Eurovip_inicio_tipo_idioma ON Eurovip.inicio (tipo_servicio, id_idioma) INCLUDE (estado, id_contenedor);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 13 — 12/10/2026 — Tabla de AUDITORÍA (historial de cambios)
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: cada vez que alguien crea, edita, activa/desactiva o elimina un hotel,
+   se guarda aquí quién lo hizo, cuándo, desde qué IP y qué cambió.
+   Copiada de: ViajeVDT.dbo.auditoria_consulta_oferta (solo estructura).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.auditoria_consulta_oferta', 'U') IS NULL
+CREATE TABLE Eurovip.auditoria_consulta_oferta (
+    id                 int IDENTITY(1,1) NOT NULL,
+    ids_servicio       nvarchar(max) NOT NULL,                       -- productos afectados (JSON)
+    cantidad_servicios int           NOT NULL,
+    tipo_mantenimiento varchar(50)   NOT NULL,                       -- Hotel_Crear, Hotel_Editar…
+    usuario            varchar(100)  NOT NULL,                       -- quién lo hizo
+    fecha_hora         datetime      NOT NULL CONSTRAINT DF_Eurovip_auditoria_fecha DEFAULT (getdate()),
+    cambios_realizados nvarchar(max) NULL,                           -- detalle del cambio (JSON)
+    ip_usuario         varchar(50)   NULL,
+    navegador          varchar(200)  NULL,
+    CONSTRAINT PK_Eurovip_auditoria_consulta_oferta PRIMARY KEY CLUSTERED (id)
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_Auditoria_FechaHora')
+    CREATE NONCLUSTERED INDEX IX_Eurovip_Auditoria_FechaHora ON Eurovip.auditoria_consulta_oferta (fecha_hora);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_Auditoria_TipoMantenimiento')
+    CREATE NONCLUSTERED INDEX IX_Eurovip_Auditoria_TipoMantenimiento ON Eurovip.auditoria_consulta_oferta (tipo_mantenimiento);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_Auditoria_Usuario')
+    CREATE NONCLUSTERED INDEX IX_Eurovip_Auditoria_Usuario ON Eurovip.auditoria_consulta_oferta (usuario);
+GO
+
+
+/* ##########################################################################################
+   FASE 3 — CIRCUITOS  (12/10/2026)
+   ------------------------------------------------------------------------------------------
+   Un CIRCUITO es un viaje por varios destinos (ej. "Costa Rica Esencial", 7 noches) con:
+     • sus destinos, sus hoteles por categoría (Standard, Superior…) y su itinerario día a día;
+   y se VENDE creando "servicios": uno por cada fecha de salida, con su precio, campaña,
+   suplementos/tasas, notas y, SOLO SI TIENE, sus vuelos (en Eurovip los vuelos son opcionales).
+   Todo se copió de ViajeVDT (10.10.10.29) sin tocar ese servidor, siempre en idioma ES.
+
+   Diferencias a propósito con ViajeVDT (mejoras Eurovip):
+     • Vuelos opcionales de verdad: no se graban vuelos "de relleno".
+     • servicio_circuito guarda también el origen de venta (para circuitos sin vuelo).
+     • spInsertaServicio ya no "se traga" el error: lo registra y lo devuelve (la carga
+       completa se deshace si algo falla, nada queda a medias).
+     • Se crea spInsertaCircuitoItinerario (en ViajeVDT se llamaba pero no existía).
+   ########################################################################################## */
+
+
+/* ==========================================================================================
+   CAMBIO 14 — 12/10/2026 — Catálogos geográficos: PAÍSES y DESTINOS
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: lista de países y de destinos/ciudades (Punta Cana, Madrid, El Cairo…).
+   Se usan para elegir los destinos de un circuito y el origen de venta.
+   Copiadas de: ViajeVDT.dbo.pais y dbo.destino — solo filas en español (ES).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.pais', 'U') IS NULL
+CREATE TABLE Eurovip.pais (
+    id_pais           char(2)     NOT NULL,   -- código (DO, ES…)
+    id_idioma         char(2)     NOT NULL,
+    nombre_continente varchar(15) NULL,
+    nombre            varchar(30) NOT NULL,
+    CONSTRAINT PK_Eurovip_pais PRIMARY KEY CLUSTERED (id_pais, id_idioma),
+    CONSTRAINT FK_Eurovip_pais_idioma FOREIGN KEY (id_idioma) REFERENCES Eurovip.idioma (id_idioma) ON UPDATE CASCADE
+);
+GO
+-- Datos copiados de ViajeVDT (142 filas; no duplica si ya existen)
+INSERT INTO Eurovip.pais (id_pais, id_idioma, nombre_continente, nombre)
+SELECT v.id_pais, v.id_idioma, v.nombre_continente, v.nombre FROM (VALUES
+    (N'AB', N'ES', NULL, N'Antigua y Barbuda'),
+    (N'AD', N'ES', NULL, N'Andorra'),
+    (N'AE', N'ES', NULL, N'Emiratos Arabes Unidos'),
+    (N'AF', N'ES', NULL, N'Antillas Lesser - Francia'),
+    (N'AL', N'ES', N'Europa', N'Albania'),
+    (N'AM', N'ES', NULL, N'Armenia'),
+    (N'AR', N'ES', NULL, N'Argentina'),
+    (N'AT', N'ES', NULL, N'Austria'),
+    (N'AU', N'ES', NULL, N'Australia'),
+    (N'AW', N'ES', NULL, N'Antillas Holandesas'),
+    (N'BA', N'ES', NULL, N'Bahrain'),
+    (N'BB', N'ES', NULL, N'Baleares'),
+    (N'BD', N'ES', NULL, N'Barbados'),
+    (N'BE', N'ES', NULL, N'Bélgica'),
+    (N'BG', N'ES', NULL, N'Bulgaria'),
+    (N'BH', N'ES', NULL, N'Bosnia y Herzegovina'),
+    (N'BI', N'ES', NULL, N'Bielorrusia'),
+    (N'BO', N'ES', NULL, N'Bolivia'),
+    (N'BR', N'ES', NULL, N'Brasil'),
+    (N'BS', N'ES', NULL, N'Bahamas'),
+    (N'BZ', N'ES', NULL, N'Escocia'),
+    (N'CA', N'ES', NULL, N'Canada'),
+    (N'CC', N'ES', NULL, N'Islas Canarias'),
+    (N'CH', N'ES', NULL, N'Suiza'),
+    (N'CL', N'ES', NULL, N'Chile'),
+    (N'CM', N'ES', NULL, N'Camboya'),
+    (N'CN', N'ES', NULL, N'China'),
+    (N'CO', N'ES', NULL, N'Colombia'),
+    (N'CR', N'ES', NULL, N'Costa Rica'),
+    (N'CU', N'ES', NULL, N'Cuba'),
+    (N'CV', N'ES', NULL, N'Cabo Verde'),
+    (N'CY', N'ES', NULL, N'Chipre'),
+    (N'CZ', N'ES', NULL, N'Republica Checa'),
+    (N'DE', N'ES', NULL, N'Alemania'),
+    (N'DK', N'ES', NULL, N'Dinamarca'),
+    (N'DO', N'ES', NULL, N'República Dominicana'),
+    (N'E1', N'ES', NULL, N'Arabia Saudi'),
+    (N'E3', N'ES', NULL, N'Bosnia-herzegovina'),
+    (N'EC', N'ES', NULL, N'Ecuador'),
+    (N'EE', N'ES', NULL, N'Estonia'),
+    (N'EG', N'ES', NULL, N'Egipto'),
+    (N'ES', N'ES', NULL, N'España'),
+    (N'FI', N'ES', NULL, N'Finlandia'),
+    (N'FJ', N'ES', NULL, N'Fiji'),
+    (N'FR', N'ES', NULL, N'Francia'),
+    (N'GB', N'ES', NULL, N'Gran Bretaña'),
+    (N'GF', N'ES', NULL, N'Guayana Francesa'),
+    (N'GH', N'ES', NULL, N'Ganha'),
+    (N'GM', N'ES', NULL, N'Gambia'),
+    (N'GP', N'ES', NULL, N'Guadalupe'),
+    (N'GR', N'ES', NULL, N'Grecia'),
+    (N'GT', N'ES', NULL, N'Guatemala'),
+    (N'HN', N'ES', NULL, N'Honduras'),
+    (N'HR', N'ES', NULL, N'Croacia'),
+    (N'HU', N'ES', NULL, N'Hungria'),
+    (N'ID', N'ES', NULL, N'Indonesia'),
+    (N'IE', N'ES', NULL, N'Irlanda'),
+    (N'IL', N'ES', NULL, N'Israel'),
+    (N'IM', N'ES', NULL, N'Islas Mauricio'),
+    (N'IN', N'ES', NULL, N'India'),
+    (N'IR', N'ES', NULL, N'Irán'),
+    (N'IS', N'ES', NULL, N'Islandia'),
+    (N'IT', N'ES', NULL, N'Italia'),
+    (N'JM', N'ES', N'', N'Jamaica'),
+    (N'JO', N'ES', NULL, N'Jordania'),
+    (N'JP', N'ES', NULL, N'Japón'),
+    (N'KE', N'ES', NULL, N'Kenya'),
+    (N'KR', N'ES', NULL, N'Corea del Sur'),
+    (N'KW', N'ES', NULL, N'Kuwait'),
+    (N'LB', N'ES', NULL, N'Libano'),
+    (N'LI', N'ES', NULL, N'Liechtenstein'),
+    (N'LK', N'ES', NULL, N'Sri Lanka'),
+    (N'LT', N'ES', NULL, N'Lituania'),
+    (N'LU', N'ES', NULL, N'Luxemburgo'),
+    (N'LV', N'ES', NULL, N'Letonia'),
+    (N'LY', N'ES', NULL, N'Libia'),
+    (N'MA', N'ES', NULL, N'Marruecos'),
+    (N'MC', N'ES', NULL, N'Mónaco'),
+    (N'ME', N'ES', N'America', N'Puerto Morelos'),
+    (N'MG', N'ES', NULL, N'Madagascar'),
+    (N'MK', N'ES', NULL, N'Macedonia'),
+    (N'MO', N'ES', NULL, N'República popular China'),
+    (N'MQ', N'ES', NULL, N'Martinica - Francia'),
+    (N'MR', N'ES', NULL, N'Myanmar'),
+    (N'MT', N'ES', NULL, N'Malta'),
+    (N'MU', N'es', N'Africa', N'Mauricio'),
+    (N'MV', N'ES', NULL, N'Maldivas'),
+    (N'MX', N'ES', NULL, N'México'),
+    (N'MY', N'ES', NULL, N'Malaysia'),
+    (N'MZ', N'ES', NULL, N'Mozambique'),
+    (N'NC', N'ES', NULL, N'Nueva Caledonia - Francia'),
+    (N'NG', N'ES', NULL, N'Nigeria'),
+    (N'NI', N'ES', NULL, N'Nicaragua'),
+    (N'NL', N'ES', NULL, N'Holanda'),
+    (N'NO', N'ES', NULL, N'Noruega'),
+    (N'NP', N'ES', NULL, N'Nepal'),
+    (N'NY', N'ES', NULL, N'Nueva York'),
+    (N'NZ', N'ES', NULL, N'Nueva Zelandia'),
+    (N'OM', N'ES', NULL, N'Omán'),
+    (N'PA', N'ES', NULL, N'Panamá')
+) v (id_pais, id_idioma, nombre_continente, nombre)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.pais t WHERE t.id_pais = v.id_pais AND t.id_idioma = v.id_idioma);
+INSERT INTO Eurovip.pais (id_pais, id_idioma, nombre_continente, nombre)
+SELECT v.id_pais, v.id_idioma, v.nombre_continente, v.nombre FROM (VALUES
+    (N'PE', N'ES', NULL, N'Perú'),
+    (N'PF', N'ES', NULL, N'Polinesia Francesa'),
+    (N'PH', N'ES', NULL, N'Filipinas'),
+    (N'PL', N'ES', NULL, N'Polonia'),
+    (N'PP', N'ES', NULL, N'Palermo'),
+    (N'PR', N'ES', NULL, N'Puerto Rico'),
+    (N'PT', N'ES', NULL, N'Portugal'),
+    (N'PY', N'ES', NULL, N'Paraguay'),
+    (N'QA', N'ES', NULL, N'Qatar'),
+    (N'RO', N'ES', NULL, N'Rumania'),
+    (N'RU', N'ES', NULL, N'Rusia'),
+    (N'SA', N'ES', N'Europa', N'Arabia Saudi'),
+    (N'SB', N'ES', NULL, N'Serbia'),
+    (N'SC', N'ES', NULL, N'Seychelles'),
+    (N'SE', N'ES', NULL, N'Suecia'),
+    (N'SG', N'ES', NULL, N'República de Singapur'),
+    (N'SI', N'ES', NULL, N'Eslovenia'),
+    (N'SK', N'ES', NULL, N'Eslovaquia'),
+    (N'SL', N'ES', NULL, N'St. Lucia'),
+    (N'SM', N'ES', NULL, N'San Marino'),
+    (N'SN', N'ES', NULL, N'Senegal'),
+    (N'SU', N'ES', NULL, N'Sudán'),
+    (N'SV', N'ES', NULL, N'El Salvador'),
+    (N'SY', N'ES', NULL, N'Siria'),
+    (N'TH', N'ES', NULL, N'Tailandia'),
+    (N'TN', N'ES', NULL, N'Túnez'),
+    (N'TR', N'ES', NULL, N'Turquia'),
+    (N'TT', N'ES', NULL, N'Trinidad y Tobago'),
+    (N'TW', N'ES', NULL, N'República de China'),
+    (N'TZ', N'ES', NULL, N'Tanzania'),
+    (N'UA', N'ES', NULL, N'Ucrania'),
+    (N'US', N'ES', NULL, N'Estados Unidos'),
+    (N'UY', N'ES', NULL, N'Uruguay'),
+    (N'UZ', N'ES', NULL, N'Uzbekistán'),
+    (N'VE', N'ES', NULL, N'Venezuela'),
+    (N'VI', N'ES', NULL, N'St. Vincent y las Granadinas'),
+    (N'VN', N'ES', NULL, N'Vietnam'),
+    (N'ww', N'ES', N'Am', N'America'),
+    (N'XX', N'ES', NULL, N'Desconocido'),
+    (N'YU', N'ES', NULL, N'Yugoslavia'),
+    (N'ZA', N'ES', NULL, N'Sudáfrica'),
+    (N'ZW', N'ES', NULL, N'Zimbawe')
+) v (id_pais, id_idioma, nombre_continente, nombre)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.pais t WHERE t.id_pais = v.id_pais AND t.id_idioma = v.id_idioma);
+GO
+IF OBJECT_ID('Eurovip.destino', 'U') IS NULL
+CREATE TABLE Eurovip.destino (
+    id_destino  varchar(30)  NOT NULL,   -- nombre del destino (ej. Punta Cana)
+    id_idioma   char(2)      NOT NULL,
+    id_pais     char(2)      NOT NULL,
+    caratula    varchar(300) NULL,
+    id          int          NULL,
+    informacion varchar(max) NULL,
+    latitud     varchar(50)  NULL,
+    longitud    varchar(50)  NULL,
+    CONSTRAINT PK_Eurovip_destino PRIMARY KEY CLUSTERED (id_destino, id_idioma, id_pais),
+    CONSTRAINT FK_Eurovip_destino_pais FOREIGN KEY (id_pais, id_idioma) REFERENCES Eurovip.pais (id_pais, id_idioma) ON UPDATE CASCADE
+);
+GO
+-- Datos: copia masiva desde ViajeVDT →  SELECT * FROM dbo.destino WHERE id_idioma = 'ES'   (≈7.320 filas)
+
+
+/* ==========================================================================================
+   CAMBIO 15 — 12/10/2026 — HOTELES (alojamientos)
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: catálogo de hoteles y su tipo (Hotel / Crucero). Se usan para asignar los
+   hoteles de cada circuito por categoría.
+   Copiadas de: ViajeVDT.dbo.tipo_alojamiento y dbo.alojamiento — solo filas ES.
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.tipo_alojamiento', 'U') IS NULL
+CREATE TABLE Eurovip.tipo_alojamiento (
+    id_tipo_alojamiento varchar(20)  NOT NULL,
+    descripcion         varchar(max) NOT NULL,
+    CONSTRAINT PK_Eurovip_tipo_alojamiento PRIMARY KEY CLUSTERED (id_tipo_alojamiento)
+);
+GO
+-- Datos copiados de ViajeVDT (2 filas; no duplica si ya existen)
+INSERT INTO Eurovip.tipo_alojamiento (id_tipo_alojamiento, descripcion)
+SELECT v.id_tipo_alojamiento, v.descripcion FROM (VALUES
+    (N'CRUCERO', N'Crucero'),
+    (N'HOTEL', N'Hotel')
+) v (id_tipo_alojamiento, descripcion)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.tipo_alojamiento t WHERE t.id_tipo_alojamiento = v.id_tipo_alojamiento);
+GO
+IF OBJECT_ID('Eurovip.alojamiento', 'U') IS NULL
+CREATE TABLE Eurovip.alojamiento (
+    id_alojamiento      int           NOT NULL,   -- número del hotel
+    id_idioma           char(2)       NOT NULL,
+    id_tipo_alojamiento varchar(20)   NOT NULL,   -- HOTEL / CRUCERO
+    id_destino          varchar(30)   NOT NULL,   -- destino donde está
+    id_pais             char(2)       NOT NULL,
+    nombre              varchar(100)  NOT NULL,
+    caratula            varchar(300)  NULL,
+    descripcion         varchar(max)  NULL,
+    grupo               int           NULL,
+    categoria           varchar(15)   NOT NULL,   -- estrellas / categoría del hotel
+    latitude            nvarchar(100) NULL,
+    longitude           nvarchar(100) NULL,
+    categoria_circuito  varchar(50)   NULL,
+    circuito            bit           NULL,
+    activo              bit           NOT NULL CONSTRAINT DF_Eurovip_alojamiento_activo DEFAULT ((1)),
+    CONSTRAINT PK_Eurovip_alojamiento PRIMARY KEY CLUSTERED (id_alojamiento, id_idioma),
+    CONSTRAINT FK_Eurovip_alojamiento_tipo FOREIGN KEY (id_tipo_alojamiento) REFERENCES Eurovip.tipo_alojamiento (id_tipo_alojamiento) ON UPDATE CASCADE
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_alojamiento_nombre' AND object_id = OBJECT_ID('Eurovip.alojamiento'))
+    CREATE NONCLUSTERED INDEX IX_Eurovip_alojamiento_nombre ON Eurovip.alojamiento (id_idioma, nombre) INCLUDE (id_destino, id_pais, categoria, caratula, activo);
+GO
+-- Datos: copia masiva desde ViajeVDT →  SELECT * FROM dbo.alojamiento WHERE id_idioma = 'ES'   (≈9.560 filas)
+
+
+/* ==========================================================================================
+   CAMBIO 16 — 12/10/2026 — PROVEEDORES, AEROPUERTOS, RÉGIMEN, TASAS y CATEGORÍAS
+   ------------------------------------------------------------------------------------------
+   Qué se hizo:
+     • proveedor / tipo_proveedor: tour operadores (dueños del circuito) y aerolíneas.
+     • estacion / tipo_estacion: aeropuertos (solo se usan si el circuito lleva vuelo).
+     • regimen: Todo Incluido, Media Pensión… (para el itinerario día a día).
+     • tasa: suplementos y tasas que se suman al precio (Tasas de Origen, Visado…).
+     • categoria: categorías de hoteles del circuito (Standard, Superior, Deluxe…).
+   Copiadas de: ViajeVDT (proveedor y estacion por copia masiva; el resto aquí abajo).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.tipo_proveedor', 'U') IS NULL
+CREATE TABLE Eurovip.tipo_proveedor (
+    id_tipo_proveedor varchar(20) NOT NULL,
+    CONSTRAINT PK_Eurovip_tipo_proveedor PRIMARY KEY CLUSTERED (id_tipo_proveedor)
+);
+GO
+-- Datos copiados de ViajeVDT (2 filas; no duplica si ya existen)
+INSERT INTO Eurovip.tipo_proveedor (id_tipo_proveedor)
+SELECT v.id_tipo_proveedor FROM (VALUES
+    (N'Aerolinea'),
+    (N'Tour Operador')
+) v (id_tipo_proveedor)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.tipo_proveedor t WHERE t.id_tipo_proveedor = v.id_tipo_proveedor);
+GO
+IF OBJECT_ID('Eurovip.proveedor', 'U') IS NULL
+CREATE TABLE Eurovip.proveedor (
+    id_proveedor      varchar(10) NOT NULL,
+    id_tipo_proveedor varchar(20) NOT NULL,   -- Aerolinea / Tour Operador
+    nombre            varchar(50) NOT NULL,
+    CONSTRAINT PK_Eurovip_proveedor PRIMARY KEY CLUSTERED (id_proveedor),
+    CONSTRAINT FK_Eurovip_proveedor_tipo FOREIGN KEY (id_tipo_proveedor) REFERENCES Eurovip.tipo_proveedor (id_tipo_proveedor) ON UPDATE CASCADE
+);
+GO
+-- Datos: copia masiva desde ViajeVDT →  SELECT * FROM dbo.proveedor   (≈1.335 filas)
+
+IF OBJECT_ID('Eurovip.tipo_estacion', 'U') IS NULL
+CREATE TABLE Eurovip.tipo_estacion (
+    id_tipo_estacion varchar(15) NOT NULL,
+    CONSTRAINT PK_Eurovip_tipo_estacion PRIMARY KEY CLUSTERED (id_tipo_estacion)
+);
+GO
+-- Datos copiados de ViajeVDT (1 filas; no duplica si ya existen)
+INSERT INTO Eurovip.tipo_estacion (id_tipo_estacion)
+SELECT v.id_tipo_estacion FROM (VALUES
+    (N'AEROPUERTO')
+) v (id_tipo_estacion)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.tipo_estacion t WHERE t.id_tipo_estacion = v.id_tipo_estacion);
+GO
+IF OBJECT_ID('Eurovip.estacion', 'U') IS NULL
+CREATE TABLE Eurovip.estacion (
+    id_estacion      varchar(10) NOT NULL,   -- código del aeropuerto (PUJ, MAD…)
+    id_destino       varchar(30) NOT NULL,   -- ciudad
+    id_idioma        char(2)     NOT NULL,
+    id_pais          char(2)     NOT NULL,
+    id_tipo_estacion varchar(15) NOT NULL,
+    nombre           varchar(80) NOT NULL,
+    CONSTRAINT PK_Eurovip_estacion PRIMARY KEY CLUSTERED (id_estacion, id_destino, id_idioma, id_pais),
+    CONSTRAINT FK_Eurovip_estacion_tipo FOREIGN KEY (id_tipo_estacion) REFERENCES Eurovip.tipo_estacion (id_tipo_estacion) ON UPDATE CASCADE
+);
+GO
+-- Datos: copia masiva desde ViajeVDT →  SELECT * FROM dbo.estacion WHERE id_idioma = 'ES'   (≈3.715 filas)
+
+IF OBJECT_ID('Eurovip.regimen', 'U') IS NULL
+CREATE TABLE Eurovip.regimen (
+    id_regimen  char(2)      NOT NULL,   -- TI, MP, AD…
+    id_idioma   char(2)      NOT NULL,
+    descripcion varchar(max) NOT NULL,
+    CONSTRAINT PK_Eurovip_regimen PRIMARY KEY CLUSTERED (id_regimen, id_idioma),
+    CONSTRAINT FK_Eurovip_regimen_idioma FOREIGN KEY (id_idioma) REFERENCES Eurovip.idioma (id_idioma) ON UPDATE CASCADE
+);
+GO
+-- Datos copiados de ViajeVDT (11 filas; no duplica si ya existen)
+INSERT INTO Eurovip.regimen (id_regimen, id_idioma, descripcion)
+SELECT v.id_regimen, v.id_idioma, v.descripcion FROM (VALUES
+    (N'AD', N'ES', N'Alojamiento Y Desayuno AD'),
+    (N'HD', N'ES', N'Alojamiento Y Desayuno'),
+    (N'MP', N'ES', N'Media Pensión MP'),
+    (N'PC', N'ES', N'Pensión Completa PC'),
+    (N'PT', N'ES', N'Solo Habitación.'),
+    (N'RO', N'ES', N'Solo Habitación..'),
+    (N'SA', N'ES', N'Solo Habitación'),
+    (N'SH', N'ES', N'Solo Habitación SH'),
+    (N'SI', N'ES', N'Súper Todo Incluído Pio Gusto'),
+    (N'SP', N'ES', N'Según Programa SP'),
+    (N'TI', N'ES', N'Todo Incluido TI')
+) v (id_regimen, id_idioma, descripcion)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.regimen t WHERE t.id_regimen = v.id_regimen AND t.id_idioma = v.id_idioma);
+GO
+IF OBJECT_ID('Eurovip.tasa', 'U') IS NULL
+CREATE TABLE Eurovip.tasa (
+    id_tasa      varchar(50) NOT NULL,   -- nombre del suplemento/tasa
+    id_idioma    char(2)     NOT NULL,
+    id_tipo_tasa int         NULL,
+    CONSTRAINT PK_Eurovip_tasa PRIMARY KEY CLUSTERED (id_tasa, id_idioma),
+    CONSTRAINT FK_Eurovip_tasa_idioma FOREIGN KEY (id_idioma) REFERENCES Eurovip.idioma (id_idioma) ON UPDATE CASCADE
+);
+GO
+-- Datos copiados de ViajeVDT (47 filas; no duplica si ya existen)
+INSERT INTO Eurovip.tasa (id_tasa, id_idioma, id_tipo_tasa)
+SELECT v.id_tasa, v.id_idioma, v.id_tipo_tasa FROM (VALUES
+    (N'Anulación VDT PLUS', N'ES', 101),
+    (N'Asistencia VDT PLUS', N'ES', 101),
+    (N'Campaña', N'ES', 11),
+    (N'Carburante', N'ES', 2),
+    (N'Cargo Barco', N'ES', 9),
+    (N'Categoría Gran Clase', N'ES', 3),
+    (N'Categoría Superior', N'ES', 1),
+    (N'Cena de Noche Vieja', N'ES', 5),
+    (N'Conexion', N'ES', NULL),
+    (N'Descuento general', N'ES', 32),
+    (N'Descuento por Bebé', N'ES', 34),
+    (N'Descuento por Niño', N'ES', 33),
+    (N'excursión', N'ES', 100),
+    (N'f', N'ES', 56),
+    (N'Gala de Navidad', N'ES', 4),
+    (N'Habitación cuadruple', N'ES', 31),
+    (N'Habitación Individual', N'ES', 22),
+    (N'Habitación Junior', N'ES', 23),
+    (N'Habitación Suite', N'ES', 24),
+    (N'Habitación triple', N'ES', 30),
+    (N'ITBIS', N'ES', 14),
+    (N'Multiasistencia Plus con Anulación Receptivo', N'ES', 101),
+    (N'Multiasistencia VDT PLUS', N'ES', 101),
+    (N'Prueba', N'ES', 111),
+    (N'Prueba3', N'ES', NULL),
+    (N'Seguro', N'ES', NULL),
+    (N'Sin Seguro', N'ES', 101),
+    (N'Sup. Origen BCN', N'ES', 41),
+    (N'Sup. Origen MAD', N'ES', 40),
+    (N'Sup. Origen OTR', N'ES', 42),
+    (N'Suplemento Adicional', N'ES', 102),
+    (N'Suplemento Ampliacion Estancia', N'ES', 6),
+    (N'Suplemento de Origen', N'ES', 8),
+    (N'Suplemento de Salida', N'ES', 12),
+    (N'Suplemento Dia', N'ES', NULL),
+    (N'Suplemento Individual', N'ES', NULL),
+    (N'Suplemento Noche extra', N'ES', 21),
+    (N'Tasa Entrada país Destino', N'ES', 16),
+    (N'Tasa Origen BCN', N'ES', 51),
+    (N'Tasa Origen MAD', N'ES', 50),
+    (N'Tasa Origen OTR', N'ES', 52),
+    (N'Tasa Salida País destino', N'ES', 15),
+    (N'Tasas de Origen', N'ES', 7),
+    (N'Traslado', N'ES', 25),
+    (N'Visado', N'ES', 10),
+    (N'Visado ES', N'ES', NULL),
+    (N'Vistas', N'ES', 20)
+) v (id_tasa, id_idioma, id_tipo_tasa)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.tasa t WHERE t.id_tasa = v.id_tasa AND t.id_idioma = v.id_idioma);
+GO
+IF OBJECT_ID('Eurovip.categoria', 'U') IS NULL
+CREATE TABLE Eurovip.categoria (
+    categoria   varchar(20)  NOT NULL,   -- Standard, Superior…
+    descripcion varchar(200) NULL,
+    CONSTRAINT PK_Eurovip_categoria PRIMARY KEY CLUSTERED (categoria)
+);
+GO
+-- Datos copiados de ViajeVDT (4 filas; no duplica si ya existen)
+INSERT INTO Eurovip.categoria (categoria, descripcion)
+SELECT v.categoria, v.descripcion FROM (VALUES
+    (N'Deluxe', N'Deluxe'),
+    (N'Deluxe Plus', N'Deluxe Plus'),
+    (N'Standard', N'Standard'),
+    (N'Superior', N'Superior')
+) v (categoria, descripcion)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.categoria t WHERE t.categoria = v.categoria);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 17 — 12/10/2026 — CONFIGURACIÓN del sistema
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: tabla clave/valor. Por ahora guarda "precio_base_minimo" = 300: ninguna salida
+   de circuito se puede cargar con precio base menor (igual que en ViajeVDT).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.config_sistema', 'U') IS NULL
+CREATE TABLE Eurovip.config_sistema (
+    clave                varchar(100) NOT NULL,
+    valor                varchar(500) NOT NULL,
+    descripcion          varchar(300) NULL,
+    fecha_modificacion   datetime     NULL CONSTRAINT DF_Eurovip_config_fecha DEFAULT (getdate()),
+    usuario_modificacion varchar(100) NULL,
+    CONSTRAINT PK_Eurovip_config_sistema PRIMARY KEY CLUSTERED (clave)
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM Eurovip.config_sistema WHERE clave = 'precio_base_minimo')
+    INSERT INTO Eurovip.config_sistema (clave, valor, descripcion)
+    VALUES ('precio_base_minimo', '300', 'Precio base mínimo aceptado al cargar salidas de circuitos');
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 18 — 12/10/2026 — CATÁLOGO DE CIRCUITOS
+   ------------------------------------------------------------------------------------------
+   Qué se hizo (4 tablas, empiezan vacías):
+     • circuito ......................... el circuito: código, nombre, noches, proveedor, imagen.
+     • circuito_destino ................. qué destinos recorre.
+     • circuito_itinerario .............. qué se hace cada día (título, descripción, visitas…).
+     • servicio_circuito_alojamiento .... qué hoteles usa, por categoría.
+   Copiadas de: ViajeVDT (solo estructura). En Eurovip cada circuito es solo ES (1 nombre).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.circuito', 'U') IS NULL
+CREATE TABLE Eurovip.circuito (
+    nombre_circuito varchar(50)  NOT NULL,   -- nombre visible del circuito
+    id_idioma       char(2)      NOT NULL,   -- siempre ES en Eurovip
+    id_proveedor    varchar(10)  NOT NULL,   -- tour operador
+    noches          smallint     NOT NULL,
+    caratula        varchar(200) NULL,       -- imagen de portada
+    itinerario      varchar(max) NULL,       -- resumen del recorrido
+    id              varchar(100) NULL,       -- código único del circuito
+    CONSTRAINT PK_Eurovip_circuito PRIMARY KEY CLUSTERED (nombre_circuito, id_idioma),
+    CONSTRAINT FK_Eurovip_circuito_idioma    FOREIGN KEY (id_idioma)    REFERENCES Eurovip.idioma (id_idioma) ON UPDATE CASCADE,
+    CONSTRAINT FK_Eurovip_circuito_proveedor FOREIGN KEY (id_proveedor) REFERENCES Eurovip.proveedor (id_proveedor) ON UPDATE CASCADE
+);
+GO
+IF OBJECT_ID('Eurovip.circuito_destino', 'U') IS NULL
+CREATE TABLE Eurovip.circuito_destino (
+    nombre_circuito varchar(50)  NOT NULL,
+    id_destino      varchar(30)  NOT NULL,
+    id_idioma       char(2)      NOT NULL,
+    id_pais         char(2)      NOT NULL,
+    id              varchar(100) NULL,
+    CONSTRAINT PK_Eurovip_circuito_destino PRIMARY KEY CLUSTERED (nombre_circuito, id_destino, id_idioma, id_pais),
+    CONSTRAINT FK_Eurovip_circuito_destino_circuito FOREIGN KEY (nombre_circuito, id_idioma) REFERENCES Eurovip.circuito (nombre_circuito, id_idioma),
+    CONSTRAINT FK_Eurovip_circuito_destino_destino  FOREIGN KEY (id_destino, id_idioma, id_pais) REFERENCES Eurovip.destino (id_destino, id_idioma, id_pais) ON UPDATE CASCADE
+);
+GO
+IF OBJECT_ID('Eurovip.circuito_itinerario', 'U') IS NULL
+CREATE TABLE Eurovip.circuito_itinerario (
+    dia              int          NOT NULL,   -- 1, 2, 3…
+    titulo           varchar(200) NOT NULL,
+    nombre_circuito  varchar(50)  NOT NULL,
+    id_idioma        char(2)      NOT NULL,
+    descripcion      varchar(max) NOT NULL,
+    visitas          varchar(max) NULL,
+    regimen          varchar(200) NULL,
+    transporte       varchar(200) NULL,
+    tipo_alojamiento varchar(20)  NULL,
+    caratula         varchar(200) NULL,       -- imagen del día
+    CONSTRAINT PK_Eurovip_circuito_itinerario PRIMARY KEY CLUSTERED (nombre_circuito, id_idioma, dia),
+    CONSTRAINT FK_Eurovip_circuito_itinerario_circuito FOREIGN KEY (nombre_circuito, id_idioma) REFERENCES Eurovip.circuito (nombre_circuito, id_idioma)
+);
+GO
+IF OBJECT_ID('Eurovip.servicio_circuito_alojamiento', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_circuito_alojamiento (
+    nombre_circuito varchar(50)  NOT NULL,
+    id_idioma       char(2)      NOT NULL,
+    id_alojamiento  int          NOT NULL,
+    categoria       varchar(50)  NOT NULL,   -- Standard, Superior…
+    caratula        varchar(200) NULL,
+    CONSTRAINT PK_Eurovip_servicio_circuito_alojamiento PRIMARY KEY CLUSTERED (nombre_circuito, id_idioma, id_alojamiento, categoria),
+    CONSTRAINT FK_Eurovip_sca_alojamiento FOREIGN KEY (id_alojamiento, id_idioma) REFERENCES Eurovip.alojamiento (id_alojamiento, id_idioma),
+    CONSTRAINT FK_Eurovip_sca_circuito    FOREIGN KEY (nombre_circuito, id_idioma) REFERENCES Eurovip.circuito (nombre_circuito, id_idioma)
+);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 19 — 12/10/2026 — CARGA DE CIRCUITOS (lo que se vende)
+   ------------------------------------------------------------------------------------------
+   Qué se hizo (empiezan vacías):
+     • servicio .............. una fila por SALIDA vendible (fecha, precio, campaña, descuento).
+     • servicio_circuito ..... a qué circuito pertenece cada salida y sus fechas desde/hasta.
+                               ➕ Eurovip: guarda país y ciudad de origen de venta (sirve
+                               cuando el circuito NO lleva vuelo).
+     • servicio_itinerario ... los VUELOS de la salida (solo si tiene; opcional).
+     • servicio_tasa ......... suplementos/tasas de cada salida.
+     • servicio_nota ......... notas (incluye, no incluye, condiciones…).
+     • alojamiento_circuito .. vitrina de circuitos para la web (precio desde por circuito).
+     • Log_Cargas ............ registro de cada carga (quién, cuándo, cuántas salidas, estado).
+     • LogErroresServicio .... errores de base de datos al cargar.
+   Copiadas de: ViajeVDT (solo estructura).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.servicio', 'U') IS NULL
+CREATE TABLE Eurovip.servicio (
+    id_servicio        int IDENTITY(1,1) NOT NULL,
+    id_tipo_servicio   varchar(20)   NOT NULL,                     -- CIRCUITO
+    id_idioma          char(2)       NOT NULL,
+    id_moneda          char(3)       NOT NULL,
+    id_campanya        smallint      NOT NULL,
+    id_Proveedor       varchar(10)   NOT NULL,
+    apertura           date          NOT NULL CONSTRAINT DF_Eurovip_servicio_apertura DEFAULT (getdate()),
+    usuario            varchar(15)   NOT NULL CONSTRAINT DF_Eurovip_servicio_usuario DEFAULT ('eurovip'),
+    precio_base        money         NOT NULL CONSTRAINT DF_Eurovip_servicio_precio_base DEFAULT ((0.00)),
+    descuento          numeric(6,2)  NOT NULL CONSTRAINT DF_Eurovip_servicio_descuento DEFAULT ((0)),
+    precio_mas_menos   money         NOT NULL CONSTRAINT DF_Eurovip_servicio_mas_menos DEFAULT ((0)),
+    ajuste             money         NULL     CONSTRAINT DF_Eurovip_servicio_ajuste DEFAULT ((0)),
+    nota               varchar(max)  NULL,
+    noches             smallint      NOT NULL,
+    codigo             varchar(30)   NULL,                         -- código de la carga
+    baja               date          NULL,
+    nombre             varchar(50)   NULL,                         -- nombre del circuito
+    activo             bit           NOT NULL CONSTRAINT DF_Eurovip_servicio_activo DEFAULT ((1)),
+    precio             AS ([precio_base]-[precio_base]*([descuento]/(100))),
+    categoria_circuito varchar(20)   NULL,
+    CONSTRAINT PK_Eurovip_servicio PRIMARY KEY CLUSTERED (id_servicio),
+    CONSTRAINT FK_Eurovip_servicio_idioma    FOREIGN KEY (id_idioma) REFERENCES Eurovip.idioma (id_idioma) ON UPDATE CASCADE,
+    CONSTRAINT FK_Eurovip_servicio_campanya  FOREIGN KEY (id_campanya, id_idioma) REFERENCES Eurovip.campanya (id_campanya, id_idioma),
+    CONSTRAINT FK_Eurovip_servicio_moneda    FOREIGN KEY (id_moneda) REFERENCES Eurovip.moneda (id_moneda) ON UPDATE CASCADE,
+    CONSTRAINT FK_Eurovip_servicio_tipo      FOREIGN KEY (id_tipo_servicio) REFERENCES Eurovip.tipo_servicio (id_tipo_servicio) ON UPDATE CASCADE,
+    CONSTRAINT FK_Eurovip_servicio_proveedor FOREIGN KEY (id_Proveedor) REFERENCES Eurovip.proveedor (id_proveedor) ON UPDATE CASCADE,
+    CONSTRAINT FK_Eurovip_servicio_categoria FOREIGN KEY (categoria_circuito) REFERENCES Eurovip.categoria (categoria),
+    CONSTRAINT CK_Eurovip_servicio_categoria_circuito CHECK ([id_tipo_servicio]='CIRCUITO' AND [categoria_circuito] IS NOT NULL OR [id_tipo_servicio]<>'CIRCUITO')
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_servicio_busqueda' AND object_id = OBJECT_ID('Eurovip.servicio'))
+    CREATE NONCLUSTERED INDEX IX_Eurovip_servicio_busqueda ON Eurovip.servicio (id_idioma, id_tipo_servicio, id_campanya, id_moneda, activo) INCLUDE (noches, precio_base, precio_mas_menos, descuento, id_Proveedor, nombre, codigo);
+GO
+IF OBJECT_ID('Eurovip.servicio_circuito', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_circuito (
+    id_servicio     int         NOT NULL,
+    nombre_circuito varchar(50) NOT NULL,
+    id_idoma        char(2)     NOT NULL,   -- (se mantiene el nombre de ViajeVDT, con su errata)
+    desde           date        NOT NULL,   -- fecha de salida
+    hasta           date        NOT NULL,   -- fecha de regreso
+    id_pais_origen  char(2)     NULL,       -- ➕ Eurovip: país de origen de venta
+    origen          varchar(30) NULL,       -- ➕ Eurovip: ciudad de origen de venta
+    CONSTRAINT PK_Eurovip_servicio_circuito PRIMARY KEY CLUSTERED (id_servicio, nombre_circuito, id_idoma),
+    CONSTRAINT FK_Eurovip_servicio_circuito_circuito FOREIGN KEY (nombre_circuito, id_idoma) REFERENCES Eurovip.circuito (nombre_circuito, id_idioma) ON UPDATE CASCADE,
+    CONSTRAINT FK_Eurovip_servicio_circuito_servicio FOREIGN KEY (id_servicio) REFERENCES Eurovip.servicio (id_servicio)
+);
+GO
+IF OBJECT_ID('Eurovip.servicio_itinerario', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_itinerario (
+    id_servicio         int         NOT NULL,
+    segmento            smallint    NOT NULL,   -- 1, 2, 3… (orden del vuelo)
+    id_proveedor        varchar(10) NOT NULL,   -- aerolínea
+    id_estacion_origen  varchar(10) NOT NULL,   -- aeropuerto de salida
+    origen              varchar(30) NOT NULL,
+    id_idioma           char(2)     NOT NULL,
+    id_pais_origen      char(2)     NOT NULL,
+    id_estacion_destino varchar(10) NOT NULL,   -- aeropuerto de llegada
+    destino             varchar(30) NOT NULL,
+    id_pais_destino     char(2)     NOT NULL,
+    vuelo               varchar(15) NULL,       -- número de vuelo
+    fecha_salida        date        NOT NULL,
+    hora_salida         varchar(10) NOT NULL,
+    fecha_regreso       date        NOT NULL,   -- fecha de llegada del segmento
+    hora_regreso        varchar(10) NOT NULL,
+    clase               char(1)     NOT NULL,
+    conexion            bit         NOT NULL,
+    CONSTRAINT PK_Eurovip_servicio_itinerario PRIMARY KEY CLUSTERED (id_servicio, segmento),
+    CONSTRAINT FK_Eurovip_servicio_itinerario_origen    FOREIGN KEY (id_estacion_origen, origen, id_idioma, id_pais_origen) REFERENCES Eurovip.estacion (id_estacion, id_destino, id_idioma, id_pais),
+    CONSTRAINT FK_Eurovip_servicio_itinerario_destino   FOREIGN KEY (id_estacion_destino, destino, id_idioma, id_pais_destino) REFERENCES Eurovip.estacion (id_estacion, id_destino, id_idioma, id_pais),
+    CONSTRAINT FK_Eurovip_servicio_itinerario_proveedor FOREIGN KEY (id_proveedor) REFERENCES Eurovip.proveedor (id_proveedor),
+    CONSTRAINT FK_Eurovip_servicio_itinerario_servicio  FOREIGN KEY (id_servicio) REFERENCES Eurovip.servicio (id_servicio)
+);
+GO
+IF OBJECT_ID('Eurovip.servicio_tasa', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_tasa (
+    id_Servicio int         NOT NULL,
+    id_tasa     varchar(50) NOT NULL,   -- suplemento (cambio 16)
+    id_idioma   char(2)     NOT NULL,
+    valor       money       NOT NULL,   -- importe que se suma al precio
+    CONSTRAINT PK_Eurovip_servicio_tasa PRIMARY KEY CLUSTERED (id_Servicio, id_tasa, id_idioma),
+    CONSTRAINT FK_Eurovip_servicio_tasa_servicio FOREIGN KEY (id_Servicio) REFERENCES Eurovip.servicio (id_servicio),
+    CONSTRAINT FK_Eurovip_servicio_tasa_tasa     FOREIGN KEY (id_tasa, id_idioma) REFERENCES Eurovip.tasa (id_tasa, id_idioma) ON UPDATE CASCADE
+);
+GO
+IF OBJECT_ID('Eurovip.servicio_nota', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_nota (
+    id_servicio int          NOT NULL,
+    secuencia   smallint     NOT NULL,
+    id_idioma   char(3)      NOT NULL,
+    tipo        varchar(50)  NOT NULL,   -- Incluye, No incluye, Condiciones…
+    nota1       varchar(max) NOT NULL,
+    nota2       varchar(max) NOT NULL,
+    CONSTRAINT PK_Eurovip_servicio_nota PRIMARY KEY CLUSTERED (id_servicio, secuencia, id_idioma),
+    CONSTRAINT FK_Eurovip_servicio_nota_servicio FOREIGN KEY (id_servicio) REFERENCES Eurovip.servicio (id_servicio)
+);
+GO
+IF OBJECT_ID('Eurovip.alojamiento_circuito', 'U') IS NULL
+CREATE TABLE Eurovip.alojamiento_circuito (
+    id_servicio      int          NOT NULL,
+    id_idioma        char(2)      NOT NULL,
+    id_tipo_servicio varchar(30)  NOT NULL,
+    id_campanya      smallint     NOT NULL,
+    id_moneda        char(3)      NOT NULL,
+    id_pais_origen   char(2)      NOT NULL,
+    id_origen        varchar(30)  NOT NULL,
+    id_pais_destino  varchar(max) NOT NULL,
+    id_destino       varchar(max) NOT NULL,
+    caratula         varchar(max) NULL,
+    precio_web       money        NOT NULL,
+    nombre_circuito  varchar(max) NOT NULL,
+    CONSTRAINT PK_Eurovip_alojamiento_circuito PRIMARY KEY CLUSTERED (id_servicio)
+);
+GO
+IF OBJECT_ID('Eurovip.Log_Cargas', 'U') IS NULL
+CREATE TABLE Eurovip.Log_Cargas (
+    id                      int IDENTITY(1,1) NOT NULL,
+    tipo_carga              nvarchar(200)  NOT NULL,
+    usuario                 nvarchar(400)  NOT NULL,
+    ip                      nvarchar(100)  NULL,
+    navegador               nvarchar(1000) NULL,
+    fecha_hora              datetime       NOT NULL CONSTRAINT DF_Eurovip_Log_Cargas_fecha DEFAULT (getdate()),
+    origen                  nvarchar(max)  NULL,
+    destino                 nvarchar(1000) NULL,
+    campanyas               nvarchar(max)  NULL,
+    regimenes               nvarchar(max)  NULL,
+    descuento_carga         int            NULL,
+    descuento_ex            int            NULL,
+    noches                  int            NULL,
+    fecha_inicio            date           NULL,
+    fecha_fin               date           NULL,
+    dias                    nvarchar(400)  NULL,
+    codigo_oferta           nvarchar(200)  NULL,
+    habitacion              int            NULL,
+    estatus                 nvarchar(100)  NULL CONSTRAINT DF_Eurovip_Log_Cargas_estatus DEFAULT (N'Sin Estatus'),
+    mensaje                 nvarchar(max)  NULL,
+    datos                   nvarchar(max)  NULL,
+    fecha_hora_fin          datetime       NULL,
+    duracion                datetime       NULL,
+    registros_insertados    int            NULL,
+    registros_no_insertados int            NULL,
+    CONSTRAINT PK_Eurovip_Log_Cargas PRIMARY KEY CLUSTERED (id)
+);
+GO
+IF OBJECT_ID('Eurovip.LogErroresServicio', 'U') IS NULL
+CREATE TABLE Eurovip.LogErroresServicio (
+    LogID          int IDENTITY(1,1) NOT NULL,
+    ErrorNumber    int            NULL,
+    ErrorMessage   nvarchar(4000) NULL,
+    ErrorProcedure nvarchar(128)  NULL,
+    ErrorLine      int            NULL,
+    FechaError     datetime       NULL,
+    UsuarioDB      nvarchar(128)  NULL,
+    CONSTRAINT PK_Eurovip_LogErroresServicio PRIMARY KEY CLUSTERED (LogID)
+);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 20 — 12/10/2026 — FUNCIONES de cálculo
+   ------------------------------------------------------------------------------------------
+   Qué se hizo:
+     • fnSegmento ........... siguiente número de vuelo de una salida.
+     • fnTotalTasa .......... suma de suplementos/tasas de una salida.
+     • fnPrecioWeb .......... precio final de una salida = base + más/menos + tasas − descuento.
+                              (En ViajeVDT también suma hotel/habitación; en circuitos eso
+                              siempre es 0, por eso aquí no se incluye.)
+     • fnAlojamientoCircuito  la salida más barata de cada circuito para la vitrina web.
+                              ➕ Eurovip: funciona CON o SIN vuelo (el origen sale del vuelo
+                              si existe; si no, del origen de venta guardado en servicio_circuito).
+   ========================================================================================== */
+CREATE OR ALTER FUNCTION Eurovip.fnSegmento (@numero INT)
+RETURNS SMALLINT
+AS
+BEGIN
+    RETURN (SELECT ISNULL(MAX(segmento), 0) + 1 FROM Eurovip.servicio_itinerario WHERE id_servicio = @numero);
+END
+GO
+CREATE OR ALTER FUNCTION Eurovip.fnTotalTasa (@id_servicio INT)
+RETURNS MONEY
+AS
+BEGIN
+    RETURN (SELECT ISNULL(SUM(valor), 0.00) FROM Eurovip.servicio_tasa WHERE id_Servicio = @id_servicio);
+END
+GO
+CREATE OR ALTER FUNCTION Eurovip.fnPrecioWeb (@id_Servicio INT)
+RETURNS MONEY
+AS
+BEGIN
+    RETURN (
+        SELECT s.precio_base + s.precio_mas_menos + Eurovip.fnTotalTasa(s.id_servicio) - s.precio_base * (s.descuento / 100)
+        FROM Eurovip.servicio s WHERE s.id_servicio = @id_Servicio
+    );
+END
+GO
+CREATE OR ALTER FUNCTION Eurovip.fnAlojamientoCircuito
+(
+    @idIdioma CHAR(2), @idTipoServicio VARCHAR(30), @idCampanya SMALLINT, @idMoneda CHAR(3),
+    @idPaisOrigen CHAR(2), @origen VARCHAR(30), @idPaisDestino VARCHAR(100)
+)
+RETURNS TABLE
+AS
+RETURN
+    WITH salidas AS (
+        SELECT s.id_servicio, s.id_idioma, s.id_tipo_servicio, s.id_campanya, s.id_moneda,
+               COALESCE(si.id_pais_origen, sc.id_pais_origen) AS id_pais_origen,
+               COALESCE(si.origen, sc.origen)                 AS id_origen,
+               cd.id_pais                                     AS id_pais_destino,
+               c.caratula, Eurovip.fnPrecioWeb(s.id_servicio) AS precio_web, c.nombre_circuito,
+               ROW_NUMBER() OVER (PARTITION BY c.nombre_circuito ORDER BY Eurovip.fnPrecioWeb(s.id_servicio), sc.desde) AS n
+        FROM Eurovip.servicio s
+        JOIN Eurovip.servicio_circuito sc ON sc.id_servicio = s.id_servicio AND sc.id_idoma = s.id_idioma
+        JOIN Eurovip.circuito c           ON c.nombre_circuito = sc.nombre_circuito AND c.id_idioma = sc.id_idoma
+        JOIN Eurovip.circuito_destino cd  ON cd.nombre_circuito = c.nombre_circuito AND cd.id_idioma = c.id_idioma
+        LEFT JOIN Eurovip.servicio_itinerario si ON si.id_servicio = s.id_servicio AND si.segmento = 1
+        WHERE s.id_idioma = @idIdioma AND s.id_tipo_servicio = @idTipoServicio AND s.id_moneda = @idMoneda
+          AND s.id_campanya = @idCampanya AND s.activo = 1 AND sc.desde > CAST(GETDATE() AS date)
+          AND COALESCE(si.id_pais_origen, sc.id_pais_origen) = @idPaisOrigen
+          AND COALESCE(si.origen, sc.origen) = @origen
+          AND cd.id_pais = @idPaisDestino
+    )
+    SELECT id_servicio, id_idioma, id_tipo_servicio, id_campanya, id_moneda, id_pais_origen, id_origen,
+           id_pais_destino, id_pais_destino AS id_destino, caratula, precio_web, nombre_circuito
+    FROM salidas WHERE n = 1;
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 21 — 12/10/2026 — PROCEDIMIENTOS de carga (igual que ViajeVDT, en esquema Eurovip)
+   ------------------------------------------------------------------------------------------
+   Qué se hizo:
+     • spInsertaServicio ................... crea una salida y devuelve su número.
+                                             ➕ si falla, anota el error y lo devuelve.
+     • spInsertaServicioItinerario ......... agrega un vuelo a la salida.
+     • spInsertaServicioSuplemento ......... agrega un suplemento/tasa.
+     • spInsertaServicioNota ............... agrega una nota.
+     • spInsertarServicioCircuitoAlojamiento agrega un hotel al circuito.
+     • spInsertaCircuitoItinerario ......... ➕ nuevo: guarda (o actualiza) un día del itinerario.
+     • spActualizaAlojamientoCircuito ...... refresca la vitrina web de circuitos.
+   ========================================================================================== */
+CREATE OR ALTER PROCEDURE Eurovip.spInsertaServicio
+    @tipoServicio VARCHAR(15), @idioma CHAR(2), @moneda CHAR(3), @campanya SMALLINT, @proveedor VARCHAR(10),
+    @apertura DATE = NULL, @usuario VARCHAR(15), @precioBase MONEY, @descuento NUMERIC(6, 2), @nota VARCHAR(MAX),
+    @activo BIT = 1, @noches SMALLINT, @precioMasMenos MONEY, @codigoServicio VARCHAR(30), @nombre VARCHAR(50),
+    @categoriaCircuito VARCHAR(20) = NULL, @baja DATE = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        INSERT INTO Eurovip.servicio (id_tipo_servicio, id_idioma, id_moneda, id_campanya, id_Proveedor, apertura, usuario, precio_base,
+                                      descuento, precio_mas_menos, nota, noches, codigo, categoria_circuito, baja, nombre, activo)
+        VALUES (@tipoServicio, @idioma, @moneda, @campanya, @proveedor, ISNULL(@apertura, CAST(GETDATE() AS date)), @usuario, @precioBase,
+                @descuento, @precioMasMenos, @nota, @noches, @codigoServicio, @categoriaCircuito, @baja, @nombre, @activo);
+        RETURN SCOPE_IDENTITY();
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE() = 1 OR @@TRANCOUNT = 0
+            INSERT INTO Eurovip.LogErroresServicio (ErrorNumber, ErrorMessage, ErrorProcedure, ErrorLine, FechaError, UsuarioDB)
+            VALUES (ERROR_NUMBER(), ERROR_MESSAGE(), ERROR_PROCEDURE(), ERROR_LINE(), GETDATE(), SYSTEM_USER);
+        THROW;
+    END CATCH
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spInsertaServicioItinerario
+    @numero INT, @proveedor VARCHAR(10), @estacionOrigen VARCHAR(10), @origen VARCHAR(30), @idioma CHAR(2), @PaisOrigen CHAR(2),
+    @estacionDestino VARCHAR(10), @destino VARCHAR(30), @paisDestino CHAR(2), @vuelo VARCHAR(15), @fechaSalida DATE,
+    @horaSalida CHAR(5), @fechaRegreso DATE, @horaRegreso CHAR(5), @clase CHAR(1), @conexion BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @segmento SMALLINT = Eurovip.fnSegmento(@numero);
+    INSERT INTO Eurovip.servicio_itinerario (id_servicio, segmento, id_proveedor, id_estacion_origen, origen, id_idioma, id_pais_origen,
+        id_estacion_destino, destino, id_pais_destino, vuelo, fecha_salida, hora_salida, fecha_regreso, hora_regreso, clase, conexion)
+    VALUES (@numero, @segmento, @proveedor, @estacionOrigen, @origen, @idioma, @PaisOrigen, @estacionDestino, @destino, @paisDestino,
+            @vuelo, @fechaSalida, @horaSalida, @fechaRegreso, @horaRegreso, @clase, @conexion);
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spInsertaServicioSuplemento
+    @numeroServicio INT, @nombreSuplemento VARCHAR(50), @codigoIdioma CHAR(2), @valor MONEY
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO Eurovip.servicio_tasa (id_Servicio, id_tasa, id_idioma, valor) VALUES (@numeroServicio, @nombreSuplemento, @codigoIdioma, @valor);
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spInsertaServicioNota
+    @numero INT, @idIdioma CHAR(2), @nota1 VARCHAR(MAX), @nota2 VARCHAR(MAX), @tipo VARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @secuencia SMALLINT = (SELECT ISNULL(MAX(secuencia), 0) + 1 FROM Eurovip.servicio_nota WHERE id_servicio = @numero);
+    INSERT INTO Eurovip.servicio_nota (id_servicio, secuencia, id_idioma, nota1, nota2, tipo) VALUES (@numero, @secuencia, @idIdioma, @nota1, @nota2, @tipo);
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spInsertarServicioCircuitoAlojamiento
+    @nombre_circuito VARCHAR(50), @id_idioma CHAR(2), @id_alojamiento INT, @categoria VARCHAR(50), @caratula VARCHAR(200) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM Eurovip.servicio_circuito_alojamiento
+                   WHERE nombre_circuito = @nombre_circuito AND id_idioma = @id_idioma AND id_alojamiento = @id_alojamiento AND categoria = @categoria)
+        INSERT INTO Eurovip.servicio_circuito_alojamiento (nombre_circuito, id_idioma, id_alojamiento, categoria, caratula)
+        VALUES (@nombre_circuito, @id_idioma, @id_alojamiento, @categoria, @caratula);
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spInsertaCircuitoItinerario
+    @nombre_circuito VARCHAR(50), @idioma CHAR(2), @dia INT, @titulo VARCHAR(200), @descripcion VARCHAR(MAX),
+    @visitas VARCHAR(MAX) = NULL, @regimen VARCHAR(200) = NULL, @transporte VARCHAR(200) = NULL,
+    @tipo_alojamiento VARCHAR(20) = NULL, @caratula VARCHAR(200) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1 FROM Eurovip.circuito_itinerario WHERE nombre_circuito = @nombre_circuito AND id_idioma = @idioma AND dia = @dia)
+        UPDATE Eurovip.circuito_itinerario
+        SET titulo = @titulo, descripcion = @descripcion, visitas = @visitas, regimen = @regimen, transporte = @transporte,
+            tipo_alojamiento = @tipo_alojamiento, caratula = @caratula
+        WHERE nombre_circuito = @nombre_circuito AND id_idioma = @idioma AND dia = @dia;
+    ELSE
+        INSERT INTO Eurovip.circuito_itinerario (dia, titulo, nombre_circuito, id_idioma, descripcion, visitas, regimen, transporte, tipo_alojamiento, caratula)
+        VALUES (@dia, @titulo, @nombre_circuito, @idioma, @descripcion, @visitas, @regimen, @transporte, @tipo_alojamiento, @caratula);
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spActualizaAlojamientoCircuito
+    @idIdioma CHAR(2), @idTipoServicio VARCHAR(30), @idCampanya SMALLINT, @idMoneda CHAR(3),
+    @idPaisOrigen CHAR(2), @idOrigen VARCHAR(30), @idPaisDestino VARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM Eurovip.alojamiento_circuito
+    WHERE id_idioma = @idIdioma AND id_tipo_servicio = @idTipoServicio AND id_campanya = @idCampanya AND id_moneda = @idMoneda
+      AND id_pais_origen = @idPaisOrigen AND id_origen = @idOrigen AND id_pais_destino = @idPaisDestino;
+
+    INSERT INTO Eurovip.alojamiento_circuito (id_servicio, id_idioma, id_tipo_servicio, id_campanya, id_moneda, id_pais_origen, id_origen,
+                                              id_pais_destino, id_destino, caratula, precio_web, nombre_circuito)
+    SELECT f.id_servicio, f.id_idioma, f.id_tipo_servicio, f.id_campanya, f.id_moneda, f.id_pais_origen, f.id_origen,
+           f.id_pais_destino, f.id_destino, f.caratula, f.precio_web, f.nombre_circuito
+    FROM Eurovip.fnAlojamientoCircuito(@idIdioma, @idTipoServicio, @idCampanya, @idMoneda, @idPaisOrigen, @idOrigen, @idPaisDestino) f
+    WHERE NOT EXISTS (SELECT 1 FROM Eurovip.alojamiento_circuito x WHERE x.id_servicio = f.id_servicio);
+END
+GO
+
+
+/* ##########################################################################################
+   FASE 4 — CARGA MANUAL DE OFERTAS DE HOTEL  (13/10/2026)
+   ------------------------------------------------------------------------------------------
+   Una OFERTA es un paquete de hotel que se vende por fechas: hotel + régimen + noches +
+   precio por tipo de habitación, con campaña, suplementos/tasas, notas y (SOLO SI TIENE)
+   vuelo. Cada fecha de salida es un "servicio" (igual que en circuitos), con:
+     • servicio_detalle ..... el hotel, régimen, fechas y noches de esa salida;
+     • servicio_habitacion .. el precio de cada tipo de habitación (Doble, Suite…).
+   Todo se copió de ViajeVDT (10.10.10.29) sin tocar ese servidor, siempre en idioma ES.
+
+   Diferencias a propósito con ViajeVDT (mejoras Eurovip):
+     • servicio_origen (nueva): guarda desde dónde se vende cada oferta, para que una oferta
+       SIN vuelo también se pueda publicar en la web.
+     • fnAlojamientoDestino funciona CON o SIN vuelo (en ViajeVDT exigía vuelo).
+   ########################################################################################## */
+
+
+/* ==========================================================================================
+   CAMBIO 22 — 13/10/2026 — TIPOS DE HABITACIÓN y HABITACIONES DE CADA HOTEL
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: catálogo de tipos de habitación (Doble, Suite, Junior Suite…) y las
+   habitaciones que tiene cada hotel. Se usan para poner precio por habitación en la oferta.
+   Copiadas de: ViajeVDT.dbo.tipo_habitacion y dbo.alojamiento_habitacion — solo filas ES
+   (copia masiva, ver bitácora).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.tipo_habitacion', 'U') IS NULL
+CREATE TABLE Eurovip.tipo_habitacion (
+    id_idioma          char(2)      NOT NULL,
+    id_tipo_habitacion varchar(100) NOT NULL,   -- Doble, Suite…
+    CONSTRAINT PK_Eurovip_tipo_habitacion PRIMARY KEY CLUSTERED (id_idioma, id_tipo_habitacion)
+);
+GO
+IF OBJECT_ID('Eurovip.alojamiento_habitacion', 'U') IS NULL
+CREATE TABLE Eurovip.alojamiento_habitacion (
+    id_alojamiento     int           NOT NULL,   -- hotel (cambio 15)
+    id_habitacion      int           NOT NULL,   -- número de la habitación
+    id_idioma          char(2)       NOT NULL,
+    id_tipo_habitacion varchar(100)  NOT NULL,
+    codigo             varchar(50)   NOT NULL,
+    nombre             varchar(255)  NOT NULL,   -- nombre visible (ej. Doble Vista Mar)
+    grupo              int           NOT NULL,
+    nota               varchar(max)  NULL,
+    precio             money         NOT NULL CONSTRAINT DF_Eurovip_alojamiento_habitacion_precio DEFAULT ((0.00)),
+    codigo_newblue     nvarchar(510) NULL,
+    nombre_newblue     nvarchar(max) NULL,
+    CONSTRAINT PK_Eurovip_alojamiento_habitacion PRIMARY KEY CLUSTERED (id_alojamiento, id_habitacion, id_idioma),
+    CONSTRAINT FK_Eurovip_alojamiento_habitacion_alojamiento FOREIGN KEY (id_alojamiento, id_idioma) REFERENCES Eurovip.alojamiento (id_alojamiento, id_idioma),
+    CONSTRAINT FK_Eurovip_alojamiento_habitacion_tipo FOREIGN KEY (id_idioma, id_tipo_habitacion) REFERENCES Eurovip.tipo_habitacion (id_idioma, id_tipo_habitacion)
+);
+GO
+-- Datos: copia masiva desde ViajeVDT →
+--   SELECT * FROM dbo.tipo_habitacion        WHERE id_idioma = 'ES'   (≈15.900 filas)
+--   SELECT * FROM dbo.alojamiento_habitacion WHERE id_idioma = 'ES'   (≈130.000 filas)
+
+
+/* ==========================================================================================
+   CAMBIO 23 — 13/10/2026 — DETALLE DE HOTEL y PRECIO POR HABITACIÓN de cada salida
+   ------------------------------------------------------------------------------------------
+   Qué se hizo:
+     • servicio_detalle ..... en cada salida: hotel, régimen, fecha de entrada y salida, noches.
+     • servicio_habitacion .. en cada salida: precio de cada habitación del hotel.
+     • servicio_origen ...... ➕ Eurovip: país y ciudad desde donde se vende (ofertas sin vuelo).
+   Copiadas de: ViajeVDT (solo estructura; empiezan vacías).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.servicio_detalle', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_detalle (
+    id_servicio    int          NOT NULL,
+    secuencia      smallint     NOT NULL,   -- 1 = primer hotel de la salida
+    id_alojamiento int          NOT NULL,
+    id_regimen     char(2)      NOT NULL,   -- TI, MP, AD…
+    id_idioma      char(2)      NOT NULL,
+    desde          date         NOT NULL,   -- entrada al hotel
+    hora_desde     varchar(10)  NOT NULL,
+    hasta          date         NOT NULL,   -- salida del hotel
+    hora_hasta     varchar(10)  NOT NULL,
+    noches         smallint     NULL,
+    categoria      varchar(50)  NULL,
+    precio         money        NULL,
+    CONSTRAINT PK_Eurovip_servicio_detalle PRIMARY KEY CLUSTERED (id_servicio, secuencia),
+    CONSTRAINT FK_Eurovip_servicio_detalle_servicio FOREIGN KEY (id_servicio) REFERENCES Eurovip.servicio (id_servicio),
+    CONSTRAINT FK_Eurovip_servicio_detalle_alojamiento FOREIGN KEY (id_alojamiento, id_idioma) REFERENCES Eurovip.alojamiento (id_alojamiento, id_idioma),
+    CONSTRAINT FK_Eurovip_servicio_detalle_regimen FOREIGN KEY (id_regimen, id_idioma) REFERENCES Eurovip.regimen (id_regimen, id_idioma)
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_servicio_detalle_aloj' AND object_id = OBJECT_ID('Eurovip.servicio_detalle'))
+    CREATE NONCLUSTERED INDEX IX_Eurovip_servicio_detalle_aloj ON Eurovip.servicio_detalle (id_alojamiento, id_idioma, desde) INCLUDE (id_servicio, secuencia, id_regimen, noches);
+GO
+IF OBJECT_ID('Eurovip.servicio_habitacion', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_habitacion (
+    id_servicio    int      NOT NULL,
+    secuencia      smallint NOT NULL,   -- hotel (servicio_detalle) al que pertenece
+    id_alojamiento int      NOT NULL,
+    id_idioma      char(2)  NOT NULL,
+    id_habitacion  int      NOT NULL,
+    precio         money    NOT NULL,   -- importe que suma esta habitación al precio
+    CONSTRAINT PK_Eurovip_servicio_habitacion PRIMARY KEY CLUSTERED (id_servicio, secuencia, id_alojamiento, id_idioma, id_habitacion),
+    CONSTRAINT FK_Eurovip_servicio_habitacion_detalle FOREIGN KEY (id_servicio, secuencia) REFERENCES Eurovip.servicio_detalle (id_servicio, secuencia),
+    CONSTRAINT FK_Eurovip_servicio_habitacion_habitacion FOREIGN KEY (id_alojamiento, id_habitacion, id_idioma) REFERENCES Eurovip.alojamiento_habitacion (id_alojamiento, id_habitacion, id_idioma)
+);
+GO
+IF OBJECT_ID('Eurovip.servicio_origen', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_origen (
+    id_servicio    int         NOT NULL,
+    id_pais_origen char(2)     NOT NULL,
+    origen         varchar(30) NOT NULL,
+    CONSTRAINT PK_Eurovip_servicio_origen PRIMARY KEY CLUSTERED (id_servicio),
+    CONSTRAINT FK_Eurovip_servicio_origen_servicio FOREIGN KEY (id_servicio) REFERENCES Eurovip.servicio (id_servicio)
+);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 24 — 13/10/2026 — VITRINA WEB DE HOTELES (alojamiento_destino)
+   ------------------------------------------------------------------------------------------
+   Qué se hizo: tabla con la oferta más barata de cada hotel y régimen por destino, que es la
+   que muestra la web. Se refresca sola al terminar cada carga manual.
+   Copiada de: ViajeVDT.dbo.alojamiento_destino (solo estructura).
+   ========================================================================================== */
+IF OBJECT_ID('Eurovip.alojamiento_destino', 'U') IS NULL
+CREATE TABLE Eurovip.alojamiento_destino (
+    id_servicio         int            NOT NULL,
+    id_idioma           char(2)        NOT NULL,
+    id_tipo_servicio    varchar(30)    NOT NULL,
+    id_campanya         smallint       NOT NULL,
+    id_moneda           char(3)        NOT NULL,
+    id_pais_origen      char(2)        NOT NULL,
+    id_origen           varchar(30)    NOT NULL,
+    id_pais_destino     varchar(200)   NOT NULL,
+    id_destino          varchar(400)   NOT NULL,
+    id_alojamiento      varchar(200)   NOT NULL,
+    nombre_alojamiento  varchar(400)   NOT NULL,
+    descripcion_regimen varchar(500)   NOT NULL,
+    grupo               varchar(200)   NULL,
+    categoria           varchar(200)   NULL,
+    caratula            varchar(500)   NULL,
+    latitude            nvarchar(1000) NULL,
+    longitude           nvarchar(1000) NULL,
+    desde               varchar(200)   NOT NULL,
+    noches              varchar(100)   NOT NULL,
+    id_habitacion       int            NOT NULL,
+    precio_web          money          NOT NULL,
+    CONSTRAINT PK_Eurovip_alojamiento_destino PRIMARY KEY CLUSTERED (id_servicio)
+);
+GO
+
+
+/* ==========================================================================================
+   CAMBIO 25 — 13/10/2026 — FUNCIONES y PROCEDIMIENTOS de la carga manual
+   ------------------------------------------------------------------------------------------
+   Qué se hizo:
+     • fnSecuencia .................. siguiente número de hotel dentro de una salida
+                                       (en OFERTA solo puede haber 1 hotel, igual que ViajeVDT).
+     • fnPrecioWeb (actualizada) .... precio final = base + más/menos + tasas + habitación
+                                       más barata + detalle − descuento (igual que ViajeVDT).
+     • spInsertaServicioDetalle ..... agrega el hotel de la salida.
+     • InsertarServicioHabitacion ... agrega el precio de una habitación (valida el hotel).
+     • fnAlojamientoDestino ......... oferta más barata por hotel y régimen (➕ con o sin vuelo).
+     • spActualizaAlojamientoDestino  refresca la vitrina de hoteles de un destino.
+     • spEliminaServicio ............ borra una salida completa en el orden correcto.
+   ========================================================================================== */
+CREATE OR ALTER FUNCTION Eurovip.fnSecuencia (@numero INT)
+RETURNS SMALLINT
+AS
+BEGIN
+    DECLARE @tipo VARCHAR(20) = (SELECT id_tipo_servicio FROM Eurovip.servicio WHERE id_servicio = @numero);
+    IF @tipo = 'OFERTA'
+        RETURN CASE WHEN EXISTS (SELECT 1 FROM Eurovip.servicio_detalle WHERE id_servicio = @numero) THEN -1 ELSE 1 END;
+    RETURN (SELECT ISNULL(MAX(secuencia), 0) + 1 FROM Eurovip.servicio_detalle WHERE id_servicio = @numero);
+END
+GO
+CREATE OR ALTER FUNCTION Eurovip.fnPrecioWeb (@id_Servicio INT)
+RETURNS MONEY
+AS
+BEGIN
+    RETURN (
+        SELECT s.precio_base + s.precio_mas_menos + Eurovip.fnTotalTasa(s.id_servicio)
+             + ISNULL((SELECT MIN(precio) FROM Eurovip.servicio_habitacion WHERE id_servicio = s.id_servicio), 0)
+             + ISNULL((SELECT MIN(precio) FROM Eurovip.servicio_detalle WHERE id_servicio = s.id_servicio), 0)
+             - s.precio_base * (s.descuento / 100)
+        FROM Eurovip.servicio s WHERE s.id_servicio = @id_Servicio
+    );
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spInsertaServicioDetalle
+    @numero INT, @alojamiento INT, @idioma CHAR(2), @regimen CHAR(2), @desde DATE, @horaDesde CHAR(5),
+    @hasta DATE, @horaHasta CHAR(5), @noches SMALLINT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @secuencia SMALLINT = Eurovip.fnSecuencia(@numero);
+    IF @secuencia = -1
+        THROW 50001, 'Una oferta solo puede tener un hotel.', 1;
+    INSERT INTO Eurovip.servicio_detalle (id_servicio, secuencia, id_alojamiento, id_idioma, id_regimen, desde, hora_desde, hasta, hora_hasta, noches)
+    VALUES (@numero, @secuencia, @alojamiento, @idioma, @regimen, @desde, @horaDesde, @hasta, @horaHasta, @noches);
+    RETURN @secuencia;
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.InsertarServicioHabitacion
+    @Id_Servicio INT, @Secuencia INT, @Id_Alojamiento INT, @Id_Idioma CHAR(2), @Id_Habitacion INT, @Precio DECIMAL(18,2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM Eurovip.alojamiento WHERE id_alojamiento = @Id_Alojamiento AND id_idioma = @Id_Idioma)
+        THROW 50002, 'No existe el hotel con ese número e idioma.', 1;
+    IF NOT EXISTS (SELECT 1 FROM Eurovip.servicio_habitacion
+                   WHERE id_servicio = @Id_Servicio AND secuencia = @Secuencia AND id_alojamiento = @Id_Alojamiento
+                     AND id_idioma = @Id_Idioma AND id_habitacion = @Id_Habitacion)
+        INSERT INTO Eurovip.servicio_habitacion (id_servicio, secuencia, id_alojamiento, id_idioma, id_habitacion, precio)
+        VALUES (@Id_Servicio, @Secuencia, @Id_Alojamiento, @Id_Idioma, @Id_Habitacion, @Precio);
+END
+GO
+CREATE OR ALTER FUNCTION Eurovip.fnAlojamientoDestino
+(
+    @idIdioma CHAR(2), @idTipoServicio VARCHAR(30), @idCampanya SMALLINT, @idMoneda CHAR(3),
+    @idPaisOrigen CHAR(2), @origen VARCHAR(30), @idPaisDestino CHAR(2), @idDestino VARCHAR(30)
+)
+RETURNS TABLE
+AS
+RETURN
+    WITH ofertas AS (
+        SELECT s.id_servicio, s.id_idioma, s.id_tipo_servicio AS tipo_servicio, s.id_campanya, s.id_moneda,
+               COALESCE(si.id_pais_origen, so.id_pais_origen) AS id_pais_origen,
+               COALESCE(si.origen, so.origen)                 AS id_origen,
+               a.id_pais AS id_pais_destino, a.id_destino, a.id_alojamiento, a.nombre AS nombre_alojamiento,
+               CONCAT(sd.id_regimen, ' ', r.descripcion) AS descripcion_regimen,
+               a.grupo, a.categoria, a.caratula, a.latitude, a.longitude, sd.desde, sd.noches,
+               hab.id_habitacion, Eurovip.fnPrecioWeb(s.id_servicio) AS precio_web,
+               ROW_NUMBER() OVER (PARTITION BY a.id_alojamiento, sd.id_regimen
+                                  ORDER BY Eurovip.fnPrecioWeb(s.id_servicio), sd.desde) AS n
+        FROM Eurovip.servicio s
+        JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.desde > CAST(GETDATE() AS date)
+        JOIN Eurovip.alojamiento a       ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
+        JOIN Eurovip.regimen r           ON r.id_regimen = sd.id_regimen AND r.id_idioma = s.id_idioma
+        CROSS APPLY (SELECT TOP 1 sh.id_habitacion FROM Eurovip.servicio_habitacion sh
+                     WHERE sh.id_servicio = sd.id_servicio AND sh.secuencia = sd.secuencia ORDER BY sh.precio, sh.id_habitacion) hab
+        LEFT JOIN Eurovip.servicio_itinerario si ON si.id_servicio = s.id_servicio AND si.segmento = 1
+        LEFT JOIN Eurovip.servicio_origen so     ON so.id_servicio = s.id_servicio
+        WHERE s.id_idioma = @idIdioma AND s.id_tipo_servicio = @idTipoServicio AND s.id_moneda = @idMoneda
+          AND s.id_campanya = @idCampanya AND s.activo = 1
+          AND COALESCE(si.id_pais_origen, so.id_pais_origen) = @idPaisOrigen
+          AND COALESCE(si.origen, so.origen) = @origen
+          AND a.id_pais = @idPaisDestino AND a.id_destino = @idDestino
+    )
+    SELECT id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, id_origen, id_pais_destino, id_destino,
+           id_alojamiento, nombre_alojamiento, descripcion_regimen, grupo, categoria, caratula, latitude, longitude,
+           desde, noches, id_habitacion, precio_web
+    FROM ofertas WHERE n = 1;
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spActualizaAlojamientoDestino
+    @idIdioma CHAR(2), @idTipoServicio VARCHAR(30), @idCampanya SMALLINT, @idMoneda CHAR(3),
+    @idPaisOrigen CHAR(2), @idOrigen VARCHAR(30), @idPaisDestino CHAR(2), @idDestino VARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM Eurovip.alojamiento_destino
+    WHERE id_idioma = @idIdioma AND id_tipo_servicio = @idTipoServicio AND id_campanya = @idCampanya AND id_moneda = @idMoneda
+      AND id_pais_origen = @idPaisOrigen AND id_origen = @idOrigen AND id_pais_destino = @idPaisDestino AND id_destino = @idDestino;
+
+    INSERT INTO Eurovip.alojamiento_destino (id_servicio, id_idioma, id_tipo_servicio, id_campanya, id_moneda, id_pais_origen, id_origen,
+        id_pais_destino, id_destino, id_alojamiento, nombre_alojamiento, descripcion_regimen, grupo, categoria, caratula, latitude, longitude,
+        desde, noches, id_habitacion, precio_web)
+    SELECT f.id_servicio, f.id_idioma, f.tipo_servicio, f.id_campanya, f.id_moneda, f.id_pais_origen, f.id_origen, f.id_pais_destino,
+           f.id_destino, f.id_alojamiento, f.nombre_alojamiento, f.descripcion_regimen, f.grupo, f.categoria, f.caratula, f.latitude,
+           f.longitude, CONVERT(varchar(10), f.desde, 23), CAST(f.noches AS varchar(10)), f.id_habitacion, f.precio_web
+    FROM Eurovip.fnAlojamientoDestino(@idIdioma, @idTipoServicio, @idCampanya, @idMoneda, @idPaisOrigen, @idOrigen, @idPaisDestino, @idDestino) f
+    WHERE NOT EXISTS (SELECT 1 FROM Eurovip.alojamiento_destino x WHERE x.id_servicio = f.id_servicio);
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spEliminaServicio @idServicio INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM Eurovip.servicio_tasa        WHERE id_Servicio = @idServicio;
+    DELETE FROM Eurovip.servicio_itinerario  WHERE id_servicio = @idServicio;
+    DELETE FROM Eurovip.servicio_habitacion  WHERE id_servicio = @idServicio;
+    DELETE FROM Eurovip.servicio_nota        WHERE id_servicio = @idServicio;
+    DELETE FROM Eurovip.servicio_detalle     WHERE id_servicio = @idServicio;
+    DELETE FROM Eurovip.servicio_circuito    WHERE id_servicio = @idServicio;
+    DELETE FROM Eurovip.servicio_origen      WHERE id_servicio = @idServicio;
+    DELETE FROM Eurovip.alojamiento_circuito WHERE id_servicio = @idServicio;
+    DELETE FROM Eurovip.alojamiento_destino  WHERE id_servicio = @idServicio;
+    DELETE FROM Eurovip.servicio             WHERE id_servicio = @idServicio;
+END
+GO
+
+
+/* ##########################################################################################
+   BITÁCORA — cambios de datos puntuales
+   (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
+   ##########################################################################################
+
+   12/10/2026  Se creó desde la pantalla "Crear usuario" la cuenta "Nachely" (#1) como
+               Superadministrador. Luego se reemplazó por ARodriguez (ver CAMBIO 6).
+
+   12/10/2026  Se asignó una contraseña TEMPORAL al usuario ARodriguez, solo en
+               Eurovip.usuario, porque no se recordaba la original.
+               La contraseña de Tropitours (dbo.usuario) NO se tocó.
+               Pendiente: cambiarla desde la pantalla de perfil cuando exista.
+
+   12/10/2026  Prueba de la pantalla "Carga de Hoteles": se creó el hotel de prueba
+               "Hotel Prueba Bávaro" (#1), se ocultó, se editó, se volvió a mostrar y se
+               ELIMINÓ. Eurovip.inicio quedó vacía. En Eurovip.auditoria_consulta_oferta
+               quedan las 6 filas de esa prueba (registros 1 a 6) como evidencia.
+               Nota: el próximo hotel que se cargue tendrá el número #1 otra vez.
+
+   12/10/2026  A pedido de la usuaria se cambió la contraseña temporal de ARodriguez
+               (solo Eurovip.usuario) por una corta y fácil de recordar.
+               ⚠ Antes de publicar el sistema se debe cambiar por una segura.
+
+   12/10/2026  REGLA: los hoteles de Eurovip se cargan SOLO en idioma ES (español).
+               No cambia la base de datos: lo garantiza el BackOffice (siempre guarda
+               id_idioma = 'ES' y solo lista, edita y elimina hoteles ES). Las tablas
+               idioma/campanya/contenedores conservan los demás idiomas por si se
+               necesitan en el futuro.
+               Prueba: se creó un hotel enviando idioma 'FR' → se guardó 'ES' → se eliminó.
+               Eurovip.inicio quedó vacía (auditoría registros 7 y 8).
+
+   12/10/2026  FASE 3 — se copiaron por copia masiva desde ViajeVDT (solo lectura, solo ES):
+               destino 7.320 · alojamiento 9.563 · estacion 3.715 · proveedor 1.335 filas.
+
+   12/10/2026  Prueba de Circuitos: se creó el circuito "Prueba Eurovip Caribe" y se cargaron
+               salidas con la Carga Express (4, sin vuelo), la Carga Clásica (1 con vuelo) y el
+               Excel (2 con vuelo); luego "Prueba Express Nuevo" (circuito nuevo + 2 salidas).
+               Todo se ELIMINÓ desde la pantalla. Las tablas de circuitos y servicio quedaron
+               vacías. Quedan como evidencia: Eurovip.Log_Cargas (4 registros) y 7 filas de
+               auditoría "Circuito_*". Nota: los números de servicio siguen desde el #10
+               (es un contador automático, no vuelve a empezar).
+
+   13/10/2026  Pantallas "Cargas" y "Reportes" (no crean tablas: leen Log_Cargas, servicio,
+               servicio_circuito, inicio y auditoría). Para probar los gráficos se crearon y luego
+               se ELIMINARON los circuitos "Reporte Prueba Uno" (14 salidas) y "Reporte Prueba Dos"
+               (6 salidas). Quedan sus registros en Log_Cargas (#6 y #7) como evidencia.
+               No se tocó el circuito "Prueba" cargado por la usuaria.
+
+   13/10/2026  FASE 4 — copia masiva desde ViajeVDT (solo lectura, solo ES): tipo_habitacion 15.877 ·
+               alojamiento_habitacion 129.943 filas. fnPrecioWeb ahora suma también la habitación
+               más barata y el detalle (en circuitos siguen siendo 0, no cambia su precio).
+
+   13/10/2026  Pantalla "Carga manual" (ofertas de hotel: lista + Carga Express + Carga Clásica con
+               Excel). No crea tablas nuevas: usa las de la FASE 4 (servicio_detalle,
+               servicio_habitacion, servicio_origen, alojamiento_destino).
+               Prueba: Express con 2 hoteles (Riu Palace Bavaro y Barcelo Bavaro Palace) = 9 ofertas;
+               Clásica desde la plantilla Excel = 10 ofertas. Se probaron editar, activar/desactivar,
+               ajuste de precio en lote, exportar y el aviso de duplicados. Las 19 ofertas
+               (#44 a #62) se ELIMINARON desde la pantalla: servicio y sus tablas hijas quedaron
+               vacías y la vitrina alojamiento_destino volvió a 0. Quedan como evidencia
+               Log_Cargas #8 y #9 y las filas de auditoría "Oferta_*".
+
+   PENDIENTE   Copiar los demás usuarios, módulos y permisos (rol, UsuarioAcceso,
+               UsuarioModulos). Se hará cuando se confirme desde qué base copiarlos.
+   ########################################################################################## */
+
+
+

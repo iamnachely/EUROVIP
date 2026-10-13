@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Proyecto Eurovip — Plan y registro</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    @page { size: A4; margin: 16mm 15mm 18mm; }
+    :root { --mint:#B3FFF3; --aqua:#74F2E6; --teal:#2BD4C4; --deep:#0E8F86; --ink:#0B1215; --muted:#5B726F; --line:#DCEBE8; }
+    * { box-sizing: border-box; }
+    body { font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.5; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cover { background: linear-gradient(135deg, var(--mint) 0%, var(--aqua) 55%, var(--teal) 100%); border-radius: 22px; padding: 34px 36px 30px; margin-bottom: 22px; position: relative; overflow: hidden; }
+    .cover::after { content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px; border-radius: 50%; background: rgba(255,255,255,.35); }
+    .mark { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 13px; background: var(--ink); color: var(--aqua); font-weight: 800; font-size: 17px; }
+    .cover h1 { font-size: 30pt; letter-spacing: -1.2px; line-height: 1.05; margin: 16px 0 6px; font-weight: 800; }
+    .cover p { margin: 0; font-weight: 500; opacity: .8; }
+    .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; position: relative; z-index: 1; }
+    .chip { display: inline-block; font-size: 8.5pt; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: rgba(255,255,255,.75); }
+    .chip.dark { background: var(--ink); color: var(--aqua); }
+    h2 { font-size: 14pt; letter-spacing: -.3px; margin: 22px 0 8px; display: flex; align-items: center; gap: 10px; break-after: avoid; }
+    h2 .n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: var(--ink); color: var(--aqua); font-size: 10pt; }
+    h3 { font-size: 11pt; margin: 14px 0 6px; break-after: avoid; }
+    p { margin: 0 0 8px; }
+    ul { margin: 4px 0 10px; padding-left: 18px; }
+    li { margin: 2px 0; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 6px 0 12px; font-size: 9.5pt; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; break-inside: avoid; }
+    th { background: #F1FBF9; text-align: left; font-weight: 700; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+    td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    code { font-family: Consolas, monospace; font-size: 9pt; background: #F1FBF9; padding: 1px 5px; border-radius: 5px; }
+    .box { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 8px 0 12px; break-inside: avoid; }
+    .box.rule { border-left: 5px solid var(--deep); background: #F6FDFC; }
+    .box.warn { border-left: 5px solid #E8A33D; background: #FFF9EF; }
+    .box.ok { border-left: 5px solid var(--teal); background: #F2FFFC; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .swatches { display: flex; gap: 10px; margin: 6px 0 10px; }
+    .sw { flex: 1; border-radius: 12px; padding: 30px 10px 8px; font-size: 8.5pt; font-weight: 700; border: 1px solid var(--line); }
+    .done { color: var(--deep); font-weight: 800; }
+    .pend { color: #B26B00; font-weight: 800; }
+    .foot { margin-top: 26px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 8.5pt; color: var(--muted); display: flex; justify-content: space-between; }
+    .pb { break-before: page; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+    <span class="mark">EV</span>
+    <h1>Proyecto Eurovip<br>BackOffice + Base de Datos</h1>
+    <p>Documento de planificación y registro de lo que se hará y lo ejecutado en la Fase 1.</p>
+    <div class="meta">
+        <span class="chip dark">Fecha: 12/10/2026</span>
+        <span class="chip">Solicitante: Nachely Rodríguez</span>
+        <span class="chip">Grupo VDT</span>
+        <span class="chip">Versión 1.0</span>
+    </div>
+</section>
+
+<h2><span class="n">1</span> Contexto y objetivo</h2>
+<p>Se crea <b>Eurovip</b>, un sistema nuevo e independiente compuesto por un <b>BackOffice web</b> (BackEurovip) y su <b>base de datos</b>. El BackOffice sigue la estructura de BackTiTan, con un diseño nuevo y moderno, y permite la carga manual de producto turístico: hoteles, ofertas, excursiones, traslados y circuitos.</p>
+<p>La diferencia funcional principal con BackTiTan / ViajeVDT es que en Eurovip <b>los vuelos son opcionales</b> en la carga manual y en los circuitos. El resto del comportamiento replica ViajeVDT.</p>
+
+<h2><span class="n">2</span> Reglas de base de datos</h2>
+<div class="box rule">
+    <ul>
+        <li><b>Base de datos destino:</b> <code>TropitoursVDT</code> en el <b>servidor 93</b>.</li>
+        <li><b>Esquema:</b> todas las tablas y procedimientos de Eurovip se crean en el esquema <code>Eurovip</code>, <u>nunca</u> en <code>dbo</code>. Ejemplo: <code>[TropitoursVDT].[Eurovip].[usuario]</code>.</li>
+        <li><b>Origen de réplica:</b> cuando una tabla o un procedimiento se duplique, el origen es la BD <code>ViajeVDT</code> del servidor <b>10.10.10.29</b>.</li>
+        <li><b>10.10.10.29 es solo lectura:</b> allí no se crea, modifica ni borra nada. Solo se lee la estructura (y los datos cuando corresponda) para recrearla en el 93.</li>
+        <li><b>BackTiTan es solo referencia:</b> no se modifica ningún archivo de BackTiTan1.</li>
+    </ul>
+</div>
+
+<h3>Método de trabajo</h3>
+<table>
+    <tr><th style="width:28%">Operación</th><th>Cómo se hace</th></tr>
+    <tr><td>Lectura de estructura (29)</td><td><code>sqlcmd</code> con consultas <b>SELECT</b> sobre <code>sys.columns</code>, <code>sys.indexes</code> y <code>sys.foreign_keys</code>. El script auxiliar rechaza cualquier sentencia que no sea SELECT.</td></tr>
+    <tr><td>Creación de objetos (93)</td><td>Scripts SQL numerados e idempotentes en <code>BackEurovip/Database/</code>, ejecutados con <code>sqlcmd</code>. Así queda historial versionado de cada cambio.</td></tr>
+    <tr><td>Verificación (93)</td><td>Consultas de solo lectura vía MCP sobre el catálogo de <code>TropitoursVDT</code>.</td></tr>
+    <tr><td>Copia de datos</td><td>Lectura en el 29 y <code>SqlBulkCopy</code> con <code>KeepIdentity</code> hacia <code>Eurovip.*</code> en el 93, solo si la tabla destino está vacía.</td></tr>
+</table>
+
+<h2><span class="n">3</span> Proyecto de programación</h2>
+<p>Es un proyecto aparte, en una carpeta nueva fuera de BackTropi: <code>C:\Users\nrodriguez\source\repos\BackEurovip</code>.</p>
+<table>
+    <tr><th style="width:34%">Ruta</th><th>Contenido</th></tr>
+    <tr><td><code>BackEurovip.sln</code></td><td>Solución (.NET 8, igual que BackTiTan)</td></tr>
+    <tr><td><code>Common/Data/Entities/</code></td><td>Entidades: Usuario, UsuarioAcceso, UsuarioModulos, Rol</td></tr>
+    <tr><td><code>Common/MensajesError.cs</code></td><td>Mensajes de Identity en español</td></tr>
+    <tr><td><code>EuroVip/Helpers/Repository.cs</code></td><td><code>IRepository&lt;T&gt;</code> con Dapper, fijado al esquema <code>Eurovip</code></td></tr>
+    <tr><td><code>EuroVip/Repositories/Security/</code></td><td><code>UsuarioStore</code>: Identity sobre Dapper, login por email</td></tr>
+    <tr><td><code>EuroVip/Controllers/</code></td><td><code>AuthController</code> (Login/Logout/Denied), <code>HomeController</code></td></tr>
+    <tr><td><code>EuroVip/Views/</code></td><td>Login, Home y <code>_Layout</code> (shell con sidebar)</td></tr>
+    <tr><td><code>EuroVip/wwwroot/css/eurovip.css</code></td><td>Sistema de diseño Eurovip</td></tr>
+    <tr><td><code>Database/</code></td><td>Scripts SQL numerados (<code>001_…</code>, <code>002_…</code>)</td></tr>
+    <tr><td><code>Docs/</code></td><td>Este documento</td></tr>
+</table>
+<p><b>Stack:</b> ASP.NET Core 8 MVC · Dapper · SQL Server · ASP.NET Identity con cookie · Serilog · Bootstrap Icons · fuente Plus Jakarta Sans. Las credenciales no van en <code>appsettings.json</code>; se leen de <code>appsettings.Local.json</code>, que está en <code>.gitignore</code>.</p>
+
+<h2 class="pb"><span class="n">4</span> Diseño visual</h2>
+<p>El diseño parte del patrón de BackTiTan en <code>/Diseno/Sistema?sistema=GRUPOVDT</code> y <code>?sistema=Vuelokey</code>: un hero con gradiente de tres colores (g1 → g2 → g3) e iconografía Bootstrap Icons. Ese patrón se lleva a una interfaz actual de tarjetas flotantes, inspirada en las referencias compartidas (Vitality, Travenly, MyCloud y Welcome).</p>
+<div class="swatches">
+    <div class="sw" style="background:#B3FFF3">#B3FFF3<br>Menta (g1)</div>
+    <div class="sw" style="background:#74F2E6">#74F2E6<br>Aqua (g2)</div>
+    <div class="sw" style="background:#2BD4C4">#2BD4C4<br>Aqua profundo (g3)</div>
+    <div class="sw" style="background:#FFFFFF">#FFFFFF<br>Blanco</div>
+    <div class="sw" style="background:#0B1215;color:#74F2E6">#0B1215<br>Tinta (negro)</div>
+</div>
+<ul>
+    <li><b>Shell:</b> panel blanco flotante sobre un fondo menta con halos de luz. El sidebar es una tarjeta con gradiente, y la pestaña activa queda "recortada" y se funde con el panel.</li>
+    <li><b>Login:</b> tarjeta partida en dos. A la izquierda, una ilustración vectorial de viaje (montañas, ruta de avión, tarjetas de vidrio flotantes) con borde curvo; a la derecha, el formulario con foco aqua.</li>
+    <li><b>Home:</b> hero con gradiente y saludo, KPIs, grilla de módulos de carga con microinteracciones, y un rail derecho con el anillo de avance y la hoja de ruta.</li>
+    <li><b>Extras:</b> modo oscuro (se guarda por usuario), atajo <code>Ctrl+K</code> para la búsqueda, diseño responsive con menú deslizable en móvil, y respeto a <code>prefers-reduced-motion</code>.</li>
+</ul>
+
+<h2><span class="n">5</span> Alcance funcional</h2>
+<table>
+    <tr><th style="width:24%">Módulo</th><th>Descripción</th><th style="width:22%">Vuelo</th></tr>
+    <tr><td>Carga de Hoteles</td><td>Alojamientos, habitaciones, regímenes y fotos (base: AlojamientoController y Alojamiento_Habitacion)</td><td>N/A</td></tr>
+    <tr><td>Carga Manual</td><td>Oferta hotel + servicios (base: CargarOferta2). Se puede guardar sin segmentos de vuelo.</td><td><b>Opcional</b></td></tr>
+    <tr><td>Carga Excursión</td><td>Excursiones por destino, con precio y cancelación (base: Servicio_Extra / servicio_excursion)</td><td>N/A</td></tr>
+    <tr><td>Carga Traslado</td><td><b>Módulo nuevo</b>: no existe en BackTiTan. Traslados aeropuerto ↔ hotel y entre ciudades.</td><td>N/A</td></tr>
+    <tr><td>Carga Circuito</td><td>Itinerario por días y hoteles (base: CargarCircuito)</td><td><b>Opcional</b></td></tr>
+    <tr><td>Resto</td><td>Igual que ViajeVDT: catálogos, usuarios, accesos por módulo</td><td>—</td></tr>
+</table>
+<div class="box">
+    <b>Cómo se hace opcional el vuelo.</b> En BackTiTan el vuelo es obligatorio por validación en el cliente (<code>validarVuelosObligatorios()</code> en CargarOferta2 y las validaciones por segmento en CargarCircuito/Index2). Además, el servidor escribe <code>servicio_itinerario</code> por cada segmento.
+    En Eurovip:
+    <ul>
+        <li>La validación del cliente solo se aplica si el usuario agrega al menos un segmento.</li>
+        <li>El servidor solo inserta itinerario de vuelo cuando hay segmentos.</li>
+        <li>Si los SPs replicados exigen datos de vuelo, se adaptan en <code>Eurovip.*</code> para aceptarlos como NULL.</li>
+        <li>Existe el flag de configuración <code>Eurovip:VuelosObligatorios = false</code>.</li>
+    </ul>
+</div>
+
+<h2><span class="n">6</span> Plan por fases</h2>
+<table>
+    <tr><th style="width:8%">Fase</th><th style="width:30%">Entregable</th><th>Tablas / SPs a replicar desde ViajeVDT (29) hacia Eurovip (93)</th><th style="width:13%">Estado</th></tr>
+    <tr><td>1</td><td>Base, Login y Home</td><td>usuario, rol, UsuarioAcceso, UsuarioModulos</td><td class="done">Hecho*</td></tr>
+    <tr><td>2</td><td>Carga de Hoteles</td><td>alojamiento, alojamiento_habitacion, filtro, alojamiento_filtro, destino, idioma, tipo_alojamiento, tipo_habitacion…</td><td>Pendiente</td></tr>
+    <tr><td>3</td><td>Carga Manual</td><td>servicio, servicio_detalle, servicio_itinerario, servicio_habitacion, suplementos, notas, campanya, tasa, proveedor, moneda + spInsertaServicio*, spActualiza*</td><td>Pendiente</td></tr>
+    <tr><td>4</td><td>Excursiones y Traslados</td><td>servicio_excursion + spInsertaServicioExtra; tabla nueva <code>Eurovip.servicio_traslado</code></td><td>Pendiente</td></tr>
+    <tr><td>5</td><td>Circuitos</td><td>circuito, circuito_destino, circuito_itinerario, categoria, servicio_circuito, servicio_circuito_alojamiento + spActualizaAlojamientoCircuito</td><td>Pendiente</td></tr>
+    <tr><td>6</td><td>Administración</td><td>Pantallas de usuarios, accesos por módulo y catálogos</td><td>Pendiente</td></tr>
+</table>
+<p style="font-size:9pt;color:var(--muted)">* La estructura está creada y verificada. La copia de los datos de usuarios está pendiente de autorización (ver punto 7).</p>
+
+<h2 class="pb"><span class="n">7</span> Registro de lo ejecutado — Fase 1 (12/10/2026)</h2>
+<table>
+    <tr><th style="width:5%">#</th><th>Acción</th><th style="width:15%">Resultado</th></tr>
+    <tr><td>1</td><td>Se verificó que el MCP de base de datos apunta al servidor 93. Ese MCP no permite DDL ni tiene linked server al 10.10.10.29.</td><td class="done">OK</td></tr>
+    <tr><td>2</td><td>Por decisión de la solicitante: lectura del 10.10.10.29 (SRVREPDB01, ViajeVDT, 137 tablas / 40 SPs) con <code>sqlcmd</code>, solo SELECT, y DDL en el 93 con <code>sqlcmd</code>.</td><td class="done">OK</td></tr>
+    <tr><td>3</td><td>Se leyó la estructura de <code>dbo.usuario</code>, <code>dbo.rol</code>, <code>dbo.UsuarioAcceso</code> y <code>dbo.UsuarioModulos</code> en el 29: columnas, PKs, defaults y FK UsuarioModulos → UsuarioAcceso.</td><td class="done">OK</td></tr>
+    <tr><td>4</td><td>Script <code>Database/001_Eurovip_Esquema_Login.sql</code>: crea <code>CREATE SCHEMA Eurovip</code> y las 4 tablas con sus PK/FK/defaults. Ejecutado en TropitoursVDT del 93.</td><td class="done">OK</td></tr>
+    <tr><td>5</td><td>Verificación vía MCP: <code>Eurovip.rol</code> (1 col), <code>Eurovip.usuario</code> (15), <code>Eurovip.UsuarioAcceso</code> (3), <code>Eurovip.UsuarioModulos</code> (4).</td><td class="done">OK</td></tr>
+    <tr><td>6</td><td>Copia de datos (rol 3, usuario 24, UsuarioAcceso 60, UsuarioModulos 1260 filas). La herramienta la bloqueó porque copia hashes de contraseña. Requiere autorización explícita o ejecución manual.</td><td class="pend">Pendiente</td></tr>
+    <tr><td>7</td><td>Se creó la solución <code>BackEurovip</code> (Common + EuroVip, .NET 8) con Identity sobre Dapper, Login, Home, layout y design system.</td><td class="done">OK</td></tr>
+    <tr><td>8</td><td><code>dotnet build</code>: 0 errores, 0 advertencias. Login probado en el navegador local (http://localhost:5166).</td><td class="done">OK</td></tr>
+    <tr><td>9</td><td>No se realizaron cambios en el 10.10.10.29, en BackTiTan1 ni en el esquema <code>dbo</code> de TropitoursVDT.</td><td class="done">Confirmado</td></tr>
+</table>
+
+<h2><span class="n">8</span> Riesgos y notas</h2>
+<ul>
+    <li><b>Dos ViajeVDT distintos:</b> el ViajeVDT del 93 (122 tablas / 35 SPs) no es igual al del 29 (137 / 40). El origen oficial es siempre el del 29.</li>
+    <li><b>Credenciales:</b> los <code>appsettings.json</code> de BackTiTan tienen contraseñas en texto plano. En Eurovip van en un archivo local fuera de git. Se recomienda crear un usuario SQL propio para Eurovip con permisos solo sobre el esquema <code>Eurovip</code>, en lugar de <code>sa</code>.</li>
+    <li><b>SPs replicados:</b> cada SP copiado se reescribe para referenciar <code>Eurovip.</code> en lugar de <code>dbo.</code>, para no leer ni escribir tablas de Tropitours por error.</li>
+    <li><b>Traslados:</b> no hay tabla origen en ViajeVDT, así que se diseñará desde cero en la Fase 4.</li>
+</ul>
+
+<div class="foot"><span>Proyecto Eurovip · Grupo VDT</span><span>Generado el 12/10/2026</span></div>
+</body>
+</html>

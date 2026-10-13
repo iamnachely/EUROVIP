@@ -1,0 +1,252 @@
+@{
+    ViewData["Title"] = "Reportes";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    :root { --ev-chart: #0E8F86; --ev-chart-hover: #0B1215; }
+    :root[data-theme="dark"] { --ev-chart: #19A497; --ev-chart-hover: #E8FFFB; }
+    @@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ev-chart: #19A497; --ev-chart-hover: #E8FFFB; } }
+
+    .rp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
+    .rp-kpi { padding: 18px 20px; }
+    .rp-kpi small { color: var(--ev-muted); font-weight: 700; font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+    .rp-kpi b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin-top: 6px; }
+    .rp-kpi span { color: var(--ev-muted); font-size: 12.5px; font-weight: 600; }
+    .rp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .rp-card { background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 22px; padding: 18px 20px 14px; min-width: 0; }
+    .rp-card h3 { margin: 0; font-size: 15.5px; font-weight: 800; letter-spacing: -.2px; }
+    .rp-card .sub { color: var(--ev-muted); font-size: 12.5px; font-weight: 600; margin: 2px 0 10px; }
+    .rp-card.wide { grid-column: 1 / -1; }
+    .rp-chart { position: relative; }
+    .rp-chart svg { display: block; width: 100%; overflow: visible; }
+    .rp-chart .eje { font: 600 11px var(--ev-font); fill: var(--ev-muted); }
+    .rp-chart .val { font: 800 11.5px var(--ev-font); fill: var(--ev-text); }
+    .rp-chart .grid { stroke: var(--ev-line); stroke-width: 1; }
+    .rp-chart .bar { fill: var(--ev-chart); transition: fill .15s; }
+    .rp-chart .hit { fill: transparent; cursor: default; }
+    .rp-chart .hit:hover + .bar, .rp-chart g.on .bar { fill: var(--ev-chart-hover); }
+    .rp-tip { position: absolute; pointer-events: none; background: var(--ev-ink); color: #fff; padding: 8px 11px; border-radius: 11px; font-size: 12.5px; font-weight: 600; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); box-shadow: var(--ev-shadow-lg); z-index: 5; }
+    .rp-tip b { color: var(--ev-aqua); }
+    .rp-card details { margin-top: 8px; }
+    .rp-card summary { cursor: pointer; color: var(--ev-muted); font-weight: 700; font-size: 12.5px; }
+    .rp-card details .ui-table-wrap { margin-top: 8px; max-height: 260px; overflow: auto; }
+    .rp-vacio { padding: 30px 10px; text-align: center; color: var(--ev-muted); font-weight: 600; font-size: 13.5px; }
+    .rp-tl { list-style: none; margin: 0; padding: 0; }
+    .rp-tl li { display: flex; gap: 12px; padding: 10px 0; border-top: 1px dashed var(--ev-line); align-items: center; }
+    .rp-tl li:first-child { border-top: 0; }
+    .rp-tl .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--ev-surface-2); flex-shrink: 0; }
+    .rp-tl b { font-size: 13.5px; }
+    .rp-tl small { display: block; color: var(--ev-muted); font-weight: 600; font-size: 12px; }
+    .rp-tl time { margin-left: auto; color: var(--ev-muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .rp-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    @@media (max-width: 1100px) { .rp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rp-grid { grid-template-columns: 1fr; } }
+</style>
+}
+
+<section class="ui-hero ev-rise">
+    <i class="bi bi-bar-chart-line ui-hero-ico" aria-hidden="true"></i>
+    <div>
+        <span class="ev-chip dark"><i class="bi bi-graph-up-arrow"></i> Tablero</span>
+        <h1>Reportes</h1>
+        <p>Cómo va lo cargado en Eurovip: salidas a la venta, circuitos con más fechas, cargas de los últimos días y quién hizo cambios. Todo se puede exportar a Excel.</p>
+    </div>
+    <div class="ui-hero-acts">
+        <button class="ev-btn light" type="button" onclick="RP.recargar()"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+        <a class="ev-btn" href="#" id="rpExportar"><i class="bi bi-filetype-csv"></i> Exportar salidas</a>
+    </div>
+    <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+    </svg>
+</section>
+
+<section class="rp-kpis" id="rpKpis">
+    @for (var i = 0; i < 4; i++) { <div class="ui-skel" style="height:112px"></div> }
+</section>
+
+<section class="rp-grid">
+    <div class="rp-card wide">
+        <h3>Salidas a la venta por mes</h3>
+        <div class="sub">Salidas activas de circuitos en los próximos 12 meses</div>
+        <div class="rp-chart" id="chMeses"></div>
+        <details><summary>Ver datos</summary><div id="tMeses"></div></details>
+    </div>
+    <div class="rp-card">
+        <h3>Circuitos con más salidas</h3>
+        <div class="sub">Salidas activas a futuro (top 8)</div>
+        <div class="rp-chart" id="chTop"></div>
+        <details><summary>Ver datos</summary><div id="tTop"></div></details>
+    </div>
+    <div class="rp-card">
+        <h3>Cargas por día</h3>
+        <div class="sub">Últimos 30 días</div>
+        <div class="rp-chart" id="chDias"></div>
+        <details><summary>Ver datos</summary><div id="tDias"></div></details>
+    </div>
+    <div class="rp-card">
+        <h3>Cambios por usuario</h3>
+        <div class="sub">Altas, ediciones y bajas en los últimos 30 días</div>
+        <div class="rp-chart" id="chUsuarios"></div>
+        <details><summary>Ver datos</summary><div id="tUsuarios"></div></details>
+    </div>
+    <div class="rp-card">
+        <h3>Últimos cambios</h3>
+        <div class="sub">Registro de auditoría</div>
+        <ul class="rp-tl" id="rpCambios"></ul>
+    </div>
+    <div class="rp-card wide">
+        <h3>Salidas cargadas</h3>
+        <div class="sub">Detalle para revisar o exportar</div>
+        <div class="rp-filtros">
+            <label class="ui-f" style="margin:0"><input type="date" id="sDesde"></label>
+            <span style="color:var(--ev-muted);font-weight:700">a</span>
+            <label class="ui-f" style="margin:0"><input type="date" id="sHasta"></label>
+            <label class="ui-switch"><input type="checkbox" id="sActivas" checked><span class="tr"></span> Solo activas</label>
+            <span style="flex:1"></span>
+            <a class="ev-btn ghost sm" href="#" id="sExportar"><i class="bi bi-filetype-csv"></i> Exportar esta lista</a>
+        </div>
+        <div id="rpSalidas"></div>
+    </div>
+</section>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script>
+const RP = (() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const esc = EV.esc;
+    const NS = 'http://www.w3.org/2000/svg';
+
+    // ---------------- gráfico de barras (una serie; sin leyenda: el título la nombra) ----------------
+    // cfg: { horizontal, alto, etiquetaValor(d), tooltip(d), marcarMax }
+    function barras(cont, datos, cfg = {}) {
+        cont.innerHTML = '';
+        if (!datos.length || datos.every(d => !d.valor)) { cont.innerHTML = '<div class="rp-vacio"><i class="bi bi-bar-chart"></i> Todavía no hay datos para mostrar.</div>'; return; }
+        const ancho = Math.max(320, cont.clientWidth || 600);
+        const max = Math.max(...datos.map(d => d.valor), 1);
+        const svg = document.createElementNS(NS, 'svg');
+        const tip = document.createElement('div'); tip.className = 'rp-tip'; tip.hidden = true;
+        const el = (tag, attrs, padre = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); padre.appendChild(e); return e; };
+        const paso = n => { const p = Math.pow(10, Math.floor(Math.log10(n))); return [1, 2, 5, 10].map(x => x * p).find(x => n / x <= 4) || p * 10; };
+        const tope = Math.ceil(max / paso(max)) * paso(max);
+
+        if (cfg.horizontal) {
+            const fila = 30, izq = Math.min(190, ancho * .38), der = 46, alto = datos.length * fila + 6;
+            svg.setAttribute('viewBox', `0 0 ${ancho} ${alto}`); svg.setAttribute('height', alto);
+            const w = ancho - izq - der;
+            datos.forEach((d, i) => {
+                const y = i * fila + 4, h = fila - 10, bw = Math.max(8, w * d.valor / tope);
+                const g = el('g', {});
+                const hit = el('rect', { class: 'hit', x: 0, y: y - 4, width: ancho, height: fila }, g);
+                el('path', { class: 'bar', d: `M${izq} ${y} h${bw - 4} a4 4 0 0 1 4 4 v${h - 8} a4 4 0 0 1 -4 4 h${-(bw - 4)} Z` }, g);
+                const t = el('text', { class: 'eje', x: izq - 10, y: y + h / 2 + 4, 'text-anchor': 'end' }, g);
+                t.textContent = d.etiqueta.length > 26 ? d.etiqueta.slice(0, 25) + '…' : d.etiqueta;
+                const v = el('text', { class: 'val', x: izq + bw + 6, y: y + h / 2 + 4 }, g); v.textContent = EV.fmt(d.valor);
+                engancharTip(g, hit, d, () => [izq + bw / 2, y]);
+            });
+        } else {
+            const alto = cfg.alto || 220, abajo = 26, arriba = 14, izq = 30;
+            svg.setAttribute('viewBox', `0 0 ${ancho} ${alto}`); svg.setAttribute('height', alto);
+            const h = alto - abajo - arriba, w = ancho - izq, n = datos.length, slot = w / n, bw = Math.max(4, Math.min(42, slot - 2 - slot * .35));
+            for (let k = 0; k <= 4; k++) {
+                const yv = arriba + h - h * k / 4;
+                el('line', { class: 'grid', x1: izq, x2: ancho, y1: yv, y2: yv });
+                const t = el('text', { class: 'eje', x: izq - 6, y: yv + 4, 'text-anchor': 'end' }); t.textContent = EV.fmt(tope * k / 4);
+            }
+            const iMax = datos.reduce((m, d, i) => d.valor > datos[m].valor ? i : m, 0);
+            const cadaEtiqueta = Math.ceil(n / Math.max(1, Math.floor(w / 46)));
+            datos.forEach((d, i) => {
+                const x = izq + slot * i + (slot - bw) / 2, bh = h * d.valor / tope, y = arriba + h - bh;
+                const g = el('g', {});
+                const hit = el('rect', { class: 'hit', x: izq + slot * i, y: arriba, width: slot, height: h + abajo }, g);
+                if (d.valor > 0) el('path', { class: 'bar', d: bh > 4 ? `M${x} ${arriba + h} v${-(bh - 4)} a4 4 0 0 1 4 -4 h${bw - 8} a4 4 0 0 1 4 4 v${bh - 4} Z` : `M${x} ${arriba + h} v${-bh} h${bw} v${bh} Z` }, g);
+                if (i % cadaEtiqueta === 0) { const t = el('text', { class: 'eje', x: x + bw / 2, y: alto - 8, 'text-anchor': 'middle' }, g); t.textContent = d.etiqueta; }
+                if (cfg.marcarMax && i === iMax && d.valor > 0) { const v = el('text', { class: 'val', x: x + bw / 2, y: y - 6, 'text-anchor': 'middle' }, g); v.textContent = EV.fmt(d.valor); }
+                engancharTip(g, hit, d, () => [x + bw / 2, y]);
+            });
+        }
+        cont.append(svg, tip);
+
+        function engancharTip(g, hit, d, pos) {
+            hit.addEventListener('mouseenter', () => {
+                g.classList.add('on');
+                const [x, y] = pos(), r = svg.getBoundingClientRect(), esc_ = r.width / svg.viewBox.baseVal.width;
+                tip.innerHTML = cfg.tooltip ? cfg.tooltip(d) : `${esc(d.etiqueta)}: <b>${EV.fmt(d.valor)}</b>`;
+                tip.style.left = x * esc_ + 'px'; tip.style.top = y * esc_ + 'px'; tip.hidden = false;
+            });
+            hit.addEventListener('mouseleave', () => { g.classList.remove('on'); tip.hidden = true; });
+        }
+    }
+
+    const tabla = (cabeceras, filas) => `<div class="ui-table-wrap"><table class="ui-table"><thead><tr>${cabeceras.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${filas.map(f => `<tr>${f.map((v, i) => `<td class="${i ? 'num' : ''}">${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    const capital = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+    const icono = t => /Eliminar/i.test(t) ? 'trash3' : /Crear|Carga/i.test(t) ? 'plus-circle' : /Estado/i.test(t) ? 'toggle-on' : 'pencil';
+    const nombreCambio = t => ({ Hotel_Crear: 'Hotel creado', Hotel_Editar: 'Hotel editado', Hotel_Estado: 'Hotel mostrado/ocultado', Hotel_Eliminar: 'Hotel eliminado',
+        Circuito_Crear: 'Circuito creado', Circuito_Editar: 'Circuito editado', Circuito_Eliminar: 'Circuito eliminado', Circuito_Carga: 'Salidas cargadas',
+        Circuito_SalidaEstado: 'Salida activada/desactivada', Circuito_SalidaEliminar: 'Salida eliminada', Categoria_Guardar: 'Categoría guardada', Categoria_Eliminar: 'Categoría eliminada' }[t] || t);
+    let datos = null;
+
+    async function cargar() {
+        try {
+            datos = await EV.api('/Reportes/Datos');
+            const d = datos;
+            const sinVuelo = d.salidasActivas - d.salidasConVuelo;
+            $('#rpKpis').innerHTML = `
+                <div class="ev-card rp-kpi ev-rise d1"><small><i class="bi bi-airplane-engines"></i> Salidas a la venta</small><b>${EV.fmt(d.salidasActivas)}</b><span>${EV.fmt(d.salidasProximas30)} en los próximos 30 días</span></div>
+                <div class="ev-card rp-kpi ev-rise d2"><small><i class="bi bi-signpost-split"></i> Circuitos</small><b>${EV.fmt(d.circuitos)}</b><span>${EV.fmt(d.salidasConVuelo)} salidas con vuelo · ${EV.fmt(sinVuelo)} sin vuelo</span></div>
+                <div class="ev-card rp-kpi ev-rise d3"><small><i class="bi bi-building"></i> Hoteles en la vitrina</small><b>${EV.fmt(d.hotelesVitrina)}</b><span>${EV.fmt(d.hotelesVisibles)} visibles en la web</span></div>
+                <div class="ev-card rp-kpi ev-rise d4"><small><i class="bi bi-tags"></i> Precio medio de salida</small><b>${d.precioMedio != null ? EV.dinero(d.precioMedio) : '—'}</b><span>${EV.fmt(d.cargasMes)} cargas en 30 días</span></div>`;
+
+            const meses = d.salidasPorMes.map(x => ({ etiqueta: capital(x.etiqueta.replace('.', '')), valor: x.valor, extra: x.extra }));
+            barras($('#chMeses'), meses, { marcarMax: true, tooltip: x => `${esc(x.etiqueta)}: <b>${EV.fmt(x.valor)} salida${x.valor === 1 ? '' : 's'}</b>${x.extra != null ? ` · desde ${EV.dinero(x.extra)}` : ''}` });
+            $('#tMeses').innerHTML = tabla(['Mes', 'Salidas', 'Precio desde'], meses.map(x => [esc(x.etiqueta), EV.fmt(x.valor), x.extra != null ? EV.dinero(x.extra) : '—']));
+
+            const top = d.topCircuitos.map(x => ({ etiqueta: x.etiqueta, valor: x.valor, extra: x.extra }));
+            barras($('#chTop'), top, { horizontal: true, tooltip: x => `${esc(x.etiqueta)}: <b>${x.valor} salidas</b>${x.extra != null ? ` · desde ${EV.dinero(x.extra)}` : ''}` });
+            $('#tTop').innerHTML = tabla(['Circuito', 'Salidas', 'Precio desde'], top.map(x => [esc(x.etiqueta), x.valor, x.extra != null ? EV.dinero(x.extra) : '—']));
+
+            const dias = d.cargasPorDia.map(x => ({ etiqueta: x.etiqueta.replace('.', ''), valor: x.valor, extra: x.extra }));
+            barras($('#chDias'), dias, { alto: 190, tooltip: x => `${esc(x.etiqueta)}: <b>${x.valor} carga${x.valor === 1 ? '' : 's'}</b> · ${EV.fmt(x.extra || 0)} salidas creadas` });
+            $('#tDias').innerHTML = tabla(['Día', 'Cargas', 'Salidas creadas'], dias.filter(x => x.valor).map(x => [esc(x.etiqueta), x.valor, EV.fmt(x.extra || 0)]));
+
+            const usu = d.actividadPorUsuario.map(x => ({ etiqueta: x.etiqueta, valor: x.valor }));
+            barras($('#chUsuarios'), usu, { horizontal: true, tooltip: x => `${esc(x.etiqueta)}: <b>${x.valor} cambios</b>` });
+            $('#tUsuarios').innerHTML = tabla(['Usuario', 'Cambios'], usu.map(x => [esc(x.etiqueta), x.valor]));
+
+            $('#rpCambios').innerHTML = d.ultimosCambios.length ? d.ultimosCambios.map(c => `<li><span class="ic"><i class="bi bi-${icono(c.tipo_Mantenimiento)}"></i></span>
+                <div><b>${esc(nombreCambio(c.tipo_Mantenimiento))}</b><small>${esc(c.usuario)}${c.cantidad_Servicios > 1 ? ` · ${c.cantidad_Servicios} registros` : ''}</small></div>
+                <time>${new Date(c.fecha_Hora).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</time></li>`).join('')
+                : '<li><span style="color:var(--ev-muted)">Sin cambios todavía.</span></li>';
+        } catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    const qSalidas = () => new URLSearchParams({ soloActivas: $('#sActivas').checked, desde: $('#sDesde').value, hasta: $('#sHasta').value });
+
+    async function salidas() {
+        $('#rpSalidas').innerHTML = '<div class="ui-skel" style="height:140px"></div>';
+        try {
+            const s = await EV.api('/Reportes/Salidas?' + qSalidas());
+            $('#rpSalidas').innerHTML = !s.length ? '<div class="rp-vacio">No hay salidas con esos filtros.</div>' :
+                `<div class="ui-table-wrap" style="max-height:420px;overflow:auto"><table class="ui-table"><thead><tr><th>#</th><th>Circuito</th><th>Salida</th><th>Regreso</th><th>Campaña</th><th>Categoría</th><th>Origen</th><th>Vuelo</th><th class="num">Precio web</th><th>Activa</th></tr></thead><tbody>
+                ${s.map(x => `<tr><td>${x.id_Servicio}</td><td><b>${esc(x.nombre || '')}</b></td><td>${x.desde ? EV.fecha(x.desde.slice(0, 10)) : '—'}</td><td>${x.hasta ? EV.fecha(x.hasta.slice(0, 10)) : '—'}</td>
+                    <td>${esc(x.campanya || '')}</td><td>${esc(x.categoria || '')}</td><td>${esc(x.origen || '—')}</td><td>${x.vuelos ? `${x.vuelos} vuelos` : 'Sin vuelo'}</td>
+                    <td class="num">${EV.dinero(x.precioWeb, x.id_Moneda)}</td><td>${x.activo ? '<i class="bi bi-check-circle-fill" style="color:#16A34A"></i> Sí' : '<i class="bi bi-dash-circle" style="color:var(--ev-muted)"></i> No'}</td></tr>`).join('')}
+                </tbody></table></div><div class="rp-vacio" style="padding:10px 0 0;text-align:left">${s.length} salida${s.length === 1 ? '' : 's'}</div>`;
+        } catch (e) { $('#rpSalidas').innerHTML = `<div class="rp-vacio">${esc(e.message)}</div>`; }
+    }
+
+    function iniciar() {
+        $('#sDesde').value = EV.hoy();
+        ['#sDesde', '#sHasta', '#sActivas'].forEach(id => $(id).addEventListener('change', salidas));
+        $('#sExportar').addEventListener('click', e => { e.preventDefault(); location.href = '/Reportes/ExportarSalidas?' + qSalidas(); });
+        $('#rpExportar').addEventListener('click', e => { e.preventDefault(); location.href = '/Reportes/ExportarSalidas?' + qSalidas(); });
+        let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => datos && cargar(), 250); });
+        cargar(); salidas();
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+    return { recargar: () => { cargar(); salidas(); } };
+})();
+</script>
+}

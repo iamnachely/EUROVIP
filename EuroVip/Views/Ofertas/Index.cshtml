@@ -1,0 +1,352 @@
+@{
+    ViewData["Title"] = "Carga manual";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .of-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+    .of-kpi { display: flex; align-items: center; gap: 12px; padding: 16px 18px; }
+    .of-kpi i { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-size: 18px; background: var(--ev-mint); flex-shrink: 0; }
+    .of-kpi b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.6px; line-height: 1.1; }
+    .of-kpi small { color: var(--ev-muted); font-weight: 600; font-size: 12.5px; }
+    .of-filtros2 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; width: 100%; }
+    .of-hotel { display: flex; align-items: center; gap: 10px; min-width: 220px; }
+    .of-th { width: 46px; height: 36px; border-radius: 10px; background: var(--ev-grad); overflow: hidden; display: grid; place-items: center; font-weight: 800; font-size: 12px; flex-shrink: 0; }
+    .of-th img { width: 100%; height: 100%; object-fit: cover; }
+    .of-hotel b { display: block; font-size: 13.5px; }
+    .of-sub { color: var(--ev-muted); font-size: 12px; font-weight: 600; }
+    .of-reg { font: 800 11.5px var(--ev-font); padding: 4px 9px; border-radius: 8px; background: var(--ev-mint); white-space: nowrap; }
+    .of-fecha { white-space: nowrap; }
+    .of-fecha b { display: block; }
+    .ui-table tr.off td { opacity: .55; }
+    .ui-table tr.sel td { background: #ECFEFB; }
+    .of-check { width: 18px; height: 18px; min-width: 0 !important; accent-color: var(--ev-ink); cursor: pointer; }
+    .of-bulk {
+        position: sticky; bottom: 14px; z-index: 30; margin-top: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        padding: 12px 16px; border-radius: 18px; background: var(--ev-ink); color: #fff; box-shadow: var(--ev-shadow-lg); animation: uiFade .3s var(--ev-ease);
+    }
+    .of-bulk b { color: var(--ev-aqua); }
+    .of-bulk .sp { flex: 1; }
+    .of-pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+    .of-pager small { color: var(--ev-muted); font-weight: 600; }
+    .of-pages { display: flex; gap: 6px; }
+    .of-pages button { min-width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--ev-line); background: var(--ev-surface); font: 700 13px var(--ev-font); color: var(--ev-text); cursor: pointer; }
+    .of-pages button.on { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+    .of-pages button:disabled { opacity: .4; cursor: default; }
+    .of-precio-vivo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 14px 16px; border-radius: 16px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); font-weight: 700; margin-bottom: 18px; }
+    .of-precio-vivo span { padding: 5px 10px; border-radius: 10px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
+    .of-precio-vivo .eq { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); font-size: 16px; }
+    @@media (max-width: 1100px) { .of-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="ui-hero ev-rise">
+    <i class="bi bi-pencil-square ui-hero-ico" aria-hidden="true"></i>
+    <div>
+        <span class="ev-chip dark"><i class="bi bi-building"></i> Ofertas de hotel</span>
+        <h1>Carga manual</h1>
+        <p>Aquí ves todas las ofertas de hotel cargadas: búscalas, edítalas, actívalas o elimínalas. Para cargar nuevas usa la versión Express (todo junto) o la Clásica (como BackTiTan, con Excel). El vuelo es opcional.</p>
+    </div>
+    <div class="ui-hero-acts">
+        <a class="ev-btn light" asp-controller="CargaManual" asp-action="Clasica"><i class="bi bi-ui-checks"></i> Carga Clásica</a>
+        <a class="ev-btn" asp-controller="CargaManual" asp-action="Express"><i class="bi bi-lightning-charge"></i> Carga Express</a>
+    </div>
+    <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+    </svg>
+</section>
+
+<section class="of-kpis">
+    <div class="ev-card of-kpi ev-rise d1"><i class="bi bi-calendar-check"></i><div><b id="kFut">—</b><small>Ofertas a la venta</small></div></div>
+    <div class="ev-card of-kpi ev-rise d2"><i class="bi bi-building" style="background:var(--ev-aqua)"></i><div><b id="kHot">—</b><small>Hoteles con ofertas</small></div></div>
+    <div class="ev-card of-kpi ev-rise d3"><i class="bi bi-airplane" style="background:var(--ev-ink);color:var(--ev-aqua)"></i><div><b id="kVue">—</b><small>Con vuelo</small></div></div>
+    <div class="ev-card of-kpi ev-rise d4"><i class="bi bi-tags"></i><div><b id="kDesde">—</b><small>Precio desde</small></div></div>
+</section>
+
+<div class="ui-toolbar">
+    <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar hotel, destino, campaña, código o nº de oferta…" /></label>
+    <select class="ui-select" id="fDestino"><option value="">Todos los destinos</option></select>
+    <select class="ui-select" id="fCampanya"><option value="">Todas las campañas</option></select>
+    <select class="ui-select" id="fOrden"><option value="fecha">Por fecha</option><option value="precio">Precio más bajo</option><option value="hotel">Hotel A–Z</option><option value="recientes">Recién cargadas</option></select>
+    <div class="of-filtros2">
+        <div class="ui-chips" id="fEstado">
+            <button type="button" class="ui-pick on" data-v="">Todas</button>
+            <button type="button" class="ui-pick" data-v="1"><i class="bi bi-check-circle"></i> Activas</button>
+            <button type="button" class="ui-pick" data-v="0"><i class="bi bi-dash-circle"></i> Inactivas</button>
+        </div>
+        <div class="ui-chips" id="fVuelo">
+            <button type="button" class="ui-pick on" data-v="">Con y sin vuelo</button>
+            <button type="button" class="ui-pick" data-v="1"><i class="bi bi-airplane"></i> Con vuelo</button>
+            <button type="button" class="ui-pick" data-v="0"><i class="bi bi-bus-front"></i> Sin vuelo</button>
+        </div>
+        <input class="ui-select" type="date" id="fDesde" title="Entrada desde" style="background-image:none;padding-right:12px">
+        <input class="ui-select" type="date" id="fHasta" title="Entrada hasta" style="background-image:none;padding-right:12px">
+        <label class="ui-switch"><input type="checkbox" id="fPasadas"><span class="tr"></span> Incluir pasadas</label>
+        <span style="flex:1"></span>
+        <a class="ev-btn ghost sm" href="#" id="ofExportar"><i class="bi bi-filetype-csv"></i> Exportar</a>
+    </div>
+</div>
+
+<div id="ofLista"></div>
+<div class="of-pager" id="ofPager" hidden><small id="ofRango"></small><div class="of-pages" id="ofPages"></div></div>
+
+<div class="of-bulk" id="ofBulk" hidden>
+    <span><b id="bNum">0</b> seleccionadas</span>
+    <button class="ev-btn aqua sm" type="button" onclick="OF.lote(true)"><i class="bi bi-check-circle"></i> Activar</button>
+    <button class="ev-btn light sm" type="button" onclick="OF.lote(false)"><i class="bi bi-dash-circle"></i> Desactivar</button>
+    <button class="ev-btn light sm" type="button" onclick="OF.ajustar()"><i class="bi bi-plus-slash-minus"></i> Ajustar precio</button>
+    <button class="ev-btn red sm" type="button" onclick="OF.eliminar()"><i class="bi bi-trash3"></i> Eliminar</button>
+    <span class="sp"></span>
+    <button class="ev-btn light sm" type="button" onclick="OF.limpiarSel()">Quitar selección</button>
+</div>
+
+<!-- EDITOR -->
+<aside class="ui-drawer" id="ofEditor" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-pencil-square"></i></div>
+        <div style="min-width:0"><h2 id="eTitulo">Oferta</h2><small id="eSub"></small></div>
+        <button class="ui-ibtn x" type="button" onclick="OF.cerrar()" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db">
+        <div class="of-precio-vivo" id="ePrecio"></div>
+        <div class="ui-sec">
+            <div class="ui-sec-t"><span>1</span> Fechas y régimen</div>
+            <div class="ui-row r4">
+                <div class="ui-f"><label>Entrada</label><input type="date" id="eDesde"></div>
+                <div class="ui-f"><label>Noches</label><input type="number" id="eNoches" min="1" max="60"></div>
+                <div class="ui-f"><label>Salida</label><input id="eHasta" readonly tabindex="-1"></div>
+                <div class="ui-f"><label>Régimen</label><select id="eRegimen"></select></div>
+            </div>
+        </div>
+        <div class="ui-sec">
+            <div class="ui-sec-t"><span>2</span> Precio y campaña</div>
+            <div class="ui-row r3">
+                <div class="ui-f"><label>Precio total <em>lo que paga el cliente</em></label><div class="ui-money"><b class="sim">€</b><input type="number" id="eTotal" min="1" step="1"></div></div>
+                <div class="ui-f"><label>Descuento %</label><input type="number" id="eDescuento" min="0" max="100" step="0.5"></div>
+                <div class="ui-f"><label>Campaña</label><select id="eCampanya"></select></div>
+            </div>
+            <div id="eSuplementos"></div>
+        </div>
+        <div class="ui-sec">
+            <div class="ui-sec-t"><span>3</span> Habitaciones</div>
+            <div id="eHabs"></div>
+        </div>
+        <div class="ui-sec">
+            <div class="ui-sec-t"><span>4</span> Estado y datos de la carga</div>
+            <label class="ui-switch" style="margin-bottom:14px"><input type="checkbox" id="eActivo"><span class="tr"></span> Activa (se vende)</label>
+            <div id="eInfo"></div>
+        </div>
+    </div>
+    <div class="ui-df">
+        <button class="ev-btn ghost" type="button" id="eEliminar"><i class="bi bi-trash3"></i> Eliminar</button>
+        <span class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> para guardar</span>
+        <button class="ev-btn ghost" type="button" onclick="OF.cerrar()">Cancelar</button>
+        <button class="ev-btn" type="button" id="eGuardar"><i class="bi bi-check2-circle"></i> Guardar cambios</button>
+    </div>
+</aside>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script>
+const OF = (() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    const st = { q: '', destino: '', campanya: '', estado: '', vuelo: '', desde: '', hasta: '', pasadas: false, orden: 'fecha', pagina: 1 };
+    const sel = new Set();
+    let items = [], cat, actual = null, sups = null;
+    const drawer = EV.drawer($('#ofEditor'));
+
+    const params = () => new URLSearchParams({ q: st.q, destino: st.destino, campanya: st.campanya, estado: st.estado, vuelo: st.vuelo, desde: st.desde, hasta: st.hasta, pasadas: st.pasadas, orden: st.orden, pagina: st.pagina, tam: 25 });
+    const thumb = o => EV.esUrl(o.caratula) ? `<img src="${esc(o.caratula)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${esc(EV.iniciales(o.hotel)).replace(/'/g, '')}'">` : esc(EV.iniciales(o.hotel));
+
+    async function cargar() {
+        $('#ofLista').innerHTML = '<div class="ui-skel" style="height:320px"></div>';
+        try {
+            const d = await EV.api('/Ofertas/Listar?' + params());
+            items = d.items;
+            $('#kFut').textContent = EV.fmt(d.stats.futuras); $('#kHot').textContent = EV.fmt(d.stats.hoteles);
+            $('#kVue').textContent = EV.fmt(d.stats.conVuelo); $('#kDesde').textContent = d.stats.precioDesde != null ? EV.dinero(d.stats.precioDesde) : '—';
+            pintar(d);
+        } catch (e) { $('#ofLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar las ofertas</h3><p>${esc(e.message)}</p></div>`; }
+    }
+
+    function pintar(d) {
+        if (!d.items.length) {
+            const filtrando = st.q || st.destino || st.campanya || st.estado || st.vuelo || st.desde || st.hasta;
+            $('#ofLista').innerHTML = `<div class="ui-empty"><i class="bi bi-building big"></i><h3>${filtrando ? 'No hay ofertas con esos filtros' : 'Todavía no hay ofertas cargadas'}</h3>
+                <p>${filtrando ? 'Prueba con otros filtros o activa "Incluir pasadas".' : 'Carga las primeras con la versión Express o la Clásica.'}</p>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><a class="ev-btn" href="/CargaManual/Express"><i class="bi bi-lightning-charge"></i> Carga Express</a><a class="ev-btn ghost" href="/CargaManual/Clasica"><i class="bi bi-ui-checks"></i> Carga Clásica</a></div></div>`;
+            $('#ofPager').hidden = true; return;
+        }
+        $('#ofLista').innerHTML = `<div class="ui-table-wrap"><table class="ui-table"><thead><tr>
+            <th style="width:40px"><input type="checkbox" class="of-check" id="selTodo" title="Seleccionar todo"></th><th>Hotel</th><th>Régimen</th><th>Fechas</th><th>Campaña</th><th class="num">Precio web</th><th>Vuelo</th><th>Origen</th><th>Activa</th><th></th></tr></thead><tbody>
+            ${d.items.map(o => `<tr class="${o.activo ? '' : 'off'} ${sel.has(o.id_Servicio) ? 'sel' : ''}" data-id="${o.id_Servicio}">
+                <td><input type="checkbox" class="of-check" data-sel="${o.id_Servicio}" ${sel.has(o.id_Servicio) ? 'checked' : ''}></td>
+                <td><div class="of-hotel"><span class="of-th">${thumb(o)}</span><div><b>${esc(o.hotel)}</b><span class="of-sub">#${o.id_Servicio} · ${esc(o.destino || '')}</span></div></div></td>
+                <td><span class="of-reg" title="${esc(o.regimen || '')}">${esc(o.id_Regimen)}</span></td>
+                <td class="of-fecha"><b>${EV.fechaCorta(o.desde.slice(0, 10))}</b><span class="of-sub">${o.noches} noches · hasta ${EV.fecha(o.hasta.slice(0, 10))}</span></td>
+                <td>${esc(o.campanya || '#' + o.id_Campanya)}${o.descuento ? ` <span class="ui-chip" style="padding:2px 8px;font-size:11px">-${EV.fmt(o.descuento, 1)}%</span>` : ''}</td>
+                <td class="num" title="Base ${EV.fmt(o.precio_Base)} + tasas ${EV.fmt(o.tasas)}">${EV.dinero(o.precioWeb, o.id_Moneda)}</td>
+                <td>${o.vuelos ? `<span class="ui-chip dark" style="padding:3px 9px">${o.vuelos} vuelos</span>` : '<span class="ui-chip ghost" style="padding:3px 9px">Sin vuelo</span>'}</td>
+                <td>${esc(o.origen || '—')}</td>
+                <td><label class="ui-switch"><input type="checkbox" ${o.activo ? 'checked' : ''} data-act="${o.id_Servicio}"><span class="tr"></span></label></td>
+                <td style="white-space:nowrap"><button class="ui-ibtn" title="Editar" data-edit="${o.id_Servicio}"><i class="bi bi-pencil"></i></button>
+                    <button class="ui-ibtn danger" title="Eliminar" data-del="${o.id_Servicio}"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
+            </tbody></table></div>`;
+        $('#selTodo').checked = d.items.every(o => sel.has(o.id_Servicio));
+        const desde = (d.pagina - 1) * d.tam + 1, hasta = Math.min(d.pagina * d.tam, d.total), pags = Math.ceil(d.total / d.tam);
+        $('#ofPager').hidden = false;
+        $('#ofRango').textContent = `Mostrando ${desde}–${hasta} de ${d.total} oferta${d.total === 1 ? '' : 's'}`;
+        $('#ofPages').innerHTML = pags <= 1 ? '' :
+            `<button ${d.pagina === 1 ? 'disabled' : ''} data-p="${d.pagina - 1}"><i class="bi bi-chevron-left"></i></button>` +
+            Array.from({ length: pags }, (_, i) => i + 1).filter(n => n === 1 || n === pags || Math.abs(n - d.pagina) <= 1)
+                .map((n, i, a) => (i && n - a[i - 1] > 1 ? '<button disabled>…</button>' : '') + `<button class="${n === d.pagina ? 'on' : ''}" data-p="${n}">${n}</button>`).join('') +
+            `<button ${d.pagina === pags ? 'disabled' : ''} data-p="${d.pagina + 1}"><i class="bi bi-chevron-right"></i></button>`;
+    }
+
+    function barraLote() { $('#ofBulk').hidden = sel.size === 0; $('#bNum').textContent = sel.size; }
+
+    // ---------------- editor ----------------
+    async function editar(id) {
+        try {
+            const o = await EV.api('/Ofertas/Obtener?id=' + id);
+            actual = o;
+            const habsHotel = await EV.api('/Ofertas/Habitaciones?hotel=' + o.id_Alojamiento);
+            $('#eTitulo').textContent = o.hotel;
+            $('#eSub').textContent = `Oferta #${o.id_Servicio} · ${o.destino || ''} · ${esc(o.proveedor || '')}`;
+            $('#eDesde').value = o.desde.slice(0, 10); $('#eNoches').value = o.noches;
+            $('#eRegimen').innerHTML = cat.regimenes.map(r => `<option value="${esc(r.valor)}">${esc(r.valor)} · ${esc(r.texto)}</option>`).join('');
+            $('#eRegimen').value = o.id_Regimen.trim();
+            $('#eCampanya').innerHTML = cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)} (#${esc(c.valor)})</option>`).join('');
+            $('#eCampanya').value = String(o.id_Campanya);
+            $('#eTotal').value = Math.round((o.precio_Base + o.tasas) * 100) / 100; $('#eDescuento').value = o.descuento;
+            $('#eActivo').checked = o.activo;
+            sups = EVC.filas($('#eSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento / tasa', valorEtiqueta: 'Importe', sufijo: '€', onChange: precioVivo, placeholder: 'Elige…', inicial: o.tasasDetalle.map(t => ({ opcion: t.id_Tasa, valor: t.valor })) });
+            const marcadas = new Map(o.habitacionesDetalle.map(h => [h.id_Habitacion, h.precio]));
+            // marcadas primero; con muchas habitaciones, buscador
+            habsHotel.sort((a, b) => (marcadas.has(b.id_Habitacion) ? 1 : 0) - (marcadas.has(a.id_Habitacion) ? 1 : 0));
+            $('#eHabs').innerHTML = `${habsHotel.length > 8 ? `<label class="ui-search" style="margin-bottom:10px"><i class="bi bi-search"></i><input type="search" id="eHabFiltro" placeholder="Filtrar ${habsHotel.length} habitaciones…"></label>` : ''}
+                <div class="ui-table-wrap" style="max-height:280px;overflow:auto"><table class="ui-table"><thead><tr><th style="width:44px"></th><th>Habitación</th><th>Tipo</th><th style="width:160px">Suplemento</th></tr></thead><tbody>
+                ${habsHotel.map(h => `<tr data-txt="${esc(`${h.nombre} ${h.id_Tipo_Habitacion || ''} ${h.id_Habitacion}`.toLowerCase())}"><td><input type="checkbox" class="of-check" data-hab="${h.id_Habitacion}" ${marcadas.has(h.id_Habitacion) ? 'checked' : ''}></td><td><b>${esc(h.nombre)}</b> <small style="color:var(--ev-muted)">#${h.id_Habitacion}</small></td>
+                    <td>${esc(h.id_Tipo_Habitacion || '')}</td><td><div class="ui-money"><b>+</b><input type="number" min="0" step="1" data-sup="${h.id_Habitacion}" value="${marcadas.get(h.id_Habitacion) ?? 0}"></div></td></tr>`).join('')}</tbody></table></div>`;
+            const vuelos = o.vuelosDetalle;
+            $('#eInfo').innerHTML = `<dl class="ui-row r3" style="margin:0">
+                ${[['Código de carga', o.codigo], ['Cargada por', o.usuario], ['Origen de venta', o.origen]].map(([t, v]) => `<div class="ui-f"><label>${t}</label><input value="${esc(v || '—')}" readonly tabindex="-1"></div>`).join('')}</dl>
+                ${vuelos.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Vuelo</th><th>Ruta</th><th>Sale</th><th>Llega</th></tr></thead><tbody>
+                    ${vuelos.map(v => `<tr><td>${v.segmento}</td><td>${esc(v.id_Proveedor)} ${esc(v.vuelo || '')}</td><td>${esc(v.id_Estacion_Origen)} → ${esc(v.id_Estacion_Destino)}</td>
+                    <td>${EV.fecha(v.fecha_Salida.slice(0, 10))} ${esc(v.hora_Salida)}</td><td>${EV.fecha(v.fecha_Regreso.slice(0, 10))} ${esc(v.hora_Regreso)}</td></tr>`).join('')}</tbody></table></div>
+                    <div class="ui-help" style="margin-top:8px">Si cambias la fecha de entrada, los vuelos se mueven los mismos días.</div>` : '<div class="ui-chip ghost"><i class="bi bi-bus-front"></i> Oferta sin vuelo</div>'}
+                ${o.notas.length ? `<div style="margin-top:12px">${o.notas.map(n => `<div class="ui-note info" style="margin-bottom:8px"><i class="bi bi-journal-text"></i><div><b>${esc(n.tipo)}</b><br>${esc(n.nota1)}</div></div>`).join('')}</div>` : ''}`;
+            $('#eEliminar').onclick = () => eliminarIds([o.id_Servicio]);
+            hasta(); precioVivo();
+            drawer.abrir();
+        } catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    function hasta() { const d = $('#eDesde').value, n = parseInt($('#eNoches').value, 10) || 0; $('#eHasta').value = d && n ? EV.fecha(EV.sumarDias(d, n)) : '—'; }
+
+    function precioVivo() {
+        const total = parseFloat($('#eTotal').value) || 0, tasas = sups ? sups.total() : 0, desc = parseFloat($('#eDescuento').value) || 0;
+        const base = total - tasas, final = total - base * desc / 100, m = actual?.id_Moneda;
+        const supMin = Math.min(...$$('#eHabs [data-hab]:checked').map(c => parseFloat($(`#eHabs [data-sup="${c.dataset.hab}"]`).value) || 0), Infinity);
+        const extra = isFinite(supMin) ? supMin : 0;
+        $('#ePrecio').innerHTML = `<i class="bi bi-calculator"></i> <span>Base ${EV.dinero(base, m)}</span> + <span>Tasas ${EV.dinero(tasas, m)}</span>${extra ? ` + <span>Hab. ${EV.dinero(extra, m)}</span>` : ''}${desc ? ` − <span>Desc. ${EV.fmt(desc, 1)}%</span>` : ''} = <span class="eq">Precio web ${EV.dinero(final + extra, m)}</span>
+            ${base < cat.minimo ? `<span style="background:#FEE4E2;color:#B42318;border-color:#FECDCA"><i class="bi bi-exclamation-triangle"></i> base menor al mínimo (${EV.fmt(cat.minimo)})</span>` : ''}`;
+    }
+
+    async function guardar() {
+        const habs = $$('#eHabs [data-hab]:checked').map(c => ({ Id_Habitacion: +c.dataset.hab, Precio: parseFloat($(`#eHabs [data-sup="${c.dataset.hab}"]`).value) || 0 }));
+        if (!habs.length) { EV.toast('Marca al menos una habitación.', 'err'); return; }
+        const dto = {
+            Id_Servicio: actual.id_Servicio, PrecioTotal: parseFloat($('#eTotal').value) || 0, Descuento: parseFloat($('#eDescuento').value) || 0,
+            Id_Campanya: parseInt($('#eCampanya').value, 10), Id_Regimen: $('#eRegimen').value, Desde: $('#eDesde').value, Noches: parseInt($('#eNoches').value, 10) || 0,
+            Activo: $('#eActivo').checked, Habitaciones: habs, Suplementos: sups.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor }))
+        };
+        if (dto.PrecioTotal - sups.total() < cat.minimo && !await EV.confirmar({ titulo: 'Precio base bajo', texto: `El precio base queda por debajo del mínimo (${EV.fmt(cat.minimo)}). ¿Guardar igual?`, si: 'Guardar igual' })) return;
+        const b = $('#eGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
+        try { const r = await EV.post('/Ofertas/Editar', dto); EV.toast(r.mensaje); drawer.cerrar(); cargar(); }
+        catch (e) { EV.toast(e.message, 'err'); }
+        finally { b.disabled = false; b.innerHTML = html; }
+    }
+
+    async function eliminarIds(ids) {
+        const n = ids.length;
+        const ok = await EV.confirmar({ titulo: n === 1 ? '¿Eliminar esta oferta?' : `¿Eliminar ${n} ofertas?`, peligro: true, si: 'Sí, eliminar',
+            texto: `Se borran con sus habitaciones, tasas, notas y vuelos. No se puede deshacer.<br>Si solo no quieres que se venda, es mejor <b>desactivarla</b>.`,
+            escribir: n > 10 ? 'ELIMINAR' : null });
+        if (!ok) return;
+        try { const r = await EV.post('/Ofertas/Eliminar', ids); EV.toast(r.mensaje); ids.forEach(i => sel.delete(i)); barraLote(); drawer.cerrar(); cargar(); }
+        catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    async function iniciar() {
+        cat = await EVC.catalogos();
+        const destinos = await EV.api('/Ofertas/Destinos');
+        $('#fDestino').innerHTML += destinos.map(d => `<option value="${esc(d.valor)}">${esc(d.texto)} (${esc(d.extra)})</option>`).join('');
+        $('#fCampanya').innerHTML += cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)} (#${esc(c.valor)})</option>`).join('');
+
+        $('#fQ').addEventListener('input', EV.debounce(e => { st.q = e.target.value.trim(); st.pagina = 1; cargar(); }, 300));
+        [['#fDestino', 'destino'], ['#fCampanya', 'campanya'], ['#fOrden', 'orden'], ['#fDesde', 'desde'], ['#fHasta', 'hasta']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; st.pagina = 1; cargar(); }));
+        $('#fPasadas').addEventListener('change', e => { st.pasadas = e.target.checked; st.pagina = 1; cargar(); });
+        [['#fEstado', 'estado'], ['#fVuelo', 'vuelo']].forEach(([id, k]) => $$(id + ' [data-v]').forEach(b => b.addEventListener('click', () => { $$(id + ' .ui-pick').forEach(x => x.classList.toggle('on', x === b)); st[k] = b.dataset.v; st.pagina = 1; cargar(); })));
+        $('#ofExportar').addEventListener('click', e => { e.preventDefault(); location.href = '/Ofertas/Exportar?' + params(); });
+
+        $('#ofLista').addEventListener('change', async e => {
+            const t = e.target;
+            if (t.id === 'selTodo') { items.forEach(o => t.checked ? sel.add(o.id_Servicio) : sel.delete(o.id_Servicio)); $$('[data-sel]').forEach(c => { c.checked = t.checked; c.closest('tr').classList.toggle('sel', t.checked); }); barraLote(); }
+            if (t.dataset.sel) { const id = +t.dataset.sel; t.checked ? sel.add(id) : sel.delete(id); t.closest('tr').classList.toggle('sel', t.checked); barraLote(); }
+            if (t.dataset.act) {
+                const id = +t.dataset.act;
+                try { const r = await EV.post('/Ofertas/Lote', { Ids: [id], Activo: t.checked }); t.closest('tr').classList.toggle('off', !t.checked);
+                      EV.toast(t.checked ? 'Oferta activada.' : 'Oferta desactivada.', 'ok', { texto: 'Deshacer', accion: async () => { await EV.post('/Ofertas/Lote', { Ids: [id], Activo: !t.checked }); cargar(); } }); }
+                catch (err) { t.checked = !t.checked; EV.toast(err.message, 'err'); }
+            }
+        });
+        $('#ofLista').addEventListener('click', e => {
+            const ed = e.target.closest('[data-edit]'); if (ed) return editar(+ed.dataset.edit);
+            const de = e.target.closest('[data-del]'); if (de) return eliminarIds([+de.dataset.del]);
+        });
+        $('#ofPages').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b && !b.disabled) { st.pagina = +b.dataset.p; cargar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+
+        ['#eTotal', '#eDescuento'].forEach(id => $(id).addEventListener('input', precioVivo));
+        $('#eHabs').addEventListener('input', e => {
+            if (e.target.id === 'eHabFiltro') {
+                const q = e.target.value.trim().toLowerCase();
+                $$('#eHabs tbody tr').forEach(tr => tr.hidden = !(tr.querySelector('[data-hab]').checked || !q || tr.dataset.txt.includes(q)));
+                return;
+            }
+            precioVivo();
+        }); $('#eHabs').addEventListener('change', precioVivo);
+        ['#eDesde', '#eNoches'].forEach(id => $(id).addEventListener('input', hasta));
+        $('#eGuardar').onclick = guardar;
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') drawer.cerrar();
+            if (drawer.abierto() && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); guardar(); }
+        });
+        cargar();
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+
+    return {
+        cerrar: () => drawer.cerrar(),
+        limpiarSel: () => { sel.clear(); $$('[data-sel]').forEach(c => { c.checked = false; c.closest('tr').classList.remove('sel'); }); if ($('#selTodo')) $('#selTodo').checked = false; barraLote(); },
+        lote: async activo => { try { const r = await EV.post('/Ofertas/Lote', { Ids: [...sel], Activo: activo }); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); } },
+        ajustar: async () => {
+            const v = prompt(`¿Cuánto sumar (o restar con -) al precio de las ${sel.size} ofertas elegidas? Ej: 50 o -30`);
+            if (v == null) return;
+            const n = parseFloat(String(v).replace(',', '.'));
+            if (isNaN(n) || !n) { EV.toast('Escribe un número distinto de 0.', 'err'); return; }
+            if (!await EV.confirmar({ titulo: 'Ajustar precios', texto: `Se ${n > 0 ? 'sumarán' : 'restarán'} <b>${EV.fmt(Math.abs(n), 2)}</b> al precio de <b>${sel.size}</b> ofertas.`, si: 'Aplicar' })) return;
+            try { const r = await EV.post('/Ofertas/Lote', { Ids: [...sel], AjustePrecio: n }); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
+        },
+        eliminar: () => eliminarIds([...sel])
+    };
+})();
+</script>
+}
