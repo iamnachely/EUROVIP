@@ -63,6 +63,10 @@
    CAMBIO 30-31 (13/10/2026)  Funciones "más barato por destino" sin vuelo obligatorio.
    CAMBIO 32 (13/10/2026)  spActualizaInicio corregido (circuitos + conserva el orden).
    CAMBIO 33 (13/10/2026)  SP de lectura para la web (carrusel activo y destinos).
+   --- FASE 6: HERRAMIENTAS (MANTENIMIENTOS BÁSICOS) ---
+   CAMBIO 34 (13/10/2026)  SP para crear/editar ALOJAMIENTOS (copiado de ViajeVDT, mejorado).
+   CAMBIO 35 (13/10/2026)  SP para crear/editar HABITACIONES de un hotel (copiado de ViajeVDT).
+   CAMBIO 36 (13/10/2026)  ÍNDICES para buscar rápido hoteles y habitaciones en Herramientas.
    BITÁCORA de cambios de datos puntuales (al final).
    ########################################################################################## */
 
@@ -2056,6 +2060,144 @@ END
 GO
 
 /* ##########################################################################################
+   FASE 6 — HERRAMIENTAS (mantenimientos básicos)  (13/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: dar de alta, editar y eliminar los catálogos que usa Eurovip (destinos, monedas,
+   campañas, países, idiomas, tasas, regímenes, estaciones, proveedores, alojamientos y
+   habitaciones). Las TABLAS ya estaban copiadas de ViajeVDT (fases 2-4, solo ES).
+   De ViajeVDT solo existen dos procedimientos de mantenimiento; se copiaron al esquema Eurovip.
+   El resto de catálogos BackTiTan los mantiene con SQL directo; Eurovip hace lo mismo desde
+   la pantalla Herramientas (siempre sobre Eurovip.*, nunca dbo).
+
+   CAMBIO 34  InsertarOActualizarAlojamiento: crea o edita un hotel. Diferencias con ViajeVDT:
+              número nuevo calculado con bloqueo (dos usuarios a la vez no chocan) y, si el
+              hotel ya existe, ahora SE ACTUALIZA (antes no hacía nada); guarda "activo".
+   CAMBIO 35  InsertarAlojamientoHabitacion: crea o edita una habitación de un hotel (y su tipo
+              si no existe). Diferencia: número nuevo con bloqueo y en una transacción.
+   CAMBIO 36  Índices de búsqueda en alojamiento y alojamiento_habitacion (solo columnas que se
+              buscan): buscar en 130.000 habitaciones bajó de ~2,5 s a ~1,2 s.
+   ########################################################################################## */
+/* ---------- CAMBIO 34: InsertarOActualizarAlojamiento (copiado de ViajeVDT) ----------
+   Diferencias: tablas Eurovip; el número nuevo se calcula con bloqueo (dos usuarios a la vez no
+   obtienen el mismo); si el hotel ya existe en ese idioma, ahora SE ACTUALIZA (en ViajeVDT se
+   devolvía sin hacer nada); guarda también "activo". */
+CREATE OR ALTER PROCEDURE Eurovip.InsertarOActualizarAlojamiento
+    @in_id_alojamiento   INT          = NULL,
+    @id_idioma           CHAR(2),
+    @id_tipo_alojamiento VARCHAR(20),
+    @id_destino          VARCHAR(30),
+    @id_pais             CHAR(2),
+    @nombre              VARCHAR(100),
+    @caratula            VARCHAR(300) = NULL,
+    @descripcion         VARCHAR(MAX) = NULL,
+    @grupo               INT          = NULL,
+    @categoria           VARCHAR(15),
+    @latitude            NVARCHAR(50) = NULL,
+    @longitude           NVARCHAR(50) = NULL,
+    @categoria_circuito  VARCHAR(50)  = NULL,
+    @circuito            BIT          = NULL,
+    @activo              BIT          = 1,
+    @id_alojamiento      INT          OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRAN;
+
+    IF @in_id_alojamiento IS NOT NULL
+       AND EXISTS (SELECT 1 FROM Eurovip.alojamiento WHERE id_alojamiento = @in_id_alojamiento AND id_idioma = @id_idioma)
+    BEGIN
+        UPDATE Eurovip.alojamiento SET
+            id_tipo_alojamiento = @id_tipo_alojamiento, id_destino = @id_destino, id_pais = @id_pais, nombre = @nombre,
+            caratula = @caratula, descripcion = @descripcion, grupo = @grupo, categoria = @categoria,
+            latitude = @latitude, longitude = @longitude, categoria_circuito = @categoria_circuito,
+            circuito = @circuito, activo = @activo
+        WHERE id_alojamiento = @in_id_alojamiento AND id_idioma = @id_idioma;
+        SET @id_alojamiento = @in_id_alojamiento;
+    END
+    ELSE
+    BEGIN
+        IF @in_id_alojamiento IS NOT NULL
+           AND EXISTS (SELECT 1 FROM Eurovip.alojamiento WITH (UPDLOCK, HOLDLOCK) WHERE id_alojamiento = @in_id_alojamiento)
+            SET @id_alojamiento = @in_id_alojamiento;      -- mismo hotel, otro idioma
+        ELSE
+            SELECT @id_alojamiento = ISNULL(MAX(id_alojamiento), 0) + 1 FROM Eurovip.alojamiento WITH (UPDLOCK, HOLDLOCK);
+
+        INSERT INTO Eurovip.alojamiento (id_alojamiento, id_idioma, id_tipo_alojamiento, id_destino, id_pais, nombre,
+               caratula, descripcion, grupo, categoria, latitude, longitude, categoria_circuito, circuito, activo)
+        VALUES (@id_alojamiento, @id_idioma, @id_tipo_alojamiento, @id_destino, @id_pais, @nombre,
+               @caratula, @descripcion, @grupo, @categoria, @latitude, @longitude, @categoria_circuito, @circuito, @activo);
+    END
+
+    COMMIT;
+END
+GO
+
+/* ---------- CAMBIO 35: InsertarAlojamientoHabitacion (copiado de ViajeVDT) ----------
+   Diferencias: tablas Eurovip; número nuevo con bloqueo y dentro de una transacción. */
+CREATE OR ALTER PROCEDURE Eurovip.InsertarAlojamientoHabitacion
+    @id_alojamiento     INT,
+    @id_idioma          NVARCHAR(10),
+    @id_tipo_habitacion NVARCHAR(100),
+    @codigo             NVARCHAR(50),
+    @nombre             NVARCHAR(255),
+    @grupo              INT,
+    @nota               NVARCHAR(MAX),
+    @precio             DECIMAL(18,2),
+    @codigo_newblue     NVARCHAR(50),
+    @nombre_newblue     NVARCHAR(255),
+    @id_habitacion      INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    DECLARE @nuevo_id_habitacion INT;
+    BEGIN TRAN;
+
+    IF NOT EXISTS (SELECT 1 FROM Eurovip.tipo_habitacion WHERE id_idioma = @id_idioma AND id_tipo_habitacion = @id_tipo_habitacion)
+        INSERT INTO Eurovip.tipo_habitacion (id_idioma, id_tipo_habitacion) VALUES (@id_idioma, @id_tipo_habitacion);
+
+    IF @id_habitacion IS NOT NULL AND EXISTS (
+        SELECT 1 FROM Eurovip.alojamiento_habitacion
+        WHERE id_habitacion = @id_habitacion AND id_alojamiento = @id_alojamiento AND id_idioma = @id_idioma)
+    BEGIN
+        UPDATE Eurovip.alojamiento_habitacion SET
+            codigo = @codigo, nombre = @nombre, grupo = @grupo, nota = @nota, precio = @precio,
+            id_tipo_habitacion = @id_tipo_habitacion, codigo_newblue = @codigo_newblue, nombre_newblue = @nombre_newblue
+        WHERE id_habitacion = @id_habitacion AND id_alojamiento = @id_alojamiento AND id_idioma = @id_idioma;
+        SET @nuevo_id_habitacion = @id_habitacion;
+    END
+    ELSE
+    BEGIN
+        IF @id_habitacion IS NOT NULL
+            SET @nuevo_id_habitacion = @id_habitacion;
+        ELSE
+            SELECT @nuevo_id_habitacion = ISNULL(MAX(id_habitacion), 0) + 1 FROM Eurovip.alojamiento_habitacion WITH (UPDLOCK, HOLDLOCK);
+
+        INSERT INTO Eurovip.alojamiento_habitacion (id_alojamiento, id_habitacion, id_idioma, id_tipo_habitacion, codigo, nombre,
+               grupo, nota, precio, codigo_newblue, nombre_newblue)
+        VALUES (@id_alojamiento, @nuevo_id_habitacion, @id_idioma, @id_tipo_habitacion, @codigo, @nombre,
+               @grupo, @nota, @precio, @codigo_newblue, @nombre_newblue);
+    END
+
+    COMMIT;
+    SELECT @nuevo_id_habitacion AS nuevo_id_habitacion;
+END
+GO
+
+/* ---------- CAMBIO 36: índices para buscar rápido en Herramientas ----------
+   Buscar "suite" en 130.000 habitaciones obligaba a leer la tabla entera (con sus notas largas).
+   Estos índices solo guardan las columnas que se buscan, así la lectura es mucho más chica. */
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_aloj_hab_buscar' AND object_id = OBJECT_ID('Eurovip.alojamiento_habitacion'))
+    CREATE NONCLUSTERED INDEX IX_Eurovip_aloj_hab_buscar ON Eurovip.alojamiento_habitacion (id_idioma, nombre)
+        INCLUDE (id_tipo_habitacion, codigo, precio);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_alojamiento_buscar' AND object_id = OBJECT_ID('Eurovip.alojamiento'))
+    CREATE NONCLUSTERED INDEX IX_Eurovip_alojamiento_buscar ON Eurovip.alojamiento (id_idioma, nombre)
+        INCLUDE (id_destino, id_pais, id_tipo_alojamiento, categoria, activo);
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -2124,6 +2266,12 @@ GO
    13/10/2026  FASE 5 — copia masiva desde ViajeVDT (solo lectura, solo ES): carrusel 53 ·
                carrucelDestino 36 · home_contenido 176 filas (se conservaron los números de
                carrusel para que los precios de cada slide sigan enlazados).
+
+   13/10/2026  Pantalla "Herramientas" (11 catálogos). Prueba: se crearon y luego se ELIMINARON
+               desde la pantalla: destino "Prueba Eurovip", hotel #10450 con 2 habitaciones
+               (#368833 y #368834), campaña #8223, estación ZZQ y moneda USD. Las tablas quedaron
+               como estaban (tipo_habitacion sigue en 15.877). Quedan como evidencia las filas de
+               auditoría "Herramienta_*".
 
    PENDIENTE   Copiar los demás usuarios, módulos y permisos (rol, UsuarioAcceso,
                UsuarioModulos). Se hará cuando se confirme desde qué base copiarlos.

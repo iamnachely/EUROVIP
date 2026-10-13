@@ -1,0 +1,111 @@
+@using EuroVip.Models
+@{
+    ViewData["Title"] = "Herramientas";
+    var grupos = HrCatalogos.Todos.GroupBy(c => c.Grupo).ToList();
+    var iconoGrupo = new Dictionary<string, string> { ["Geografía"] = "bi-globe2", ["Comercial"] = "bi-tags", ["Proveedores"] = "bi-briefcase", ["Hoteles"] = "bi-building" };
+    var d = 0;
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .hr-buscar { position: relative; margin-top: 18px; }
+    .hr-buscar .ui-search { padding: 6px 8px 6px 18px; border-radius: 20px; box-shadow: var(--ev-shadow); }
+    .hr-buscar .ui-search input { font-size: 16px; padding: 12px 6px; }
+    .hr-buscar kbd { font: 700 11px var(--ev-font); padding: 4px 8px; border-radius: 8px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); color: var(--ev-muted); }
+    .hr-res { margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+    .hr-res .ev-card { padding: 14px 16px; }
+    .hr-res h4 { margin: 0 0 8px; font-size: 14px; font-weight: 800; display: flex; gap: 8px; align-items: center; }
+    .hr-res a.it { display: block; padding: 8px 10px; border-radius: 12px; color: var(--ev-text); text-decoration: none; font-weight: 600; font-size: 13.5px; }
+    .hr-res a.it:hover { background: var(--ev-grad-soft); }
+    .hr-res a.it small { color: var(--ev-muted); font-weight: 600; margin-left: 6px; }
+    .hr-grupo { margin-top: 30px; }
+    .hr-grupo h2 { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; margin: 0 0 14px; letter-spacing: -.3px; }
+    .hr-grupo h2 i { width: 34px; height: 34px; border-radius: 11px; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-size: 16px; }
+    .hr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+    .hr-card { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line);
+               color: var(--ev-text); text-decoration: none; overflow: hidden; transition: transform .3s var(--ev-ease), box-shadow .3s var(--ev-ease), border-color .3s; }
+    .hr-card::after { content: ""; position: absolute; right: -40px; top: -40px; width: 130px; height: 130px; border-radius: 50%; background: var(--ev-grad); opacity: .35; transition: transform .5s var(--ev-ease); }
+    .hr-card:hover { transform: translateY(-4px); box-shadow: var(--ev-shadow-lg); border-color: var(--ev-aqua); }
+    .hr-card:hover::after { transform: scale(1.35); }
+    .hr-card .ico { width: 52px; height: 52px; border-radius: 17px; background: var(--ev-grad); display: grid; place-items: center; font-size: 23px; position: relative; z-index: 1; }
+    .hr-card b { font-size: 17px; font-weight: 800; letter-spacing: -.3px; position: relative; z-index: 1; }
+    .hr-card p { margin: 0; color: var(--ev-muted); font-weight: 500; font-size: 13.5px; position: relative; z-index: 1; min-height: 38px; }
+    .hr-card .pie { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
+    .hr-card .num { font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+    .hr-card .num small { font-size: 12px; color: var(--ev-muted); font-weight: 700; letter-spacing: 0; margin-left: 4px; }
+    .hr-card .ir { width: 38px; height: 38px; border-radius: 12px; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; transition: transform .3s var(--ev-ease); }
+    .hr-card:hover .ir { transform: translateX(4px); }
+</style>
+}
+
+<section class="ui-hero ev-rise">
+    <i class="bi bi-tools ui-hero-ico" aria-hidden="true"></i>
+    <div>
+        <span class="ev-chip dark"><i class="bi bi-database"></i> Esquema Eurovip</span>
+        <h1>Herramientas</h1>
+        <p>Todos los catálogos de Eurovip en un solo lugar. Elige uno para buscar, crear, editar o eliminar. Son copia de ViajeVDT y viven solo en el esquema Eurovip (no se comparte nada con dbo).</p>
+    </div>
+    <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+    </svg>
+</section>
+
+<div class="hr-buscar">
+    <label class="ui-search"><i class="bi bi-search"></i><input id="hrQ" type="search" placeholder="Busca en todos los catálogos: Punta Cana, PUJ, Riu, DTGeneral…" autocomplete="off"><kbd>/</kbd></label>
+    <div class="hr-res" id="hrRes"></div>
+</div>
+
+@foreach (var g in grupos)
+{
+    <section class="hr-grupo ev-rise d@(Math.Min(++d, 4))">
+        <h2><i class="bi @(iconoGrupo.GetValueOrDefault(g.Key, "bi-folder"))"></i> @g.Key</h2>
+        <div class="hr-grid">
+            @foreach (var c in g)
+            {
+                <a class="hr-card" asp-action="Catalogo" asp-route-id="@c.Clave">
+                    <span class="ico"><i class="bi @c.Icono"></i></span>
+                    <b>@c.Titulo</b>
+                    <p>@c.Descripcion</p>
+                    <div class="pie"><span class="num" data-n="@c.Clave">—<small>registros</small></span><span class="ir"><i class="bi bi-arrow-right"></i></span></div>
+                </a>
+            }
+        </div>
+    </section>
+}
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script>
+(() => {
+    const $ = s => document.querySelector(s), esc = EV.esc;
+    const defs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(HrCatalogos.Todos.ToDictionary(c => c.Clave, c => new { claves = c.Claves.Select(k => k.Col), titulo = c.Campos.First(f => !f.Auto && f.Tipo != "hotel" && f.Tipo != "select").Col })));
+
+    EV.api('/Herramientas/Resumen').then(r => r.forEach(x => {
+        const el = document.querySelector(`[data-n="${x.clave}"]`);
+        if (el) el.innerHTML = `${EV.fmt(x.total)}<small>registros</small>`;
+    })).catch(() => {});
+
+    const buscar = EV.debounce(async () => {
+        const q = $('#hrQ').value.trim();
+        if (q.length < 2) { $('#hrRes').innerHTML = ''; return; }
+        $('#hrRes').innerHTML = '<div class="ui-skel" style="height:120px"></div>';
+        try {
+            const r = await EV.api('/Herramientas/Buscar?q=' + encodeURIComponent(q));
+            $('#hrRes').innerHTML = r.length ? r.map(g => {
+                const d = defs[g.clave];
+                return `<div class="ev-card"><h4><i class="bi ${esc(g.icono)}"></i> ${esc(g.titulo)}</h4>
+                    ${g.filas.map(f => {
+                        const k = encodeURIComponent(JSON.stringify(Object.fromEntries(d.claves.map(c => [c, f[c]]))));
+                        return `<a class="it" href="/Herramientas/Catalogo/${g.clave}?abrir=${k}">${esc(f[d.titulo] ?? '')}<small>${d.claves.map(c => esc(f[c])).join(' · ')}</small></a>`;
+                    }).join('')}
+                    <a class="it" style="color:var(--ev-deep)" href="/Herramientas/Catalogo/${g.clave}?q=${encodeURIComponent(q)}">Ver todos <i class="bi bi-arrow-right"></i></a></div>`;
+            }).join('') : `<div class="ui-empty" style="grid-column:1/-1;padding:20px"><p style="margin:0">No hay nada con «${esc(q)}».</p></div>`;
+        } catch (e) { $('#hrRes').innerHTML = `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>${esc(e.message)}</div></div>`; }
+    }, 350);
+    $('#hrQ').addEventListener('input', buscar);
+    document.addEventListener('keydown', e => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('#hrQ').focus(); } });
+})();
+</script>
+}
