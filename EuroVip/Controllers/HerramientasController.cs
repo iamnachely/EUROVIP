@@ -33,6 +33,7 @@ namespace EuroVip.Controllers
         }
 
         [HttpGet] public async Task<IActionResult> Resumen() => Json(await _repo.ResumenAsync());
+        [HttpGet] public async Task<IActionResult> Actividad() => Json(await _repo.ActividadAsync(8));
 
         [HttpGet]
         public async Task<IActionResult> Buscar(string? q)

@@ -1,111 +1,297 @@
 @using EuroVip.Models
 @{
     ViewData["Title"] = "Herramientas";
-    var grupos = HrCatalogos.Todos.GroupBy(c => c.Grupo).ToList();
+    var grupos = HrCatalogos.Todos.Select(c => c.Grupo).Distinct().ToList();
     var iconoGrupo = new Dictionary<string, string> { ["Geografía"] = "bi-globe2", ["Comercial"] = "bi-tags", ["Proveedores"] = "bi-briefcase", ["Hoteles"] = "bi-building" };
-    var d = 0;
+    // tamaño de cada tarjeta en el mosaico
+    var tam = new Dictionary<string, string> { ["alojamientos"] = "xl", ["destinos"] = "wide", ["habitaciones"] = "wide", ["campanyas"] = "tall" };
+    var i = 0;
 }
 
 @section Styles {
 <link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
 <style>
-    .hr-buscar { position: relative; margin-top: 18px; }
-    .hr-buscar .ui-search { padding: 6px 8px 6px 18px; border-radius: 20px; box-shadow: var(--ev-shadow); }
-    .hr-buscar .ui-search input { font-size: 16px; padding: 12px 6px; }
-    .hr-buscar kbd { font: 700 11px var(--ev-font); padding: 4px 8px; border-radius: 8px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); color: var(--ev-muted); }
-    .hr-res { margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
-    .hr-res .ev-card { padding: 14px 16px; }
-    .hr-res h4 { margin: 0 0 8px; font-size: 14px; font-weight: 800; display: flex; gap: 8px; align-items: center; }
-    .hr-res a.it { display: block; padding: 8px 10px; border-radius: 12px; color: var(--ev-text); text-decoration: none; font-weight: 600; font-size: 13.5px; }
-    .hr-res a.it:hover { background: var(--ev-grad-soft); }
-    .hr-res a.it small { color: var(--ev-muted); font-weight: 600; margin-left: 6px; }
-    .hr-grupo { margin-top: 30px; }
-    .hr-grupo h2 { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; margin: 0 0 14px; letter-spacing: -.3px; }
-    .hr-grupo h2 i { width: 34px; height: 34px; border-radius: 11px; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-size: 16px; }
-    .hr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
-    .hr-card { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line);
-               color: var(--ev-text); text-decoration: none; overflow: hidden; transition: transform .3s var(--ev-ease), box-shadow .3s var(--ev-ease), border-color .3s; }
-    .hr-card::after { content: ""; position: absolute; right: -40px; top: -40px; width: 130px; height: 130px; border-radius: 50%; background: var(--ev-grad); opacity: .35; transition: transform .5s var(--ev-ease); }
-    .hr-card:hover { transform: translateY(-4px); box-shadow: var(--ev-shadow-lg); border-color: var(--ev-aqua); }
-    .hr-card:hover::after { transform: scale(1.35); }
-    .hr-card .ico { width: 52px; height: 52px; border-radius: 17px; background: var(--ev-grad); display: grid; place-items: center; font-size: 23px; position: relative; z-index: 1; }
-    .hr-card b { font-size: 17px; font-weight: 800; letter-spacing: -.3px; position: relative; z-index: 1; }
-    .hr-card p { margin: 0; color: var(--ev-muted); font-weight: 500; font-size: 13.5px; position: relative; z-index: 1; min-height: 38px; }
-    .hr-card .pie { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
-    .hr-card .num { font-size: 26px; font-weight: 800; letter-spacing: -1px; }
-    .hr-card .num small { font-size: 12px; color: var(--ev-muted); font-weight: 700; letter-spacing: 0; margin-left: 4px; }
-    .hr-card .ir { width: 38px; height: 38px; border-radius: 12px; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; transition: transform .3s var(--ev-ease); }
-    .hr-card:hover .ir { transform: translateX(4px); }
+    /* ================= PORTADA ================= */
+    .ht-hero { position: relative; z-index: 20; border-radius: 32px; padding: 34px 36px 30px; background: var(--ev-ink); color: #fff; isolation: isolate; }
+    .ht-deco { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; z-index: -1; pointer-events: none; }
+    .ht-deco::before { content: ""; position: absolute; inset: 0;
+        background-image: linear-gradient(rgba(116,242,230,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(116,242,230,.07) 1px, transparent 1px);
+        background-size: 34px 34px; mask-image: radial-gradient(ellipse at 70% 0%, #000 0%, transparent 70%); }
+    .ht-blob { position: absolute; border-radius: 50%; filter: blur(60px); z-index: -1; opacity: .55; animation: htBlob 14s ease-in-out infinite alternate; }
+    .ht-blob.a { width: 380px; height: 380px; background: #2BD4C4; right: -80px; top: -140px; }
+    .ht-blob.b { width: 300px; height: 300px; background: #74F2E6; right: 280px; bottom: -200px; animation-delay: -5s; opacity: .35; }
+    .ht-blob.c { width: 220px; height: 220px; background: #B3FFF3; left: -90px; top: -90px; animation-delay: -9s; opacity: .18; }
+    @@keyframes htBlob { to { transform: translate(-40px, 30px) scale(1.15); } }
+    .ht-orbita { position: absolute; right: 60px; top: 50%; width: 250px; height: 250px; margin-top: -125px; border-radius: 50%; border: 1px dashed rgba(116,242,230,.25); z-index: -1; animation: htGira 50s linear infinite; }
+    .ht-orbita i { position: absolute; width: 42px; height: 42px; margin: -21px; border-radius: 14px; display: grid; place-items: center; font-size: 18px;
+                   background: rgba(255,255,255,.08); border: 1px solid rgba(116,242,230,.3); color: #74F2E6; backdrop-filter: blur(6px); animation: htGira 50s linear infinite reverse; }
+    .ht-orbita .nucleo { position: absolute; inset: 70px; border-radius: 50%; background: radial-gradient(circle, rgba(116,242,230,.35), transparent 70%); display: grid; place-items: center; font-size: 46px; color: #B3FFF3; animation: htGira 50s linear infinite reverse; }
+    @@keyframes htGira { to { transform: rotate(360deg); } }
+    .ht-hero .tag { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 99px; background: rgba(116,242,230,.14); color: #B3FFF3; font: 700 12px var(--ev-font); }
+    .ht-hero .tag b { width: 7px; height: 7px; border-radius: 50%; background: #74F2E6; animation: htPulse 2s infinite; }
+    @@keyframes htPulse { 0% { box-shadow: 0 0 0 0 rgba(116,242,230,.7); } 100% { box-shadow: 0 0 0 8px rgba(116,242,230,0); } }
+    .ht-hero h1 { font-size: clamp(32px, 4vw, 48px); font-weight: 800; letter-spacing: -2px; margin: 14px 0 6px; line-height: 1; }
+    .ht-hero h1 span { background: linear-gradient(90deg, #B3FFF3, #74F2E6, #2BD4C4); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .ht-hero p { margin: 0; max-width: 58ch; color: rgba(232,255,251,.72); font-weight: 500; font-size: 15px; }
+    .ht-stats { display: flex; gap: 12px; margin: 22px 0 22px; flex-wrap: wrap; }
+    .ht-stat { padding: 12px 18px; border-radius: 18px; background: rgba(255,255,255,.06); border: 1px solid rgba(116,242,230,.18); min-width: 130px; }
+    .ht-stat b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -1px; color: #fff; line-height: 1.1; }
+    .ht-stat small { color: rgba(232,255,251,.6); font-weight: 600; font-size: 12px; }
+
+    /* buscador tipo paleta de comandos */
+    .ht-cmd { position: relative; max-width: 720px; z-index: 5; }
+    .ht-cmd .caja { display: flex; align-items: center; gap: 12px; padding: 8px 10px 8px 20px; border-radius: 20px; background: rgba(255,255,255,.96); box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); }
+    .ht-cmd .caja i { color: var(--ev-deep); font-size: 18px; }
+    .ht-cmd input { flex: 1; border: 0; outline: 0; background: transparent; font: 600 16px var(--ev-font); color: #0B1215; padding: 12px 0; min-width: 0; }
+    .ht-cmd kbd { font: 700 11px var(--ev-font); padding: 5px 9px; border-radius: 9px; background: #F1FBF9; border: 1px solid #DCEBE8; color: #66807C; }
+    .ht-pal { position: absolute; left: 0; right: 0; top: calc(100% + 10px); max-height: 440px; overflow: auto; border-radius: 22px; background: var(--ev-surface); color: var(--ev-text);
+              border: 1px solid var(--ev-line); box-shadow: var(--ev-shadow-lg); padding: 8px; display: none; animation: uiFade .2s var(--ev-ease); }
+    .ht-pal.on { display: block; }
+    .ht-pal .g { font: 800 11px var(--ev-font); letter-spacing: .07em; text-transform: uppercase; color: var(--ev-muted); padding: 10px 12px 4px; display: flex; gap: 8px; align-items: center; }
+    .ht-pal a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; color: var(--ev-text); text-decoration: none; font-weight: 700; font-size: 14px; }
+    .ht-pal a .mi { width: 32px; height: 32px; border-radius: 10px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); display: grid; place-items: center; color: var(--ev-deep); flex-shrink: 0; }
+    .ht-pal a small { color: var(--ev-muted); font-weight: 600; margin-left: auto; font-size: 12px; text-align: right; }
+    .ht-pal a.sel, .ht-pal a:hover { background: var(--ev-grad-soft); }
+    .ht-pal a.sel { box-shadow: inset 0 0 0 1.5px var(--ev-aqua); }
+    .ht-pal .vacio { padding: 26px; text-align: center; color: var(--ev-muted); font-weight: 600; }
+
+    /* ================= CUERPO ================= */
+    .ht-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; margin-top: 24px; align-items: start; }
+    .ht-filtro { display: flex; gap: 6px; padding: 6px; border-radius: 18px; background: var(--ev-surface); border: 1px solid var(--ev-line); width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 16px; }
+    .ht-filtro button { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 9px 14px; border-radius: 13px; font: 700 13.5px var(--ev-font); color: var(--ev-muted); cursor: pointer; white-space: nowrap; transition: all .25s var(--ev-ease); }
+    .ht-filtro button span { font-size: 11px; padding: 2px 7px; border-radius: 99px; background: var(--ev-surface-2); }
+    .ht-filtro button.on { background: var(--ev-ink); color: #fff; }
+    .ht-filtro button.on span { background: rgba(116,242,230,.2); color: var(--ev-aqua); }
+
+    /* mosaico */
+    .ht-bento { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 200px; grid-auto-flow: dense; gap: 14px; }
+    .ht-card { --c1: #B3FFF3; --c2: #74F2E6; position: relative; overflow: hidden; border-radius: 26px; padding: 18px 20px; background: var(--ev-surface); border: 1px solid var(--ev-line);
+               color: var(--ev-text); text-decoration: none; display: flex; flex-direction: column; transition: transform .35s var(--ev-ease), box-shadow .35s var(--ev-ease), border-color .35s, opacity .3s;
+               animation: evRise .6s var(--ev-ease) both; animation-delay: calc(var(--n) * 45ms); }
+    .ht-card.wide { grid-column: span 2; }
+    .ht-card.tall { grid-row: span 2; }
+    .ht-card.xl { grid-column: span 2; grid-row: span 2; }
+    .ht-card[data-g="Geografía"] { --c1: #B3FFF3; --c2: #74F2E6; }
+    .ht-card[data-g="Comercial"] { --c1: #74F2E6; --c2: #2BD4C4; }
+    .ht-card[data-g="Proveedores"] { --c1: #CFFAF4; --c2: #8EEADF; }
+    .ht-card[data-g="Hoteles"] { --c1: #2BD4C4; --c2: #0E8F86; }
+    .ht-card .fondo { position: absolute; right: -24px; bottom: -34px; font-size: 150px; line-height: 1; color: var(--c2); opacity: .13; transform: rotate(-12deg); transition: transform .6s var(--ev-ease), opacity .4s; pointer-events: none; }
+    .ht-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(500px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--c2) 22%, transparent), transparent 40%); opacity: 0; transition: opacity .3s; pointer-events: none; }
+    .ht-card:hover { transform: translateY(-5px); box-shadow: 0 26px 50px -26px color-mix(in srgb, var(--c2) 70%, #000); border-color: var(--c2); }
+    .ht-card:hover::before { opacity: 1; }
+    .ht-card:hover .fondo { transform: rotate(0) scale(1.08); opacity: .2; }
+    .ht-card .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; position: relative; }
+    .ht-card .ico { width: 50px; height: 50px; border-radius: 16px; background: linear-gradient(135deg, var(--c1), var(--c2)); display: grid; place-items: center; font-size: 22px; color: #0B1215; box-shadow: 0 10px 22px -10px var(--c2); }
+    .ht-card[data-g="Hoteles"] .ico { color: #fff; }
+    .ht-card .nuevo { opacity: 0; transform: translateY(-4px); transition: all .25s var(--ev-ease); border: 0; border-radius: 12px; padding: 7px 11px; background: var(--ev-ink); color: var(--ev-aqua); font: 800 12px var(--ev-font); cursor: pointer; display: flex; gap: 6px; align-items: center; }
+    .ht-card:hover .nuevo, .ht-card:focus-within .nuevo { opacity: 1; transform: none; }
+    .ht-card b.t { font-size: 17px; font-weight: 800; letter-spacing: -.3px; margin-top: 12px; position: relative; flex-shrink: 0; }
+    .ht-card p { margin: 3px 0 0; color: var(--ev-muted); font-weight: 500; font-size: 13px; position: relative; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex-shrink: 0; }
+    .ht-card .pie { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; position: relative; }
+    .ht-card .num { font-size: 30px; font-weight: 800; letter-spacing: -1.4px; line-height: 1; }
+    .ht-card .num small { display: block; font-size: 11.5px; letter-spacing: 0; color: var(--ev-muted); font-weight: 700; margin-top: 3px; }
+    .ht-card .ir { width: 40px; height: 40px; border-radius: 13px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); display: grid; place-items: center; transition: all .3s var(--ev-ease); }
+    .ht-card:hover .ir { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); transform: translateX(3px); }
+    .ht-card.xl { background: linear-gradient(150deg, var(--ev-surface) 40%, color-mix(in srgb, var(--c1) 30%, var(--ev-surface))); }
+    .ht-card.xl .num { font-size: 52px; letter-spacing: -2.5px; }
+    .ht-card.xl b.t { font-size: 24px; }
+    .ht-card.xl p { font-size: 14.5px; -webkit-line-clamp: 3; }
+    .ht-card .extra { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; position: relative; }
+    .ht-card .extra span { padding: 6px 11px; border-radius: 11px; background: var(--ev-surface); border: 1px solid var(--ev-line); font-weight: 700; font-size: 12.5px; }
+    .ht-card.oculta { display: none; }
+
+    /* actividad */
+    .ht-aside { position: sticky; top: 92px; display: grid; gap: 14px; }
+    .ht-panel { border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line); padding: 18px; }
+    .ht-panel h3 { margin: 0 0 12px; font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .ht-act { list-style: none; margin: 0; padding: 0; position: relative; }
+    .ht-act::before { content: ""; position: absolute; left: 17px; top: 8px; bottom: 8px; width: 2px; background: var(--ev-line); }
+    .ht-act li { display: flex; gap: 12px; padding: 8px 0; position: relative; }
+    .ht-act .pt { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; background: var(--ev-surface-2); border: 1px solid var(--ev-line); z-index: 1; font-size: 15px; }
+    .ht-act .pt.Crear { background: #DCFCE7; color: #166534; border-color: #BBF7D0; }
+    .ht-act .pt.Editar { background: #E0F2FE; color: #075985; border-color: #BAE6FD; }
+    .ht-act .pt.Eliminar { background: #FEE4E2; color: #B42318; border-color: #FECDCA; }
+    .ht-act b { display: block; font-size: 13px; font-weight: 800; }
+    .ht-act small { color: var(--ev-muted); font-weight: 600; font-size: 12px; }
+    .ht-tips { display: grid; gap: 10px; font-size: 13px; font-weight: 600; color: var(--ev-muted); }
+    .ht-tips div { display: flex; align-items: center; gap: 10px; }
+    .ht-tips kbd { font: 800 11px var(--ev-font); padding: 4px 8px; border-radius: 8px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); color: var(--ev-text); min-width: 26px; text-align: center; }
+    .ht-db { background: var(--ev-ink); color: #fff; border-color: var(--ev-ink); }
+    .ht-db p { margin: 0; color: rgba(232,255,251,.7); font-size: 13px; font-weight: 500; }
+    .ht-db code { color: var(--ev-aqua); }
+
+    @@media (max-width: 1350px) { .ht-body { grid-template-columns: 1fr; } .ht-aside { position: static; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } }
+    @@media (max-width: 1100px) { .ht-orbita { display: none; } .ht-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(200px, auto); } .ht-card.tall, .ht-card.xl { grid-row: auto; } .ht-card.xl { min-height: 260px; } }
+    @@media (max-width: 640px) { .ht-bento { grid-template-columns: 1fr; grid-auto-rows: auto; } .ht-card, .ht-card.wide, .ht-card.tall, .ht-card.xl { grid-column: auto; grid-row: auto; min-height: 170px; } .ht-hero { padding: 26px 20px; } }
+    @@media (prefers-reduced-motion: reduce) { .ht-blob, .ht-orbita, .ht-orbita i, .ht-orbita .nucleo, .ht-card { animation: none !important; } }
 </style>
 }
 
-<section class="ui-hero ev-rise">
-    <i class="bi bi-tools ui-hero-ico" aria-hidden="true"></i>
-    <div>
-        <span class="ev-chip dark"><i class="bi bi-database"></i> Esquema Eurovip</span>
-        <h1>Herramientas</h1>
-        <p>Todos los catálogos de Eurovip en un solo lugar. Elige uno para buscar, crear, editar o eliminar. Son copia de ViajeVDT y viven solo en el esquema Eurovip (no se comparte nada con dbo).</p>
+<section class="ht-hero ev-rise">
+    <div class="ht-deco" aria-hidden="true"><span class="ht-blob a"></span><span class="ht-blob b"></span><span class="ht-blob c"></span>
+    <div class="ht-orbita" aria-hidden="true">
+        <span class="nucleo"><i class="bi bi-tools" style="position:static;border:0;background:none;width:auto;height:auto;margin:0;font-size:46px;animation:none"></i></span>
+        @{ var orb = HrCatalogos.Todos.Take(8).ToList(); }
+        @for (var k = 0; k < orb.Count; k++)
+        {
+            var ang = k * 2 * Math.PI / orb.Count;
+            <i class="bi @orb[k].Icono" style="left:@((50 + 50 * Math.Cos(ang)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;top:@((50 + 50 * Math.Sin(ang)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></i>
+        }
     </div>
-    <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
-        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
-        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
-    </svg>
+    </div>
+
+    <span class="tag"><b></b> Esquema Eurovip · copia de ViajeVDT</span>
+    <h1>Herra<span>mientas</span></h1>
+    <p>Todos los catálogos de Eurovip en un solo lugar. Elige uno para buscar, crear, editar o eliminar. Nada se comparte con dbo.</p>
+
+    <div class="ht-stats">
+        <div class="ht-stat"><b id="sTotal">—</b><small>registros en total</small></div>
+        <div class="ht-stat"><b>@HrCatalogos.Todos.Length</b><small>catálogos</small></div>
+        <div class="ht-stat"><b>@grupos.Count</b><small>grupos</small></div>
+        <div class="ht-stat"><b id="sHoy">—</b><small>cambios recientes</small></div>
+    </div>
+
+    <div class="ht-cmd">
+        <label class="caja"><i class="bi bi-search"></i><input id="hrQ" type="search" placeholder="Busca en todo: Punta Cana, PUJ, Riu, DTGeneral…" autocomplete="off" aria-label="Buscar en todos los catálogos"><kbd>/</kbd></label>
+        <div class="ht-pal" id="hrPal" role="listbox"></div>
+    </div>
 </section>
 
-<div class="hr-buscar">
-    <label class="ui-search"><i class="bi bi-search"></i><input id="hrQ" type="search" placeholder="Busca en todos los catálogos: Punta Cana, PUJ, Riu, DTGeneral…" autocomplete="off"><kbd>/</kbd></label>
-    <div class="hr-res" id="hrRes"></div>
-</div>
-
-@foreach (var g in grupos)
-{
-    <section class="hr-grupo ev-rise d@(Math.Min(++d, 4))">
-        <h2><i class="bi @(iconoGrupo.GetValueOrDefault(g.Key, "bi-folder"))"></i> @g.Key</h2>
-        <div class="hr-grid">
-            @foreach (var c in g)
+<div class="ht-body">
+    <div>
+        <div class="ht-filtro" id="hrFiltro" role="tablist">
+            <button type="button" class="on" data-g=""><i class="bi bi-grid"></i> Todos <span>@HrCatalogos.Todos.Length</span></button>
+            @foreach (var g in grupos)
             {
-                <a class="hr-card" asp-action="Catalogo" asp-route-id="@c.Clave">
-                    <span class="ico"><i class="bi @c.Icono"></i></span>
-                    <b>@c.Titulo</b>
+                <button type="button" data-g="@g"><i class="bi @(iconoGrupo.GetValueOrDefault(g, "bi-folder"))"></i> @g <span>@HrCatalogos.Todos.Count(c => c.Grupo == g)</span></button>
+            }
+        </div>
+
+        <div class="ht-bento">
+            @foreach (var c in HrCatalogos.Todos.OrderBy(c => c.Clave == "alojamientos" ? 0 : c.Clave == "destinos" ? 1 : 2))
+            {
+                var t = tam.GetValueOrDefault(c.Clave, "");
+                <a class="ht-card @t" style="--n:@(i++)" data-g="@c.Grupo" asp-action="Catalogo" asp-route-id="@c.Clave">
+                    <i class="bi @c.Icono fondo" aria-hidden="true"></i>
+                    <div class="top">
+                        <span class="ico"><i class="bi @c.Icono"></i></span>
+                        <button type="button" class="nuevo" data-nuevo="@c.Clave" title="@c.Nuevo @c.Singular"><i class="bi bi-plus-lg"></i> @c.Nuevo</button>
+                    </div>
+                    <b class="t">@c.Titulo</b>
                     <p>@c.Descripcion</p>
-                    <div class="pie"><span class="num" data-n="@c.Clave">—<small>registros</small></span><span class="ir"><i class="bi bi-arrow-right"></i></span></div>
+                    @if (c.Clave == "alojamientos")
+                    {
+                        <div class="extra"><span id="xHab">— habitaciones</span><span id="xDest">— destinos</span><span><i class="bi bi-shield-check"></i> con protección al borrar</span></div>
+                    }
+                    <div class="pie"><span class="num"><span data-n="@c.Clave">—</span><small>registros</small></span><span class="ir"><i class="bi bi-arrow-right"></i></span></div>
                 </a>
             }
         </div>
-    </section>
-}
+    </div>
+
+    <aside class="ht-aside">
+        <div class="ht-panel">
+            <h3><i class="bi bi-activity"></i> Actividad reciente</h3>
+            <ul class="ht-act" id="hrAct"><li><div class="ui-skel" style="height:120px;width:100%"></div></li></ul>
+        </div>
+        <div class="ht-panel">
+            <h3><i class="bi bi-lightning-charge"></i> Atajos</h3>
+            <div class="ht-tips">
+                <div><kbd>/</kbd> buscar en todos los catálogos</div>
+                <div><kbd>↑</kbd><kbd>↓</kbd> moverse entre resultados</div>
+                <div><kbd>Enter</kbd> abrir el resultado</div>
+                <div><kbd>Esc</kbd> cerrar la búsqueda</div>
+            </div>
+        </div>
+        <div class="ht-panel ht-db">
+            <h3><i class="bi bi-database-check" style="color:var(--ev-aqua)"></i> Dónde viven los datos</h3>
+            <p>Servidor 93 · <code>TropitoursVDT.Eurovip</code>. Copiados de ViajeVDT (solo ES). Cada cambio queda en la auditoría.</p>
+        </div>
+    </aside>
+</div>
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script>
 (() => {
-    const $ = s => document.querySelector(s), esc = EV.esc;
-    const defs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(HrCatalogos.Todos.ToDictionary(c => c.Clave, c => new { claves = c.Claves.Select(k => k.Col), titulo = c.Campos.First(f => !f.Auto && f.Tipo != "hotel" && f.Tipo != "select").Col })));
+    const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], esc = EV.esc;
+    const defs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(HrCatalogos.Todos.ToDictionary(c => c.Clave, c => new { claves = c.Claves.Select(k => k.Col), titulo = (c.Campo("nombre") ?? c.Campo("descripcion") ?? c.Campos.First(f => !f.Auto && f.Tipo != "hotel" && f.Tipo != "select")).Col, nombre = c.Titulo })));
+    const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    EV.api('/Herramientas/Resumen').then(r => r.forEach(x => {
-        const el = document.querySelector(`[data-n="${x.clave}"]`);
-        if (el) el.innerHTML = `${EV.fmt(x.total)}<small>registros</small>`;
-    })).catch(() => {});
+    // contador animado
+    const contar = (el, n) => {
+        if (reducido) { el.textContent = EV.fmt(n); return; }
+        const t0 = performance.now(), dur = 900;
+        const paso = t => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = EV.fmt(Math.round(n * e)); if (p < 1) requestAnimationFrame(paso); };
+        requestAnimationFrame(paso);
+    };
 
+    EV.api('/Herramientas/Resumen').then(r => {
+        const m = Object.fromEntries(r.map(x => [x.clave, x.total]));
+        r.forEach(x => { const el = document.querySelector(`[data-n="${x.clave}"]`); if (el) contar(el, x.total); });
+        contar($('#sTotal'), r.reduce((s, x) => s + x.total, 0));
+        $('#xHab').textContent = `${EV.fmt(m.habitaciones || 0)} habitaciones`;
+        $('#xDest').textContent = `${EV.fmt(m.destinos || 0)} destinos`;
+    }).catch(() => {});
+
+    // actividad reciente
+    const verbo = { Crear: ['Creó', 'bi-plus-lg'], Editar: ['Editó', 'bi-pencil'], Eliminar: ['Eliminó', 'bi-trash3'] };
+    const hace = f => { const s = (Date.now() - new Date(f)) / 1000; return s < 60 ? 'hace un momento' : s < 3600 ? `hace ${Math.round(s / 60)} min` : s < 86400 ? `hace ${Math.round(s / 3600)} h` : EV.fecha(f.slice(0, 10)); };
+    EV.api('/Herramientas/Actividad').then(r => {
+        $('#sHoy').textContent = r.length;
+        $('#hrAct').innerHTML = r.length ? r.map(a => { const v = verbo[a.accion] || [a.accion, 'bi-dot'];
+            return `<li><span class="pt ${esc(a.accion)}"><i class="bi ${v[1]}"></i></span><div><b>${v[0]} ${a.detalle ? '«' + esc(a.detalle) + '»' : ''}</b>
+                <small><i class="bi ${esc(a.icono)}"></i> ${esc(a.catalogo)} · ${esc(a.usuario)} · ${hace(a.fecha)}</small></div></li>`; }).join('')
+            : '<li style="color:var(--ev-muted);font-weight:600;font-size:13px">Todavía no hay cambios. Cuando alguien cree o edite algo, aparecerá aquí.</li>';
+    }).catch(() => $('#hrAct').innerHTML = '');
+
+    // filtro por grupo
+    $('#hrFiltro').addEventListener('click', e => {
+        const b = e.target.closest('[data-g]'); if (!b) return;
+        $$('#hrFiltro button').forEach(x => x.classList.toggle('on', x === b));
+        $$('.ht-card').forEach((c, k) => { const ver = !b.dataset.g || c.dataset.g === b.dataset.g; c.classList.toggle('oculta', !ver); if (ver) { c.style.animation = 'none'; c.offsetHeight; c.style.animation = ''; } });
+    });
+
+    // brillo que sigue al ratón + botón Nuevo
+    $$('.ht-card').forEach(c => c.addEventListener('pointermove', e => { const r = c.getBoundingClientRect(); c.style.setProperty('--mx', `${e.clientX - r.left}px`); c.style.setProperty('--my', `${e.clientY - r.top}px`); }));
+    document.addEventListener('click', e => { const n = e.target.closest('[data-nuevo]'); if (n) { e.preventDefault(); location.href = `/Herramientas/Catalogo/${n.dataset.nuevo}?nuevo=1`; } });
+
+    // ---------- paleta de comandos ----------
+    const pal = $('#hrPal'), inp = $('#hrQ');
+    let enlaces = [], sel = -1;
+    const marcar = i => { enlaces.forEach((a, k) => a.classList.toggle('sel', k === i)); sel = i; enlaces[i]?.scrollIntoView({ block: 'nearest' }); };
+    const catalogosQueCoinciden = q => Object.entries(defs).filter(([, d]) => d.nombre.toLowerCase().includes(q.toLowerCase()));
     const buscar = EV.debounce(async () => {
-        const q = $('#hrQ').value.trim();
-        if (q.length < 2) { $('#hrRes').innerHTML = ''; return; }
-        $('#hrRes').innerHTML = '<div class="ui-skel" style="height:120px"></div>';
+        const q = inp.value.trim();
+        if (q.length < 2) { pal.classList.remove('on'); return; }
+        pal.classList.add('on');
+        pal.innerHTML = '<div class="vacio"><span class="ui-spin"></span> Buscando en 11 catálogos…</div>';
         try {
             const r = await EV.api('/Herramientas/Buscar?q=' + encodeURIComponent(q));
-            $('#hrRes').innerHTML = r.length ? r.map(g => {
+            const cats = catalogosQueCoinciden(q);
+            let html = cats.length ? `<div class="g"><i class="bi bi-grid"></i> Ir al catálogo</div>${cats.map(([k, d]) => `<a href="/Herramientas/Catalogo/${k}"><span class="mi"><i class="bi bi-arrow-right"></i></span>${esc(d.nombre)}</a>`).join('')}` : '';
+            html += r.map(g => {
                 const d = defs[g.clave];
-                return `<div class="ev-card"><h4><i class="bi ${esc(g.icono)}"></i> ${esc(g.titulo)}</h4>
-                    ${g.filas.map(f => {
-                        const k = encodeURIComponent(JSON.stringify(Object.fromEntries(d.claves.map(c => [c, f[c]]))));
-                        return `<a class="it" href="/Herramientas/Catalogo/${g.clave}?abrir=${k}">${esc(f[d.titulo] ?? '')}<small>${d.claves.map(c => esc(f[c])).join(' · ')}</small></a>`;
-                    }).join('')}
-                    <a class="it" style="color:var(--ev-deep)" href="/Herramientas/Catalogo/${g.clave}?q=${encodeURIComponent(q)}">Ver todos <i class="bi bi-arrow-right"></i></a></div>`;
-            }).join('') : `<div class="ui-empty" style="grid-column:1/-1;padding:20px"><p style="margin:0">No hay nada con «${esc(q)}».</p></div>`;
-        } catch (e) { $('#hrRes').innerHTML = `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>${esc(e.message)}</div></div>`; }
-    }, 350);
-    $('#hrQ').addEventListener('input', buscar);
-    document.addEventListener('keydown', e => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('#hrQ').focus(); } });
+                return `<div class="g"><i class="bi ${esc(g.icono)}"></i> ${esc(g.titulo)}</div>` + g.filas.map(f => {
+                    const k = encodeURIComponent(JSON.stringify(Object.fromEntries(d.claves.map(c => [c, f[c]]))));
+                    return `<a href="/Herramientas/Catalogo/${g.clave}?abrir=${k}"><span class="mi"><i class="bi ${esc(g.icono)}"></i></span>${esc(f[d.titulo] ?? '')}<small>${d.claves.map(c => esc(f[c])).join(' · ')}</small></a>`;
+                }).join('') + `<a href="/Herramientas/Catalogo/${g.clave}?q=${encodeURIComponent(q)}" style="color:var(--ev-deep);font-size:13px"><span class="mi"><i class="bi bi-list-ul"></i></span>Ver todos en ${esc(d.nombre)}</a>`;
+            }).join('');
+            pal.innerHTML = html || `<div class="vacio"><i class="bi bi-search" style="font-size:26px;display:block;margin-bottom:6px"></i>Nada con «${esc(q)}»</div>`;
+            enlaces = [...pal.querySelectorAll('a')];
+            marcar(enlaces.length ? 0 : -1);
+        } catch (e) { pal.innerHTML = `<div class="vacio" style="color:#B42318">${esc(e.message)}</div>`; }
+    }, 300);
+    inp.addEventListener('input', buscar);
+    inp.addEventListener('focus', () => { if (inp.value.trim().length >= 2 && enlaces.length) pal.classList.add('on'); });
+    inp.addEventListener('keydown', e => {
+        if (e.key === 'ArrowDown' && enlaces.length) { e.preventDefault(); marcar((sel + 1) % enlaces.length); }
+        else if (e.key === 'ArrowUp' && enlaces.length) { e.preventDefault(); marcar((sel - 1 + enlaces.length) % enlaces.length); }
+        else if (e.key === 'Enter' && enlaces[sel]) { e.preventDefault(); location.href = enlaces[sel].href; }
+        else if (e.key === 'Escape') { pal.classList.remove('on'); inp.blur(); }
+    });
+    document.addEventListener('click', e => { if (!e.target.closest('.ht-cmd')) pal.classList.remove('on'); });
+    document.addEventListener('keydown', e => { if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) { e.preventDefault(); inp.focus(); } });
 })();
 </script>
 }

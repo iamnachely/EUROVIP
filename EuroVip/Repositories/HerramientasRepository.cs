@@ -16,6 +16,7 @@ namespace EuroVip.Repositories
         Task<string?> EliminarAsync(HrCatalogo c, Dictionary<string, JsonElement> clave);
         Task<IEnumerable<Opcion>> ListaAsync(string nombre, string? q);
         Task<List<HrResultadoBusqueda>> BuscarGlobalAsync(string q);
+        Task<List<HrActividad>> ActividadAsync(int n);
     }
 
     /// <summary>
@@ -264,6 +265,43 @@ namespace EuroVip.Repositories
                 };
             });
             return (await Task.WhenAll(tareas)).Where(r => r is not null).ToList()!;
+        }
+
+        /// <summary>Últimos cambios hechos desde Herramientas (auditoría Herramienta_*).</summary>
+        public async Task<List<HrActividad>> ActividadAsync(int n)
+        {
+            using var cn = _db.Conexion();
+            var filas = await cn.QueryAsync<(string Tipo, string Usuario, DateTime Fecha, string? Cambios)>(@"
+                SELECT TOP (@n) tipo_mantenimiento, usuario, fecha_hora, cambios_realizados FROM Eurovip.auditoria_consulta_oferta
+                WHERE tipo_mantenimiento LIKE 'Herramienta[_]%' ORDER BY id DESC", new { n });
+            return filas.Select(f =>
+            {
+                var partes = f.Tipo.Split('_');
+                var cat = HrCatalogos.Buscar(partes.ElementAtOrDefault(1));
+                return new HrActividad
+                {
+                    Clave = cat?.Clave ?? "", Catalogo = cat?.Titulo ?? partes.ElementAtOrDefault(1) ?? "", Icono = cat?.Icono ?? "bi-tools",
+                    Accion = partes.ElementAtOrDefault(2) ?? "", Usuario = f.Usuario, Fecha = f.Fecha, Detalle = Detalle(f.Cambios)
+                };
+            }).ToList();
+        }
+
+        /// <summary>Nombre legible del registro tocado (nombre / descripción / clave) a partir del JSON de auditoría.</summary>
+        private static string? Detalle(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return null;
+            try
+            {
+                using var d = JsonDocument.Parse(json);
+                foreach (var raiz in new[] { "datos", "antes", "clave" })
+                {
+                    if (!d.RootElement.TryGetProperty(raiz, out var o) || o.ValueKind != JsonValueKind.Object) continue;
+                    foreach (var k in new[] { "nombre", "descripcion", "id_destino", "id_tasa", "id_estacion", "id_moneda", "id_idioma", "id_regimen", "id_pais", "id_alojamiento" })
+                        if (o.TryGetProperty(k, out var v) && v.ValueKind is JsonValueKind.String or JsonValueKind.Number) return v.ToString();
+                }
+            }
+            catch (JsonException) { }
+            return null;
         }
 
         // ---------------------------------------------------------------- helpers

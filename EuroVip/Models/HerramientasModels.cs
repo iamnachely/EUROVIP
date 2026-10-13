@@ -193,6 +193,17 @@ namespace EuroVip.Models
         public int Total { get; set; }
     }
 
+    public class HrActividad
+    {
+        public string Clave { get; set; } = "";
+        public string Catalogo { get; set; } = "";
+        public string Icono { get; set; } = "";
+        public string Accion { get; set; } = "";
+        public string Usuario { get; set; } = "";
+        public DateTime Fecha { get; set; }
+        public string? Detalle { get; set; }
+    }
+
     public class HrResultadoBusqueda
     {
         public string Clave { get; set; } = "";
