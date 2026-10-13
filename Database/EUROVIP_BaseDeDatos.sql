@@ -2500,6 +2500,66 @@ CREATE TABLE Eurovip.contactos_vdt (
 GO
 
 /* ##########################################################################################
+   FASE 10 — USUARIOS Y ACCESOS  (13/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: la pantalla "Usuarios y accesos" (como /Usuario2 + /Usuario2/Accesos de BackTiTan,
+   todo en una) permite crear usuarios, activarlos/desactivarlos, cambiarles la contraseña y
+   decir qué módulos de Eurovip puede abrir cada uno.
+
+   Explicado fácil:
+   • Cada pantalla de Eurovip es un "módulo" (tabla UsuarioAcceso). Los módulos de BackTiTan NO
+     se copian: son otras pantallas. Eurovip tiene su propia lista (CAMBIO 43).
+   • UsuarioModulos dice "este usuario SÍ / NO puede entrar a este módulo".
+   • El rol "Superadministrador" entra a todo siempre (no necesita marcar módulos).
+   • Si un usuario no tiene un módulo, no lo ve en el menú y si entra por la dirección le sale
+     "Acceso denegado". Inicio y "Mi perfil" los ven todos.
+
+   CAMBIO 42  UsuarioAcceso: columnas nuevas clave, controladores, icono, descripcion, orden.
+   CAMBIO 43  Módulos de Eurovip y roles (Superadministrador, Administrador, Usuario).
+   ########################################################################################## */
+/* ---------- CAMBIO 42: UsuarioAcceso con datos para el menú y para saber qué pantallas cubre ---------- */
+IF COL_LENGTH('Eurovip.UsuarioAcceso', 'clave') IS NULL
+    ALTER TABLE Eurovip.UsuarioAcceso ADD
+        clave         VARCHAR(40)   NULL,      -- código fijo que usa el programa (ej. 'flyers_enviar')
+        controladores VARCHAR(300)  NULL,      -- pantallas que cubre, separadas por coma (ej. 'Ofertas,CargaManual')
+        icono         VARCHAR(40)   NULL,      -- icono de Bootstrap Icons (ej. 'bi-building')
+        descripcion   NVARCHAR(300) NULL,      -- explicación corta que ve el administrador
+        orden         INT           NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Eurovip_UsuarioAcceso_clave')
+    CREATE UNIQUE INDEX UX_Eurovip_UsuarioAcceso_clave ON Eurovip.UsuarioAcceso (clave) WHERE clave IS NOT NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Eurovip_UsuarioModulos_usuario_modulo')
+    CREATE UNIQUE INDEX UX_Eurovip_UsuarioModulos_usuario_modulo ON Eurovip.UsuarioModulos (usuario, id_modulo);
+GO
+
+/* ---------- CAMBIO 43: módulos de Eurovip y roles ---------- */
+MERGE Eurovip.UsuarioAcceso AS d
+USING (VALUES
+    ('hoteles',           N'Hoteles',                    N'Cargas',         'Hoteles',                  'bi-building',               N'Ver y editar los hoteles y sus contenedores.', 10),
+    ('carga_manual',      N'Carga manual de ofertas',    N'Cargas',         'Ofertas,CargaManual',      'bi-pencil-square',          N'Cargar ofertas (Express y Clásica) y editar la lista de ofertas.', 20),
+    ('circuitos',         N'Circuitos',                  N'Cargas',         'Circuitos,CargaCircuitos', 'bi-signpost-split',         N'Cargar y editar circuitos.', 30),
+    ('historial_cargas',  N'Historial de cargas',        N'Cargas',         'Cargas',                   'bi-clock-history',          N'Ver quién cargó qué y cuándo.', 40),
+    ('home_web',          N'Home de la web y carrusel',  N'Web',            'HomeWeb',                  'bi-window-sidebar',         N'Ordenar la portada de la web y el slider.', 50),
+    ('consultar_ofertas', N'Consultar ofertas',          N'Web',            'ConsultarOferta',          'bi-search-heart',           N'Buscar, editar, duplicar y exportar ofertas a la venta.', 60),
+    ('flyers',            N'Flyers',                     N'Web',            'Flyer',                    'bi-file-earmark-richtext',  N'Generar flyers y manejar los contactos.', 70),
+    ('flyers_enviar',     N'Enviar flyers por WhatsApp', N'Web',            NULL,                       'bi-whatsapp',               N'Permiso especial: enviar los flyers a los contactos.', 75),
+    ('herramientas',      N'Herramientas',               N'Administración', 'Herramientas',             'bi-tools',                  N'Mantenimientos básicos: destinos, monedas, campañas, etc.', 80),
+    ('reportes',          N'Reportes',                   N'Administración', 'Reportes',                 'bi-bar-chart-line',         N'Tablero y reportes de salidas.', 90),
+    ('usuarios',          N'Usuarios y accesos',         N'Administración', 'Usuarios',                 'bi-people',                 N'Crear usuarios y decidir qué ve cada uno.', 100)
+) AS o (clave, nombre, categoria, controladores, icono, descripcion, orden)
+ON d.clave = o.clave
+WHEN MATCHED THEN UPDATE SET nombre_modulo = o.nombre, Categoria = o.categoria, controladores = o.controladores,
+                             icono = o.icono, descripcion = o.descripcion, orden = o.orden
+WHEN NOT MATCHED THEN INSERT (nombre_modulo, Categoria, clave, controladores, icono, descripcion, orden)
+                      VALUES (o.nombre, o.categoria, o.clave, o.controladores, o.icono, o.descripcion, o.orden);
+GO
+INSERT INTO Eurovip.rol (codigoRol)
+SELECT r FROM (VALUES ('Superadministrador'), ('Administrador'), ('Usuario')) v (r)
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.rol x WHERE x.codigoRol = v.r);
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -2609,8 +2669,19 @@ GO
                OJO: las configuraciones 1-5 (campaña 199, idioma 'EX') vienen de ViajeVDT y la
                campaña 199 no existe en Eurovip: revisarlas o borrarlas desde la pantalla.
 
-   PENDIENTE   Copiar los demás usuarios, módulos y permisos (rol, UsuarioAcceso,
-               UsuarioModulos). Se hará cuando se confirme desde qué base copiarlos.
+   13/10/2026  FASE 10 aplicada (CAMBIO 42 y 43): 11 módulos de Eurovip y 3 roles.
+               • La primera vez sqlcmd leyó el archivo sin UTF-8 y los acentos de los módulos quedaron
+                 mal ("ClÃ¡sica"). Se volvió a correr el MERGE con UTF-8 (-f 65001) y quedaron bien.
+               • Pantalla "Usuarios y accesos": se creó el usuario de prueba zzPruebaAcc (id 3,
+                 correo zz.prueba.acc@eurovip.test), se le dieron y quitaron módulos, se le cambió la
+                 contraseña, se desactivó/activó, se entró con él para comprobar que no ve lo que no
+                 tiene, y se BORRÓ desde la pantalla. Quedan solo sus líneas en la auditoría
+                 (tipo 'Usuario_*'). El próximo usuario nuevo tendrá número 4 o mayor.
+               • ARodriguez (Superadministrador) no se tocó.
+
+   PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
+               NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
+               accesos se dan desde "Usuarios y accesos".
    ########################################################################################## */
 
 

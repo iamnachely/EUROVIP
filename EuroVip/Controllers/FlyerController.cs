@@ -10,9 +10,9 @@ namespace EuroVip.Controllers
     /// Flyers (equivale a /Flyer/Hub de BackTiTan, sus 11 pantallas en una): destinos y precios, generar imágenes,
     /// galería, contactos y envío por WhatsApp (cuenta de BackTiTan) con progreso e historial.
     /// </summary>
+    [AccesoEstricto]   // tiene teléfonos de clientes: sin el módulo no se lee nada
     public class FlyerController : Controller
     {
-        private static readonly string[] RolesEnvio = { "Superadministrador", "Administrador" };
         private readonly IFlyerRepository _repo;
         private readonly IFlyerImagenService _img;
         private readonly WhatsAppService _wa;
@@ -30,7 +30,8 @@ namespace EuroVip.Controllers
             _logger = logger;
         }
 
-        private bool PuedeEnviar => RolesEnvio.Contains(HttpContext.Session.GetString("Rol") ?? "", StringComparer.OrdinalIgnoreCase);
+        /// <summary>Permiso especial "Enviar flyers por WhatsApp" (Usuarios y accesos). Superadministrador siempre puede.</summary>
+        private bool PuedeEnviar => HttpContext.Items[AccesoModuloFilter.ClavePermisos] is PermisosUsuario p && p.Puede(Modulos.FlyersEnviar);
 
         public IActionResult Hub() => View();
         public IActionResult Index() => RedirectToAction(nameof(Hub));
@@ -176,7 +177,7 @@ namespace EuroVip.Controllers
         public async Task<IActionResult> Enviar([FromBody] FlyerEnviarDto d)
         {
             if (!_wa.Configurado) return BadRequest(new { mensaje = "WhatsApp no está configurado en este servidor." });
-            if (!PuedeEnviar) return StatusCode(403, new { mensaje = "Solo un administrador puede enviar flyers." });
+            if (!PuedeEnviar) return StatusCode(403, new { mensaje = "No tienes el permiso \"Enviar flyers por WhatsApp\". Pídeselo a un administrador." });
             var rutas = d.Imagenes.Select(x => x.Split('/', 2)).Where(p => p.Length == 2).Select(p => _img.Fisico(p[0], p[1])).Where(r => r is not null).Cast<string>().ToList();
             if (rutas.Count == 0) return BadRequest(new { mensaje = "Elige al menos un flyer de la galería." });
             if (rutas.Count > 10) return BadRequest(new { mensaje = "Máximo 10 flyers por envío." });

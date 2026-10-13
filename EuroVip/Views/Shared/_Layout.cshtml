@@ -5,6 +5,8 @@
     var foto = Context.Session.GetString("Imagen");
     var iniciales = string.Concat(nombre.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpper(p[0])));
     var controlador = ViewContext.RouteData.Values["controller"]?.ToString();
+    var permisos = Context.Items[EuroVip.Helpers.AccesoModuloFilter.ClavePermisos] as EuroVip.Models.PermisosUsuario;
+    bool Ve(string modulo) => permisos?.Puede(modulo) ?? true;
     string Activo(string c) => string.Equals(controlador, c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
 }
 <!DOCTYPE html>
@@ -43,30 +45,29 @@
                 <div class="ev-grupo" data-grupo="cargas">
                     <button type="button" class="ev-nav-label" aria-expanded="true"><span>Cargas</span><i class="bi bi-chevron-down"></i></button>
                     <ul class="ev-nav">
-                        <li><a asp-controller="Hoteles" asp-action="Index" class="@Activo("Hoteles")"><i class="bi bi-building"></i> Hoteles</a></li>
-                        <li><a asp-controller="Ofertas" asp-action="Index" class="@(Activo("Ofertas") != "" || Activo("CargaManual") != "" ? "active" : "")"><i class="bi bi-pencil-square"></i> Carga manual</a></li>
-                        <li><a asp-controller="Circuitos" asp-action="Index" class="@(Activo("Circuitos") != "" || Activo("CargaCircuitos") != "" ? "active" : "")"><i class="bi bi-signpost-split"></i> Circuitos</a></li>
+                        @if (Ve("hoteles")) { <li><a asp-controller="Hoteles" asp-action="Index" class="@Activo("Hoteles")"><i class="bi bi-building"></i> Hoteles</a></li> }
+                        @if (Ve("carga_manual")) { <li><a asp-controller="Ofertas" asp-action="Index" class="@(Activo("Ofertas") != "" || Activo("CargaManual") != "" ? "active" : "")"><i class="bi bi-pencil-square"></i> Carga manual</a></li> }
+                        @if (Ve("circuitos")) { <li><a asp-controller="Circuitos" asp-action="Index" class="@(Activo("Circuitos") != "" || Activo("CargaCircuitos") != "" ? "active" : "")"><i class="bi bi-signpost-split"></i> Circuitos</a></li> }
                         <li><a href="#" class="pronto"><i class="bi bi-compass"></i> Excursiones <span class="ev-pill">PRONTO</span></a></li>
                         <li><a href="#" class="pronto"><i class="bi bi-car-front"></i> Traslados <span class="ev-pill">PRONTO</span></a></li>
                     </ul>
                 </div>
 
-                <div class="ev-grupo" data-grupo="web">
+                <div class="ev-grupo" data-grupo="web" hidden="@(!(Ve("home_web") || Ve("consultar_ofertas") || Ve("flyers")))">
                     <button type="button" class="ev-nav-label" aria-expanded="true"><span>Web</span><i class="bi bi-chevron-down"></i></button>
                     <ul class="ev-nav">
-                        <li><a asp-controller="HomeWeb" asp-action="Index" class="@Activo("HomeWeb")"><i class="bi bi-window-sidebar"></i> Home de la web</a></li>
-                        <li><a href="/HomeWeb/Index#carrusel"><i class="bi bi-images"></i> Carrusel (slider)</a></li>
-                        <li><a asp-controller="ConsultarOferta" asp-action="Index" class="@Activo("ConsultarOferta")"><i class="bi bi-search-heart"></i> Consultar ofertas</a></li>
-                        <li><a asp-controller="Flyer" asp-action="Hub" class="@Activo("Flyer")"><i class="bi bi-file-earmark-richtext"></i> Flyers</a></li>
+                        @if (Ve("home_web")) { <li><a asp-controller="HomeWeb" asp-action="Index" class="@Activo("HomeWeb")"><i class="bi bi-window-sidebar"></i> Home de la web</a></li> }
+                        @if (Ve("home_web")) { <li><a href="/HomeWeb/Index#carrusel"><i class="bi bi-images"></i> Carrusel (slider)</a></li> }
+                        @if (Ve("consultar_ofertas")) { <li><a asp-controller="ConsultarOferta" asp-action="Index" class="@Activo("ConsultarOferta")"><i class="bi bi-search-heart"></i> Consultar ofertas</a></li> }
+                        @if (Ve("flyers")) { <li><a asp-controller="Flyer" asp-action="Hub" class="@Activo("Flyer")"><i class="bi bi-file-earmark-richtext"></i> Flyers</a></li> }
                     </ul>
                 </div>
 
-                <div class="ev-grupo" data-grupo="admin">
+                <div class="ev-grupo" data-grupo="admin" hidden="@(!(Ve("herramientas") || Ve("usuarios")))">
                     <button type="button" class="ev-nav-label" aria-expanded="true"><span>Administración</span><i class="bi bi-chevron-down"></i></button>
                     <ul class="ev-nav">
-                        <li><a asp-controller="Herramientas" asp-action="Index" class="@Activo("Herramientas")"><i class="bi bi-tools"></i> Herramientas</a></li>
-                        <li><a href="#" class="pronto"><i class="bi bi-people"></i> Usuarios <span class="ev-pill">PRONTO</span></a></li>
-                        <li><a href="#" class="pronto"><i class="bi bi-shield-lock"></i> Accesos <span class="ev-pill">PRONTO</span></a></li>
+                        @if (Ve("herramientas")) { <li><a asp-controller="Herramientas" asp-action="Index" class="@Activo("Herramientas")"><i class="bi bi-tools"></i> Herramientas</a></li> }
+                        @if (Ve("usuarios")) { <li><a asp-controller="Usuarios" asp-action="Index" class="@Activo("Usuarios")"><i class="bi bi-people"></i> Usuarios y accesos</a></li> }
                     </ul>
                 </div>
             </nav>
@@ -85,8 +86,8 @@
                 </button>
                 <nav class="ev-tabs">
                     <a asp-controller="Home" asp-action="Index" class="@(Activo("Cargas") == "" && Activo("Reportes") == "" ? "active" : "")">Resumen</a>
-                    <a asp-controller="Cargas" asp-action="Index" class="@Activo("Cargas")">Cargas</a>
-                    <a asp-controller="Reportes" asp-action="Index" class="@Activo("Reportes")">Reportes</a>
+                    @if (Ve("historial_cargas")) { <a asp-controller="Cargas" asp-action="Index" class="@Activo("Cargas")">Cargas</a> }
+                    @if (Ve("reportes")) { <a asp-controller="Reportes" asp-action="Index" class="@Activo("Reportes")">Reportes</a> }
                 </nav>
                 <label class="ev-search">
                     <i class="bi bi-search"></i>
@@ -104,7 +105,7 @@
                             <div class="ev-seg" id="evNotifFiltro"><button type="button" class="on" data-f="">Todas</button><button type="button" data-f="nl">No leídas</button></div>
                         </div>
                         <div class="ev-notif-lista" id="evNotifLista"><div class="ev-notif-vacio"><span class="ev-spin"></span> Cargando…</div></div>
-                        <div class="ev-pop-f"><button type="button" id="evNotifLeer"><i class="bi bi-check2-all"></i> Marcar todo como leído</button><a href="/Cargas/Index">Ver cargas <i class="bi bi-arrow-right"></i></a></div>
+                        <div class="ev-pop-f"><button type="button" id="evNotifLeer"><i class="bi bi-check2-all"></i> Marcar todo como leído</button>@if (Ve("historial_cargas")) { <a href="/Cargas/Index">Ver cargas <i class="bi bi-arrow-right"></i></a> }</div>
                     </div>
                 </div>
                 <div class="ev-pop-wrap">

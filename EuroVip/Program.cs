@@ -62,6 +62,9 @@ builder.Services.AddScoped<EuroVip.Services.IFlyerImagenService, EuroVip.Service
 builder.Services.AddScoped<EuroVip.Services.WhatsAppService>();
 builder.Services.AddSingleton<EuroVip.Services.FlyerEnvioJob>();
 builder.Services.AddHttpClient("whatsapp");
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<EuroVip.Repositories.IAccesoService, EuroVip.Repositories.AccesoService>();
+builder.Services.AddScoped<EuroVip.Repositories.IUsuariosRepository, EuroVip.Repositories.UsuariosRepository>();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(o =>
@@ -71,9 +74,12 @@ builder.Services.AddSession(o =>
     o.Cookie.IsEssential = true;
 });
 
-// Todo requiere login salvo lo marcado con [AllowAnonymous]
+// Todo requiere login salvo lo marcado con [AllowAnonymous]; luego cada pantalla pide su módulo (Usuarios y accesos).
 var mvc = builder.Services.AddControllersWithViews(o =>
-    o.Filters.Add(new AuthorizeFilter(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())));
+{
+    o.Filters.Add(new AuthorizeFilter(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()));
+    o.Filters.Add<EuroVip.Helpers.AccesoModuloFilter>();
+});
 if (builder.Environment.IsDevelopment())
     mvc.AddRazorRuntimeCompilation();
 

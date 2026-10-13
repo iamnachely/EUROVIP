@@ -50,6 +50,8 @@ namespace EuroVip.Models
         public string Url { get; set; } = "#";
         public bool Disponible { get; set; }
         public string? Etiqueta { get; set; }
+        /// <summary>Clave del módulo (Usuarios y accesos) que hace falta para verlo; null = lo ven todos.</summary>
+        public string? Modulo { get; set; }
     }
 
     public class HomeViewModel

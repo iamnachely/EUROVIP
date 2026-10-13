@@ -316,7 +316,7 @@
         $('#eTotal').textContent = `${EV.fmt(D.contactos.activos)} contacto(s) activo(s) recibirán ${imgs.length || 0} imagen(es)${$('#eTexto').value.trim() ? ' y el mensaje' : ''}.`;
         $('#eWa').innerHTML = D.whatsapp ? '<i class="bi bi-whatsapp"></i> Cuenta de WhatsApp configurada (la misma de BackTiTan).' : '<i class="bi bi-exclamation-triangle" style="color:#B54708"></i> WhatsApp no está configurado en este servidor.';
         $('#eEnviar').disabled = !D.whatsapp || !D.puedeEnviar || !imgs.length;
-        if (!D.puedeEnviar) $('#eWa').innerHTML += '<br><small style="color:var(--ev-muted)">Solo un administrador puede enviar.</small>';
+        if (!D.puedeEnviar) $('#eWa').innerHTML += '<br><small style="color:var(--ev-muted)">Te falta el permiso "Enviar flyers por WhatsApp" (Usuarios y accesos).</small>';
     }
     async function enviar() {
         const imgs = D.galeria.filter(g => elegidas.has(clave(g))).map(clave), quien = $('input[name=aQuien]:checked').value;
@@ -368,7 +368,7 @@
             const cfg = e.target.closest('[data-cfg]'); if (cfg) return editarConfig(+cfg.dataset.cfg);
             const act = e.target.closest('[data-actu]'); if (act) { try { const r = await EV.post(`/Flyer/ActualizarPrecios?id=${act.dataset.actu}`, {}); EV.toast(r.mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
             const del = e.target.closest('[data-delcfg]');
-            if (del) { const c = D.configs.find(x => x.id === +del.dataset.delcfg); if (!await EV.confirmar({ titulo: `¿Quitar ${esc(c.nombre_Destino || c.id_Destino)} de los flyers?`, texto: 'Las ofertas no se tocan; solo deja de salir en los flyers.', si: 'Quitar', peligro: true })) return;
+            if (del) { const c = D.configs.find(x => x.id === +del.dataset.delcfg); if (!await EV.confirmar({ titulo: `¿Quitar ${c.nombre_Destino || c.id_Destino} de los flyers?`, texto: 'Las ofertas no se tocan; solo deja de salir en los flyers.', si: 'Quitar', peligro: true })) return;
                 try { const r = await EV.post(`/Flyer/EliminarConfig?id=${c.id}`, {}); EV.toast(r.mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
             const di = e.target.closest('[data-delimg]');
             if (di) { e.stopPropagation(); const [carp, arch] = di.dataset.delimg.split('/'); if (!await EV.confirmar({ titulo: '¿Eliminar este flyer?', texto: 'Se borra la imagen de la galería.', si: 'Eliminar', peligro: true })) return;

@@ -24,8 +24,8 @@ namespace EuroVip.Controllers
             {
                 NombreUsuario = HttpContext.Session.GetString("NombreUsuario") ?? userName,
                 Rol = HttpContext.Session.GetString("Rol"),
-                ModulosCarga = ModulosCarga(),
-                ModulosAdministracion = ModulosAdministracion()
+                ModulosCarga = Visibles(ModulosCarga()),
+                ModulosAdministracion = Visibles(ModulosAdministracion())
             };
 
             try
@@ -54,18 +54,22 @@ namespace EuroVip.Controllers
         // Módulos de carga Eurovip — todo manual; los vuelos son OPCIONALES en carga manual y circuitos.
         private static List<ModuloHome> ModulosCarga() => new()
         {
-            new() { Titulo = "Carga de Hoteles", Descripcion = "Publica hoteles en la vitrina: precio, régimen e imagen.", Icono = "bi-building", Etiqueta = "Disponible", Url = "/Hoteles/Index", Disponible = true },
-            new() { Titulo = "Carga Manual",     Descripcion = "Ofertas de hotel: Express o Clásica (con Excel). Vuelo opcional.", Icono = "bi-pencil-square", Etiqueta = "Disponible", Url = "/Ofertas/Index", Disponible = true },
+            new() { Titulo = "Carga de Hoteles", Descripcion = "Publica hoteles en la vitrina: precio, régimen e imagen.", Icono = "bi-building", Etiqueta = "Disponible", Url = "/Hoteles/Index", Disponible = true, Modulo = "hoteles" },
+            new() { Titulo = "Carga Manual",     Descripcion = "Ofertas de hotel: Express o Clásica (con Excel). Vuelo opcional.", Icono = "bi-pencil-square", Etiqueta = "Disponible", Url = "/Ofertas/Index", Disponible = true, Modulo = "carga_manual" },
             new() { Titulo = "Carga Excursión",  Descripcion = "Excursiones por destino, precio y cancelación.",    Icono = "bi-compass",        Etiqueta = "Fase 2" },
             new() { Titulo = "Carga Traslado",   Descripcion = "Traslados aeropuerto ↔ hotel y entre ciudades.",   Icono = "bi-car-front",      Etiqueta = "Nuevo" },
-            new() { Titulo = "Carga Circuito",   Descripcion = "Catálogo, itinerario, hoteles y salidas. Vuelo opcional.", Icono = "bi-signpost-split", Etiqueta = "Disponible", Url = "/Circuitos/Index", Disponible = true },
+            new() { Titulo = "Carga Circuito",   Descripcion = "Catálogo, itinerario, hoteles y salidas. Vuelo opcional.", Icono = "bi-signpost-split", Etiqueta = "Disponible", Url = "/Circuitos/Index", Disponible = true, Modulo = "circuitos" },
         };
+
+        /// <summary>Solo las tarjetas de los módulos que el usuario tiene (Usuarios y accesos).</summary>
+        private List<ModuloHome> Visibles(List<ModuloHome> l) =>
+            HttpContext.Items[EuroVip.Helpers.AccesoModuloFilter.ClavePermisos] is EuroVip.Models.PermisosUsuario p
+                ? l.Where(m => m.Modulo is null || p.Puede(m.Modulo)).ToList() : l;
 
         private static List<ModuloHome> ModulosAdministracion() => new()
         {
-            new() { Titulo = "Usuarios",  Descripcion = "Altas, roles y estado.",          Icono = "bi-people",       Etiqueta = "Fase 2" },
-            new() { Titulo = "Accesos",   Descripcion = "Permisos por módulo.",            Icono = "bi-shield-lock",  Etiqueta = "Fase 2" },
-            new() { Titulo = "Catálogos", Descripcion = "Destinos, monedas, proveedores…", Icono = "bi-grid-3x3-gap", Etiqueta = "Fase 2" },
+            new() { Titulo = "Usuarios y accesos", Descripcion = "Altas, contraseñas y qué ve cada uno.", Icono = "bi-people",  Url = "/Usuarios/Index",     Disponible = true, Modulo = "usuarios" },
+            new() { Titulo = "Herramientas",       Descripcion = "Destinos, monedas, proveedores…",       Icono = "bi-tools",   Url = "/Herramientas/Index", Disponible = true, Modulo = "herramientas" },
         };
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

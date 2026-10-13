@@ -1,0 +1,363 @@
+@{
+    ViewData["Title"] = "Usuarios y accesos";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .us-hero { position: relative; overflow: hidden; border-radius: 30px; padding: 26px 30px; background: var(--ev-ink); color: #fff; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; isolation: isolate; }
+    .us-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(520px 260px at 100% -10%, rgba(43,212,196,.5), transparent 60%), radial-gradient(380px 220px at 0% 130%, rgba(179,255,243,.2), transparent 60%); }
+    .us-hero h1 { margin: 0; font-size: clamp(26px, 3vw, 34px); font-weight: 800; letter-spacing: -1.2px; }
+    .us-hero p { margin: 4px 0 0; color: rgba(232,255,251,.72); font-weight: 500; max-width: 60ch; }
+    .us-hero .sp { flex: 1; }
+    .us-kpis { display: flex; gap: 10px; flex-wrap: wrap; width: 100%; }
+    .us-kpi { padding: 10px 16px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid rgba(116,242,230,.18); }
+    .us-kpi b { font-size: 20px; font-weight: 800; display: block; line-height: 1.1; }
+    .us-kpi small { color: rgba(232,255,251,.6); font-weight: 600; font-size: 12px; }
+
+    .us-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .us-card { border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line); padding: 18px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform .25s var(--ev-ease), box-shadow .25s; }
+    .us-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
+    .us-card.off { opacity: .62; }
+    .us-card .top { display: flex; gap: 12px; align-items: center; }
+    .us-av { width: 52px; height: 52px; border-radius: 17px; flex-shrink: 0; display: grid; place-items: center; background: var(--ev-grad); color: var(--ev-ink); font-weight: 800; font-size: 18px; overflow: hidden; }
+    .us-av img { width: 100%; height: 100%; object-fit: cover; }
+    .us-card h3 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .us-card .sub { color: var(--ev-muted); font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .us-card .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .us-tag { font: 800 11.5px var(--ev-font); padding: 4px 10px; border-radius: 9px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); display: inline-flex; gap: 5px; align-items: center; }
+    .us-tag.super { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+    .us-tag.admin { background: #E0F2FE; color: #075985; border-color: #BAE6FD; }
+    .us-tag.off { background: #FEF3C7; color: #92400E; border-color: #FDE68A; }
+    .us-tag.yo { background: var(--ev-grad-soft); border-color: var(--ev-teal); }
+    .us-card .pie { display: flex; justify-content: space-between; align-items: center; color: var(--ev-muted); font-size: 12px; font-weight: 600; border-top: 1px solid var(--ev-line); padding-top: 10px; }
+    .us-mods { display: flex; gap: 3px; }
+    .us-mods i { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 11.5px; background: var(--ev-surface-2); color: var(--ev-line); }
+    .us-mods i.si { background: var(--ev-grad-soft); color: var(--ev-deep); }
+    .us-nuevo { border: 2px dashed var(--ev-line); border-radius: 24px; background: transparent; min-height: 170px; display: grid; place-items: center; color: var(--ev-muted); font: 800 14px var(--ev-font); cursor: pointer; }
+    .us-nuevo:hover { border-color: var(--ev-teal); color: var(--ev-deep); background: var(--ev-grad-soft); }
+    .us-nuevo i { font-size: 30px; display: block; margin-bottom: 6px; }
+
+    .us-mx { overflow: auto; border-radius: 22px; border: 1px solid var(--ev-line); background: var(--ev-surface); max-height: 70vh; }
+    .us-mx table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+    .us-mx th, .us-mx td { padding: 8px 10px; border-bottom: 1px solid var(--ev-line); text-align: center; white-space: nowrap; }
+    .us-mx thead th { position: sticky; top: 0; background: var(--ev-surface); z-index: 2; vertical-align: bottom; }
+    .us-mx thead tr:first-child th { font: 800 11px var(--ev-font); letter-spacing: .06em; text-transform: uppercase; color: var(--ev-muted); border-bottom: 0; }
+    .us-mx thead tr + tr th { top: 30px; }
+    .us-mx .mh { display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 700; font-size: 11.5px; max-width: 92px; white-space: normal; line-height: 1.2; }
+    .us-mx .mh i { font-size: 17px; color: var(--ev-deep); }
+    .us-mx tbody th { position: sticky; left: 0; background: var(--ev-surface); text-align: left; z-index: 1; font-weight: 700; }
+    .us-mx tbody th small { display: block; color: var(--ev-muted); font-weight: 600; }
+    .us-mx tbody tr:hover td, .us-mx tbody tr:hover th { background: var(--ev-surface-2); }
+    .us-ck { width: 30px; height: 30px; border-radius: 10px; border: 1.5px solid var(--ev-line); background: transparent; display: inline-grid; place-items: center; cursor: pointer; color: transparent; transition: all .15s; }
+    .us-ck:hover { border-color: var(--ev-teal); }
+    .us-ck.si { background: var(--ev-ink); border-color: var(--ev-ink); color: var(--ev-aqua); }
+    .us-ck.todo { background: var(--ev-grad-soft); border-color: transparent; color: var(--ev-deep); cursor: default; }
+    .us-ck:disabled { cursor: default; }
+
+    .us-cat { margin-top: 14px; }
+    .us-cat h4 { margin: 0 0 8px; font: 800 12px var(--ev-font); letter-spacing: .06em; text-transform: uppercase; color: var(--ev-muted); display: flex; gap: 8px; align-items: center; }
+    .us-cat h4 button { margin-left: auto; border: 0; background: none; color: var(--ev-deep); font: 700 12px var(--ev-font); cursor: pointer; text-transform: none; letter-spacing: 0; }
+    .us-mod { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 14px; border: 1.5px solid var(--ev-line); margin-bottom: 6px; cursor: pointer; }
+    .us-mod:has(input:checked) { border-color: var(--ev-teal); background: var(--ev-grad-soft); }
+    .us-mod > i { font-size: 18px; color: var(--ev-deep); width: 22px; text-align: center; }
+    .us-mod b { display: block; font-size: 13.5px; }
+    .us-mod small { color: var(--ev-muted); font-weight: 600; font-size: 12px; }
+    .us-mod .ui-switch { margin-left: auto; }
+    .us-sug { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .us-sug button { border: 1px solid var(--ev-line); background: var(--ev-surface-2); border-radius: 9px; padding: 4px 9px; font: 700 12px var(--ev-font); cursor: pointer; }
+    .us-sug button:hover { border-color: var(--ev-teal); }
+    .us-clave { font: 800 22px ui-monospace, Consolas, monospace; letter-spacing: 1px; padding: 14px; border-radius: 14px; background: var(--ev-surface-2); border: 1px dashed var(--ev-teal); text-align: center; margin: 10px 0; user-select: all; }
+    .us-dsec { padding: 14px 0; border-top: 1px solid var(--ev-line); }
+    .us-dsec:first-child { border-top: 0; padding-top: 0; }
+    .us-dsec > h3 { margin: 0 0 10px; font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="us-hero ev-rise">
+    <div>
+        <h1><i class="bi bi-people" style="color:var(--ev-aqua)"></i> Usuarios y accesos</h1>
+        <p>Quién entra a Eurovip y qué puede ver cada uno. Lo que un usuario no tiene marcado no le sale en el menú.</p>
+    </div>
+    <span class="sp"></span>
+    <button type="button" class="ev-btn aqua sm" id="uNuevo"><i class="bi bi-person-plus"></i> Nuevo usuario</button>
+    <div class="us-kpis" id="uKpis"></div>
+</section>
+
+<div class="ui-tabs" id="uTabs" style="margin-top:18px">
+    <button type="button" data-tab="tPer" class="on"><i class="bi bi-person-badge"></i> Personas</button>
+    <button type="button" data-tab="tMx"><i class="bi bi-grid-3x3-gap"></i> Quién ve qué</button>
+    <button type="button" data-tab="tMod"><i class="bi bi-ui-checks-grid"></i> Módulos</button>
+</div>
+
+<section class="ui-pane on" id="tPer" style="margin-top:14px">
+    <div class="ui-toolbar" style="margin-top:0">
+        <label class="ui-search"><i class="bi bi-search"></i><input id="uQ" type="search" placeholder="Buscar nombre, usuario o correo…"></label>
+        <select class="ui-select" id="uRol"><option value="">Todos los roles</option></select>
+        <select class="ui-select" id="uEst"><option value="">Activos e inactivos</option><option value="1">Solo activos</option><option value="0">Solo inactivos</option></select>
+    </div>
+    <div class="us-grid" id="uGrid"><div class="ui-skel" style="height:170px"></div></div>
+</section>
+
+<section class="ui-pane" id="tMx" style="margin-top:14px">
+    <div class="ui-note info" style="margin-top:0"><i class="bi bi-hand-index"></i><div>Toca un cuadro para dar o quitar el acceso al momento. Los <b>Superadministradores</b> ven todo siempre.</div></div>
+    <div class="us-mx" id="uMx"></div>
+</section>
+
+<section class="ui-pane" id="tMod" style="margin-top:14px">
+    <div class="ui-note info" style="margin-top:0"><i class="bi bi-info-circle"></i><div>Cada módulo es una parte de Eurovip. Los marcados con <i class="bi bi-lock"></i> los usa el programa: puedes cambiarles el nombre pero no borrarlos.</div></div>
+    <div id="uMods"></div>
+</section>
+
+<aside class="ui-drawer" id="uDrawer" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="us-av" id="dAv" style="width:46px;height:46px"></div>
+        <div style="min-width:0"><h2 id="dTit"></h2><small id="dSub"></small></div>
+        <button class="ui-ibtn x" type="button" data-cerrar aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="dCuerpo"></div>
+    <div class="ui-df" id="dPie"></div>
+</aside>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script>
+(() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    let D = null;
+    const drawer = EV.drawer($('#uDrawer'));
+    const tabs = EV.tabs($('#uTabs'), id => { if (id === 'tMx') pintarMatriz(); if (id === 'tMod') pintarModulos(); });
+    const SUPER = 'Superadministrador';
+    const esSuper = u => (u.rol || '') === SUPER;
+    const iniciales = u => ((u.nombre || '?')[0] + (u.apellido || '')[0] || '').toUpperCase();
+    const avatar = u => u.foto ? `<img src="${esc(u.foto)}" alt="">` : esc(iniciales(u));
+    const accesos = u => D.matriz[Object.keys(D.matriz).find(k => k.toLowerCase() === u.userName.toLowerCase())] || [];
+    const tagRol = r => `<span class="us-tag ${r === SUPER ? 'super' : r === 'Administrador' ? 'admin' : ''}"><i class="bi ${r === SUPER ? 'bi-stars' : r === 'Administrador' ? 'bi-shield-check' : 'bi-person'}"></i>${esc(r || 'Sin rol')}</span>`;
+    const hace = f => { if (!f) return 'Sin actividad'; const d = Math.round((Date.now() - new Date(f)) / 864e5); return d <= 0 ? 'Activo hoy' : d === 1 ? 'Activo ayer' : `Activo hace ${d} días`; };
+    const categorias = () => [...new Set(D.modulos.map(m => m.categoria || 'Otros'))];
+
+    async function cargar() {
+        D = await EV.api('/Usuarios/Datos');
+        const act = D.usuarios.filter(u => u.activo).length;
+        $('#uKpis').innerHTML = [[D.usuarios.length, 'usuarios'], [act, 'activos'], [D.usuarios.length - act, 'desactivados'],
+            [D.usuarios.filter(esSuper).length, 'superadministradores'], [D.modulos.length, 'módulos']]
+            .map(([b, s]) => `<div class="us-kpi"><b>${b}</b><small>${s}</small></div>`).join('');
+        const rolSel = $('#uRol').value;
+        $('#uRol').innerHTML = '<option value="">Todos los roles</option>' + D.roles.map(r => `<option>${esc(r)}</option>`).join('');
+        $('#uRol').value = rolSel;
+        pintarPersonas();
+        if ($('#tMx').classList.contains('on')) pintarMatriz();
+        if ($('#tMod').classList.contains('on')) pintarModulos();
+    }
+
+    // ---------------- personas ----------------
+    function pintarPersonas() {
+        const q = $('#uQ').value.trim().toLowerCase(), rol = $('#uRol').value, est = $('#uEst').value;
+        const l = D.usuarios.filter(u => (!q || [u.nombre + ' ' + u.apellido, u.userName, u.email].some(x => (x || '').toLowerCase().includes(q)))
+            && (!rol || u.rol === rol) && (!est || String(+u.activo) === est));
+        const conClave = D.modulos.filter(m => m.clave);
+        $('#uGrid').innerHTML = `<button type="button" class="us-nuevo" data-nuevo><span><i class="bi bi-person-plus"></i>Nuevo usuario</span></button>` + l.map(u => {
+            const mis = accesos(u), yo = u.userName.toLowerCase() === D.yo.toLowerCase();
+            return `<article class="us-card ${u.activo ? '' : 'off'}" data-u="${u.codigoUsuario}" tabindex="0">
+                <div class="top"><div class="us-av">${avatar(u)}</div><div style="min-width:0"><h3>${esc(u.nombre)} ${esc(u.apellido)}</h3><div class="sub">@@${esc(u.userName)} · ${esc(u.email)}</div></div></div>
+                <div class="tags">${tagRol(u.rol)}${u.activo ? '' : '<span class="us-tag off"><i class="bi bi-pause-circle"></i>Desactivado</span>'}${yo ? '<span class="us-tag yo">Tú</span>' : ''}</div>
+                <div class="pie"><span>${esSuper(u) ? 'Ve todo' : `${mis.length} de ${D.modulos.length} módulos`}</span>
+                    <span class="us-mods">${conClave.map(m => `<i class="bi ${esc(m.icono || 'bi-square')} ${esSuper(u) || mis.includes(m.id_Modulo) ? 'si' : ''}" title="${esc(m.nombre_Modulo)}"></i>`).join('')}</span></div>
+                <div class="sub" style="margin-top:-6px">${hace(u.ultimaActividad)}</div>
+            </article>`;
+        }).join('') + (l.length ? '' : '<div class="ui-empty" style="grid-column:1/-1"><p>Nadie coincide con esa búsqueda.</p></div>');
+    }
+
+    // ---------------- matriz ----------------
+    function pintarMatriz() {
+        const cats = categorias(), us = D.usuarios.filter(u => u.activo);
+        const mods = cats.flatMap(c => D.modulos.filter(m => (m.categoria || 'Otros') === c));
+        $('#uMx').innerHTML = `<table><thead>
+            <tr><th></th>${cats.map(c => `<th colspan="${D.modulos.filter(m => (m.categoria || 'Otros') === c).length}">${esc(c)}</th>`).join('')}</tr>
+            <tr><th style="text-align:left;left:0;z-index:3">Usuario</th>${mods.map(m => `<th><span class="mh"><i class="bi ${esc(m.icono || 'bi-square')}"></i>${esc(m.nombre_Modulo)}</span></th>`).join('')}</tr></thead>
+            <tbody>${us.map(u => {
+                const mis = accesos(u);
+                return `<tr><th>${esc(u.nombre)} ${esc(u.apellido)}<small>@@${esc(u.userName)} · ${esc(u.rol || '')}</small></th>${mods.map(m => esSuper(u)
+                    ? `<td><button class="us-ck todo" disabled title="Superadministrador: ve todo"><i class="bi bi-check-lg"></i></button></td>`
+                    : `<td><button type="button" class="us-ck ${mis.includes(m.id_Modulo) ? 'si' : ''}" data-mx="${esc(u.userName)}|${m.id_Modulo}" title="${esc(m.nombre_Modulo)}"><i class="bi bi-check-lg"></i></button></td>`).join('')}</tr>`;
+            }).join('')}</tbody></table>` + (us.length < D.usuarios.length ? `<div class="ui-help" style="padding:10px 14px">No se muestran ${D.usuarios.length - us.length} usuario(s) desactivado(s).</div>` : '');
+    }
+
+    // ---------------- módulos ----------------
+    function pintarModulos() {
+        $('#uMods').innerHTML = `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th style="width:44px"></th><th>Módulo</th><th>Grupo</th><th>Qué permite</th><th class="num">Usuarios</th><th style="width:90px"></th></tr></thead><tbody>
+            ${D.modulos.map(m => `<tr><td><i class="bi ${esc(m.icono || 'bi-square')}" style="font-size:18px;color:var(--ev-deep)"></i></td>
+                <td><b>${esc(m.nombre_Modulo)}</b> ${m.clave ? '<i class="bi bi-lock" title="Lo usa el programa" style="color:var(--ev-muted)"></i>' : ''}</td><td>${esc(m.categoria || '—')}</td>
+                <td style="white-space:normal;color:var(--ev-muted)">${esc(m.descripcion || '')}</td><td class="num">${m.usuarios}</td>
+                <td style="text-align:right;white-space:nowrap">${D.esSuper ? `<button class="ui-ibtn" data-med="${m.id_Modulo}" title="Editar"><i class="bi bi-pencil"></i></button>${m.clave ? '' : `<button class="ui-ibtn danger" data-mdel="${m.id_Modulo}" title="Eliminar"><i class="bi bi-trash3"></i></button>`}` : ''}</td></tr>`).join('')}
+            </tbody></table></div>${D.esSuper ? '<button type="button" class="ev-btn ghost sm" id="mNuevo" style="margin-top:12px"><i class="bi bi-plus-lg"></i> Nuevo módulo</button>' : '<div class="ui-help">Solo un Superadministrador puede cambiar los módulos.</div>'}`;
+    }
+    function editarModulo(m) {
+        m ??= { id_Modulo: 0, nombre_Modulo: '', categoria: '', descripcion: '', icono: 'bi-square' };
+        $('#dTit').textContent = m.id_Modulo ? 'Editar módulo' : 'Nuevo módulo'; $('#dSub').textContent = m.clave ? 'Módulo de Eurovip' : 'Módulo creado a mano';
+        $('#dAv').innerHTML = `<i class="bi ${esc(m.icono || 'bi-square')}"></i>`;
+        $('#dCuerpo').innerHTML = `<div class="ui-f"><label>Nombre *</label><input id="mNom" maxlength="200" value="${esc(m.nombre_Modulo)}"></div>
+            <div class="ui-row r2"><div class="ui-f"><label>Grupo</label><input id="mCat" maxlength="200" list="mCats" value="${esc(m.categoria || '')}"><datalist id="mCats">${categorias().map(c => `<option>${esc(c)}</option>`).join('')}</datalist></div>
+            <div class="ui-f"><label>Icono <em>Bootstrap Icons</em></label><input id="mIco" maxlength="40" value="${esc(m.icono || '')}" placeholder="bi-star"></div></div>
+            <div class="ui-f"><label>Qué permite</label><input id="mDes" maxlength="300" value="${esc(m.descripcion || '')}"></div>`;
+        $('#dPie').innerHTML = `<button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button><span style="flex:1"></span><button class="ev-btn" type="button" id="dOk"><i class="bi bi-check2-circle"></i> Guardar</button>`;
+        enlazarCerrar();
+        $('#dOk').onclick = async () => {
+            try { const r = await EV.post('/Usuarios/Modulo', { Id_Modulo: m.id_Modulo, Nombre_Modulo: $('#mNom').value.trim(), Categoria: $('#mCat').value.trim() || null, Descripcion: $('#mDes').value.trim() || null, Icono: $('#mIco').value.trim() || null });
+                  EV.toast(r.mensaje); drawer.cerrar(); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
+        };
+        drawer.abrir();
+    }
+
+    // ---------------- usuario (crear / editar) ----------------
+    function bloqueAccesos(marcados, deshabilitado) {
+        return categorias().map(c => `<div class="us-cat"><h4>${esc(c)}${deshabilitado ? '' : `<button type="button" data-todo="${esc(c)}">Todo / nada</button>`}</h4>
+            ${D.modulos.filter(m => (m.categoria || 'Otros') === c).map(m => `<label class="us-mod" data-cat="${esc(c)}"><i class="bi ${esc(m.icono || 'bi-square')}"></i>
+                <span><b>${esc(m.nombre_Modulo)}</b><small>${esc(m.descripcion || '')}</small></span>
+                <span class="ui-switch"><input type="checkbox" data-mod="${m.id_Modulo}" ${deshabilitado || marcados.includes(m.id_Modulo) ? 'checked' : ''} ${deshabilitado ? 'disabled' : ''}><span class="tr"></span></span></label>`).join('')}</div>`).join('');
+    }
+    const marcados = () => $$('#dCuerpo [data-mod]:checked').map(x => +x.dataset.mod);
+
+    function editarUsuario(u) {
+        const nuevo = !u;
+        u ??= { codigoUsuario: 0, nombre: '', apellido: '', userName: '', email: '', telefono: '', rol: 'Usuario', activo: true };
+        const yo = !nuevo && u.userName.toLowerCase() === D.yo.toLowerCase();
+        const bloqueado = esSuper(u) && !D.esSuper;
+        $('#dTit').textContent = nuevo ? 'Nuevo usuario' : `${u.nombre} ${u.apellido}`;
+        $('#dSub').textContent = nuevo ? 'Crea el acceso y elige qué puede ver' : `@@${u.userName} · ${hace(u.ultimaActividad)}`;
+        $('#dAv').innerHTML = nuevo ? '<i class="bi bi-person-plus"></i>' : avatar(u);
+        const roles = D.roles.filter(r => D.esSuper || r !== SUPER || u.rol === SUPER);
+        $('#dCuerpo').innerHTML = `
+            ${bloqueado ? '<div class="ui-note warn" style="margin-top:0"><i class="bi bi-lock"></i><div>Es Superadministrador: solo otro Superadministrador puede cambiarlo.</div></div>' : ''}
+            <div class="us-dsec"><h3><i class="bi bi-person-vcard"></i> Datos</h3>
+                <div class="ui-row r2"><div class="ui-f"><label>Nombre *</label><input id="fNom" maxlength="50" value="${esc(u.nombre)}"></div>
+                    <div class="ui-f"><label>Apellido *</label><input id="fApe" maxlength="50" value="${esc(u.apellido)}"></div></div>
+                <div class="ui-row r2"><div class="ui-f"><label>Usuario * <em>máx. 15</em></label><input id="fUser" maxlength="15" value="${esc(u.userName)}" autocomplete="off" spellcheck="false"><div class="us-sug" id="fSug"></div></div>
+                    <div class="ui-f"><label>Teléfono</label><input id="fTel" maxlength="15" inputmode="tel" value="${esc(u.telefono || '')}"></div></div>
+                <div class="ui-f"><label>Correo * <em>con este entra a Eurovip</em></label><input id="fMail" type="email" maxlength="50" value="${esc(u.email)}" autocomplete="off"></div>
+                <div class="ui-f"><label>Rol</label><select id="fRol" ${yo && esSuper(u) ? 'disabled' : ''}>${roles.map(r => `<option>${esc(r)}</option>`).join('')}</select></div>
+                <label class="us-mod" style="margin-top:4px"><i class="bi bi-door-open"></i><span><b>Puede entrar a Eurovip</b><small>${yo ? 'No puedes desactivarte a ti misma/o.' : 'Apágalo para bloquear el acceso sin borrar el usuario.'}</small></span>
+                    <span class="ui-switch"><input type="checkbox" id="fAct" ${u.activo ? 'checked' : ''} ${yo ? 'disabled' : ''}><span class="tr"></span></span></label>
+            </div>
+            ${nuevo ? `<div class="us-dsec"><h3><i class="bi bi-key"></i> Contraseña</h3>
+                <div class="ui-opt-list" style="display:grid;gap:8px">
+                    <label class="us-mod"><i class="bi bi-magic"></i><span><b>Crear una segura automáticamente</b><small>Te la mostramos una sola vez para que se la pases.</small></span><span class="ui-switch"><input type="radio" name="fPw" value="auto" checked><span class="tr"></span></span></label>
+                    <label class="us-mod"><i class="bi bi-keyboard"></i><span><b>Escribirla yo</b><small>8+ caracteres con mayúscula, minúscula, número y símbolo.</small></span><span class="ui-switch"><input type="radio" name="fPw" value="manual"><span class="tr"></span></span></label>
+                </div><input id="fPass" type="text" class="ui-input" placeholder="Contraseña" autocomplete="new-password" hidden style="width:100%;margin-top:8px"></div>`
+            : `<div class="us-dsec"><h3><i class="bi bi-key"></i> Contraseña</h3><button type="button" class="ev-btn ghost sm" id="fClave" ${bloqueado ? 'disabled' : ''}><i class="bi bi-arrow-repeat"></i> Crear una contraseña nueva</button>
+                <div class="ui-help">La actual no se puede ver. Se genera una nueva segura y se la pasas al usuario.</div></div>`}
+            <div class="us-dsec"><h3><i class="bi bi-shield-lock"></i> Qué puede ver <span id="fCuenta" style="margin-left:auto;font-size:12px;color:var(--ev-muted)"></span></h3>
+                <div id="fSuperNota" class="ui-note info" style="margin:0 0 8px" hidden><i class="bi bi-stars"></i><div>Superadministrador: ve todo, no hace falta marcar.</div></div>
+                <div class="ui-f" style="margin-bottom:4px"><label>Copiar los accesos de…</label><select id="fCopiar"><option value="">— elige un usuario —</option>${D.usuarios.filter(x => x.codigoUsuario !== u.codigoUsuario && !esSuper(x)).map(x => `<option value="${esc(x.userName)}">${esc(x.nombre)} ${esc(x.apellido)} (@@${esc(x.userName)})</option>`).join('')}</select></div>
+                <div id="fMods"></div>
+            </div>`;
+        $('#fRol').value = u.rol || 'Usuario';
+        const pintarMods = () => {
+            const s = $('#fRol').value === SUPER;
+            const antes = $('#fMods').innerHTML ? marcados() : accesos(u);
+            $('#fMods').innerHTML = bloqueAccesos(antes, s || bloqueado); $('#fSuperNota').hidden = !s; $('#fCopiar').parentElement.hidden = s || bloqueado;
+            contar();
+        };
+        const contar = () => { $('#fCuenta').textContent = $('#fRol').value === SUPER ? 'todo' : `${marcados().length} de ${D.modulos.length}`; };
+        pintarMods();
+        $('#fRol').onchange = pintarMods;
+        $('#fMods').addEventListener('change', contar);
+        $('#fMods').addEventListener('click', e => { const b = e.target.closest('[data-todo]'); if (!b) return;
+            const cajas = $$(`#fMods .us-mod[data-cat="${CSS.escape(b.dataset.todo)}"] input`), todas = cajas.every(c => c.checked); cajas.forEach(c => c.checked = !todas); contar(); });
+        $('#fCopiar').onchange = () => { const o = D.usuarios.find(x => x.userName === $('#fCopiar').value); if (!o) return; const m = accesos(o);
+            $$('#fMods [data-mod]').forEach(c => c.checked = m.includes(+c.dataset.mod)); contar(); EV.toast(`Accesos copiados de ${o.userName}. Recuerda guardar.`, 'info'); };
+        if (nuevo) {
+            $$('input[name=fPw]').forEach(r => r.onchange = () => { $('#fPass').hidden = $('input[name=fPw]:checked').value !== 'manual'; if (!$('#fPass').hidden) $('#fPass').focus(); });
+            const sugerir = EV.debounce(async () => {
+                const n = $('#fNom').value.trim(), a = $('#fApe').value.trim(); if (!n || !a) { $('#fSug').innerHTML = ''; return; }
+                const s = await EV.api(`/Usuarios/Sugerir?nombre=${encodeURIComponent(n)}&apellido=${encodeURIComponent(a)}`).catch(() => []);
+                $('#fSug').innerHTML = s.map(x => `<button type="button" data-sug="${esc(x)}">${esc(x)}</button>`).join('');
+                if (!$('#fUser').value && s[0]) $('#fUser').placeholder = s[0];
+            }, 350);
+            $('#fNom').addEventListener('input', sugerir); $('#fApe').addEventListener('input', sugerir);
+            $('#fSug').onclick = e => { const b = e.target.closest('[data-sug]'); if (b) $('#fUser').value = b.dataset.sug; };
+        } else {
+            $('#fClave').onclick = () => nuevaClave(u);
+        }
+        $('#dPie').innerHTML = `${!nuevo && !yo && !bloqueado ? '<button class="ev-btn ghost" type="button" id="dDel" style="color:#B42318"><i class="bi bi-trash3"></i></button>' : ''}
+            <button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button><span style="flex:1"></span>
+            <button class="ev-btn" type="button" id="dOk" ${bloqueado ? 'disabled' : ''}><i class="bi bi-check2-circle"></i> ${nuevo ? 'Crear usuario' : 'Guardar'}</button>`;
+        enlazarCerrar();
+        $('#dDel')?.addEventListener('click', () => eliminar(u));
+        $('#dOk').onclick = async () => {
+            const b = $('#dOk'); b.disabled = true;
+            try {
+                const dto = { CodigoUsuario: u.codigoUsuario, Nombre: $('#fNom').value.trim(), Apellido: $('#fApe').value.trim(), UserName: $('#fUser').value.trim() || $('#fUser').placeholder,
+                    Email: $('#fMail').value.trim(), Telefono: $('#fTel').value.trim() || null, Rol: $('#fRol').value, Activo: $('#fAct').checked };
+                const mods = $('#fRol').value === SUPER ? [] : marcados();
+                if (nuevo) { dto.Modulos = mods; if ($('input[name=fPw]:checked').value === 'manual') { dto.Password = $('#fPass').value; if (!dto.Password) throw new Error('Escribe la contraseña o elige crearla automáticamente.'); } }
+                const r = await EV.post('/Usuarios/Guardar', dto);
+                if (!nuevo && !bloqueado && $('#fRol').value !== SUPER) await EV.post('/Usuarios/Accesos', { Usuario: dto.UserName, Modulos: mods });
+                EV.toast(r.mensaje); drawer.cerrar(); await cargar();
+                if (r.clave) mostrarClave(dto.UserName, dto.Email, r.clave);
+            } catch (e) { EV.toast(e.message, 'err'); } finally { b.disabled = false; }
+        };
+        drawer.abrir();
+        setTimeout(() => (nuevo ? $('#fNom') : null)?.focus(), 250);
+    }
+
+    async function nuevaClave(u) {
+        if (!await EV.confirmar({ titulo: `¿Crear una contraseña nueva para ${u.userName}?`, texto: 'La contraseña actual deja de funcionar. Te mostraremos la nueva una sola vez.', si: 'Crear contraseña', icono: 'key' })) return;
+        try { const r = await EV.post('/Usuarios/Clave', { CodigoUsuario: u.codigoUsuario }); mostrarClave(u.userName, u.email, r.clave); } catch (e) { EV.toast(e.message, 'err'); }
+    }
+    async function mostrarClave(user, email, clave) {
+        const ok = await EV.confirmar({ titulo: 'Contraseña lista', icono: 'key', si: 'Copiar y cerrar', no: 'Cerrar',
+            texto: `Pásale estos datos a <b>${esc(user)}</b>. Por seguridad no se vuelve a mostrar.<div class="us-clave">${esc(clave)}</div><small>Entra con su correo: <b>${esc(email)}</b></small>` });
+        if (ok) { try { await navigator.clipboard.writeText(`Usuario: ${email}\nContraseña: ${clave}`); EV.toast('Copiado.'); } catch { EV.toast('No se pudo copiar: selecciónala y cópiala a mano.', 'err'); } }
+    }
+    async function eliminar(u) {
+        const ok = await EV.confirmar({ titulo: `¿Borrar a ${u.nombre} ${u.apellido}?`, peligro: true, si: 'Borrar', escribir: u.userName,
+            texto: 'Se borra el usuario y sus accesos. Su historial de cargas y cambios se conserva.<br><b>Si solo quieres que no entre, mejor desactívalo.</b>' });
+        if (!ok) return;
+        try { const r = await EV.post(`/Usuarios/Eliminar?id=${u.codigoUsuario}`, {}); EV.toast(r.mensaje); drawer.cerrar(); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
+    }
+    const enlazarCerrar = () => $$('#uDrawer [data-cerrar]').forEach(b => b.onclick = () => drawer.cerrar());
+
+    // ---------------- eventos ----------------
+    async function iniciar() {
+        try { await cargar(); } catch (e) { $('#uGrid').innerHTML = `<div class="ui-empty"><h3>No se pudo cargar</h3><p>${esc(e.message)}</p></div>`; return; }
+        $('#uNuevo').onclick = () => editarUsuario(null);
+        $('#uQ').addEventListener('input', EV.debounce(pintarPersonas, 200)); $('#uRol').onchange = pintarPersonas; $('#uEst').onchange = pintarPersonas;
+        document.addEventListener('click', async e => {
+            if (e.target.closest('[data-nuevo]')) return editarUsuario(null);
+            const c = e.target.closest('.us-card'); if (c) return editarUsuario(D.usuarios.find(u => u.codigoUsuario === +c.dataset.u));
+            const mx = e.target.closest('[data-mx]');
+            if (mx) {
+                const [user, id] = mx.dataset.mx.split('|'), dar = !mx.classList.contains('si');
+                mx.disabled = true;
+                try {
+                    await EV.post(`/Usuarios/Acceso?usuario=${encodeURIComponent(user)}&idModulo=${id}&acceso=${dar}`, {});
+                    mx.classList.toggle('si', dar);
+                    const k = Object.keys(D.matriz).find(x => x.toLowerCase() === user.toLowerCase()) || user;
+                    D.matriz[k] = dar ? [...(D.matriz[k] || []), +id] : (D.matriz[k] || []).filter(x => x !== +id);
+                    const m = D.modulos.find(x => x.id_Modulo === +id); m.usuarios += dar ? 1 : -1;
+                    EV.toast(`${dar ? 'Acceso dado' : 'Acceso quitado'}: ${user} · ${m.nombre_Modulo}`);
+                    pintarPersonas();
+                } catch (er) { EV.toast(er.message, 'err'); } finally { mx.disabled = false; }
+                return;
+            }
+            const me = e.target.closest('[data-med]'); if (me) return editarModulo(D.modulos.find(m => m.id_Modulo === +me.dataset.med));
+            if (e.target.closest('#mNuevo')) return editarModulo(null);
+            const md = e.target.closest('[data-mdel]');
+            if (md) { const m = D.modulos.find(x => x.id_Modulo === +md.dataset.mdel);
+                if (!await EV.confirmar({ titulo: `¿Borrar el módulo ${m.nombre_Modulo}?`, texto: `Se quita también a los ${m.usuarios} usuario(s) que lo tenían.`, si: 'Borrar', peligro: true })) return;
+                try { const r = await EV.post(`/Usuarios/EliminarModulo?id=${m.id_Modulo}`, {}); EV.toast(r.mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } }
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') drawer.cerrar();
+            if (e.key === 'Enter' && e.target.classList?.contains('us-card')) e.target.click();
+        });
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+})();
+</script>
+}
