@@ -55,6 +55,14 @@
    CAMBIO 23 (13/10/2026)  DETALLE DE HOTEL y PRECIO POR HABITACIÓN de cada salida (+ origen de venta).
    CAMBIO 24 (13/10/2026)  VITRINA WEB DE HOTELES (alojamiento_destino).
    CAMBIO 25 (13/10/2026)  FUNCIONES y PROCEDIMIENTOS de la carga manual (vitrina con o sin vuelo).
+   --- FASE 5: HOME DE LA WEB (INICIO + CARRUSEL) ---
+   CAMBIO 26 (13/10/2026)  INICIO con número propio (id) para que hoteles y ofertas no choquen.
+   CAMBIO 27 (13/10/2026)  HOME_CONTENIDO: sección y posición de cada destino (176 filas).
+   CAMBIO 28 (13/10/2026)  CARRUSEL: slides de la Home web / tablet / móvil (53 filas).
+   CAMBIO 29 (13/10/2026)  CARRUCELDESTINO: precio "desde" de cada slide (36 filas).
+   CAMBIO 30-31 (13/10/2026)  Funciones "más barato por destino" sin vuelo obligatorio.
+   CAMBIO 32 (13/10/2026)  spActualizaInicio corregido (circuitos + conserva el orden).
+   CAMBIO 33 (13/10/2026)  SP de lectura para la web (carrusel activo y destinos).
    BITÁCORA de cambios de datos puntuales (al final).
    ########################################################################################## */
 
@@ -1797,6 +1805,257 @@ GO
 
 
 /* ##########################################################################################
+   FASE 5 — HOME DE LA WEB: INICIO + CARRUSEL  (13/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: organizar todo lo que el cliente ve en la Home de la web de Eurovip.
+     • CARRUSEL = el slider grande de arriba (imágenes web / tablet / móvil, con su orden).
+     • INICIO   = las tarjetas de la Home, agrupadas en secciones (CARIBE, AMÉRICA, HOTEL…).
+   Copiado de ViajeVDT (10.10.10.29, solo lectura), solo idioma ES, todo en el esquema Eurovip.
+
+   CAMBIO 26  inicio: nueva columna "id" (número propio). Antes la clave era id_servicio y un
+              hotel cargado a mano (#1, #2…) podía chocar con el número de una oferta real.
+   CAMBIO 27  home_contenido: recuerda en qué sección y posición va cada destino, para que al
+              refrescar precios desde las ofertas no se pierda el orden (176 filas copiadas).
+   CAMBIO 28  carrusel: los slides (53 filas copiadas: 15 web, 18 tablet, 20 móvil).
+   CAMBIO 29  carrucelDestino: precio "desde" que muestra un slide (36 filas copiadas).
+   CAMBIO 30  fnServicioMinimo: la oferta más barata de un destino. En ViajeVDT exigía vuelo;
+              aquí usa el origen de venta (servicio_origen), así funciona con o sin vuelo.
+   CAMBIO 31  fnServicioMinimoCircuito: igual para circuitos (usa servicio_circuito.origen).
+   CAMBIO 32  spActualizaInicio: pone en la Home la oferta/circuito más barato. Corrige un fallo
+              de ViajeVDT (el bloque de circuitos se ejecutaba SIEMPRE por faltar un ELSE) y
+              conserva lo que el usuario ordenó (estado, sección y posiciones).
+   CAMBIO 33  SP de lectura para la web: sp_ListarCarruselActivos y usp_GetDestinos.
+   ########################################################################################## */
+GO
+
+/* ---------- CAMBIO 26: inicio con identificador propio ---------- */
+-- La clave era id_servicio: un hotel cargado a mano (#1, #2…) chocaba con el número de una oferta real.
+IF COL_LENGTH('Eurovip.inicio', 'id') IS NULL
+BEGIN
+    ALTER TABLE Eurovip.inicio DROP CONSTRAINT PK_Eurovip_inicio;
+    ALTER TABLE Eurovip.inicio ADD id INT IDENTITY(1,1) NOT NULL;
+    ALTER TABLE Eurovip.inicio ADD CONSTRAINT PK_Eurovip_inicio PRIMARY KEY CLUSTERED (id);
+    CREATE INDEX IX_Eurovip_inicio_servicio ON Eurovip.inicio (id_servicio, tipo_servicio);
+END
+GO
+
+/* ---------- CAMBIO 27: home_contenido (qué destino va en qué contenedor y posición) ---------- */
+IF OBJECT_ID('Eurovip.home_contenido') IS NULL
+CREATE TABLE Eurovip.home_contenido (
+    id_home_contenido INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_home_contenido PRIMARY KEY,
+    id_idioma         CHAR(2)      NOT NULL,
+    id_contenedor     INT          NOT NULL,
+    id_campanya       INT          NULL,
+    id_moneda         CHAR(3)      NOT NULL,
+    id_pais_origen    CHAR(2)      NOT NULL,
+    origen            VARCHAR(30)  NOT NULL,
+    id_destino        VARCHAR(MAX) NOT NULL,
+    posicion          INT          NOT NULL,
+    oferta_especial   BIT          NOT NULL CONSTRAINT DF_Eurovip_home_contenido_oe DEFAULT (0)
+);
+GO
+
+/* ---------- CAMBIO 28: carrusel (slider de la Home) ---------- */
+IF OBJECT_ID('Eurovip.carrusel') IS NULL
+CREATE TABLE Eurovip.carrusel (
+    id_carrusel SMALLINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_carrusel PRIMARY KEY,
+    id_idioma   CHAR(2)      NOT NULL,
+    orden       SMALLINT     NOT NULL,
+    orientacion CHAR(2)      NOT NULL,
+    ruta        VARCHAR(100) NOT NULL,
+    activo      BIT          NOT NULL,
+    url         VARCHAR(500) NULL,
+    formato     VARCHAR(50)  NULL          -- 1 = web, 2 = tablet, 3 = móvil
+);
+GO
+
+/* ---------- CAMBIO 29: carrucelDestino (precio "desde" que se muestra en un slide) ---------- */
+IF OBJECT_ID('Eurovip.carrucelDestino') IS NULL
+CREATE TABLE Eurovip.carrucelDestino (
+    id          INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_carrucelDestino PRIMARY KEY,
+    id_carrusel INT          NOT NULL,
+    origen      VARCHAR(50)  NOT NULL,
+    destino     VARCHAR(50)  NOT NULL,
+    precio      MONEY        NOT NULL,
+    id_campanya INT          NOT NULL,
+    regimen     VARCHAR(100) NULL
+);
+GO
+
+/* ---------- CAMBIO 30: fnServicioMinimo (oferta más barata de un destino) — sin vuelo obligatorio ---------- */
+CREATE OR ALTER FUNCTION Eurovip.fnServicioMinimo
+(
+    @tipoServicio VARCHAR(30), @idCampanya SMALLINT, @destino VARCHAR(MAX), @idIdioma CHAR(2),
+    @idMoneda CHAR(3), @origen VARCHAR(30), @idPaisOrigen CHAR(2)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT TOP 1
+        s.id_servicio, s.id_idioma, s.id_tipo_servicio, s.id_campanya, s.id_moneda, so.id_pais_origen, so.origen,
+        a.id_pais, a.id_destino, a.caratula,
+        r.descripcion, d.latitud, d.longitud, Eurovip.fnPrecioWeb(s.id_servicio) AS precioWeb,
+        hc.id_contenedor, cont.nombre AS nombre_contenedor, cont.posicion AS posicion_contenedor,
+        hc.posicion AS posicion_destino
+    FROM Eurovip.servicio s
+        INNER JOIN Eurovip.servicio_detalle sd ON s.id_servicio = sd.id_servicio
+        INNER JOIN Eurovip.alojamiento a ON sd.id_alojamiento = a.id_alojamiento AND sd.id_idioma = a.id_idioma
+        INNER JOIN Eurovip.destino d ON a.id_destino = d.id_destino AND a.id_idioma = d.id_idioma AND a.id_pais = d.id_pais
+        INNER JOIN Eurovip.servicio_origen so ON s.id_servicio = so.id_servicio          -- antes: servicio_itinerario segmento 1 (vuelo)
+        INNER JOIN Eurovip.regimen r ON sd.id_regimen = r.id_regimen AND sd.id_idioma = r.id_idioma
+        LEFT JOIN Eurovip.home_contenido hc
+            ON hc.id_idioma = s.id_idioma AND hc.id_campanya = s.id_campanya AND hc.id_moneda = s.id_moneda
+           AND hc.id_pais_origen = so.id_pais_origen AND hc.origen = so.origen AND hc.id_destino = a.id_destino
+        LEFT JOIN Eurovip.contenedores cont ON cont.id_contenedor = hc.id_contenedor
+    WHERE s.activo = 1
+      AND s.id_tipo_servicio = @tipoServicio
+      AND s.id_campanya = @idCampanya
+      AND a.id_destino = @destino
+      AND s.id_idioma = @idIdioma
+      AND s.id_moneda = @idMoneda
+      AND so.origen = @origen
+      AND so.id_pais_origen = @idPaisOrigen
+      AND sd.desde > GETDATE()
+    ORDER BY Eurovip.fnPrecioWeb(s.id_servicio) ASC
+);
+GO
+
+/* ---------- CAMBIO 31: fnServicioMinimoCircuito — sin vuelo obligatorio ---------- */
+CREATE OR ALTER FUNCTION Eurovip.fnServicioMinimoCircuito
+(
+    @idCampanya SMALLINT, @idIdioma CHAR(2), @idMoneda CHAR(3), @origen VARCHAR(30), @idPaisOrigen CHAR(2), @idPaisDestino CHAR(2)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT TOP 1
+        s.id_servicio, s.id_idioma, s.id_tipo_servicio, s.id_campanya, s.id_moneda, sc.id_pais_origen, sc.origen,
+        cd.id_pais, cd.id_pais AS paisDestino, c.caratula, sc.nombre_circuito, NULL AS latitud, NULL AS longitud,
+        Eurovip.fnPrecioWeb(s.id_servicio) AS precioWeb, NULL AS id_contenedor, NULL AS contenedor,
+        NULL AS posicion_contenedor, NULL AS posicion_destino
+    FROM Eurovip.servicio s
+        INNER JOIN Eurovip.servicio_circuito sc ON s.id_servicio = sc.id_servicio       -- origen guardado en servicio_circuito
+        INNER JOIN Eurovip.circuito_destino cd ON sc.nombre_circuito = cd.nombre_circuito AND sc.id_idoma = cd.id_idioma
+        INNER JOIN Eurovip.circuito c ON c.nombre_circuito = sc.nombre_circuito AND c.id_idioma = sc.id_idoma
+    WHERE s.activo = 1
+      AND s.id_tipo_servicio = 'CIRCUITO'
+      AND s.id_campanya = @idCampanya
+      AND s.id_idioma = @idIdioma
+      AND s.id_moneda = @idMoneda
+      AND sc.origen = @origen
+      AND sc.id_pais_origen = @idPaisOrigen
+      AND cd.id_pais = @idPaisDestino
+      AND sc.desde > GETDATE()
+    GROUP BY s.id_servicio, s.id_idioma, s.id_tipo_servicio, s.id_campanya, s.id_moneda, sc.id_pais_origen, sc.origen,
+             sc.nombre_circuito, cd.id_pais, Eurovip.fnPrecioWeb(s.id_servicio), c.caratula
+    ORDER BY Eurovip.fnPrecioWeb(s.id_servicio) ASC
+);
+GO
+
+/* ---------- CAMBIO 32: spActualizaInicio — pone en la Home la oferta/circuito más barato ----------
+   Diferencias con ViajeVDT:
+     • Corrige que el bloque de CIRCUITO se ejecutaba SIEMPRE (faltaba el ELSE).
+     • Conserva lo que el usuario ordenó en el editor (estado, contenedor y posiciones) si la fila ya existía.
+     • Todo en una transacción. Sin combinados (Eurovip no los tiene). */
+CREATE OR ALTER PROCEDURE Eurovip.spActualizaInicio
+    @tipoServicio VARCHAR(30), @idCampanya SMALLINT, @destino VARCHAR(MAX), @idIdioma CHAR(2),
+    @idMoneda CHAR(3), @origen VARCHAR(30), @idPaisOrigen CHAR(2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRAN;
+
+    DECLARE @prev TABLE (estado BIT, id_contenedor INT, contenedor VARCHAR(50), posicion_contenedor INT, posicion_destino INT);
+    INSERT INTO @prev
+    SELECT TOP 1 estado, id_contenedor, contenedor, posicion_contenedor, posicion_destino
+    FROM Eurovip.inicio
+    WHERE tipo_servicio = @tipoServicio AND id_campanya = @idCampanya AND id_destino = @destino AND id_idioma = @idIdioma
+      AND id_moneda = @idMoneda AND origen = @origen AND id_pais_origen = @idPaisOrigen;
+
+    DELETE FROM Eurovip.inicio
+    WHERE tipo_servicio = @tipoServicio AND id_campanya = @idCampanya AND id_destino = @destino AND id_idioma = @idIdioma
+      AND id_moneda = @idMoneda AND origen = @origen AND id_pais_origen = @idPaisOrigen;
+
+    IF @tipoServicio = 'CIRCUITO'
+        INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino,
+               id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor,
+               posicion_contenedor, posicion_destino, estado, noches, notas)
+        SELECT id_servicio, id_idioma, id_tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_pais,
+               paisDestino, caratula, nombre_circuito, latitud, longitud, precioWeb, id_contenedor, contenedor,
+               posicion_contenedor, posicion_destino, 1, NULL, NULL
+        FROM Eurovip.fnServicioMinimoCircuito(@idCampanya, @idIdioma, @idMoneda, @origen, @idPaisOrigen, @destino);
+    ELSE
+        INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino,
+               id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor,
+               posicion_contenedor, posicion_destino, estado, noches, notas)
+        SELECT id_servicio, id_idioma, id_tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_pais,
+               id_destino, caratula, descripcion, latitud, longitud, precioWeb, id_contenedor, nombre_contenedor,
+               posicion_contenedor, posicion_destino, 1, NULL, NULL
+        FROM Eurovip.fnServicioMinimo(@tipoServicio, @idCampanya, @destino, @idIdioma, @idMoneda, @origen, @idPaisOrigen);
+
+    -- restaurar lo que el usuario había organizado
+    UPDATE i SET i.estado = p.estado,
+                 i.id_contenedor = ISNULL(p.id_contenedor, i.id_contenedor), i.contenedor = ISNULL(p.contenedor, i.contenedor),
+                 i.posicion_contenedor = ISNULL(p.posicion_contenedor, i.posicion_contenedor),
+                 i.posicion_destino = ISNULL(p.posicion_destino, i.posicion_destino)
+    FROM Eurovip.inicio i CROSS JOIN @prev p
+    WHERE i.tipo_servicio = @tipoServicio AND i.id_campanya = @idCampanya AND i.id_destino = @destino AND i.id_idioma = @idIdioma
+      AND i.id_moneda = @idMoneda AND i.origen = @origen AND i.id_pais_origen = @idPaisOrigen;
+
+    COMMIT;
+END
+GO
+
+/* ---------- CAMBIO 33: SP de lectura para la web (copiados de ViajeVDT) ---------- */
+CREATE OR ALTER PROCEDURE Eurovip.sp_ListarCarruselActivos
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT c.id_carrusel, c.id_idioma, c.orden, c.orientacion, c.ruta, c.url, c.formato,
+           cd.regimen, cd.origen, cd.destino, cd.precio, cd.id_campanya,
+           i.contenedor, i.id_contenedor
+    FROM Eurovip.carrusel c
+        LEFT JOIN Eurovip.carrucelDestino cd ON cd.id_carrusel = c.id_carrusel
+        LEFT JOIN Eurovip.inicio i
+            ON i.id_campanya = cd.id_campanya AND i.id_idioma = c.id_idioma AND i.origen = cd.origen AND i.id_destino = cd.destino
+    WHERE c.activo = 1
+    ORDER BY c.formato, c.orden;
+END
+GO
+
+CREATE OR ALTER PROCEDURE Eurovip.usp_GetDestinos
+    @Campanya INT, @Idioma VARCHAR(50), @FiltrarCampanya BIT = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @FiltrarCampanya = 1
+    BEGIN
+        WITH CTE_MasEconomico AS (
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY id_paisDestino ORDER BY precioWeb ASC) AS rn
+            FROM Eurovip.inicio WHERE id_campanya = @Campanya AND id_idioma = @Idioma
+        )
+        SELECT id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino, id_destino,
+               caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor, posicion_contenedor,
+               posicion_destino, estado, noches, notas
+        FROM Eurovip.inicio WHERE id_campanya <> @Campanya AND id_idioma = @Idioma
+        UNION ALL
+        SELECT id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino, id_destino,
+               caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor, posicion_contenedor,
+               posicion_destino, estado, noches, notas
+        FROM CTE_MasEconomico WHERE rn = 1;
+    END
+    ELSE
+        SELECT id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino, id_destino,
+               caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor, posicion_contenedor,
+               posicion_destino, estado, noches, notas
+        FROM Eurovip.inicio WHERE id_idioma = @Idioma;
+END
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -1857,6 +2116,14 @@ GO
                (#44 a #62) se ELIMINARON desde la pantalla: servicio y sus tablas hijas quedaron
                vacías y la vitrina alojamiento_destino volvió a 0. Quedan como evidencia
                Log_Cargas #8 y #9 y las filas de auditoría "Oferta_*".
+
+   13/10/2026  Clásica de ofertas y de circuitos rehechas como BackTiTan actual (solo INICIO,
+               VUELOS y CARGAR EXCEL). Prueba de la Clásica de ofertas: 5 ofertas (#63 a #67)
+               cargadas desde la plantilla y ELIMINADAS después. Queda Log_Cargas #10.
+
+   13/10/2026  FASE 5 — copia masiva desde ViajeVDT (solo lectura, solo ES): carrusel 53 ·
+               carrucelDestino 36 · home_contenido 176 filas (se conservaron los números de
+               carrusel para que los precios de cada slide sigan enlazados).
 
    PENDIENTE   Copiar los demás usuarios, módulos y permisos (rol, UsuarioAcceso,
                UsuarioModulos). Se hará cuando se confirme desde qué base copiarlos.
