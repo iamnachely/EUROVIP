@@ -1,0 +1,512 @@
+@{
+    ViewData["Title"] = "Consultar ofertas";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .co-hero { position: relative; overflow: hidden; border-radius: 30px; padding: 26px 30px 22px; background: var(--ev-ink); color: #fff; isolation: isolate; }
+    .co-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(520px 260px at 95% -10%, rgba(43,212,196,.5), transparent 60%), radial-gradient(380px 200px at 0% 130%, rgba(179,255,243,.22), transparent 60%); }
+    .co-hero h1 { margin: 0; font-size: clamp(26px, 3vw, 34px); font-weight: 800; letter-spacing: -1.2px; }
+    .co-hero p { margin: 4px 0 16px; color: rgba(232,255,251,.7); font-weight: 500; }
+    .co-busca { display: flex; gap: 10px; align-items: center; padding: 8px 8px 8px 18px; border-radius: 20px; background: rgba(255,255,255,.97); box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); }
+    .co-busca i.bi-search { color: var(--ev-deep); font-size: 18px; }
+    .co-busca input { flex: 1; border: 0; outline: 0; background: transparent; font: 600 16px var(--ev-font); color: #0B1215; padding: 10px 0; min-width: 0; }
+    .co-busca .ev-btn { flex-shrink: 0; }
+    .co-res { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .co-res div { padding: 9px 14px; border-radius: 14px; background: rgba(255,255,255,.07); border: 1px solid rgba(116,242,230,.18); }
+    .co-res b { display: block; font-size: 18px; font-weight: 800; line-height: 1.15; }
+    .co-res small { color: rgba(232,255,251,.6); font-weight: 600; font-size: 11.5px; }
+
+    .co-rapidos { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0 10px; }
+    .co-seg { display: flex; gap: 3px; padding: 4px; border-radius: 14px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
+    .co-seg button { border: 0; background: transparent; padding: 7px 12px; border-radius: 10px; font: 700 13px var(--ev-font); color: var(--ev-muted); cursor: pointer; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+    .co-seg button.on { background: var(--ev-ink); color: var(--ev-aqua); }
+    .co-rapidos .sp { flex: 1; }
+    .co-mas { display: none; margin-bottom: 14px; padding: 18px 20px; border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line); animation: uiFade .25s var(--ev-ease); }
+    .co-mas.on { display: block; }
+    .co-mas .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 14px; }
+    .co-mas .ui-f { margin: 0; }
+    .co-mas .grupo { grid-column: 1 / -1; font: 800 11px var(--ev-font); letter-spacing: .08em; text-transform: uppercase; color: var(--ev-muted); margin-top: 6px; display: flex; gap: 8px; align-items: center; }
+    .co-mas .grupo::after { content: ""; flex: 1; height: 1px; background: var(--ev-line); }
+    .co-rango { display: flex; gap: 6px; }
+    .co-rango input { min-width: 0; }
+    .co-dias { display: flex; gap: 4px; flex-wrap: wrap; }
+    .co-dias .ui-pick { padding: 6px 10px; }
+    .co-camps { max-height: 150px; overflow: auto; border: 1px solid var(--ev-line); border-radius: 14px; padding: 6px; background: var(--ev-surface-2); }
+    .co-camps label { display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 9px; font-weight: 600; font-size: 13px; cursor: pointer; }
+    .co-camps label:hover { background: var(--ev-surface); }
+    .co-camps input { width: 16px; height: 16px; min-width: 0; accent-color: var(--ev-ink); }
+    .co-mas .pie { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+    .co-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; min-height: 0; }
+    .co-pills span { display: inline-flex; gap: 6px; align-items: center; padding: 5px 6px 5px 11px; border-radius: 99px; background: var(--ev-ink); color: #fff; font: 700 12px var(--ev-font); }
+    .co-pills span b { color: var(--ev-aqua); font-weight: 800; }
+    .co-pills button { border: 0; width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,.15); color: #fff; cursor: pointer; display: grid; place-items: center; font-size: 11px; }
+    .co-pills .limpiar { background: transparent; color: var(--ev-deep); border: 1px dashed var(--ev-line); padding: 5px 11px; }
+
+    .co-tabla td { vertical-align: middle; }
+    .co-tabla tr.inactiva td { opacity: .55; }
+    .co-tabla tr.sel td { background: #ECFEFB; }
+    .co-chk { width: 18px; height: 18px; min-width: 0 !important; accent-color: var(--ev-ink); cursor: pointer; }
+    .co-tipo { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--ev-mint); font-size: 15px; }
+    .co-tipo.c { background: var(--ev-ink); color: var(--ev-aqua); }
+    .co-dest b { display: block; font-size: 13.5px; }
+    .co-dest small, .co-sub { color: var(--ev-muted); font-weight: 600; font-size: 12px; display: block; }
+    .co-precio { text-align: right; white-space: nowrap; }
+    .co-precio b { font-size: 15px; }
+    .co-precio small { display: block; color: var(--ev-muted); font-weight: 600; font-size: 11.5px; }
+    .co-vuelo { font: 800 11px var(--ev-font); padding: 4px 8px; border-radius: 8px; white-space: nowrap; }
+    .co-vuelo.si { background: #E0F2FE; color: #075985; }
+    .co-vuelo.no { background: var(--ev-surface-2); color: var(--ev-muted); }
+    .co-pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+    .co-pager small { color: var(--ev-muted); font-weight: 600; }
+    .co-pages { display: flex; gap: 6px; }
+    .co-pages button { min-width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--ev-line); background: var(--ev-surface); font: 700 13px var(--ev-font); color: var(--ev-text); cursor: pointer; }
+    .co-pages button.on { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+    .co-pages button:disabled { opacity: .4; cursor: default; }
+
+    .co-bulk { position: sticky; bottom: 14px; z-index: 30; margin-top: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-radius: 20px; background: var(--ev-ink); color: #fff; box-shadow: var(--ev-shadow-lg); animation: uiFade .3s var(--ev-ease); }
+    .co-bulk .cnt b { color: var(--ev-aqua); font-size: 16px; }
+    .co-bulk .todo { border: 0; background: transparent; color: var(--ev-aqua); font: 700 12.5px var(--ev-font); text-decoration: underline; cursor: pointer; }
+    .co-bulk .sp { flex: 1; }
+    .co-bulk .ev-btn.light { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(116,242,230,.25); }
+
+    .co-det dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 14px; }
+    .co-det dl div { padding: 12px 14px; border-radius: 14px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); min-width: 0; }
+    .co-det dt { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--ev-muted); font-weight: 700; }
+    .co-det dd { margin: 4px 0 0; font-weight: 800; font-size: 14px; overflow-wrap: anywhere; }
+    .co-precio-vivo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 14px 16px; border-radius: 16px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); font-weight: 700; margin-bottom: 16px; }
+    .co-precio-vivo span { padding: 5px 10px; border-radius: 10px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
+    .co-precio-vivo .eq { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+    .co-fechas { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .co-fechas span { font: 700 12px var(--ev-font); padding: 5px 10px; border-radius: 10px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    @@media (max-width: 1200px) { .co-mas .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .co-det dl { grid-template-columns: 1fr 1fr; } }
+    @@media (max-width: 640px) { .co-mas .grid { grid-template-columns: 1fr; } }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="co-hero ev-rise">
+    <h1><i class="bi bi-search-heart" style="color:var(--ev-aqua)"></i> Consultar ofertas</h1>
+    <p>Busca cualquier oferta de hotel o salida de circuito. Marca las que quieras y edítalas, actívalas, duplícalas o ponles tasas de una vez.</p>
+    <form class="co-busca" id="coForm" autocomplete="off">
+        <i class="bi bi-search"></i>
+        <input id="coQ" type="search" placeholder="Destino, hotel, circuito, código o nº de oferta…" aria-label="Buscar">
+        <button type="button" class="ev-btn ghost sm" id="coMasBtn"><i class="bi bi-sliders"></i> Más filtros <span class="ui-chip" id="coNFil" style="padding:1px 7px;font-size:11px" hidden>0</span></button>
+        <button type="submit" class="ev-btn"><i class="bi bi-search"></i> Buscar</button>
+    </form>
+    <div class="co-res" id="coRes"></div>
+</section>
+
+<div class="co-rapidos">
+    <div class="co-seg" data-f="Tipo"><button type="button" class="on" data-v="">Todo</button><button type="button" data-v="OFERTA"><i class="bi bi-building"></i> Ofertas</button><button type="button" data-v="CIRCUITO"><i class="bi bi-signpost-split"></i> Circuitos</button></div>
+    <div class="co-seg" data-f="Activo"><button type="button" class="on" data-v="true">Activas</button><button type="button" data-v="false">Inactivas</button><button type="button" data-v="">Todas</button></div>
+    <div class="co-seg" data-f="ConVuelo"><button type="button" class="on" data-v="">Con y sin vuelo</button><button type="button" data-v="true"><i class="bi bi-airplane"></i> Con vuelo</button><button type="button" data-v="false">Sin vuelo</button></div>
+    <label class="ui-switch"><input type="checkbox" id="coPasadas"><span class="tr"></span> Incluir pasadas</label>
+    <span class="sp"></span>
+    <select class="ui-select" id="coOrden" title="Ordenar"><option value="inicio">Por fecha de entrada</option><option value="precio">Precio más bajo</option><option value="destino">Destino A–Z</option><option value="recientes">Recién cargadas</option></select>
+    <select class="ui-select" id="coTam" title="Filas por página"><option>50</option><option>100</option><option>200</option></select>
+    <button type="button" class="ev-btn ghost sm" id="coExportar"><i class="bi bi-filetype-csv"></i> Exportar</button>
+</div>
+
+<!-- MÁS FILTROS -->
+<section class="co-mas" id="coMas" aria-label="Más filtros">
+    <div class="grid">
+        <div class="grupo"><i class="bi bi-geo-alt"></i> Dónde</div>
+        <div class="ui-f"><label>Destino</label><select id="fDestino"><option value="">Cualquiera</option></select></div>
+        <div class="ui-f"><label>País de destino</label><select id="fPaisDestino"><option value="">Cualquiera</option></select></div>
+        <div class="ui-f"><label>País de origen</label><select id="fPaisOrigen"><option value="">Cualquiera</option></select></div>
+        <div class="ui-f"><label>Ciudad de origen</label><input id="fOrigen" placeholder="Madrid…"></div>
+
+        <div class="grupo"><i class="bi bi-calendar3"></i> Cuándo</div>
+        <div class="ui-f"><label>Entrada entre</label><div class="co-rango"><input type="date" id="fIniD"><input type="date" id="fIniH"></div></div>
+        <div class="ui-f"><label>Mes de entrada</label><select id="fMes"><option value="">Cualquiera</option></select></div>
+        <div class="ui-f"><label>Noches</label><input type="number" id="fNoches" min="1" max="60" placeholder="Cualquiera"></div>
+        <div class="ui-f"><label>Día de entrada</label><div class="co-dias" id="fDias">
+            @foreach (var (d, i) in new[] { ("L", 1), ("M", 2), ("X", 3), ("J", 4), ("V", 5), ("S", 6), ("D", 0) }) { <button type="button" class="ui-pick" data-d="@i">@d</button> }
+        </div></div>
+
+        <div class="grupo"><i class="bi bi-tags"></i> Qué</div>
+        <div class="ui-f"><label>Hotel</label><input id="fHotel" placeholder="Busca el hotel…"></div>
+        <div class="ui-f"><label>Régimen</label><select id="fRegimen"><option value="">Cualquiera</option></select></div>
+        <div class="ui-f"><label>Proveedor</label><input id="fProveedor" placeholder="Busca el proveedor…"></div>
+        <div class="ui-f"><label>Código de carga</label><input id="fCodigo" maxlength="30"></div>
+        <div class="ui-f" style="grid-column:span 2"><label>Campañas</label><div class="co-camps" id="fCamps"></div></div>
+        <div class="ui-f"><label>Moneda</label><select id="fMoneda"><option value="">Cualquiera</option></select></div>
+        <div class="ui-f"><label>Nº de oferta</label><input id="fId" type="number" min="1"></div>
+
+        <div class="grupo"><i class="bi bi-cash-coin"></i> Precio y carga</div>
+        <div class="ui-f"><label>Precio base entre</label><div class="co-rango"><input type="number" id="fPD" placeholder="desde" min="0"><input type="number" id="fPH" placeholder="hasta" min="0"></div></div>
+        <div class="ui-f"><label>Descuento % entre</label><div class="co-rango"><input type="number" id="fDD" placeholder="desde" min="0" step="0.5"><input type="number" id="fDH" placeholder="hasta" min="0" step="0.5"></div></div>
+        <div class="ui-f"><label>Cargada entre</label><div class="co-rango"><input type="date" id="fApD"><input type="date" id="fApH"></div></div>
+        <div class="ui-f"><label>Cargada por</label><select id="fUsuario"><option value="">Cualquiera</option></select></div>
+    </div>
+    <div class="pie"><button type="button" class="ev-btn ghost" id="coLimpiar"><i class="bi bi-eraser"></i> Limpiar filtros</button><button type="button" class="ev-btn" id="coAplicar"><i class="bi bi-check2"></i> Aplicar filtros</button></div>
+</section>
+
+<div class="co-pills" id="coPills"></div>
+<div id="coLista"></div>
+<div class="co-pager" id="coPager" hidden><small id="coRango"></small><div class="co-pages" id="coPages"></div></div>
+
+<div class="co-bulk" id="coBulk" hidden>
+    <span class="cnt"><b id="bN">0</b> seleccionadas</span>
+    <button type="button" class="todo" id="bTodo" hidden></button>
+    <span class="sp"></span>
+    <button type="button" class="ev-btn aqua sm" data-acc="editar"><i class="bi bi-pencil-square"></i> Editar</button>
+    <button type="button" class="ev-btn light sm" data-acc="activar"><i class="bi bi-check-circle"></i> Activar</button>
+    <button type="button" class="ev-btn light sm" data-acc="desactivar"><i class="bi bi-dash-circle"></i> Desactivar</button>
+    <button type="button" class="ev-btn light sm" data-acc="duplicar"><i class="bi bi-copy"></i> Duplicar</button>
+    <button type="button" class="ev-btn light sm" data-acc="tasa"><i class="bi bi-receipt"></i> Tasas</button>
+    <button type="button" class="ev-btn light sm" data-acc="limpiar"><i class="bi bi-x-lg"></i></button>
+</div>
+
+<!-- PANEL GENÉRICO -->
+<aside class="ui-drawer" id="coDrawer" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px" id="dIco"><i class="bi bi-search"></i></div>
+        <div style="min-width:0"><h2 id="dTitulo"></h2><small id="dSub"></small></div>
+        <button class="ui-ibtn x" type="button" data-cerrar aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="dCuerpo"></div>
+    <div class="ui-df" id="dPie"></div>
+</aside>
+
+<form id="coExpForm" method="post" action="/ConsultarOferta/Exportar" hidden>@Html.AntiForgeryToken()<input type="hidden" name="filtro" id="coExpFiltro"></form>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script>
+const CO = (() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const sel = new Set();
+    let cat, filas = [], ultimo = null, pagina = 1, total = 0;
+    const drawer = EV.drawer($('#coDrawer'));
+    const rapido = { Tipo: '', Activo: 'true', ConVuelo: '' };
+
+    // ---------------- filtro ----------------
+    function filtro() {
+        const n = id => { const v = $(id).value; return v === '' ? null : +v; };
+        const s = id => $(id).value.trim() || null;
+        return {
+            Q: $('#coQ').value.trim() || null, Id_Servicio: n('#fId'), Tipo: rapido.Tipo || null, Moneda: s('#fMoneda'),
+            Campanyas: $$('#fCamps input:checked').map(c => +c.value), Proveedor: $('#fProveedor').dataset.valor || null,
+            PaisOrigen: s('#fPaisOrigen'), Origen: s('#fOrigen'), PaisDestino: s('#fPaisDestino'), Destino: s('#fDestino'),
+            InicioDesde: s('#fIniD'), InicioHasta: s('#fIniH'), AperturaDesde: s('#fApD'), AperturaHasta: s('#fApH'), Usuario: s('#fUsuario'),
+            PrecioDesde: n('#fPD'), PrecioHasta: n('#fPH'), DescuentoDesde: n('#fDD'), DescuentoHasta: n('#fDH'),
+            Id_Alojamiento: $('#fHotel').dataset.valor ? +$('#fHotel').dataset.valor : null, Noches: n('#fNoches'),
+            Activo: rapido.Activo === '' ? null : rapido.Activo === 'true', Codigo: s('#fCodigo'), Regimen: s('#fRegimen'),
+            Mes: n('#fMes'), Dias: $$('#fDias .ui-pick.on').map(b => +b.dataset.d), ConVuelo: rapido.ConVuelo === '' ? null : rapido.ConVuelo === 'true',
+            Pasadas: $('#coPasadas').checked, Orden: $('#coOrden').value, Pagina: pagina, Tam: +$('#coTam').value
+        };
+    }
+
+    // etiquetas de los filtros aplicados (cada una se quita con un clic)
+    function pintarPills() {
+        const p = [];
+        const add = (t, v, quitar) => p.push({ t, v, quitar });
+        const txt = id => $(id).selectedOptions?.[0]?.text;
+        if ($('#fId').value) add('Nº', $('#fId').value, () => $('#fId').value = '');
+        if ($('#fDestino').value) add('Destino', $('#fDestino').value, () => $('#fDestino').value = '');
+        if ($('#fPaisDestino').value) add('País destino', txt('#fPaisDestino'), () => $('#fPaisDestino').value = '');
+        if ($('#fPaisOrigen').value) add('País origen', txt('#fPaisOrigen'), () => $('#fPaisOrigen').value = '');
+        if ($('#fOrigen').value.trim()) add('Origen', $('#fOrigen').value, () => $('#fOrigen').value = '');
+        if ($('#fIniD').value || $('#fIniH').value) add('Entrada', `${$('#fIniD').value ? EV.fecha($('#fIniD').value) : '…'} → ${$('#fIniH').value ? EV.fecha($('#fIniH').value) : '…'}`, () => { $('#fIniD').value = ''; $('#fIniH').value = ''; });
+        if ($('#fMes').value) add('Mes', MESES[+$('#fMes').value - 1], () => $('#fMes').value = '');
+        if ($('#fNoches').value) add('Noches', $('#fNoches').value, () => $('#fNoches').value = '');
+        const dias = $$('#fDias .ui-pick.on'); if (dias.length) add('Entra', dias.map(b => DIAS[+b.dataset.d].slice(0, 3)).join(', '), () => dias.forEach(b => b.classList.remove('on')));
+        if ($('#fHotel').dataset.valor) add('Hotel', $('#fHotel').value, () => { $('#fHotel').value = ''; $('#fHotel').dataset.valor = ''; });
+        if ($('#fRegimen').value) add('Régimen', $('#fRegimen').value, () => $('#fRegimen').value = '');
+        if ($('#fProveedor').dataset.valor) add('Proveedor', $('#fProveedor').value, () => { $('#fProveedor').value = ''; $('#fProveedor').dataset.valor = ''; });
+        if ($('#fCodigo').value.trim()) add('Código', $('#fCodigo').value, () => $('#fCodigo').value = '');
+        const camps = $$('#fCamps input:checked'); if (camps.length) add('Campaña', camps.length > 2 ? `${camps.length} campañas` : camps.map(c => c.dataset.t).join(', '), () => camps.forEach(c => c.checked = false));
+        if ($('#fMoneda').value) add('Moneda', $('#fMoneda').value, () => $('#fMoneda').value = '');
+        if ($('#fPD').value || $('#fPH').value) add('Precio base', `${$('#fPD').value || '0'} – ${$('#fPH').value || '∞'}`, () => { $('#fPD').value = ''; $('#fPH').value = ''; });
+        if ($('#fDD').value || $('#fDH').value) add('Descuento', `${$('#fDD').value || '0'}% – ${$('#fDH').value || '100'}%`, () => { $('#fDD').value = ''; $('#fDH').value = ''; });
+        if ($('#fApD').value || $('#fApH').value) add('Cargada', `${$('#fApD').value ? EV.fecha($('#fApD').value) : '…'} → ${$('#fApH').value ? EV.fecha($('#fApH').value) : '…'}`, () => { $('#fApD').value = ''; $('#fApH').value = ''; });
+        if ($('#fUsuario').value) add('Por', $('#fUsuario').value, () => $('#fUsuario').value = '');
+        CO._quitar = p.map(x => x.quitar);
+        $('#coPills').innerHTML = p.map((x, i) => `<span>${esc(x.t)}: <b>${esc(x.v)}</b><button type="button" data-qp="${i}" aria-label="Quitar filtro ${esc(x.t)}">✕</button></span>`).join('') + (p.length ? '<button type="button" class="limpiar" id="coLimpiar2"><i class="bi bi-eraser"></i> Limpiar todo</button>' : '');
+        $('#coNFil').hidden = !p.length; $('#coNFil').textContent = p.length;
+        try { localStorage.setItem('ev-consulta', JSON.stringify(filtro())); } catch { }
+    }
+
+    // ---------------- buscar y pintar ----------------
+    async function buscar(irPag) {
+        if (irPag) pagina = irPag; else pagina = 1;
+        pintarPills();
+        $('#coLista').innerHTML = '<div class="ui-skel" style="height:320px"></div>';
+        try {
+            const f = filtro(); ultimo = f;
+            const d = await EV.post('/ConsultarOferta/Buscar', f);
+            filas = d.filas; total = d.resumen.total;
+            pintarResumen(d.resumen); pintar(d);
+        } catch (e) { $('#coLista').innerHTML = `<div class="ui-empty"><h3>No se pudo buscar</h3><p>${esc(e.message)}</p></div>`; }
+    }
+
+    function pintarResumen(r) {
+        const rango = r.precioMin != null ? (r.precioMin === r.precioMax ? EV.fmt(r.precioMin) + ' €' : `${EV.fmt(r.precioMin)} – ${EV.fmt(r.precioMax)} €`) : '—';
+        const fechas = r.primeraEntrada ? `${EV.fecha(r.primeraEntrada.slice(0, 10))} → ${EV.fecha(r.ultimaEntrada.slice(0, 10))}` : '—';
+        $('#coRes').innerHTML = [[EV.fmt(r.total), 'resultados'], [EV.fmt(r.ofertas), 'ofertas de hotel'], [EV.fmt(r.circuitos), 'salidas de circuito'], [EV.fmt(r.activas), 'activas'], [EV.fmt(r.conVuelo), 'con vuelo'], [rango, 'precio web'], [fechas, 'entradas']]
+            .map(([b, s]) => `<div><b>${b}</b><small>${s}</small></div>`).join('');
+    }
+
+    function pintar(d) {
+        if (!d.filas.length) {
+            $('#coLista').innerHTML = `<div class="ui-empty"><i class="bi bi-search big"></i><h3>No hay resultados</h3><p>Prueba quitando algún filtro${$('#coPasadas').checked ? '' : ' o activa "Incluir pasadas"'}.</p></div>`;
+            $('#coPager').hidden = true; barra(); return;
+        }
+        $('#coLista').innerHTML = `<div class="ui-table-wrap"><table class="ui-table co-tabla"><thead><tr>
+            <th style="width:40px"><input type="checkbox" class="co-chk" id="selPag" title="Seleccionar esta página"></th><th style="width:44px"></th><th>Destino</th><th>Régimen / habitación</th><th>Entrada → salida</th><th>Origen</th><th>Campaña</th><th>Vuelo</th><th class="num">Precio</th><th style="width:44px"></th></tr></thead><tbody>
+            ${d.filas.map(x => `<tr class="${x.activo ? '' : 'inactiva'} ${sel.has(x.id_Servicio) ? 'sel' : ''}" data-id="${x.id_Servicio}">
+                <td><input type="checkbox" class="co-chk" data-sel="${x.id_Servicio}" ${sel.has(x.id_Servicio) ? 'checked' : ''} aria-label="Seleccionar ${x.id_Servicio}"></td>
+                <td><span class="co-tipo ${x.id_Tipo_Servicio === 'CIRCUITO' ? 'c' : ''}" title="${x.id_Tipo_Servicio === 'CIRCUITO' ? 'Circuito' : 'Oferta de hotel'}"><i class="bi ${x.id_Tipo_Servicio === 'CIRCUITO' ? 'bi-signpost-split' : 'bi-building'}"></i></span></td>
+                <td class="co-dest"><b>${esc(x.id_Tipo_Servicio === 'CIRCUITO' ? x.nombre_Circuito : x.nombreAlojamiento || x.destino)}</b><small>${esc(x.id_Tipo_Servicio === 'CIRCUITO' ? (x.id_Pais_Destino || '') : x.destino || '')} · #${x.id_Servicio}${x.activo ? '' : ' · inactiva'}</small></td>
+                <td>${esc(x.regimen || '—')}<span class="co-sub">${esc(x.habitacion || '')}</span></td>
+                <td style="white-space:nowrap"><b>${x.inicio ? EV.fechaCorta(x.inicio.slice(0, 10)) : '—'}</b><span class="co-sub">${x.regreso ? 'hasta ' + EV.fecha(x.regreso.slice(0, 10)) : ''}${x.noches ? ` · ${x.noches} n` : ''}</span></td>
+                <td>${esc(x.origen || '—')}</td>
+                <td>${esc(x.nombreCampanya || x.id_Campanya)}${x.descuento ? `<span class="co-sub">-${EV.fmt(x.descuento, 1)}%</span>` : ''}</td>
+                <td>${x.conVuelo ? `<span class="co-vuelo si" title="${esc(x.nombreAerolinea || '')}"><i class="bi bi-airplane"></i> ${esc(x.codigoAerolinea || '')} ${esc(x.vuelo || '')}</span>` : '<span class="co-vuelo no">Sin vuelo</span>'}</td>
+                <td class="co-precio"><b>${EV.dinero(x.precioWeb, x.id_Moneda)}</b><small>base ${EV.fmt(x.precio_Base)} + tasas ${EV.fmt(x.totalTasa)}</small></td>
+                <td><button type="button" class="ui-ibtn" data-ver="${x.id_Servicio}" title="Ver detalle"><i class="bi bi-eye"></i></button></td></tr>`).join('')}
+            </tbody></table></div>`;
+        $('#selPag').checked = d.filas.every(x => sel.has(x.id_Servicio));
+        const desde = (d.pagina - 1) * d.tam + 1, hasta = Math.min(d.pagina * d.tam, total), pags = Math.ceil(total / d.tam);
+        $('#coPager').hidden = false;
+        $('#coRango').textContent = `Mostrando ${EV.fmt(desde)}–${EV.fmt(hasta)} de ${EV.fmt(total)}`;
+        $('#coPages').innerHTML = pags <= 1 ? '' :
+            `<button ${d.pagina === 1 ? 'disabled' : ''} data-p="${d.pagina - 1}" aria-label="Anterior"><i class="bi bi-chevron-left"></i></button>` +
+            Array.from({ length: pags }, (_, i) => i + 1).filter(n => n === 1 || n === pags || Math.abs(n - d.pagina) <= 1)
+                .map((n, i, a) => (i && n - a[i - 1] > 1 ? '<button disabled>…</button>' : '') + `<button class="${n === d.pagina ? 'on' : ''}" data-p="${n}">${n}</button>`).join('') +
+            `<button ${d.pagina === pags ? 'disabled' : ''} data-p="${d.pagina + 1}" aria-label="Siguiente"><i class="bi bi-chevron-right"></i></button>`;
+        barra();
+    }
+
+    function barra() {
+        $('#coBulk').hidden = sel.size === 0;
+        $('#bN').textContent = EV.fmt(sel.size);
+        const faltan = total > sel.size && filas.length && filas.every(x => sel.has(x.id_Servicio));
+        $('#bTodo').hidden = !faltan;
+        if (faltan) $('#bTodo').textContent = `Seleccionar los ${EV.fmt(Math.min(total, 2000))} resultados`;
+    }
+
+    // ---------------- panel ----------------
+    function panel({ titulo, sub, icono, cuerpo, pie }) {
+        $('#dTitulo').textContent = titulo; $('#dSub').textContent = sub || '';
+        $('#dIco').innerHTML = `<i class="bi ${icono}"></i>`;
+        $('#dCuerpo').innerHTML = cuerpo; $('#dPie').innerHTML = pie;
+        $$('#dPie [data-cerrar], #coDrawer .ui-dh [data-cerrar]').forEach(b => b.onclick = () => drawer.cerrar());
+        drawer.abrir();
+    }
+    const ids = () => [...sel];
+    const pieAccion = (texto, icono) => `<button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button><span style="flex:1"></span><button class="ev-btn" type="button" id="dOk"><i class="bi ${icono}"></i> ${texto}</button>`;
+    async function ejecutar(url, dto, boton) {
+        const b = $(boton), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Aplicando…';
+        try { const r = await EV.post(url, dto); EV.toast(r.mensaje); drawer.cerrar(); await buscar(pagina); return r; }
+        catch (e) { EV.toast(e.message, 'err'); return null; }
+        finally { b.disabled = false; b.innerHTML = html; }
+    }
+
+    async function verDetalle(id) {
+        try {
+            const d = await EV.api('/ConsultarOferta/Detalle?id=' + id), x = d.fila, m = x.id_Moneda;
+            const final = x.precioWeb;
+            panel({
+                titulo: x.id_Tipo_Servicio === 'CIRCUITO' ? x.nombre_Circuito : (x.nombreAlojamiento || x.destino), icono: x.id_Tipo_Servicio === 'CIRCUITO' ? 'bi-signpost-split' : 'bi-building',
+                sub: `${x.id_Tipo_Servicio === 'CIRCUITO' ? 'Salida de circuito' : 'Oferta de hotel'} #${x.id_Servicio} · ${x.activo ? 'activa' : 'inactiva'}`,
+                cuerpo: `<div class="co-det">
+                    <div class="co-precio-vivo"><i class="bi bi-calculator"></i> <span>Base ${EV.dinero(x.precio_Base, m)}</span> + <span>Tasas ${EV.dinero(x.totalTasa, m)}</span>${x.precio_Mas_Menos ? ` + <span>Ajuste ${EV.dinero(x.precio_Mas_Menos, m)}</span>` : ''}${x.descuento ? ` − <span>Desc. ${EV.fmt(x.descuento, 1)}%</span>` : ''} = <span class="eq">Precio web ${EV.dinero(final, m)}</span></div>
+                    <dl>
+                        <div><dt>Destino</dt><dd>${esc(x.destino || '—')}</dd></div><div><dt>Entrada</dt><dd>${x.inicio ? EV.fecha(x.inicio.slice(0, 10)) : '—'}</dd></div><div><dt>Salida</dt><dd>${x.regreso ? EV.fecha(x.regreso.slice(0, 10)) : '—'} (${x.noches || '—'} n)</dd></div>
+                        <div><dt>Origen</dt><dd>${esc(x.origen || '—')} ${esc(x.id_Pais_Origen || '')}</dd></div><div><dt>Campaña</dt><dd>${esc(x.nombreCampanya || x.id_Campanya)}</dd></div><div><dt>Proveedor</dt><dd>${esc(x.nombreProveedor || x.codigoOperador || '—')}</dd></div>
+                        <div><dt>Régimen</dt><dd>${esc(x.regimen || '—')}</dd></div><div><dt>Código de carga</dt><dd>${esc(x.codigo || '—')}</dd></div><div><dt>Cargada</dt><dd>${x.apertura ? EV.fecha(x.apertura.slice(0, 10)) : '—'} · ${esc(x.usuario || '')}</dd></div>
+                    </dl>
+                    ${d.habitaciones.length ? `<div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-door-open"></i></span> Habitaciones</div><div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Habitación</th><th>Tipo</th><th class="num">Supl.</th></tr></thead><tbody>${d.habitaciones.map(h => `<tr><td><b>${esc(h.nombre)}</b></td><td>${esc(h.id_Tipo_Habitacion || '')}</td><td class="num">${EV.fmt(h.precio, 2)}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
+                    <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-receipt"></i></span> Tasas y suplementos</div>${d.tasas.length ? `<div class="co-fechas">${d.tasas.map(t => `<span>${esc(t.id_Tasa)}: ${EV.dinero(t.valor, m)}</span>`).join('')}</div>` : '<div class="ui-help">Sin tasas.</div>'}</div>
+                    <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-airplane"></i></span> Vuelos</div>${d.vuelos.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Vuelo</th><th>Ruta</th><th>Sale</th><th>Llega</th></tr></thead><tbody>${d.vuelos.map(v => `<tr><td>${v.segmento}</td><td>${esc(v.id_Proveedor)} ${esc(v.vuelo || '')}</td><td>${esc(v.id_Estacion_Origen)} → ${esc(v.id_Estacion_Destino)}</td><td>${EV.fecha(v.fecha_Salida.slice(0, 10))} ${esc(v.hora_Salida)}</td><td>${EV.fecha(v.fecha_Regreso.slice(0, 10))} ${esc(v.hora_Regreso)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="ui-chip ghost"><i class="bi bi-bus-front"></i> Sin vuelo</div>'}</div>
+                    ${d.notas.length ? `<div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-journal-text"></i></span> Notas</div>${d.notas.map(n => `<div class="ui-note info" style="margin-bottom:8px"><i class="bi bi-journal-text"></i><div><b>${esc(n.tipo)}</b><br>${esc(n.nota1)}</div></div>`).join('')}</div>` : ''}
+                </div>`,
+                pie: `<button class="ev-btn ghost" type="button" data-cerrar>Cerrar</button><span style="flex:1"></span>
+                    ${x.id_Tipo_Servicio === 'OFERTA' ? `<a class="ev-btn ghost" href="/Ofertas/Index"><i class="bi bi-box-arrow-up-right"></i> Abrir en Carga manual</a>` : `<a class="ev-btn ghost" href="/Circuitos/Index"><i class="bi bi-box-arrow-up-right"></i> Abrir en Circuitos</a>`}
+                    <button class="ev-btn ghost" type="button" id="dDup"><i class="bi bi-copy"></i> Duplicar</button><button class="ev-btn" type="button" id="dEdit"><i class="bi bi-pencil-square"></i> Editar</button>`
+            });
+            $('#dDup').onclick = () => { sel.clear(); sel.add(id); barra(); duplicar(); };
+            $('#dEdit').onclick = () => { sel.clear(); sel.add(id); barra(); editar(x); };
+        } catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    function editar(una) {
+        const n = sel.size;
+        panel({
+            titulo: n === 1 ? 'Editar oferta' : `Editar ${EV.fmt(n)} ofertas`, icono: 'bi-pencil-square', sub: 'Solo se cambia lo que llenes. Lo vacío queda como está.',
+            cuerpo: `
+                <div class="ui-sec"><div class="ui-sec-t"><span>1</span> Precio</div>
+                    <div class="ui-row r3">
+                        <div class="ui-f"><label>¿Qué hacer con el precio base?</label><select id="eModo"><option value="">No cambiar</option><option value="fijar">Fijar un precio</option><option value="sumar">Sumar o restar</option></select></div>
+                        <div class="ui-f"><label id="eValLab">Importe</label><div class="ui-money"><b>€</b><input type="number" id="eVal" step="1" disabled placeholder="—"></div><span class="ui-help" style="margin:4px 0 0">Para restar escribe un número negativo (−50)</span></div>
+                        <div class="ui-f"><label>Descuento %</label><input type="number" id="eDesc" min="0" max="100" step="0.5" placeholder="No cambiar"></div>
+                    </div>
+                    <div class="ui-row r3"><div class="ui-f"><label>Ajuste más/menos</label><div class="ui-money"><b>€</b><input type="number" id="eMasMenos" step="1" placeholder="No cambiar"></div></div></div></div>
+                <div class="ui-sec"><div class="ui-sec-t"><span>2</span> Comercial</div>
+                    <div class="ui-row r3">
+                        <div class="ui-f"><label>Campaña</label><select id="eCamp"><option value="">No cambiar</option>${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)}</option>`).join('')}</select></div>
+                        <div class="ui-f"><label>Proveedor</label><input id="eProv" placeholder="No cambiar"></div>
+                        <div class="ui-f"><label>Moneda</label><select id="eMon"><option value="">No cambiar</option>${cat.monedas.map(m => `<option>${esc(m.valor)}</option>`).join('')}</select></div>
+                    </div>
+                    <div class="ui-row r3">
+                        <div class="ui-f"><label>Aerolínea <em>solo si lleva vuelo</em></label><input id="eAer" placeholder="No cambiar"></div>
+                        <div class="ui-f"><label>Estado</label><select id="eAct"><option value="">No cambiar</option><option value="true">Activa (se vende)</option><option value="false">Inactiva</option></select></div>
+                    </div></div>
+                <div class="ui-note info"><i class="bi bi-info-circle"></i><div>Se guarda todo junto: si algo falla, no se cambia nada. Después se actualiza la vitrina de la web.</div></div>`,
+            pie: pieAccion('Guardar cambios', 'bi-check2-circle')
+        });
+        $('#eModo').onchange = e => { $('#eVal').disabled = !e.target.value; $('#eValLab').textContent = e.target.value === 'sumar' ? 'Sumar (o restar con −)' : 'Nuevo precio base'; if (!e.target.value) $('#eVal').value = ''; };
+        if (una) { $('#eModo').value = 'fijar'; $('#eModo').onchange({ target: $('#eModo') }); $('#eVal').value = Math.round(una.precio_Base); $('#eDesc').value = una.descuento; }
+        EV.picker($('#eProv'), { url: q => `/Circuitos/Proveedores?tipo=Tour%20Operador&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-briefcase' }), onSelect: m => $('#eProv').dataset.valor = m.valor });
+        EV.picker($('#eAer'), { url: q => `/Circuitos/Proveedores?tipo=Aerolinea&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-airplane' }), onSelect: m => $('#eAer').dataset.valor = m.valor });
+        $('#dOk').onclick = async () => {
+            const num = id => $(id).value === '' ? null : +$(id).value, modo = $('#eModo').value;
+            const dto = { Ids: ids(), PrecioBase: modo === 'fijar' ? num('#eVal') : null, SumarPrecio: modo === 'sumar' ? num('#eVal') : null, Descuento: num('#eDesc'), PrecioMasMenos: num('#eMasMenos'),
+                Id_Campanya: num('#eCamp'), Proveedor: $('#eProv').dataset.valor || null, Moneda: $('#eMon').value || null, Aerolinea: $('#eAer').dataset.valor || null,
+                Activo: $('#eAct').value === '' ? null : $('#eAct').value === 'true' };
+            if (modo && dto.PrecioBase == null && dto.SumarPrecio == null) { EV.toast('Escribe el importe del precio.', 'err'); return; }
+            if (n > 20 && !await EV.confirmar({ titulo: `¿Cambiar ${EV.fmt(n)} ofertas?`, texto: 'Revisa bien los cambios: se aplican a todas las seleccionadas.', si: 'Sí, aplicar' })) return;
+            await ejecutar('/ConsultarOferta/Editar', dto, '#dOk');
+        };
+    }
+
+    function duplicar() {
+        const n = sel.size, una = n === 1 ? filas.find(x => sel.has(x.id_Servicio)) : null;
+        panel({
+            titulo: n === 1 ? 'Duplicar oferta' : `Duplicar ${EV.fmt(n)} ofertas`, icono: 'bi-copy', sub: 'Se copia todo: hotel, habitaciones, tasas, notas, vuelos y origen.',
+            cuerpo: `
+                <div class="ui-sec"><div class="ui-sec-t"><span>1</span> Fechas de las copias</div>
+                    <div class="ui-row r3">
+                        <div class="ui-f"><label>Mover las fechas <em>en días</em></label><input type="number" id="uDias" value="7" step="1"><span class="ui-help" style="margin:4px 0 0">0 = mismas fechas · 7 = una semana después</span></div>
+                        <div class="ui-f"><label>Cuántas copias</label><input type="number" id="uVeces" value="1" min="1" max="52"></div>
+                        <div class="ui-f"><label>Campaña</label><select id="uCamp"><option value="">La misma</option>${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)}</option>`).join('')}</select></div>
+                    </div>
+                    <div id="uPrev"></div></div>
+                <div class="ui-sec"><div class="ui-sec-t"><span>2</span> Origen de venta <small>opcional · déjalo vacío para usar el mismo</small></div>
+                    <div class="ui-row r3">
+                        <div class="ui-f"><label>País de origen</label><select id="uPais"><option value="">El mismo</option>${cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('')}</select></div>
+                        <div class="ui-f"><label>Ciudad de origen</label><input id="uOri" placeholder="La misma"></div>
+                        <div class="ui-f"><label>Aeropuerto de salida <em>si lleva vuelo</em></label><input id="uEst" placeholder="El mismo"></div>
+                    </div></div>`,
+            pie: pieAccion('Crear copias', 'bi-copy')
+        });
+        const prev = () => {
+            const dias = +$('#uDias').value || 0, veces = Math.max(1, +$('#uVeces').value || 1), tot = n * veces;
+            const base = una?.inicio ? una.inicio.slice(0, 10) : null;
+            $('#uPrev').innerHTML = `<div class="ui-note ${tot > 2000 ? 'err' : 'ok'}"><i class="bi bi-${tot > 2000 ? 'exclamation-octagon' : 'magic'}"></i><div>Se crearán <b>${EV.fmt(tot)}</b> copia${tot === 1 ? '' : 's'}${tot > 2000 ? ' (máximo 2.000 por vez)' : ''}.
+                ${base ? `<div class="co-fechas">${Array.from({ length: Math.min(veces, 12) }, (_, i) => `<span>${EV.fechaCorta(EV.sumarDias(base, dias * (i + 1)))}</span>`).join('')}${veces > 12 ? '<span>…</span>' : ''}</div>` : (dias ? `<br>Cada copia entra ${Math.abs(dias)} día(s) ${dias > 0 ? 'después' : 'antes'} que la anterior.` : '')}</div></div>`;
+        };
+        ['#uDias', '#uVeces'].forEach(i => $(i).addEventListener('input', prev)); prev();
+        EV.picker($('#uOri'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#uPais').value || 'ES')}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo' }), onSelect: m => $('#uOri').value = m.valor });
+        EV.picker($('#uEst'), { url: q => `/Circuitos/Aeropuertos?q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: `${x.valor} · ${x.extra}`, sub: x.texto, icono: 'bi-geo-alt' }), onSelect: m => $('#uEst').value = m.valor });
+        $('#dOk').onclick = async () => {
+            const dto = { Ids: ids(), Dias: +$('#uDias').value || 0, Veces: Math.max(1, +$('#uVeces').value || 1), Id_Campanya: $('#uCamp').value ? +$('#uCamp').value : null,
+                PaisOrigen: $('#uPais').value || null, Origen: $('#uOri').value.trim() || null, EstacionOrigen: $('#uEst').value.trim() || null };
+            if ((dto.PaisOrigen && !dto.Origen) || (!dto.PaisOrigen && dto.Origen)) { EV.toast('Para cambiar el origen elige país y ciudad.', 'err'); return; }
+            const r = await ejecutar('/ConsultarOferta/Duplicar', dto, '#dOk');
+            if (r?.nuevos?.length) { sel.clear(); r.nuevos.forEach(i => sel.add(i)); barra(); EV.toast(`${r.mensaje} Quedaron seleccionadas por si quieres editarlas.`, 'ok'); }
+        };
+    }
+
+    function tasa() {
+        const n = sel.size;
+        panel({
+            titulo: `Tasas en ${EV.fmt(n)} oferta${n === 1 ? '' : 's'}`, icono: 'bi-receipt', sub: 'El precio base no cambia: el precio web sube o baja con la tasa.',
+            cuerpo: `<div class="ui-row r3">
+                    <div class="ui-f"><label>Suplemento / tasa</label><select id="tTasa">${cat.tasas.map(t => `<option value="${esc(t.valor)}">${esc(t.texto)}</option>`).join('')}</select></div>
+                    <div class="ui-f"><label>Valor</label><div class="ui-money"><b>€</b><input type="number" id="tVal" min="0" step="0.01" value="0"></div></div>
+                    <div class="ui-f"><label>Acción</label><select id="tAcc"><option value="poner">Poner este valor</option><option value="quitar">Quitar la tasa</option></select></div>
+                </div>
+                <div class="ui-note info"><i class="bi bi-info-circle"></i><div>Si la oferta ya tiene esa tasa, se reemplaza por el nuevo valor.</div></div>`,
+            pie: pieAccion('Aplicar', 'bi-check2-circle')
+        });
+        $('#tAcc').onchange = e => $('#tVal').disabled = e.target.value === 'quitar';
+        $('#dOk').onclick = () => ejecutar('/ConsultarOferta/Tasa', { Ids: ids(), Id_Tasa: $('#tTasa').value, Valor: +$('#tVal').value || 0, Quitar: $('#tAcc').value === 'quitar' }, '#dOk');
+    }
+
+    // ---------------- inicio ----------------
+    async function iniciar() {
+        cat = await EVC.catalogos();
+        const [destinos, usuarios] = await Promise.all([EV.api('/ConsultarOferta/Destinos').catch(() => []), EV.api('/ConsultarOferta/Usuarios').catch(() => [])]);
+        $('#fDestino').innerHTML += destinos.map(d => `<option value="${esc(d.valor)}">${esc(d.texto)}</option>`).join('');
+        const paises = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
+        $('#fPaisDestino').innerHTML += paises; $('#fPaisOrigen').innerHTML += paises;
+        $('#fMes').innerHTML += MESES.map((m, i) => `<option value="${i + 1}">${m[0].toUpperCase() + m.slice(1)}</option>`).join('');
+        $('#fRegimen').innerHTML += cat.regimenes.map(r => `<option value="${esc(r.valor)}">${esc(r.valor)} · ${esc(r.texto)}</option>`).join('');
+        $('#fMoneda').innerHTML += cat.monedas.map(m => `<option>${esc(m.valor)}</option>`).join('');
+        $('#fUsuario').innerHTML += usuarios.map(u => `<option>${esc(u.valor)}</option>`).join('');
+        $('#fCamps').innerHTML = cat.campanyas.map(c => `<label><input type="checkbox" value="${esc(c.valor)}" data-t="${esc(c.texto)}"> ${esc(c.texto)} <small style="color:var(--ev-muted)">#${esc(c.valor)}</small></label>`).join('');
+        EV.picker($('#fHotel'), { url: q => `/Circuitos/Hoteles?q=${q}`, limpiar: false, map: x => ({ valor: x.id_Alojamiento, texto: x.nombre, sub: x.destino, icono: 'bi-building' }), onSelect: m => $('#fHotel').dataset.valor = m.valor });
+        $('#fHotel').addEventListener('input', () => $('#fHotel').dataset.valor = '');
+        EV.picker($('#fProveedor'), { url: q => `/Circuitos/Proveedores?tipo=Tour%20Operador&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-briefcase' }), onSelect: m => $('#fProveedor').dataset.valor = m.valor });
+        $('#fProveedor').addEventListener('input', () => $('#fProveedor').dataset.valor = '');
+        EV.picker($('#fOrigen'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#fPaisOrigen').value || 'ES')}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo' }), onSelect: m => $('#fOrigen').value = m.valor });
+
+        // eventos
+        $('#coForm').addEventListener('submit', e => { e.preventDefault(); buscar(); });
+        $('#coQ').addEventListener('input', EV.debounce(() => buscar(), 450));
+        $('#coMasBtn').onclick = () => $('#coMas').classList.toggle('on');
+        $('#coAplicar').onclick = () => { $('#coMas').classList.remove('on'); buscar(); };
+        const limpiar = () => { $$('#coMas input').forEach(i => { if (i.type === 'checkbox') i.checked = false; else { i.value = ''; delete i.dataset.valor; } }); $$('#coMas select').forEach(s => s.value = ''); $$('#fDias .ui-pick').forEach(b => b.classList.remove('on')); $('#coQ').value = ''; buscar(); };
+        $('#coLimpiar').onclick = limpiar;
+        $$('#fDias .ui-pick').forEach(b => b.addEventListener('click', () => b.classList.toggle('on')));
+        $$('.co-seg').forEach(g => g.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $$('button', g).forEach(x => x.classList.toggle('on', x === b)); rapido[g.dataset.f] = b.dataset.v; buscar(); }));
+        ['#coPasadas', '#coOrden', '#coTam'].forEach(id => $(id).addEventListener('change', () => buscar()));
+        $('#coPills').addEventListener('click', e => { const q = e.target.closest('[data-qp]'); if (q) { CO._quitar[+q.dataset.qp](); buscar(); } if (e.target.closest('#coLimpiar2')) limpiar(); });
+        $('#coPages').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b && !b.disabled) { buscar(+b.dataset.p); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+        $('#coLista').addEventListener('change', e => {
+            const t = e.target;
+            if (t.id === 'selPag') { filas.forEach(x => t.checked ? sel.add(x.id_Servicio) : sel.delete(x.id_Servicio)); $$('[data-sel]').forEach(c => { c.checked = t.checked; c.closest('tr').classList.toggle('sel', t.checked); }); barra(); }
+            if (t.dataset.sel) { const id = +t.dataset.sel; t.checked ? sel.add(id) : sel.delete(id); t.closest('tr').classList.toggle('sel', t.checked); barra(); }
+        });
+        $('#coLista').addEventListener('click', e => {
+            const v = e.target.closest('[data-ver]'); if (v) return verDetalle(+v.dataset.ver);
+            const tr = e.target.closest('tr[data-id]'); if (tr && !e.target.closest('input')) verDetalle(+tr.dataset.id);
+        });
+        $('#bTodo').onclick = async () => { try { const r = await EV.post('/ConsultarOferta/Ids', { ...ultimo, Pagina: 1 }); r.forEach(i => sel.add(i)); barra(); EV.toast(`${EV.fmt(r.length)} ofertas seleccionadas.`); } catch (e) { EV.toast(e.message, 'err'); } };
+        $('#coBulk').addEventListener('click', async e => {
+            const b = e.target.closest('[data-acc]'); if (!b) return;
+            const acc = b.dataset.acc;
+            if (acc === 'limpiar') { sel.clear(); $$('[data-sel]').forEach(c => { c.checked = false; c.closest('tr').classList.remove('sel'); }); if ($('#selPag')) $('#selPag').checked = false; barra(); return; }
+            if (acc === 'editar') return editar(sel.size === 1 ? filas.find(x => sel.has(x.id_Servicio)) : null);
+            if (acc === 'duplicar') return duplicar();
+            if (acc === 'tasa') return tasa();
+            const activar = acc === 'activar';
+            if (!await EV.confirmar({ titulo: `¿${activar ? 'Activar' : 'Desactivar'} ${EV.fmt(sel.size)} ofertas?`, texto: activar ? 'Volverán a venderse en la web.' : 'Dejarán de venderse en la web (no se borran).', si: activar ? 'Sí, activar' : 'Sí, desactivar', peligro: !activar })) return;
+            try { const r = await EV.post('/ConsultarOferta/Editar', { Ids: ids(), Activo: activar }); EV.toast(r.mensaje); buscar(pagina); } catch (er) { EV.toast(er.message, 'err'); }
+        });
+        $('#coExportar').onclick = () => { $('#coExpFiltro').value = JSON.stringify({ ...filtro(), Pagina: 1 }); $('#coExpForm').submit(); EV.toast('Preparando el archivo…', 'info'); };
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { drawer.cerrar(); $('#coMas').classList.remove('on'); } if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) { e.preventDefault(); $('#coQ').focus(); } });
+
+        // recupera los últimos filtros de este navegador
+        try {
+            const g = JSON.parse(localStorage.getItem('ev-consulta') || 'null');
+            if (g) {
+                $('#coQ').value = g.Q || ''; $('#coPasadas').checked = !!g.Pasadas; $('#coOrden').value = g.Orden || 'inicio';
+                const set = (id, v) => { if (v != null) $(id).value = typeof v === 'string' && v.length > 10 && v[4] === '-' ? v.slice(0, 10) : v; };
+                set('#fDestino', g.Destino); set('#fPaisDestino', g.PaisDestino); set('#fPaisOrigen', g.PaisOrigen); set('#fOrigen', g.Origen); set('#fIniD', g.InicioDesde); set('#fIniH', g.InicioHasta);
+                set('#fMes', g.Mes); set('#fNoches', g.Noches); set('#fRegimen', g.Regimen); set('#fCodigo', g.Codigo); set('#fMoneda', g.Moneda); set('#fPD', g.PrecioDesde); set('#fPH', g.PrecioHasta);
+                set('#fDD', g.DescuentoDesde); set('#fDH', g.DescuentoHasta); set('#fApD', g.AperturaDesde); set('#fApH', g.AperturaHasta); set('#fUsuario', g.Usuario);
+                (g.Campanyas || []).forEach(c => { const i = $(`#fCamps input[value="${c}"]`); if (i) i.checked = true; });
+                (g.Dias || []).forEach(d => $(`#fDias [data-d="${d}"]`)?.classList.add('on'));
+                const seg = (f, v) => { const g2 = $(`.co-seg[data-f="${f}"]`); const b = $$('button', g2).find(x => x.dataset.v === v); if (b) { $$('button', g2).forEach(x => x.classList.toggle('on', x === b)); rapido[f] = v; } };
+                seg('Tipo', g.Tipo || ''); seg('Activo', g.Activo == null ? '' : String(g.Activo)); seg('ConVuelo', g.ConVuelo == null ? '' : String(g.ConVuelo));
+            }
+        } catch { }
+        buscar();
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+    return {};
+})();
+</script>
+}

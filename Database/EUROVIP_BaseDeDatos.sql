@@ -69,6 +69,10 @@
    CAMBIO 36 (13/10/2026)  ÍNDICES para buscar rápido hoteles y habitaciones en Herramientas.
    --- FASE 7: PERFIL DE USUARIO Y NOTIFICACIONES ---
    CAMBIO 37 (13/10/2026)  USUARIO: fecha hasta la que ya vio sus notificaciones.
+   --- FASE 8: CONSULTAR OFERTAS ---
+   CAMBIO 38 (13/10/2026)  Buscador general de servicios (fnFiltro), con o sin vuelo.
+   CAMBIO 39 (13/10/2026)  Editar servicios uno a uno o en masa (spEditaServicio).
+   CAMBIO 40 (13/10/2026)  Duplicar servicios, también a otras fechas (spDuplicaServicio).
    BITÁCORA de cambios de datos puntuales (al final).
    ########################################################################################## */
 
@@ -2219,6 +2223,176 @@ IF COL_LENGTH('Eurovip.usuario', 'notif_leidas_hasta') IS NULL
 GO
 
 /* ##########################################################################################
+   FASE 8 — CONSULTAR OFERTAS  (13/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: la pantalla "Consultar ofertas" (como /ConsultarOferta/Index de BackTiTan) busca
+   cualquier servicio cargado (ofertas de hotel y salidas de circuito) con muchos filtros, y
+   permite editar, activar/desactivar y duplicar uno o muchos a la vez.
+   Copiado de ViajeVDT (10.10.10.29, solo lectura) y adaptado al esquema Eurovip:
+
+   CAMBIO 38  fnFiltro: el buscador. En ViajeVDT exigía vuelo; aquí funciona con o sin vuelo.
+   CAMBIO 39  spEditaServicio: edita moneda, campaña, proveedor, precio, descuento, ajuste,
+              activo y aerolínea (lo que llega vacío no se toca).
+   CAMBIO 40  spDuplicaServicio: copia un servicio completo. Corregido (se tragaba los errores)
+              y mejorado: se puede duplicar a otras fechas (mover N días) y con otro origen.
+   ########################################################################################## */
+/* ---------- CAMBIO 38: fnFiltro — buscador general de servicios (ofertas y circuitos) ----------
+   Copiado de ViajeVDT.dbo.fnFiltro y adaptado:
+     • En ViajeVDT exigía vuelo (INNER JOIN con servicio_itinerario): aquí el vuelo es opcional.
+     • Usaba funciones que Eurovip no tiene (fnUneDestino, fnFechaInicio…): se calcula todo aquí.
+     • Las fechas filtran por la ENTRADA del servicio (hotel o salida del circuito), no por el vuelo.
+     • Devuelve también si lleva vuelo, el circuito y el país de destino. */
+CREATE OR ALTER FUNCTION Eurovip.fnFiltro
+(
+    @idServicio INT, @idIdioma CHAR(2), @idTipoServicio VARCHAR(15), @idMoneda CHAR(3), @idCampanya SMALLINT,
+    @idProveedor VARCHAR(10), @idPaisOrigen CHAR(2), @nombreOrigen VARCHAR(30), @idPaisDestino CHAR(2), @idDestino VARCHAR(MAX),
+    @inicioDesde DATE, @salidaDesde DATE, @aperturaDesde DATE, @aperturaHasta DATE, @usuario VARCHAR(15),
+    @precio_baseDesde MONEY, @precio_baseHasta MONEY, @descuentoDesde NUMERIC(6, 2), @descuentoHasta NUMERIC(6, 2),
+    @idAlojamiento INT, @noches SMALLINT, @activo BIT, @codigo VARCHAR(30)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT x.* FROM (
+        SELECT
+            s.id_servicio, s.id_tipo_servicio, s.id_idioma, s.id_moneda, s.id_campanya, s.codigo, c.nombre AS nombreCampanya,
+            COALESCE(so.origen, sc.origen, si.origen) AS origen,
+            COALESCE(so.id_pais_origen, sc.id_pais_origen, si.id_pais_origen) AS id_pais_origen,
+            CASE WHEN sc.id_servicio IS NOT NULL THEN sc.nombre_circuito ELSE a.id_destino END AS destino,
+            COALESCE(a.id_pais, (SELECT TOP 1 cd.id_pais FROM Eurovip.circuito_destino cd WHERE cd.nombre_circuito = sc.nombre_circuito AND cd.id_idioma = sc.id_idoma)) AS id_pais_destino,
+            CAST(COALESCE(sd.desde, sc.desde) AS DATE) AS inicio, CAST(COALESCE(sd.hasta, sc.hasta) AS DATE) AS regreso,
+            s.noches, s.id_Proveedor AS codigoOperador, p.nombre AS nombreProveedor, s.apertura, s.usuario, s.nota, s.activo,
+            sd.id_alojamiento, a.nombre AS nombreAlojamiento, r.descripcion AS regimen, sd.id_regimen,
+            hab.nombre AS habitacion, sc.nombre_circuito,
+            CAST(CASE WHEN si.id_servicio IS NULL THEN 0 ELSE 1 END AS BIT) AS conVuelo,
+            si.id_proveedor AS codigoAerolinea, ae.nombre AS nombreAerolinea, si.vuelo, si.id_estacion_origen, si.id_estacion_destino,
+            si.fecha_salida, si.hora_salida AS horaSalidaVuelo,
+            s.precio_base, s.descuento, s.precio_mas_menos, Eurovip.fnTotalTasa(s.id_servicio) AS totalTasa, Eurovip.fnPrecioWeb(s.id_servicio) AS precioWeb
+        FROM Eurovip.servicio s
+            LEFT JOIN Eurovip.campanya c ON c.id_campanya = s.id_campanya AND c.id_idioma = s.id_idioma
+            LEFT JOIN Eurovip.proveedor p ON p.id_proveedor = s.id_Proveedor
+            OUTER APPLY (SELECT TOP 1 * FROM Eurovip.servicio_detalle d WHERE d.id_servicio = s.id_servicio ORDER BY d.secuencia) sd
+            LEFT JOIN Eurovip.alojamiento a ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
+            LEFT JOIN Eurovip.regimen r ON r.id_regimen = sd.id_regimen AND r.id_idioma = sd.id_idioma
+            LEFT JOIN Eurovip.servicio_circuito sc ON sc.id_servicio = s.id_servicio
+            LEFT JOIN Eurovip.servicio_origen so ON so.id_servicio = s.id_servicio
+            OUTER APPLY (SELECT TOP 1 * FROM Eurovip.servicio_itinerario i WHERE i.id_servicio = s.id_servicio AND i.segmento = 1) si
+            LEFT JOIN Eurovip.proveedor ae ON ae.id_proveedor = si.id_proveedor
+            OUTER APPLY (SELECT TOP 1 ah.nombre FROM Eurovip.servicio_habitacion h
+                           JOIN Eurovip.alojamiento_habitacion ah ON ah.id_alojamiento = h.id_alojamiento AND ah.id_habitacion = h.id_habitacion AND ah.id_idioma = h.id_idioma
+                         WHERE h.id_servicio = s.id_servicio ORDER BY h.precio, h.secuencia) hab
+        WHERE (@idServicio IS NULL OR s.id_servicio = @idServicio)
+          AND (@idIdioma IS NULL OR s.id_idioma = @idIdioma)
+          AND (@idTipoServicio IS NULL OR s.id_tipo_servicio = @idTipoServicio)
+          AND (@idMoneda IS NULL OR s.id_moneda = @idMoneda)
+          AND (@idCampanya IS NULL OR s.id_campanya = @idCampanya)
+          AND (@idProveedor IS NULL OR s.id_Proveedor = @idProveedor)
+          AND (@aperturaDesde IS NULL OR s.apertura >= @aperturaDesde)
+          AND (@aperturaHasta IS NULL OR s.apertura < DATEADD(DAY, 1, @aperturaHasta))
+          AND (@usuario IS NULL OR s.usuario = @usuario)
+          AND (@precio_baseDesde IS NULL OR s.precio_base >= @precio_baseDesde)
+          AND (@precio_baseHasta IS NULL OR s.precio_base <= @precio_baseHasta)
+          AND (@descuentoDesde IS NULL OR s.descuento >= @descuentoDesde)
+          AND (@descuentoHasta IS NULL OR s.descuento <= @descuentoHasta)
+          AND (@idAlojamiento IS NULL OR sd.id_alojamiento = @idAlojamiento)
+          AND (@noches IS NULL OR s.noches = @noches)
+          AND (@activo IS NULL OR s.activo = @activo)
+          AND (@codigo IS NULL OR s.codigo = @codigo)
+    ) x
+    WHERE (@idPaisOrigen IS NULL OR x.id_pais_origen = @idPaisOrigen)
+      AND (@nombreOrigen IS NULL OR x.origen = @nombreOrigen)
+      AND (@idPaisDestino IS NULL OR x.id_pais_destino = @idPaisDestino)
+      AND (@idDestino IS NULL OR x.destino = @idDestino)
+      AND (@inicioDesde IS NULL OR x.inicio >= @inicioDesde)
+      AND (@salidaDesde IS NULL OR x.inicio <= @salidaDesde)
+);
+GO
+
+/* ---------- CAMBIO 39: spEditaServicio — editar uno o muchos servicios ----------
+   Copiado de ViajeVDT. Lo que llega vacío (NULL) no se toca. Diferencias: el parámetro @baja de
+   ViajeVDT en realidad cambiaba "activo": aquí se llama @activo; la aerolínea solo se cambia si
+   el servicio tiene vuelo; todo en una transacción. */
+CREATE OR ALTER PROCEDURE Eurovip.spEditaServicio
+    @numeroServicio INT, @idMoneda CHAR(3) = NULL, @idCampanya SMALLINT = NULL, @idProveedor VARCHAR(10) = NULL,
+    @precioBase MONEY = NULL, @descuento NUMERIC(6, 2) = NULL, @precioMasMenos MONEY = NULL, @activo BIT = NULL,
+    @idAerolinea VARCHAR(10) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRAN;
+    UPDATE Eurovip.servicio SET
+        id_moneda = ISNULL(@idMoneda, id_moneda), id_campanya = ISNULL(@idCampanya, id_campanya),
+        id_Proveedor = ISNULL(@idProveedor, id_Proveedor), precio_base = ISNULL(@precioBase, precio_base),
+        descuento = ISNULL(@descuento, descuento), precio_mas_menos = ISNULL(@precioMasMenos, precio_mas_menos),
+        activo = ISNULL(@activo, activo)
+    WHERE id_servicio = @numeroServicio;
+    IF @idAerolinea IS NOT NULL
+        UPDATE Eurovip.servicio_itinerario SET id_proveedor = @idAerolinea WHERE id_servicio = @numeroServicio;
+    COMMIT;
+END
+GO
+
+/* ---------- CAMBIO 40: spDuplicaServicio — copia un servicio completo ----------
+   Copiado de ViajeVDT y corregido: devolvía una consulta de más, se "tragaba" los errores (la
+   pantalla decía OK aunque fallara) y copiaba tablas que Eurovip no tiene. NUEVO: se puede
+   duplicar a OTRAS FECHAS (@diasDesplazar mueve entrada, salida, circuito y vuelos) y con otro
+   origen de venta. Copia: servicio, detalle, habitaciones, tasas, notas, vuelos, origen y circuito. */
+CREATE OR ALTER PROCEDURE Eurovip.spDuplicaServicio
+    @numeroServicio INT, @idCampanya SMALLINT = NULL, @diasDesplazar INT = 0,
+    @idPaisOrigen CHAR(2) = NULL, @origen VARCHAR(30) = NULL, @codigoEstacionOrigen VARCHAR(10) = NULL,
+    @usuario VARCHAR(15) = NULL, @nuevoId INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    IF NOT EXISTS (SELECT 1 FROM Eurovip.servicio WHERE id_servicio = @numeroServicio)
+        THROW 50001, 'El servicio a duplicar no existe.', 1;
+    DECLARE @d INT = ISNULL(@diasDesplazar, 0);
+    BEGIN TRAN;
+
+    INSERT INTO Eurovip.servicio (id_tipo_servicio, id_idioma, id_moneda, id_campanya, id_Proveedor, apertura, usuario, precio_base, descuento,
+                                  precio_mas_menos, ajuste, nota, noches, codigo, baja, nombre, activo, categoria_circuito)   -- "precio" es columna calculada
+    SELECT id_tipo_servicio, id_idioma, id_moneda, ISNULL(@idCampanya, id_campanya), id_Proveedor, GETDATE(), ISNULL(@usuario, usuario), precio_base, descuento,
+           precio_mas_menos, ajuste, LTRIM(ISNULL(nota, '') + ' (duplicada de #' + CAST(@numeroServicio AS VARCHAR(12)) + ')'), noches, codigo, baja, nombre, activo, categoria_circuito
+    FROM Eurovip.servicio WHERE id_servicio = @numeroServicio;
+    SET @nuevoId = SCOPE_IDENTITY();
+
+    INSERT INTO Eurovip.servicio_detalle (id_servicio, secuencia, id_alojamiento, id_regimen, id_idioma, desde, hora_desde, hasta, hora_hasta, noches, categoria, precio)
+    SELECT @nuevoId, secuencia, id_alojamiento, id_regimen, id_idioma, DATEADD(DAY, @d, desde), hora_desde, DATEADD(DAY, @d, hasta), hora_hasta, noches, categoria, precio
+    FROM Eurovip.servicio_detalle WHERE id_servicio = @numeroServicio;
+
+    INSERT INTO Eurovip.servicio_habitacion (id_servicio, secuencia, id_alojamiento, id_idioma, id_habitacion, precio)
+    SELECT @nuevoId, secuencia, id_alojamiento, id_idioma, id_habitacion, precio FROM Eurovip.servicio_habitacion WHERE id_servicio = @numeroServicio;
+
+    INSERT INTO Eurovip.servicio_tasa (id_Servicio, id_tasa, id_idioma, valor)
+    SELECT @nuevoId, id_tasa, id_idioma, valor FROM Eurovip.servicio_tasa WHERE id_Servicio = @numeroServicio;
+
+    INSERT INTO Eurovip.servicio_nota (id_servicio, secuencia, id_idioma, tipo, nota1, nota2)
+    SELECT @nuevoId, secuencia, id_idioma, tipo, nota1, nota2 FROM Eurovip.servicio_nota WHERE id_servicio = @numeroServicio;
+
+    INSERT INTO Eurovip.servicio_itinerario (id_servicio, segmento, id_proveedor, id_estacion_origen, origen, id_idioma, id_pais_origen, id_estacion_destino,
+                                             destino, id_pais_destino, vuelo, fecha_salida, hora_salida, fecha_regreso, hora_regreso, clase, conexion)
+    SELECT @nuevoId, segmento, id_proveedor,
+           CASE WHEN segmento = 1 AND @codigoEstacionOrigen IS NOT NULL THEN @codigoEstacionOrigen ELSE id_estacion_origen END,
+           CASE WHEN segmento = 1 AND @origen IS NOT NULL THEN @origen ELSE origen END, id_idioma,
+           CASE WHEN segmento = 1 AND @idPaisOrigen IS NOT NULL THEN @idPaisOrigen ELSE id_pais_origen END,
+           id_estacion_destino, destino, id_pais_destino, vuelo, DATEADD(DAY, @d, fecha_salida), hora_salida, DATEADD(DAY, @d, fecha_regreso), hora_regreso, clase, conexion
+    FROM Eurovip.servicio_itinerario WHERE id_servicio = @numeroServicio;
+
+    INSERT INTO Eurovip.servicio_origen (id_servicio, id_pais_origen, origen)
+    SELECT @nuevoId, ISNULL(@idPaisOrigen, id_pais_origen), ISNULL(@origen, origen) FROM Eurovip.servicio_origen WHERE id_servicio = @numeroServicio;
+
+    INSERT INTO Eurovip.servicio_circuito (id_servicio, nombre_circuito, id_idoma, desde, hasta, id_pais_origen, origen)
+    SELECT @nuevoId, nombre_circuito, id_idoma, DATEADD(DAY, @d, desde), DATEADD(DAY, @d, hasta), ISNULL(@idPaisOrigen, id_pais_origen), ISNULL(@origen, origen)
+    FROM Eurovip.servicio_circuito WHERE id_servicio = @numeroServicio;
+
+    COMMIT;
+END
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -2310,6 +2484,11 @@ GO
                  PENDIENTE: borrarla (DELETE FROM Eurovip.home_contenido WHERE id_home_contenido = 3051).
                • "Traer ofertas a la Home" puso el circuito "Prueba" de la usuaria (inicio id 3,
                  770 €, sin sección). Se dejó porque quitarlo requiere su confirmación.
+
+   13/10/2026  Pantalla "Consultar ofertas". spDuplicaServicio y spEditaServicio se probaron dentro
+               de una transacción deshecha (ROLLBACK) sobre el servicio #10 del circuito "Prueba":
+               no quedó nada guardado (servicio sigue con 14 filas). Solo se "gastaron" los números
+               automáticos 68 y 69 (el próximo servicio nuevo será #70 o mayor; es normal).
 
    PENDIENTE   Copiar los demás usuarios, módulos y permisos (rol, UsuarioAcceso,
                UsuarioModulos). Se hará cuando se confirme desde qué base copiarlos.

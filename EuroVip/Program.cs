@@ -56,6 +56,7 @@ builder.Services.AddScoped<EuroVip.Repositories.IExcelOfertaParser, EuroVip.Repo
 builder.Services.AddScoped<EuroVip.Repositories.IHerramientasRepository, EuroVip.Repositories.HerramientasRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.IHomeWebRepository, EuroVip.Repositories.HomeWebRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.IPerfilRepository, EuroVip.Repositories.PerfilRepository>();
+builder.Services.AddScoped<EuroVip.Repositories.IConsultaRepository, EuroVip.Repositories.ConsultaRepository>();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(o =>
