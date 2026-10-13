@@ -67,6 +67,8 @@
    CAMBIO 34 (13/10/2026)  SP para crear/editar ALOJAMIENTOS (copiado de ViajeVDT, mejorado).
    CAMBIO 35 (13/10/2026)  SP para crear/editar HABITACIONES de un hotel (copiado de ViajeVDT).
    CAMBIO 36 (13/10/2026)  ÍNDICES para buscar rápido hoteles y habitaciones en Herramientas.
+   --- FASE 7: PERFIL DE USUARIO Y NOTIFICACIONES ---
+   CAMBIO 37 (13/10/2026)  USUARIO: fecha hasta la que ya vio sus notificaciones.
    BITÁCORA de cambios de datos puntuales (al final).
    ########################################################################################## */
 
@@ -2198,6 +2200,25 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_alojamiento_bu
 GO
 
 /* ##########################################################################################
+   FASE 7 — PERFIL DE USUARIO y NOTIFICACIONES  (13/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: en la barra de arriba, la campana muestra avisos (cargas terminadas o con error,
+   cambios de otros usuarios, ofertas que salen esta semana, tarjetas de la Home vencidas) y el
+   nombre abre "Mi perfil", donde cada usuario ve sus datos, sube su foto y edita nombre,
+   apellido y teléfono (correo, usuario y contraseña NO se editan desde ahí).
+   Los avisos se arman leyendo tablas que ya existían (Log_Cargas, auditoría, servicio, inicio);
+   no se creó una tabla de notificaciones.
+
+   CAMBIO 37  usuario.notif_leidas_hasta: hasta cuándo el usuario ya vio sus avisos.
+   ########################################################################################## */
+/* ---------- CAMBIO 37: usuario.notif_leidas_hasta ----------
+   Para qué: la campana de notificaciones. Guarda hasta qué fecha/hora el usuario ya vio sus
+   avisos; lo que sea más nuevo se cuenta como "no leído". Vacío = nunca abrió la campana. */
+IF COL_LENGTH('Eurovip.usuario', 'notif_leidas_hasta') IS NULL
+    ALTER TABLE Eurovip.usuario ADD notif_leidas_hasta DATETIME NULL;
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -2272,6 +2293,13 @@ GO
                (#368833 y #368834), campaña #8223, estación ZZQ y moneda USD. Las tablas quedaron
                como estaban (tipo_habitacion sigue en 15.877). Quedan como evidencia las filas de
                auditoría "Herramienta_*".
+
+   13/10/2026  "Mi perfil" y campana de notificaciones. Prueba con el usuario ARodriguez: se subió
+               una foto de prueba, se cambió el teléfono y se intentó mandar correo/usuario (el
+               servidor los ignoró). Después se quitó la foto (el archivo se borró del disco) y se
+               dejaron los datos como estaban: teléfono 829000000 e imagen 'ARodriguez.jpg'
+               (nombre de la foto antigua de ViajeVDT, restaurado con UPDATE en Eurovip.usuario).
+               "Marcar todo como leído" dejó guardada notif_leidas_hasta para ARodriguez.
 
    PENDIENTE   Copiar los demás usuarios, módulos y permisos (rol, UsuarioAcceso,
                UsuarioModulos). Se hará cuando se confirme desde qué base copiarlos.

@@ -1,6 +1,8 @@
 @{
     var nombre = Context.Session.GetString("NombreUsuario") ?? User.Identity?.Name ?? "Usuario";
+    nombre = new System.Globalization.CultureInfo("es-ES").TextInfo.ToTitleCase(nombre.ToLowerInvariant());
     var rol = Context.Session.GetString("Rol");
+    var foto = Context.Session.GetString("Imagen");
     var iniciales = string.Concat(nombre.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpper(p[0])));
     var controlador = ViewContext.RouteData.Values["controller"]?.ToString();
     string Activo(string c) => string.Equals(controlador, c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
@@ -80,12 +82,39 @@
                     <kbd>Ctrl K</kbd>
                 </label>
                 <button class="ev-icon-btn" type="button" id="evTheme" aria-label="Cambiar tema"><i class="bi bi-moon-stars"></i></button>
-                <button class="ev-icon-btn" type="button" aria-label="Notificaciones"><i class="bi bi-bell"></i><span class="dot"></span></button>
-                <div class="ev-user">
-                    <div class="ev-avatar">@iniciales</div>
-                    <div class="ev-user-text">
-                        <b>@nombre</b>
-                        <small>@(string.IsNullOrWhiteSpace(rol) ? "Eurovip" : rol)</small>
+                <div class="ev-pop-wrap">
+                    <button class="ev-icon-btn" type="button" id="evBell" aria-label="Notificaciones" aria-haspopup="true" aria-expanded="false">
+                        <i class="bi bi-bell"></i><span class="ev-badge" id="evBellN" hidden>0</span>
+                    </button>
+                    <div class="ev-pop ev-notif" id="evNotif" role="dialog" aria-label="Notificaciones" hidden>
+                        <div class="ev-pop-h">
+                            <b>Notificaciones</b>
+                            <div class="ev-seg" id="evNotifFiltro"><button type="button" class="on" data-f="">Todas</button><button type="button" data-f="nl">No leídas</button></div>
+                        </div>
+                        <div class="ev-notif-lista" id="evNotifLista"><div class="ev-notif-vacio"><span class="ev-spin"></span> Cargando…</div></div>
+                        <div class="ev-pop-f"><button type="button" id="evNotifLeer"><i class="bi bi-check2-all"></i> Marcar todo como leído</button><a href="/Cargas/Index">Ver cargas <i class="bi bi-arrow-right"></i></a></div>
+                    </div>
+                </div>
+                <div class="ev-pop-wrap">
+                    <button class="ev-user" type="button" id="evUser" aria-haspopup="true" aria-expanded="false">
+                        <span class="ev-avatar" id="evAvatar">@if (!string.IsNullOrEmpty(foto)) { <img src="@foto" alt="" /> } else { @iniciales }</span>
+                        <span class="ev-user-text">
+                            <b id="evNombre">@nombre</b>
+                            <small>@(string.IsNullOrWhiteSpace(rol) ? "Eurovip" : rol)</small>
+                        </span>
+                        <i class="bi bi-chevron-down ev-user-chev"></i>
+                    </button>
+                    <div class="ev-pop ev-menu-user" id="evUserMenu" role="menu" hidden>
+                        <div class="ev-mu-head">
+                            <span class="ev-avatar xl" id="evAvatarXl">@if (!string.IsNullOrEmpty(foto)) { <img src="@foto" alt="" /> } else { @iniciales }</span>
+                            <div><b>@nombre</b><small>@(User.Identity?.Name) · @(string.IsNullOrWhiteSpace(rol) ? "Eurovip" : rol)</small></div>
+                        </div>
+                        <a href="/Perfil/Index" role="menuitem"><i class="bi bi-person-circle"></i> Mi perfil</a>
+                        <a href="/Perfil/Index#foto" role="menuitem"><i class="bi bi-camera"></i> Cambiar mi foto</a>
+                        <button type="button" role="menuitem" onclick="document.getElementById('evTheme').click()"><i class="bi bi-circle-half"></i> Cambiar tema</button>
+                        <form asp-controller="Auth" asp-action="Logout" method="post">
+                            <button type="submit" role="menuitem" class="salir"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
+                        </form>
                     </div>
                 </div>
             </header>
@@ -95,6 +124,7 @@
     </div>
 
     <script src="~/js/eurovip.js" asp-append-version="true"></script>
+    <script src="~/js/eurovip-top.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

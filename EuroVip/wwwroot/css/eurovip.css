@@ -410,3 +410,63 @@ a { color: inherit; text-decoration: none; }
     .ev-user-text { display: none; }
 }
 @media (min-width: 901px) { .ev-menu-btn { display: none; } }
+
+/* ---------- Barra superior: campana + menú de usuario ---------- */
+.ev-pop-wrap { position: relative; }
+button.ev-user { border: 1px solid transparent; background: transparent; padding: 4px 10px 4px 4px; border-radius: 18px; cursor: pointer; font: inherit; color: inherit; text-align: left; transition: background .2s, border-color .2s; }
+button.ev-user:hover, button.ev-user[aria-expanded="true"] { background: var(--ev-surface); border-color: var(--ev-line); }
+.ev-user-chev { font-size: 12px; color: var(--ev-muted); transition: transform .25s var(--ev-ease); }
+button.ev-user[aria-expanded="true"] .ev-user-chev { transform: rotate(180deg); }
+.ev-avatar { overflow: hidden; flex-shrink: 0; }
+.ev-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ev-avatar.xl { width: 56px; height: 56px; border-radius: 18px; font-size: 19px; }
+.ev-badge { position: absolute; top: 4px; right: 3px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 99px; background: #FF5A36; color: #fff;
+            font: 800 10.5px/19px var(--ev-font); text-align: center; border: 2px solid var(--ev-surface); animation: evBadge .4s var(--ev-ease); }
+@keyframes evBadge { from { transform: scale(.3); } to { transform: none; } }
+#evBell.sonando i { display: inline-block; animation: evRing .9s ease; }
+@keyframes evRing { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(16deg); } 30% { transform: rotate(-14deg); } 45% { transform: rotate(10deg); } 60% { transform: rotate(-6deg); } 75% { transform: rotate(3deg); } }
+
+.ev-pop { position: absolute; right: 0; top: calc(100% + 10px); z-index: 120; border-radius: 22px; background: var(--ev-surface); border: 1px solid var(--ev-line);
+          box-shadow: var(--ev-shadow-lg); animation: evPop .22s var(--ev-ease); transform-origin: top right; }
+@keyframes evPop { from { opacity: 0; transform: translateY(-6px) scale(.97); } to { opacity: 1; transform: none; } }
+.ev-pop-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 16px 10px; }
+.ev-pop-h b { font-size: 16px; font-weight: 800; }
+.ev-seg { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--ev-surface-2); }
+.ev-seg button { border: 0; background: transparent; padding: 6px 10px; border-radius: 9px; font: 700 12px var(--ev-font); color: var(--ev-muted); cursor: pointer; }
+.ev-seg button.on { background: var(--ev-ink); color: var(--ev-aqua); }
+.ev-pop-f { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 16px 14px; border-top: 1px solid var(--ev-line); }
+.ev-pop-f button, .ev-pop-f a { border: 0; background: transparent; font: 700 12.5px var(--ev-font); color: var(--ev-deep); cursor: pointer; text-decoration: none; padding: 6px 4px; }
+.ev-pop-f button:disabled { opacity: .45; cursor: default; }
+
+.ev-notif { width: 400px; max-width: calc(100vw - 24px); }
+.ev-notif-lista { max-height: 430px; overflow-y: auto; padding: 0 8px 6px; }
+.ev-notif-dia { font: 800 10.5px var(--ev-font); letter-spacing: .08em; text-transform: uppercase; color: var(--ev-muted); padding: 10px 10px 4px; }
+.ev-notif-it { position: relative; display: flex; gap: 12px; padding: 10px; border-radius: 16px; color: var(--ev-text); text-decoration: none; transition: background .2s; }
+.ev-notif-it:hover { background: var(--ev-surface-2); }
+.ev-notif-it .ni { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; font-size: 17px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+.ev-notif-it.carga .ni { background: #DCFCE7; color: #166534; border-color: #BBF7D0; }
+.ev-notif-it.error .ni { background: #FEE4E2; color: #B42318; border-color: #FECDCA; }
+.ev-notif-it.proceso .ni { background: #FEF3C7; color: #92400E; border-color: #FDE68A; }
+.ev-notif-it.cambio .ni { background: #E0F2FE; color: #075985; border-color: #BAE6FD; }
+.ev-notif-it.alerta .ni { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+.ev-notif-it b { display: block; font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.ev-notif-it span.tx { display: block; color: var(--ev-muted); font-size: 12.5px; font-weight: 500; margin-top: 2px; line-height: 1.35; }
+.ev-notif-it small { color: var(--ev-muted); font-size: 11.5px; font-weight: 600; }
+.ev-notif-it.nueva { background: color-mix(in srgb, var(--ev-mint) 28%, transparent); }
+.ev-notif-it.nueva::after { content: ""; position: absolute; right: 12px; top: 16px; width: 8px; height: 8px; border-radius: 50%; background: var(--ev-teal); }
+.ev-notif-vacio { padding: 34px 20px; text-align: center; color: var(--ev-muted); font-weight: 600; font-size: 13.5px; }
+.ev-notif-vacio i { display: block; font-size: 34px; margin-bottom: 8px; color: var(--ev-teal); }
+.ev-spin { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ev-line); border-top-color: var(--ev-teal); animation: evGira .8s linear infinite; vertical-align: -2px; }
+@keyframes evGira { to { transform: rotate(360deg); } }
+
+.ev-menu-user { width: 280px; padding: 8px; }
+.ev-mu-head { display: flex; align-items: center; gap: 12px; padding: 10px 10px 14px; border-bottom: 1px solid var(--ev-line); margin-bottom: 6px; }
+.ev-mu-head b { display: block; font-size: 15px; font-weight: 800; }
+.ev-mu-head small { color: var(--ev-muted); font-size: 12px; font-weight: 600; }
+.ev-menu-user a, .ev-menu-user button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 12px; border: 0; background: transparent;
+                                        font: 700 13.5px var(--ev-font); color: var(--ev-text); text-decoration: none; cursor: pointer; text-align: left; }
+.ev-menu-user a:hover, .ev-menu-user button:hover { background: var(--ev-surface-2); }
+.ev-menu-user i { font-size: 16px; color: var(--ev-deep); width: 18px; }
+.ev-menu-user form { margin: 4px 0 0; padding-top: 6px; border-top: 1px solid var(--ev-line); }
+.ev-menu-user .salir, .ev-menu-user .salir i { color: #B42318; }
+@media (prefers-reduced-motion: reduce) { .ev-pop, .ev-badge, #evBell.sonando i { animation: none !important; } }

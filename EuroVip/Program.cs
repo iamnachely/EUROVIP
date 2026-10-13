@@ -55,6 +55,7 @@ builder.Services.AddScoped<EuroVip.Repositories.ICargaOfertaService, EuroVip.Rep
 builder.Services.AddScoped<EuroVip.Repositories.IExcelOfertaParser, EuroVip.Repositories.ExcelOfertaParser>();
 builder.Services.AddScoped<EuroVip.Repositories.IHerramientasRepository, EuroVip.Repositories.HerramientasRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.IHomeWebRepository, EuroVip.Repositories.HomeWebRepository>();
+builder.Services.AddScoped<EuroVip.Repositories.IPerfilRepository, EuroVip.Repositories.PerfilRepository>();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(o =>
@@ -85,6 +86,24 @@ app.UseRouting();
 app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// La sesión vive en memoria: si el servidor se reinicia, la cookie de login sigue válida pero se pierden
+// nombre, rol y foto. Se recargan desde Eurovip.usuario la primera vez que hacen falta.
+app.Use(async (ctx, next) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated == true && ctx.Session.GetString("NombreUsuario") is null)
+    {
+        var p = await ctx.RequestServices.GetRequiredService<EuroVip.Repositories.IPerfilRepository>().PerfilAsync(ctx.User.Identity.Name ?? "");
+        if (p is not null)
+        {
+            ctx.Session.SetString("UserName", p.UserName);
+            ctx.Session.SetString("NombreUsuario", $"{p.Nombre} {p.Apellido}".Trim());
+            ctx.Session.SetString("Rol", p.Rol ?? "");
+            if (p.Foto is not null) ctx.Session.SetString("Imagen", p.Foto);
+        }
+    }
+    await next();
+});
 
 app.MapControllerRoute(
     name: "default",

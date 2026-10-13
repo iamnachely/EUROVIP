@@ -131,6 +131,8 @@ namespace EuroVip.Controllers
             HttpContext.Session.SetString("UserName", usuario.UserName ?? string.Empty);
             HttpContext.Session.SetString("NombreUsuario", $"{usuario.Nombre} {usuario.Apellido}".Trim());
             HttpContext.Session.SetString("Rol", usuario.Rol ?? string.Empty);
+            var foto = PerfilFoto.Url(usuario.Imagen);
+            if (foto is not null) HttpContext.Session.SetString("Imagen", foto); else HttpContext.Session.Remove("Imagen");
         }
 
         [HttpPost]

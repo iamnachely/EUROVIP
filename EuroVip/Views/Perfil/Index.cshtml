@@ -1,0 +1,222 @@
+@{
+    ViewData["Title"] = "Mi perfil";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .pf { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 22px; align-items: start; }
+    .pf-card { position: relative; border-radius: 30px; background: var(--ev-surface); border: 1px solid var(--ev-line); overflow: hidden; }
+    .pf-portada { height: 130px; background: var(--ev-ink); position: relative; overflow: hidden; }
+    .pf-portada::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(116,242,230,.09) 1px, transparent 1px), linear-gradient(90deg, rgba(116,242,230,.09) 1px, transparent 1px); background-size: 26px 26px; }
+    .pf-portada span { position: absolute; border-radius: 50%; filter: blur(40px); }
+    .pf-portada span.a { width: 220px; height: 220px; background: #2BD4C4; right: -50px; top: -90px; opacity: .6; animation: pfMueve 10s ease-in-out infinite alternate; }
+    .pf-portada span.b { width: 180px; height: 180px; background: #B3FFF3; left: -40px; bottom: -110px; opacity: .35; animation: pfMueve 12s ease-in-out infinite alternate-reverse; }
+    @@keyframes pfMueve { to { transform: translate(-30px, 20px) scale(1.1); } }
+    .pf-cuerpo { padding: 0 24px 24px; text-align: center; }
+    .pf-avatar { position: relative; width: 132px; height: 132px; margin: -66px auto 14px; border-radius: 40px; background: var(--ev-grad); border: 6px solid var(--ev-surface);
+                 display: grid; place-items: center; font-size: 44px; font-weight: 800; color: var(--ev-ink); box-shadow: var(--ev-shadow-lg); overflow: hidden; }
+    .pf-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .pf-avatar.arrastrando { outline: 3px dashed var(--ev-teal); outline-offset: 4px; }
+    .pf-cam { position: absolute; left: 50%; top: 66px; transform: translate(34px, -6px); width: 44px; height: 44px; border-radius: 15px; border: 4px solid var(--ev-surface);
+              background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-size: 17px; cursor: pointer; transition: transform .25s var(--ev-ease); z-index: 2; }
+    .pf-cam:hover { transform: translate(34px, -6px) scale(1.08); }
+    .pf-cuerpo h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.6px; }
+    .pf-cuerpo .rol { display: inline-flex; gap: 6px; align-items: center; margin-top: 8px; padding: 6px 12px; border-radius: 99px; background: var(--ev-ink); color: var(--ev-aqua); font: 800 12px var(--ev-font); }
+    .pf-cuerpo .user { display: block; color: var(--ev-muted); font-weight: 600; margin-top: 8px; font-size: 13.5px; }
+    .pf-acts { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+    .pf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; text-align: left; }
+    .pf-stat { padding: 14px; border-radius: 18px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    .pf-stat i { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--ev-grad); font-size: 14px; margin-bottom: 8px; }
+    .pf-stat b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.8px; }
+    .pf-stat small { color: var(--ev-muted); font-weight: 600; font-size: 12px; }
+    .pf-sec { border-radius: 30px; background: var(--ev-surface); border: 1px solid var(--ev-line); padding: 26px 28px; }
+    .pf-sec + .pf-sec { margin-top: 18px; }
+    .pf-sec h2 { margin: 0 0 4px; font-size: 19px; font-weight: 800; letter-spacing: -.4px; display: flex; gap: 10px; align-items: center; }
+    .pf-sec h2 i { width: 36px; height: 36px; border-radius: 12px; background: var(--ev-grad); display: grid; place-items: center; font-size: 16px; }
+    .pf-sec > p { margin: 0 0 20px; color: var(--ev-muted); font-weight: 500; }
+    .pf-lock .ui-f input { padding-right: 42px; background: var(--ev-surface-2); color: var(--ev-muted); cursor: not-allowed; }
+    .pf-lock .ui-f { position: relative; }
+    .pf-lock .ui-f::after { content: "\F47B"; font-family: "bootstrap-icons"; position: absolute; right: 14px; bottom: 13px; color: var(--ev-muted); }
+    .pf-pie { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .pf-pie .sp { flex: 1; }
+    .pf-pie .estado { color: var(--ev-muted); font-weight: 600; font-size: 13px; }
+    .pf-prev { display: grid; place-items: center; gap: 14px; padding: 6px 0 2px; }
+    .pf-prev img { width: 200px; height: 200px; border-radius: 48px; object-fit: cover; box-shadow: var(--ev-shadow-lg); border: 6px solid var(--ev-surface); }
+    @@media (max-width: 1100px) { .pf { grid-template-columns: 1fr; } }
+    @@media (prefers-reduced-motion: reduce) { .pf-portada span { animation: none; } }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<div class="pf ev-rise">
+    <section class="pf-card">
+        <div class="pf-portada"><span class="a"></span><span class="b"></span></div>
+        <div class="pf-cuerpo">
+            <label class="pf-cam" for="pfArchivo" title="Cambiar foto" id="foto"><i class="bi bi-camera-fill"></i></label>
+            <div class="pf-avatar" id="pfAvatar"><span class="ui-skel" style="width:100%;height:100%"></span></div>
+            <input type="file" id="pfArchivo" accept="image/jpeg,image/png,image/webp" hidden>
+            <h1 id="pfNombre">—</h1>
+            <span class="rol" id="pfRol"><i class="bi bi-shield-check"></i> —</span>
+            <span class="user" id="pfUser"></span>
+            <div class="pf-acts">
+                <label class="ev-btn sm" for="pfArchivo" style="cursor:pointer"><i class="bi bi-image"></i> Subir foto</label>
+                <button type="button" class="ev-btn ghost sm" id="pfQuitar" hidden><i class="bi bi-trash3"></i> Quitar</button>
+            </div>
+            <small style="display:block;color:var(--ev-muted);font-weight:600;margin-top:10px;font-size:12px">JPG, PNG o WebP · también puedes arrastrarla sobre el círculo</small>
+            <div class="pf-stats">
+                <div class="pf-stat"><i class="bi bi-cloud-upload"></i><b id="sCargas">—</b><small>cargas hechas</small></div>
+                <div class="pf-stat"><i class="bi bi-collection"></i><b id="sReg">—</b><small>registros cargados</small></div>
+                <div class="pf-stat"><i class="bi bi-pencil-square"></i><b id="sCambios">—</b><small>cambios realizados</small></div>
+                <div class="pf-stat"><i class="bi bi-clock-history"></i><b id="sUltima" style="font-size:15px;letter-spacing:0;line-height:1.5">—</b><small>última carga</small></div>
+            </div>
+        </div>
+    </section>
+
+    <div>
+        <section class="pf-sec">
+            <h2><i class="bi bi-person-vcard"></i> Datos personales</h2>
+            <p>Así te ven tus compañeros en Eurovip. Puedes cambiarlos cuando quieras.</p>
+            <form id="pfForm" autocomplete="off" novalidate>
+                <div class="ui-row r3">
+                    <div class="ui-f"><label for="fNombre">Nombre *</label><input id="fNombre" maxlength="50"><span class="msg"></span></div>
+                    <div class="ui-f"><label for="fApellido">Apellido *</label><input id="fApellido" maxlength="50"><span class="msg"></span></div>
+                    <div class="ui-f"><label for="fTelefono">Teléfono <em>opcional</em></label><input id="fTelefono" maxlength="15" inputmode="tel" placeholder="+1 809 000 0000"><span class="msg"></span></div>
+                </div>
+                <div class="pf-pie">
+                    <span class="estado" id="pfEstado"><i class="bi bi-check2-circle"></i> Sin cambios</span>
+                    <span class="sp"></span>
+                    <button type="button" class="ev-btn ghost" id="pfDeshacer" disabled>Deshacer</button>
+                    <button type="submit" class="ev-btn" id="pfGuardar" disabled><i class="bi bi-check2-circle"></i> Guardar cambios</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="pf-sec">
+            <h2><i class="bi bi-shield-lock"></i> Acceso a la cuenta</h2>
+            <p>Estos datos los gestiona un administrador y no se pueden cambiar desde aquí.</p>
+            <div class="ui-row r3 pf-lock">
+                <div class="ui-f"><label>Correo</label><input id="lEmail" readonly tabindex="-1"></div>
+                <div class="ui-f"><label>Usuario</label><input id="lUser" readonly tabindex="-1"></div>
+                <div class="ui-f"><label>Contraseña</label><input value="••••••••••" readonly tabindex="-1"></div>
+            </div>
+            <div class="ui-note info" style="margin:6px 0 0"><i class="bi bi-info-circle"></i><div>¿Necesitas cambiar tu correo, usuario o contraseña? Pídeselo a un administrador de Eurovip.</div></div>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script>
+(() => {
+    const $ = s => document.querySelector(s), esc = EV.esc;
+    let orig = null;
+    const titulo = s => (s || '').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+    const inic = p => ((p.nombre || '?')[0] + (p.apellido || '')[0]).toUpperCase();
+
+    function avatar(p, url) {
+        const html = url ? `<img src="${esc(url)}" alt="Tu foto">` : esc(inic(p));
+        $('#pfAvatar').innerHTML = html;
+        ['evAvatar', 'evAvatarXl'].forEach(id => { const a = document.getElementById(id); if (a) a.innerHTML = url ? `<img src="${esc(url)}" alt="">` : esc(inic(p)); });
+        $('#pfQuitar').hidden = !url;
+    }
+
+    function cambios() {
+        const v = { Nombre: $('#fNombre').value.trim(), Apellido: $('#fApellido').value.trim(), Telefono: $('#fTelefono').value.trim() };
+        const dif = orig && (v.Nombre !== orig.Nombre || v.Apellido !== orig.Apellido || v.Telefono !== orig.Telefono);
+        $('#pfGuardar').disabled = $('#pfDeshacer').disabled = !dif;
+        $('#pfEstado').innerHTML = dif ? '<i class="bi bi-pencil" style="color:var(--ev-deep)"></i> Tienes cambios sin guardar' : '<i class="bi bi-check2-circle"></i> Sin cambios';
+        return v;
+    }
+
+    async function cargar() {
+        const p = await EV.api('/Perfil/Datos');
+        orig = { Nombre: p.nombre, Apellido: p.apellido, Telefono: p.telefono || '' };
+        $('#fNombre').value = p.nombre; $('#fApellido').value = p.apellido; $('#fTelefono').value = p.telefono || '';
+        $('#pfNombre').textContent = titulo(`${p.nombre} ${p.apellido}`);
+        $('#pfRol').innerHTML = `<i class="bi bi-shield-check"></i> ${esc(p.rol || 'Usuario')}`;
+        $('#pfUser').textContent = `@@${p.userName}`;
+        $('#lEmail').value = p.email.toLowerCase(); $('#lUser').value = p.userName;
+        $('#sCargas').textContent = EV.fmt(p.cargas); $('#sReg').textContent = EV.fmt(p.registros); $('#sCambios').textContent = EV.fmt(p.cambios);
+        $('#sUltima').textContent = p.ultimaCarga ? new Date(p.ultimaCarga).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Aún ninguna';
+        avatar(p, p.foto);
+        HOLD = p;
+        cambios();
+    }
+    let HOLD = null;
+
+    // ---------- guardar datos ----------
+    ['#fNombre', '#fApellido', '#fTelefono'].forEach(id => $(id).addEventListener('input', cambios));
+    $('#pfDeshacer').onclick = () => { $('#fNombre').value = orig.Nombre; $('#fApellido').value = orig.Apellido; $('#fTelefono').value = orig.Telefono; cambios(); };
+    $('#pfForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const v = cambios();
+        document.querySelectorAll('#pfForm .ui-f.err').forEach(f => f.classList.remove('err'));
+        const err = (id, m) => { const f = $(id).closest('.ui-f'); f.classList.add('err'); f.querySelector('.msg').textContent = m; };
+        if (!v.Nombre) return err('#fNombre', 'Escribe tu nombre');
+        if (!v.Apellido) return err('#fApellido', 'Escribe tu apellido');
+        if (v.Telefono && !/^[0-9+\-\s()]+$/.test(v.Telefono)) return err('#fTelefono', 'Solo números, espacios, +, - y paréntesis');
+        const b = $('#pfGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
+        try {
+            const r = await EV.post('/Perfil/Guardar', v);
+            EV.toast(r.mensaje);
+            orig = { ...v };
+            const nom = titulo(`${v.Nombre} ${v.Apellido}`);
+            $('#pfNombre').textContent = nom;
+            const n = document.getElementById('evNombre'); if (n) n.textContent = nom;
+            HOLD.nombre = v.Nombre; HOLD.apellido = v.Apellido;
+            if (!$('#pfAvatar img')) avatar(HOLD, null);
+        } catch (ex) { EV.toast(ex.message, 'err'); }
+        finally { b.innerHTML = html; cambios(); }
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !$('#pfGuardar').disabled) $('#pfForm').requestSubmit(); });
+
+    // ---------- foto: recorte cuadrado y reducción en el navegador ----------
+    const reducir = archivo => new Promise((ok, mal) => {
+        const img = new Image(), url = URL.createObjectURL(archivo);
+        img.onload = () => {
+            const lado = Math.min(img.naturalWidth, img.naturalHeight), t = Math.min(480, lado);
+            const c = document.createElement('canvas'); c.width = c.height = t;
+            c.getContext('2d').drawImage(img, (img.naturalWidth - lado) / 2, (img.naturalHeight - lado) / 2, lado, lado, 0, 0, t, t);
+            URL.revokeObjectURL(url);
+            c.toBlob(b => b ? ok(b) : mal(new Error('No se pudo procesar la imagen')), 'image/webp', 0.88);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); mal(new Error('Ese archivo no es una imagen válida')); };
+        img.src = url;
+    });
+
+    async function subir(archivo) {
+        if (!archivo) return;
+        if (!/^image\/(jpeg|png|webp)$/.test(archivo.type)) { EV.toast('La imagen debe ser JPG, PNG o WebP.', 'err'); return; }
+        if (archivo.size > 15 * 1024 * 1024) { EV.toast('La imagen es demasiado grande (máx. 15 MB antes de reducirla).', 'err'); return; }
+        try {
+            const blob = await reducir(archivo), prev = URL.createObjectURL(blob);
+            const ok = await EV.confirmar({ titulo: '¿Usar esta foto?', si: 'Sí, usar esta', icono: 'camera',
+                texto: `<div class="pf-prev"><img src="${prev}" alt="Vista previa"><span>Así se verá en Eurovip (recortada en cuadrado).</span></div>` });
+            URL.revokeObjectURL(prev);
+            if (!ok) return;
+            $('#pfAvatar').innerHTML = '<span class="ui-spin" style="width:34px;height:34px"></span>';
+            const fd = new FormData(); fd.append('archivo', blob, 'foto.webp');
+            const r = await EV.post('/Perfil/Foto', fd);
+            HOLD.foto = r.foto; avatar(HOLD, r.foto);
+            EV.toast(r.mensaje);
+            EV.confeti?.();
+        } catch (e) { EV.toast(e.message, 'err'); avatar(HOLD, HOLD?.foto); }
+        finally { $('#pfArchivo').value = ''; }
+    }
+    $('#pfArchivo').addEventListener('change', e => subir(e.target.files[0]));
+    const av = $('#pfAvatar');
+    ['dragenter', 'dragover'].forEach(t => av.addEventListener(t, e => { e.preventDefault(); av.classList.add('arrastrando'); }));
+    ['dragleave', 'drop'].forEach(t => av.addEventListener(t, e => { e.preventDefault(); av.classList.remove('arrastrando'); }));
+    av.addEventListener('drop', e => subir(e.dataTransfer.files[0]));
+    $('#pfQuitar').onclick = async () => {
+        if (!await EV.confirmar({ titulo: '¿Quitar tu foto?', texto: 'Se mostrarán tus iniciales en su lugar.', si: 'Quitar foto', peligro: true })) return;
+        try { const r = await EV.post('/Perfil/QuitarFoto', {}); HOLD.foto = null; avatar(HOLD, null); EV.toast(r.mensaje); }
+        catch (e) { EV.toast(e.message, 'err'); }
+    };
+
+    cargar().catch(e => EV.toast(e.message, 'err'));
+})();
+</script>
+}

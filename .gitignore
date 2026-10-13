@@ -6,3 +6,5 @@ Logs/
 publish/
 # Secretos locales (cadena de conexión con password)
 appsettings.Local.json
+# Fotos de perfil subidas por los usuarios (datos, no código)
+EuroVip/wwwroot/uploads/
