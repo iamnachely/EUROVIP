@@ -1,0 +1,689 @@
+@{
+    ViewData["Title"] = "Home de la web";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    /* ---------- portada ---------- */
+    .hw-hero { position: relative; overflow: hidden; border-radius: 30px; padding: 26px 30px; background: var(--ev-ink); color: #fff; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; isolation: isolate; }
+    .hw-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(600px 300px at 90% -20%, rgba(43,212,196,.55), transparent 60%), radial-gradient(400px 200px at 10% 120%, rgba(179,255,243,.25), transparent 60%); }
+    .hw-hero h1 { margin: 0; font-size: clamp(26px, 3vw, 34px); font-weight: 800; letter-spacing: -1.2px; }
+    .hw-hero p { margin: 4px 0 0; color: rgba(232,255,251,.72); font-weight: 500; max-width: 60ch; }
+    .hw-hero .sp { flex: 1; }
+    .hw-hero .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+    .hw-hero .ev-btn.light { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(116,242,230,.3); }
+    .hw-kpis { display: flex; gap: 10px; flex-wrap: wrap; width: 100%; }
+    .hw-kpi { padding: 10px 16px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid rgba(116,242,230,.18); }
+    .hw-kpi b { font-size: 20px; font-weight: 800; display: block; line-height: 1.1; }
+    .hw-kpi small { color: rgba(232,255,251,.6); font-weight: 600; font-size: 12px; }
+    .hw-kpi.alerta { border-color: #F79009; background: rgba(247,144,9,.12); }
+
+    .hw-barra { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 18px 0 14px; }
+    .hw-barra .sp { flex: 1; }
+    .hw-dev { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
+    .hw-dev button { border: 0; background: transparent; border-radius: 10px; padding: 8px 12px; font: 700 13px var(--ev-font); color: var(--ev-muted); cursor: pointer; display: flex; gap: 6px; align-items: center; }
+    .hw-dev button.on { background: var(--ev-ink); color: var(--ev-aqua); }
+
+    /* ---------- vista de la home (marco del dispositivo) ---------- */
+    .hw-marco { margin: 0 auto; transition: max-width .45s var(--ev-ease); border-radius: 28px; background: var(--ev-surface); border: 1px solid var(--ev-line); box-shadow: var(--ev-shadow); padding: 18px; }
+    .hw-marco[data-dev="tablet"] { max-width: 820px; border-width: 10px; border-color: var(--ev-ink); border-radius: 36px; }
+    .hw-marco[data-dev="movil"] { max-width: 400px; border-width: 10px; border-color: var(--ev-ink); border-radius: 40px; }
+    .hw-slider { position: relative; border-radius: 22px; overflow: hidden; background: var(--ev-grad-soft); aspect-ratio: 16 / 5; cursor: pointer; }
+    .hw-marco[data-dev="tablet"] .hw-slider { aspect-ratio: 16 / 7; }
+    .hw-marco[data-dev="movil"] .hw-slider { aspect-ratio: 4 / 5; }
+    .hw-slider img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .8s ease; }
+    .hw-slider img.on { opacity: 1; }
+    .hw-slider .vacio { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--ev-muted); font-weight: 700; }
+    .hw-slider .puntos { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
+    .hw-slider .puntos i { width: 8px; height: 8px; border-radius: 99px; background: rgba(255,255,255,.55); transition: width .3s; }
+    .hw-slider .puntos i.on { width: 22px; background: #fff; }
+    .hw-slider .precio { position: absolute; right: 14px; top: 14px; z-index: 2; padding: 8px 12px; border-radius: 14px; background: rgba(11,18,21,.82); color: #fff; font-weight: 800; font-size: 13px; backdrop-filter: blur(6px); }
+    .hw-slider .precio b { color: var(--ev-aqua); font-size: 17px; }
+    .hw-slider .editar { position: absolute; left: 14px; top: 14px; z-index: 2; padding: 7px 12px; border-radius: 12px; background: rgba(255,255,255,.92); color: #0B1215; font: 800 12px var(--ev-font); opacity: 0; transition: opacity .25s; }
+    .hw-slider:hover .editar { opacity: 1; }
+
+    .hw-sec { margin-top: 18px; border-radius: 22px; border: 1.5px solid transparent; padding: 12px; transition: border-color .2s, background .2s, opacity .2s; }
+    .hw-sec:hover { border-color: var(--ev-line); }
+    .hw-sec.oculta { opacity: .55; }
+    .hw-sec.arrastrando { opacity: .4; }
+    .hw-sec.sobre { border-color: var(--ev-teal); background: var(--ev-grad-soft); }
+    .hw-sec-h { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .hw-sec-h .asa { cursor: grab; color: var(--ev-muted); font-size: 18px; padding: 4px; border-radius: 8px; }
+    .hw-sec-h .asa:hover { background: var(--ev-surface-2); color: var(--ev-text); }
+    .hw-sec-h h3 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.3px; text-transform: uppercase; }
+    .hw-sec-h .n { font: 800 11px var(--ev-font); padding: 3px 9px; border-radius: 99px; background: var(--ev-surface-2); color: var(--ev-muted); }
+    .hw-sec-h .sp { flex: 1; }
+    .hw-sec-h .ui-ibtn { opacity: .45; transition: opacity .2s; }
+    .hw-sec:hover .hw-sec-h .ui-ibtn, .hw-sec-h .ui-ibtn:focus { opacity: 1; }
+    .hw-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; min-height: 70px; border-radius: 16px; transition: background .2s; }
+    .hw-marco[data-dev="movil"] .hw-cards { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .hw-cards.sobre { background: color-mix(in srgb, var(--ev-aqua) 18%, transparent); outline: 2px dashed var(--ev-teal); outline-offset: 4px; }
+    .hw-card { position: relative; border-radius: 18px; overflow: hidden; background: var(--ev-surface); border: 1px solid var(--ev-line); cursor: grab; transition: transform .25s var(--ev-ease), box-shadow .25s, opacity .2s; user-select: none; }
+    .hw-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
+    .hw-card.arrastrando { opacity: .35; transform: scale(.97); }
+    .hw-card.oculta .img, .hw-card.oculta .tx { opacity: .45; filter: grayscale(.8); }
+    .hw-card .img { aspect-ratio: 4 / 3; background: var(--ev-grad); position: relative; display: grid; place-items: center; font-size: 26px; font-weight: 800; color: rgba(11,18,21,.45); }
+    .hw-card .img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .hw-card .chips { position: absolute; left: 8px; top: 8px; display: flex; gap: 4px; flex-wrap: wrap; z-index: 1; }
+    .hw-card .chips span { font: 800 10px var(--ev-font); padding: 3px 7px; border-radius: 8px; background: rgba(11,18,21,.78); color: #fff; }
+    .hw-card .chips span.mal { background: #D92D20; }
+    .hw-card .chips span.oc { background: #475467; }
+    .hw-card .ojo { position: absolute; right: 8px; top: 8px; z-index: 1; width: 32px; height: 32px; border-radius: 10px; border: 0; background: rgba(255,255,255,.92); display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity .2s; }
+    .hw-card:hover .ojo, .hw-card .ojo:focus { opacity: 1; }
+    .hw-card .tx { padding: 10px 12px 12px; }
+    .hw-card .tx b { display: block; font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hw-card .tx small { display: block; color: var(--ev-muted); font-weight: 600; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hw-card .tx .pr { margin-top: 6px; font-size: 12px; color: var(--ev-muted); font-weight: 600; }
+    .hw-card .tx .pr b { display: inline; font-size: 17px; color: var(--ev-text); }
+    .hw-add { border: 2px dashed var(--ev-line); border-radius: 18px; background: transparent; min-height: 150px; display: grid; place-items: center; color: var(--ev-muted); font: 800 13px var(--ev-font); cursor: pointer; transition: all .2s; }
+    .hw-add:hover { border-color: var(--ev-teal); color: var(--ev-deep); background: var(--ev-grad-soft); }
+    .hw-add i { font-size: 22px; display: block; margin-bottom: 4px; }
+    .hw-sin { margin-top: 22px; border-radius: 22px; padding: 14px; background: repeating-linear-gradient(135deg, var(--ev-surface-2) 0 12px, var(--ev-surface) 12px 24px); border: 1.5px dashed var(--ev-line); }
+    .hw-nueva-sec { width: 100%; margin-top: 16px; padding: 16px; border-radius: 20px; border: 2px dashed var(--ev-line); background: transparent; font: 800 14px var(--ev-font); color: var(--ev-muted); cursor: pointer; }
+    .hw-nueva-sec:hover { border-color: var(--ev-teal); color: var(--ev-deep); background: var(--ev-grad-soft); }
+    .hw-tip { display: flex; gap: 8px; align-items: center; color: var(--ev-muted); font-weight: 600; font-size: 13px; }
+
+    /* ---------- carrusel ---------- */
+    .cr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .cr-card { border-radius: 22px; overflow: hidden; background: var(--ev-surface); border: 1px solid var(--ev-line); transition: transform .25s var(--ev-ease), box-shadow .25s, opacity .2s; }
+    .cr-card[draggable="true"] { cursor: grab; }
+    .cr-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
+    .cr-card.arrastrando { opacity: .35; }
+    .cr-card.sobre { outline: 3px solid var(--ev-teal); }
+    .cr-card.inactivo .cr-img { filter: grayscale(.9); opacity: .55; }
+    .cr-img { position: relative; aspect-ratio: 16 / 7; background: var(--ev-grad-soft); }
+    .cr-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cr-img .ord { position: absolute; left: 10px; top: 10px; width: 34px; height: 34px; border-radius: 11px; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-weight: 800; }
+    .cr-img .ori { position: absolute; right: 10px; top: 10px; font: 800 11px var(--ev-font); padding: 4px 8px; border-radius: 8px; background: rgba(255,255,255,.92); }
+    .cr-body { padding: 12px 14px 14px; }
+    .cr-body .nombre { font-weight: 800; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cr-fmt { display: flex; gap: 6px; margin: 8px 0; flex-wrap: wrap; }
+    .cr-fmt span { font: 700 11px var(--ev-font); padding: 3px 8px; border-radius: 8px; background: #DCFCE7; color: #166534; }
+    .cr-fmt span.no { background: #FEE4E2; color: #B42318; }
+    .cr-precios { display: flex; gap: 6px; flex-wrap: wrap; min-height: 26px; }
+    .cr-precios span { font: 700 11.5px var(--ev-font); padding: 4px 9px; border-radius: 9px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    .cr-precios span.mal { background: #FEF3C7; border-color: #FDE68A; color: #92400E; }
+    .cr-pie { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .cr-pie .sp { flex: 1; }
+    .cr-nuevo { border: 2px dashed var(--ev-line); border-radius: 22px; background: transparent; min-height: 230px; display: grid; place-items: center; color: var(--ev-muted); font: 800 14px var(--ev-font); cursor: pointer; }
+    .cr-nuevo:hover { border-color: var(--ev-teal); color: var(--ev-deep); background: var(--ev-grad-soft); }
+    .cr-nuevo i { font-size: 30px; display: block; margin-bottom: 6px; }
+    .cr-vistas { display: grid; grid-template-columns: 2fr 1.2fr .8fr; gap: 10px; align-items: end; }
+    .cr-vista { text-align: center; }
+    .cr-vista .im { border-radius: 14px; overflow: hidden; background: var(--ev-surface-2); border: 1px solid var(--ev-line); display: grid; place-items: center; color: var(--ev-muted); font-size: 12px; font-weight: 700; position: relative; }
+    .cr-vista .im img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cr-vista:nth-child(1) .im { aspect-ratio: 16 / 6; }
+    .cr-vista:nth-child(2) .im { aspect-ratio: 4 / 3; }
+    .cr-vista:nth-child(3) .im { aspect-ratio: 3 / 4; }
+    .cr-vista small { display: block; margin: 6px 0; font-weight: 800; font-size: 12px; }
+    .cr-vista label { font: 700 12px var(--ev-font); color: var(--ev-deep); cursor: pointer; }
+    .cr-drop { border: 2px dashed var(--ev-line); cursor: pointer; transition: all .2s; }
+    .cr-drop:hover, .cr-drop.over { border-color: var(--ev-teal); background: var(--ev-grad-soft); }
+    .cr-dest { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 120px auto; gap: 8px; align-items: end; }
+    .cr-dest .ui-f { margin: 0; }
+
+    /* ---------- tabla ---------- */
+    .hw-mini { width: 54px; height: 38px; border-radius: 9px; object-fit: cover; background: var(--ev-grad-soft); display: block; }
+    @@media (max-width: 1000px) { .cr-dest { grid-template-columns: 1fr 1fr; } .cr-vistas { grid-template-columns: 1fr 1fr 1fr; } }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="hw-hero ev-rise">
+    <div>
+        <h1><i class="bi bi-window-sidebar" style="color:var(--ev-aqua)"></i> Home de la web</h1>
+        <p>Así ve la Home el cliente. Arrastra para ordenar el carrusel, las secciones y las tarjetas. Con el ojo ocultas sin borrar.</p>
+    </div>
+    <span class="sp"></span>
+    <div class="acts">
+        <button type="button" class="ev-btn light sm" id="hwAjustes"><i class="bi bi-sliders"></i> Ajustes</button>
+        <button type="button" class="ev-btn light sm" id="hwRecalc"><i class="bi bi-arrow-repeat"></i> Recalcular precios del carrusel</button>
+        <button type="button" class="ev-btn aqua sm" id="hwTraer"><i class="bi bi-magic"></i> Traer ofertas a la Home</button>
+    </div>
+    <div class="hw-kpis" id="hwKpis"></div>
+</section>
+
+<div class="hw-barra">
+    <div class="ui-tabs" id="hwTabs" style="margin:0">
+        <button type="button" data-tab="pVista" class="on"><i class="bi bi-eye"></i> Vista de la Home</button>
+        <button type="button" data-tab="pCarrusel"><i class="bi bi-images"></i> Carrusel <span class="n" id="nSlides">0</span></button>
+        <button type="button" data-tab="pTabla"><i class="bi bi-table"></i> Todas las tarjetas <span class="n" id="nTarjetas">0</span></button>
+    </div>
+    <span class="sp"></span>
+    <div class="hw-dev" id="hwDev" role="group" aria-label="Dispositivo">
+        <button type="button" class="on" data-dev="web"><i class="bi bi-display"></i> Web</button>
+        <button type="button" data-dev="tablet"><i class="bi bi-tablet"></i> Tablet</button>
+        <button type="button" data-dev="movil"><i class="bi bi-phone"></i> Móvil</button>
+    </div>
+</div>
+
+<!-- ============ VISTA ============ -->
+<section class="ui-pane on" id="pVista">
+    <div class="hw-marco" id="hwMarco" data-dev="web">
+        <div class="hw-slider" id="hwSlider" title="Editar carrusel"></div>
+        <div id="hwSecciones"><div class="ui-skel" style="height:300px;margin-top:18px"></div></div>
+        <button type="button" class="hw-nueva-sec" id="hwNuevaSec"><i class="bi bi-plus-circle"></i> Nueva sección</button>
+        <div class="hw-sin" id="hwSin"></div>
+    </div>
+    <p class="hw-tip" style="justify-content:center;margin-top:12px"><i class="bi bi-hand-index"></i> Arrastra las tarjetas entre secciones · arrastra <i class="bi bi-grip-vertical"></i> para mover una sección · clic en una tarjeta para editarla</p>
+</section>
+
+<!-- ============ CARRUSEL ============ -->
+<section class="ui-pane" id="pCarrusel">
+    <div class="ui-toolbar" style="margin-top:0">
+        <div class="ui-chips" id="crFiltro">
+            <button type="button" class="ui-pick on" data-v="1"><i class="bi bi-play-circle"></i> Activos</button>
+            <button type="button" class="ui-pick" data-v="0"><i class="bi bi-pause-circle"></i> Inactivos</button>
+            <button type="button" class="ui-pick" data-v=""><i class="bi bi-collection"></i> Todos</button>
+        </div>
+        <span style="flex:1"></span>
+        <span class="hw-tip"><i class="bi bi-arrows-move"></i> Arrastra los activos para cambiar el orden</span>
+    </div>
+    <div class="cr-grid" id="crGrid"></div>
+</section>
+
+<!-- ============ TABLA ============ -->
+<section class="ui-pane" id="pTabla">
+    <div class="ui-toolbar" style="margin-top:0">
+        <label class="ui-search"><i class="bi bi-search"></i><input id="tQ" type="search" placeholder="Buscar destino, origen, descripción, nº de servicio…"></label>
+        <select class="ui-select" id="tTipo"><option value="">Todos los tipos</option><option>OFERTA</option><option>CIRCUITO</option><option>HOTEL</option><option>COMBINADO</option></select>
+        <select class="ui-select" id="tSec"><option value="">Todas las secciones</option><option value="-1">Sin sección</option></select>
+        <select class="ui-select" id="tEst"><option value="">Visibles y ocultas</option><option value="1">Visibles</option><option value="0">Ocultas</option><option value="v">Ya no se venden</option></select>
+        <button type="button" class="ev-btn sm" onclick="HW.nuevaTarjeta()"><i class="bi bi-plus-lg"></i> Nueva tarjeta</button>
+    </div>
+    <div id="tLista"></div>
+</section>
+
+<!-- ============ PANEL: TARJETA ============ -->
+<aside class="ui-drawer" id="dTarjeta" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-postcard"></i></div>
+        <div style="min-width:0"><h2 id="tdTitulo">Tarjeta</h2><small id="tdSub"></small></div>
+        <button class="ui-ibtn x" type="button" data-cerrar aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="tdForm"></div>
+    <div class="ui-df">
+        <button class="ev-btn ghost" type="button" id="tdEliminar"><i class="bi bi-trash3"></i> Quitar de la Home</button>
+        <span class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> para guardar</span>
+        <button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button>
+        <button class="ev-btn" type="button" id="tdGuardar"><i class="bi bi-check2-circle"></i> Guardar</button>
+    </div>
+</aside>
+
+<!-- ============ PANEL: SLIDE ============ -->
+<aside class="ui-drawer" id="dSlide" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-image"></i></div>
+        <div style="min-width:0"><h2 id="sdTitulo">Slide</h2><small id="sdSub"></small></div>
+        <button class="ui-ibtn x" type="button" data-cerrar aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="sdForm"></div>
+    <div class="ui-df">
+        <button class="ev-btn ghost" type="button" id="sdEliminar"><i class="bi bi-trash3"></i> Eliminar slide</button>
+        <span style="flex:1"></span>
+        <button class="ev-btn ghost" type="button" data-cerrar>Cerrar</button>
+        <button class="ev-btn" type="button" id="sdGuardar"><i class="bi bi-check2-circle"></i> Guardar</button>
+    </div>
+</aside>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script>
+const HW = (() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    let D = null, cat = null, dev = 'web', crFiltro = '1', rot = null, slideActual = null, tarjetaActual = null;
+    const dT = EV.drawer($('#dTarjeta')), dS = EV.drawer($('#dSlide'));
+    const tabs = EV.tabs($('#hwTabs'));
+    const PRECIO_ALERTA = 400;   // como BackTiTan: precio de slide menor a esto se marca
+
+    const todas = () => [...D.contenedores.flatMap(c => c.tarjetas), ...D.sinContenedor];
+    const img = (ruta, d = dev) => !ruta ? '' : `${{ web: D.imagenes.web, tablet: D.imagenes.tablet, movil: D.imagenes.movil }[d]}/${encodeURIComponent(ruta)}`;
+    const carat = t => t.caratulaDestino && (EV.esUrl(t.caratulaDestino) || t.caratulaDestino.startsWith('/')) ? t.caratulaDestino : null;
+    const tipoChip = { OFERTA: 'Oferta', CIRCUITO: 'Circuito', HOTEL: 'Hotel', COMBINADO: 'Combinado' };
+
+    async function cargar() {
+        D = await EV.api('/HomeWeb/Datos');
+        pintarTodo();
+    }
+
+    function pintarTodo() {
+        const ts = todas(), vencidas = ts.filter(t => t.vigente === false && t.estado).length, ocultas = ts.filter(t => !t.estado).length;
+        const activos = D.slides.filter(s => s.activo).length;
+        $('#hwKpis').innerHTML = [
+            [activos, 'slides activos en el carrusel'], [D.contenedores.filter(c => c.estado).length, 'secciones visibles'],
+            [ts.filter(t => t.estado).length, 'tarjetas visibles'], [ocultas, 'tarjetas ocultas'],
+            ...(vencidas ? [[vencidas, 'ya no se venden', 'alerta']] : [])
+        ].map(([n, t, c]) => `<div class="hw-kpi ${c || ''}"><b>${EV.fmt(n)}</b><small>${t}</small></div>`).join('');
+        $('#nSlides').textContent = D.slides.length; $('#nTarjetas').textContent = ts.length;
+        $('#tSec').innerHTML = '<option value="">Todas las secciones</option><option value="-1">Sin sección</option>' + D.contenedores.map(c => `<option value="${c.id_Contenedor}">${esc(c.nombre)}</option>`).join('');
+        pintarSlider(); pintarSecciones(); pintarCarrusel(); pintarTabla();
+    }
+
+    // ===================== VISTA: slider =====================
+    function pintarSlider() {
+        clearInterval(rot);
+        const act = D.slides.filter(s => s.activo).sort((a, b) => a.orden - b.orden);
+        const s = $('#hwSlider');
+        if (!act.length) { s.innerHTML = '<div class="vacio"><div><i class="bi bi-images" style="font-size:30px;display:block"></i>No hay slides activos. Clic para ir al carrusel.</div></div>'; return; }
+        s.innerHTML = act.map((x, i) => `<img src="${esc(img(x.ruta))}" data-i="${i}" class="${i === 0 ? 'on' : ''}" alt="" onerror="this.style.display='none'">`).join('') +
+            `<span class="editar"><i class="bi bi-pencil"></i> Editar carrusel</span><span class="precio" id="hwPrecio" hidden></span><div class="puntos">${act.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</div>`;
+        let i = 0;
+        const mostrar = k => {
+            $$('#hwSlider img').forEach((im, j) => im.classList.toggle('on', j === k)); $$('#hwSlider .puntos i').forEach((p, j) => p.classList.toggle('on', j === k));
+            const pr = act[k].destinos.filter(d => d.precio > 0).sort((a, b) => a.precio - b.precio)[0];
+            const el = $('#hwPrecio'); el.hidden = !pr; if (pr) el.innerHTML = `${esc(pr.destino)} desde <b>${EV.fmt(pr.precio)} €</b>`;
+        };
+        mostrar(0);
+        if (act.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) rot = setInterval(() => { i = (i + 1) % act.length; mostrar(i); }, 3800);
+    }
+
+    // ===================== VISTA: secciones y tarjetas =====================
+    const cardHtml = t => {
+        const c = carat(t);
+        return `<div class="hw-card ${t.estado ? '' : 'oculta'}" draggable="true" data-t="${t.id}" title="Clic para editar · arrastra para mover">
+            <div class="img">${c ? `<img src="${esc(c)}" alt="" loading="lazy" onerror="this.remove()">` : esc(EV.iniciales(t.id_Destino))}
+                <div class="chips"><span>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</span>${t.vigente === false ? '<span class="mal">Ya no se vende</span>' : ''}${t.estado ? '' : '<span class="oc">Oculta</span>'}</div>
+                <button type="button" class="ojo" data-ojo="${t.id}" title="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div>
+            <div class="tx"><b>${esc(t.descripcion && t.tipo_Servicio === 'CIRCUITO' ? t.descripcion : t.id_Destino)}</b><small>${esc(t.origen)} · ${esc(t.campanya || '#' + t.id_Campanya)}${t.noches ? ` · ${t.noches} noches` : ''}</small>
+                <div class="pr">${t.precioWeb ? `desde <b>${EV.fmt(t.precioWeb)} €</b>` : 'sin precio'}</div></div></div>`;
+    };
+
+    function pintarSecciones() {
+        $('#hwSecciones').innerHTML = D.contenedores.map(c => `
+            <section class="hw-sec ${c.estado ? '' : 'oculta'}" data-sec="${c.id_Contenedor}">
+                <div class="hw-sec-h">
+                    <span class="asa" draggable="true" data-asa="${c.id_Contenedor}" title="Arrastra para mover la sección"><i class="bi bi-grip-vertical"></i></span>
+                    <h3>${esc(c.nombre)}</h3><span class="n">${c.tarjetas.length}</span>${c.estado ? '' : '<span class="ui-chip ghost" style="padding:2px 9px">Oculta</span>'}
+                    <span class="sp"></span>
+                    <button type="button" class="ui-ibtn" data-secojo="${c.id_Contenedor}" title="${c.estado ? 'Ocultar sección' : 'Mostrar sección'}"><i class="bi ${c.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button>
+                    <button type="button" class="ui-ibtn" data-secren="${c.id_Contenedor}" title="Cambiar nombre"><i class="bi bi-pencil"></i></button>
+                    <button type="button" class="ui-ibtn danger" data-secdel="${c.id_Contenedor}" title="Eliminar sección"><i class="bi bi-trash3"></i></button>
+                </div>
+                <div class="hw-cards" data-cards="${c.id_Contenedor}">${c.tarjetas.map(cardHtml).join('')}<button type="button" class="hw-add" data-addsec="${c.id_Contenedor}"><span><i class="bi bi-plus-circle"></i>Agregar tarjeta</span></button></div>
+            </section>`).join('') || '<div class="ui-empty"><p>No hay secciones. Crea la primera.</p></div>';
+        $('#hwSin').innerHTML = `<div class="hw-sec-h"><i class="bi bi-inbox" style="font-size:18px;color:var(--ev-muted)"></i><h3 style="font-size:14px">Sin sección</h3><span class="n">${D.sinContenedor.length}</span>
+                <span class="hw-tip" style="margin-left:8px">no salen en la Home hasta que las arrastres a una sección</span></div>
+            <div class="hw-cards" data-cards="">${D.sinContenedor.map(cardHtml).join('') || '<span class="hw-tip" style="padding:10px">Vacío. Puedes soltar aquí una tarjeta para sacarla de su sección.</span>'}</div>`;
+    }
+
+    // ---------- arrastrar y soltar ----------
+    let arrastre = null;   // { tipo: 'card'|'sec'|'slide', id, el }
+    function destinoAntes(cont, y, x, sel) {
+        const items = $$(sel, cont).filter(e => !e.classList.contains('arrastrando'));
+        return items.find(e => { const r = e.getBoundingClientRect(); return y < r.top + r.height / 2 && (x < r.left + r.width / 2 || y < r.top); });
+    }
+    document.addEventListener('dragstart', e => {
+        const card = e.target.closest?.('.hw-card'), asa = e.target.closest?.('[data-asa]'), sl = e.target.closest?.('.cr-card[draggable="true"]');
+        if (asa) { arrastre = { tipo: 'sec', el: asa.closest('.hw-sec') }; }
+        else if (card) arrastre = { tipo: 'card', el: card, origen: card.parentElement };
+        else if (sl) arrastre = { tipo: 'slide', el: sl };
+        else return;
+        arrastre.el.classList.add('arrastrando');
+        e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', '');
+    });
+    document.addEventListener('dragover', e => {
+        if (!arrastre) return;
+        if (arrastre.tipo === 'card') {
+            const cont = e.target.closest('.hw-cards'); if (!cont) return;
+            e.preventDefault();
+            $$('.hw-cards.sobre').forEach(c => c !== cont && c.classList.remove('sobre')); cont.classList.add('sobre');
+            const antes = destinoAntes(cont, e.clientY, e.clientX, '.hw-card') || $('.hw-add', cont);
+            antes ? cont.insertBefore(arrastre.el, antes) : cont.appendChild(arrastre.el);
+        } else if (arrastre.tipo === 'sec') {
+            const cont = $('#hwSecciones'); if (!e.target.closest('#hwSecciones')) return;
+            e.preventDefault();
+            const antes = $$('.hw-sec', cont).filter(s => s !== arrastre.el).find(s => e.clientY < s.getBoundingClientRect().top + s.getBoundingClientRect().height / 2);
+            antes ? cont.insertBefore(arrastre.el, antes) : cont.appendChild(arrastre.el);
+        } else if (arrastre.tipo === 'slide') {
+            const cont = $('#crGrid'), sobre = e.target.closest('.cr-card[draggable="true"]'); if (!sobre || sobre === arrastre.el) { if (e.target.closest('#crGrid')) e.preventDefault(); return; }
+            e.preventDefault();
+            const r = sobre.getBoundingClientRect();
+            cont.insertBefore(arrastre.el, e.clientX < r.left + r.width / 2 ? sobre : sobre.nextSibling);
+        }
+    });
+    document.addEventListener('drop', e => { if (arrastre) e.preventDefault(); });
+    document.addEventListener('dragend', async () => {
+        if (!arrastre) return;
+        const a = arrastre; arrastre = null;
+        a.el.classList.remove('arrastrando'); $$('.sobre').forEach(x => x.classList.remove('sobre'));
+        try {
+            if (a.tipo === 'card') {
+                const cont = a.el.parentElement, sec = cont.dataset.cards;
+                const ids = $$('.hw-card', cont).map(c => +c.dataset.t);
+                await EV.post('/HomeWeb/OrdenTarjetas', { Id_Contenedor: sec === '' ? null : +sec, Ids: ids });
+                if (a.origen !== cont) EV.toast(sec === '' ? 'Tarjeta sacada de la sección.' : `Tarjeta movida a ${D.contenedores.find(c => c.id_Contenedor === +sec)?.nombre}.`);
+                await cargar();
+            } else if (a.tipo === 'sec') {
+                await EV.post('/HomeWeb/OrdenSecciones', $$('#hwSecciones .hw-sec').map(s => +s.dataset.sec));
+                EV.toast('Orden de secciones guardado.'); await cargar();
+            } else if (a.tipo === 'slide') {
+                await EV.post('/HomeWeb/OrdenSlides', $$('#crGrid .cr-card[draggable="true"]').map(s => +s.dataset.s));
+                EV.toast('Orden del carrusel guardado.'); await cargar();
+            }
+        } catch (err) { EV.toast(err.message, 'err'); cargar(); }
+    });
+
+    // ===================== CARRUSEL =====================
+    function pintarCarrusel() {
+        const lista = D.slides.filter(s => crFiltro === '' || String(+s.activo) === crFiltro).sort((a, b) => (b.activo - a.activo) || a.orden - b.orden);
+        $('#crGrid').innerHTML = `<button type="button" class="cr-nuevo" onclick="HW.nuevoSlide()"><span><i class="bi bi-plus-circle"></i>Nuevo slide</span></button>` + lista.map(s => {
+            const malos = s.destinos.filter(d => d.precio > 0 && d.precio < PRECIO_ALERTA).length;
+            return `<article class="cr-card ${s.activo ? '' : 'inactivo'}" data-s="${s.id_Carrusel}" ${s.activo ? 'draggable="true"' : ''}>
+                <div class="cr-img"><img src="${esc(img(s.ruta, 'web'))}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ui-empty',style:'padding:30px 10px;margin:0',textContent:'Imagen no disponible'}))">
+                    ${s.activo ? `<span class="ord">${s.orden}</span>` : ''}<span class="ori">${s.orientacion === 'V' ? '▯ Vertical' : '▭ Horizontal'}</span></div>
+                <div class="cr-body"><div class="nombre" title="${esc(s.ruta)}">${esc(s.ruta)}</div>
+                    <div class="cr-fmt"><span>Web</span><span class="${s.tieneTablet ? '' : 'no'}">Tablet</span><span class="${s.tieneMovil ? '' : 'no'}">Móvil</span>${s.url ? '<span style="background:var(--ev-surface-2);color:var(--ev-text)"><i class="bi bi-link-45deg"></i> enlace</span>' : ''}</div>
+                    <div class="cr-precios">${s.destinos.length ? s.destinos.slice(0, 3).map(d => `<span class="${d.precio > 0 && d.precio < PRECIO_ALERTA ? 'mal' : ''}" title="${esc(d.origen)} → ${esc(d.destino)} · campaña ${d.id_Campanya}">${esc(d.destino)} ${d.precio > 0 ? EV.fmt(d.precio) + ' €' : 'sin precio'}</span>`).join('') + (s.destinos.length > 3 ? `<span>+${s.destinos.length - 3}</span>` : '') : '<span style="color:var(--ev-muted)">Sin precio "desde"</span>'}</div>
+                    ${malos ? `<div class="ui-help" style="color:#B54708;margin-top:6px"><i class="bi bi-exclamation-triangle"></i> ${malos} precio(s) menores a ${PRECIO_ALERTA} €: revísalos</div>` : ''}
+                    <div class="cr-pie"><label class="ui-switch" title="Activo en la web"><input type="checkbox" data-sact="${s.id_Carrusel}" ${s.activo ? 'checked' : ''}><span class="tr"></span> ${s.activo ? 'Activo' : 'Inactivo'}</label>
+                        <span class="sp"></span><button type="button" class="ev-btn ghost sm" data-sed="${s.id_Carrusel}"><i class="bi bi-pencil"></i> Editar</button></div></div></article>`;
+        }).join('');
+    }
+
+    async function abrirSlide(id) {
+        const s = D.slides.find(x => x.id_Carrusel === id); if (!s) return;
+        slideActual = s; cat ??= await EVC.catalogos();
+        $('#sdTitulo').textContent = s.ruta; $('#sdSub').textContent = s.activo ? `Posición ${s.orden} del carrusel` : 'Inactivo (no sale en la web)';
+        $('#sdEliminar').hidden = false; $('#sdGuardar').hidden = false;
+        const vista = (d, et) => `<div class="cr-vista"><div class="im"><img src="${esc(img(s.ruta, d))}?v=${Date.now()}" alt="" onerror="this.replaceWith('Sin imagen')"></div><small>${et}</small>
+            <label><input type="file" accept="image/jpeg,image/png,image/webp" data-rep="${d}" hidden><i class="bi bi-arrow-repeat"></i> Reemplazar</label></div>`;
+        $('#sdForm').innerHTML = `
+            <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-display"></i></span> Imágenes <small>mismo nombre de archivo en las 3 carpetas</small></div>
+                <div class="cr-vistas">${vista('web', 'Web')}${vista('tablet', 'Tablet')}${vista('movil', 'Móvil')}</div></div>
+            <div class="ui-sec"><div class="ui-sec-t"><span>1</span> Datos del slide</div>
+                <div class="ui-row r3">
+                    <div class="ui-f"><label>Orientación</label><select id="sOri"><option value="H">Horizontal</option><option value="V">Vertical</option></select></div>
+                    <div class="ui-f" style="grid-column:span 2"><label>Enlace al pulsar <em>opcional</em></label><input id="sUrl" maxlength="500" placeholder="https://… o /ruta-de-la-web" value="${esc(s.url || '')}"></div>
+                </div>
+                <label class="ui-switch"><input type="checkbox" id="sAct" ${s.activo ? 'checked' : ''}><span class="tr"></span> Activo (sale en la web)</label></div>
+            <div class="ui-sec"><div class="ui-sec-t"><span>2</span> Precio "desde" que muestra el slide <small>se puede recalcular con lo que hay a la venta</small></div>
+                <div id="sPrecios"></div>
+                <div class="hb-form" style="padding:14px;border-radius:16px;background:var(--ev-grad-soft);border:1px solid var(--ev-line);margin-top:10px">
+                    <b style="display:block;margin-bottom:8px"><i class="bi bi-plus-circle"></i> Agregar precio</b>
+                    <div class="ui-f" style="margin-bottom:8px"><label>Tomarlo de una tarjeta de la Home <em>opcional, llena todo solo</em></label><select id="sDesdeHome"><option value="">— Elige una tarjeta —</option>${todas().filter(t => t.tipo_Servicio !== 'HOTEL').map(t => `<option value="${t.id}">${esc(t.id_Destino)} desde ${esc(t.origen)} · ${esc(t.campanya || t.id_Campanya)}${t.precioWeb ? ' · ' + EV.fmt(t.precioWeb) + ' €' : ''}</option>`).join('')}</select></div>
+                    <div class="cr-dest">
+                        <div class="ui-f"><label>Origen</label><input id="pOri" placeholder="Madrid"></div>
+                        <div class="ui-f"><label>Destino</label><input id="pDes" placeholder="Punta Cana"></div>
+                        <div class="ui-f"><label>Campaña</label><select id="pCam">${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)}</option>`).join('')}</select></div>
+                        <div class="ui-f"><label>Régimen</label><select id="pReg"><option value="">Cualquiera</option>${cat.regimenes.map(r => `<option value="${esc(r.texto)}">${esc(r.texto)}</option>`).join('')}</select></div>
+                        <div class="ui-f"><label>Precio</label><div class="ui-money"><b>€</b><input id="pPre" type="number" min="0" step="1"></div></div>
+                        <div style="display:flex;gap:6px"><button type="button" class="ev-btn ghost sm" id="pCalc" title="Calcular con las ofertas a la venta"><i class="bi bi-calculator"></i></button><button type="button" class="ev-btn sm" id="pAdd"><i class="bi bi-plus-lg"></i></button></div>
+                    </div></div></div>`;
+        $('#sOri').value = s.orientacion === 'V' ? 'V' : 'H';
+        const gen = cat.campanyas.find(c => c.texto === 'DTGeneral'); if (gen) $('#pCam').value = gen.valor;
+        pintarPrecios();
+        EV.picker($('#pOri'), { url: q => `/Circuitos/Destinos?pais=ES&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo' }), onSelect: m => $('#pOri').value = m.valor });
+        EV.picker($('#pDes'), { url: q => `/Circuitos/Destinos?q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: x.extra, icono: 'bi-geo-alt' }), onSelect: m => $('#pDes').value = m.valor });
+        $('#sDesdeHome').onchange = e => { const t = todas().find(x => x.id === +e.target.value); if (!t) return; $('#pOri').value = t.origen; $('#pDes').value = t.id_Destino; $('#pCam').value = String(t.id_Campanya); if (t.precioWeb) $('#pPre').value = Math.round(t.precioWeb); };
+        $('#pCalc').onclick = async () => {
+            if (!$('#pOri').value || !$('#pDes').value) { EV.toast('Elige origen y destino.', 'err'); return; }
+            const r = await EV.api(`/HomeWeb/PrecioMinimo?origen=${encodeURIComponent($('#pOri').value)}&destino=${encodeURIComponent($('#pDes').value)}&campanya=${$('#pCam').value}&regimen=${encodeURIComponent($('#pReg').value)}`);
+            if (r.precio) { $('#pPre').value = Math.round(r.precio); EV.toast(`Precio más bajo a la venta: ${EV.fmt(r.precio)} €`); } else EV.toast('No hay ofertas a la venta con esos datos.', 'info');
+        };
+        $('#pAdd').onclick = async () => {
+            const dto = { Id_Carrusel: s.id_Carrusel, Origen: $('#pOri').value.trim(), Destino: $('#pDes').value.trim(), Id_Campanya: +$('#pCam').value, Regimen: $('#pReg').value || null, Precio: +$('#pPre').value || 0 };
+            if (!dto.Origen || !dto.Destino) { EV.toast('Elige origen y destino.', 'err'); return; }
+            try { const r = await EV.post('/HomeWeb/SlideDestino', dto); s.destinos.push({ ...dto, id: r.id, origen: dto.Origen, destino: dto.Destino, precio: dto.Precio, id_Campanya: dto.Id_Campanya, regimen: dto.Regimen }); pintarPrecios(); pintarCarrusel(); EV.toast(r.mensaje); $('#pPre').value = ''; }
+            catch (e) { EV.toast(e.message, 'err'); }
+        };
+        $$('[data-rep]', $('#sdForm')).forEach(inp => inp.onchange = async () => {
+            const f = inp.files[0]; if (!f) return;
+            const fd = new FormData(); fd.append('id', s.id_Carrusel); fd.append(inp.dataset.rep, f);
+            try { const r = await EV.post('/HomeWeb/ImagenesSlide', fd); EV.toast(r.mensaje); const im = inp.closest('.cr-vista').querySelector('.im'); im.innerHTML = `<img src="${URL.createObjectURL(f)}" alt="">`; await cargar(); }
+            catch (e) { EV.toast(e.message, 'err'); }
+        });
+        dS.abrir();
+    }
+
+    function pintarPrecios() {
+        const s = slideActual;
+        $('#sPrecios').innerHTML = !s.destinos.length ? '<div class="ui-help">Este slide no muestra precio. Agrega uno abajo si quieres que diga "desde …".</div>'
+            : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Origen → destino</th><th>Campaña</th><th>Régimen</th><th style="width:130px">Precio</th><th style="width:96px"></th></tr></thead><tbody>
+              ${s.destinos.map((d, i) => `<tr class="${d.precio > 0 && d.precio < PRECIO_ALERTA ? 'bad' : ''}"><td><b>${esc(d.origen)}</b> → ${esc(d.destino)}</td><td>${esc(cat.campanyas.find(c => +c.valor === d.id_Campanya)?.texto || d.id_Campanya)}</td><td>${esc(d.regimen || '—')}</td>
+                <td><div class="ui-money"><b>€</b><input type="number" min="0" step="1" value="${Math.round(d.precio)}" data-dp="${i}"></div></td>
+                <td style="text-align:right;white-space:nowrap"><button type="button" class="ui-ibtn" data-dcalc="${i}" title="Recalcular con lo que está a la venta"><i class="bi bi-calculator"></i></button><button type="button" class="ui-ibtn danger" data-ddel="${i}" title="Quitar"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
+              </tbody></table></div>`;
+        $$('[data-dp]', $('#sPrecios')).forEach(inp => inp.onchange = async () => { const d = s.destinos[+inp.dataset.dp]; d.precio = +inp.value || 0; await guardarPrecio(d); });
+        $$('[data-dcalc]', $('#sPrecios')).forEach(b => b.onclick = async () => {
+            const d = s.destinos[+b.dataset.dcalc];
+            const r = await EV.api(`/HomeWeb/PrecioMinimo?origen=${encodeURIComponent(d.origen)}&destino=${encodeURIComponent(d.destino)}&campanya=${d.id_Campanya}&regimen=${encodeURIComponent(d.regimen || '')}`);
+            if (!r.precio) { EV.toast('No hay ofertas a la venta para ese destino y campaña.', 'info'); return; }
+            d.precio = Math.round(r.precio); await guardarPrecio(d); pintarPrecios();
+        });
+        $$('[data-ddel]', $('#sPrecios')).forEach(b => b.onclick = async () => {
+            const d = s.destinos[+b.dataset.ddel];
+            try { const r = await EV.post(`/HomeWeb/EliminarSlideDestino?id=${d.id}`, {}); s.destinos.splice(+b.dataset.ddel, 1); pintarPrecios(); pintarCarrusel(); pintarSlider(); EV.toast(r.mensaje); }
+            catch (e) { EV.toast(e.message, 'err'); }
+        });
+    }
+    async function guardarPrecio(d) {
+        try { await EV.post('/HomeWeb/SlideDestino', { Id: d.id, Id_Carrusel: slideActual.id_Carrusel, Origen: d.origen, Destino: d.destino, Precio: d.precio, Id_Campanya: d.id_Campanya, Regimen: d.regimen }); EV.toast('Precio guardado.'); pintarCarrusel(); pintarSlider(); }
+        catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    async function guardarSlide() {
+        if (!slideActual) return guardarNuevoSlide();
+        try {
+            const r = await EV.post('/HomeWeb/Slide', { Id_Carrusel: slideActual.id_Carrusel, Orientacion: $('#sOri').value, Url: $('#sUrl').value.trim() || null, Activo: $('#sAct').checked });
+            EV.toast(r.mensaje); dS.cerrar(); cargar();
+        } catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    function nuevoSlide() {
+        slideActual = null;
+        $('#sdTitulo').textContent = 'Nuevo slide'; $('#sdSub').textContent = 'Sube la imagen web; tablet y móvil son opcionales (si faltan se usa la web)';
+        $('#sdEliminar').hidden = true;
+        const caja = (d, et, req) => `<div class="cr-vista"><label class="im cr-drop" data-drop="${d}"><input type="file" accept="image/jpeg,image/png,image/webp" data-nf="${d}" hidden><span><i class="bi bi-cloud-arrow-up" style="font-size:22px;display:block"></i>${req ? 'Obligatoria' : 'Opcional'}</span></label><small>${et}</small></div>`;
+        $('#sdForm').innerHTML = `
+            <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-images"></i></span> Imágenes <small>arrastra o haz clic · JPG, PNG o WebP</small></div>
+                <div class="cr-vistas">${caja('web', 'Web', true)}${caja('tablet', 'Tablet')}${caja('movil', 'Móvil')}</div></div>
+            <div class="ui-sec"><div class="ui-sec-t"><span>1</span> Datos</div>
+                <div class="ui-row r3">
+                    <div class="ui-f"><label>Nombre del archivo * <em>sin espacios</em></label><input id="nNom" maxlength="90" placeholder="VeranoPuntaCana"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Orientación</label><select id="sOri"><option value="H">Horizontal</option><option value="V">Vertical</option></select></div>
+                    <div class="ui-f"><label>Enlace al pulsar <em>opcional</em></label><input id="sUrl" maxlength="500" placeholder="https://…"></div>
+                </div>
+                <label class="ui-switch"><input type="checkbox" id="sAct" checked><span class="tr"></span> Activo (sale en la web al final del carrusel)</label>
+                <div class="ui-help" style="margin-top:8px">Después de crearlo podrás agregarle el precio "desde".</div></div>`;
+        const files = {};
+        $$('[data-nf]').forEach(inp => {
+            const lab = inp.closest('label'), poner = f => { if (!f) return; files[inp.dataset.nf] = f; lab.querySelector('span').innerHTML = `<img src="${URL.createObjectURL(f)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`;
+                if (inp.dataset.nf === 'web' && !$('#nNom').value) $('#nNom').value = f.name.replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9_\-]/g, ''); };
+            inp.onchange = () => poner(inp.files[0]);
+            ['dragenter', 'dragover'].forEach(t => lab.addEventListener(t, e => { e.preventDefault(); lab.classList.add('over'); }));
+            ['dragleave', 'drop'].forEach(t => lab.addEventListener(t, e => { e.preventDefault(); lab.classList.remove('over'); }));
+            lab.addEventListener('drop', e => poner(e.dataTransfer.files[0]));
+        });
+        HW._nuevos = files;
+        dS.abrir();
+    }
+
+    async function guardarNuevoSlide() {
+        const f = HW._nuevos || {};
+        if (!f.web) { EV.toast('Sube la imagen para web.', 'err'); return; }
+        const nom = $('#nNom').value.trim();
+        if (!/^[A-Za-z0-9_\-]{3,}$/.test(nom)) { const fl = $('#nNom').closest('.ui-f'); fl.classList.add('err'); fl.querySelector('.msg').textContent = 'Mínimo 3 letras, sin espacios ni símbolos'; return; }
+        const fd = new FormData();
+        fd.append('nombre', nom); fd.append('orientacion', $('#sOri').value); fd.append('url', $('#sUrl').value.trim()); fd.append('activo', $('#sAct').checked);
+        ['web', 'tablet', 'movil'].forEach(k => f[k] && fd.append(k, f[k]));
+        const b = $('#sdGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Subiendo…';
+        try { const r = await EV.post('/HomeWeb/NuevoSlide', fd); EV.toast(r.mensaje); await cargar(); abrirSlide(r.id); }
+        catch (e) { EV.toast(e.message, 'err'); }
+        finally { b.disabled = false; b.innerHTML = html; }
+    }
+
+    // ===================== TARJETAS =====================
+    async function abrirTarjeta(t, idSeccion) {
+        cat ??= await EVC.catalogos();
+        tarjetaActual = t;
+        const v = t || { tipo_Servicio: 'OFERTA', id_Pais_Origen: 'ES', origen: '', id_PaisDestino: 'DO', id_Destino: '', estado: true, id_Contenedor: idSeccion ?? null };
+        $('#tdTitulo').textContent = t ? (t.tipo_Servicio === 'CIRCUITO' ? t.descripcion : t.id_Destino) : 'Nueva tarjeta';
+        $('#tdSub').textContent = t ? `${tipoChip[t.tipo_Servicio] || t.tipo_Servicio}${t.id_Servicio > 0 ? ' · servicio #' + t.id_Servicio : ' · tarjeta manual'}` : 'Se agrega a la Home';
+        $('#tdEliminar').hidden = !t;
+        const paises = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
+        $('#tdForm').innerHTML = `
+            ${t && t.vigente === false ? '<div class="ui-note warn"><i class="bi bi-exclamation-triangle"></i><div>La oferta de esta tarjeta <b>ya no está a la venta</b>. Ocúltala, quítala o pulsa "Traer ofertas a la Home" para poner la más barata vigente.</div></div>' : ''}
+            ${t && t.id_Servicio > 0 ? '<div class="ui-note info"><i class="bi bi-magic"></i><div>Esta tarjeta viene de las ofertas: al pulsar "Traer ofertas a la Home" se actualizan su precio e imagen, pero se respetan la sección, el orden y si está oculta.</div></div>' : ''}
+            <div class="ui-sec"><div class="ui-sec-t"><span>1</span> Qué se muestra</div>
+                <div class="hc-prev" id="tdPrev" style="border-radius:16px;overflow:hidden;margin-bottom:12px;max-height:200px;background:var(--ev-grad-soft)"></div>
+                <div class="ui-row r3">
+                    <div class="ui-f"><label>Tipo</label><select id="tTipoF">${['OFERTA', 'CIRCUITO', 'HOTEL', 'COMBINADO'].map(x => `<option>${x}</option>`).join('')}</select></div>
+                    <div class="ui-f"><label>Campaña *</label><select id="tCam">${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)}</option>`).join('')}</select></div>
+                    <div class="ui-f"><label>Sección</label><select id="tSecF"><option value="">— Sin sección —</option>${D.contenedores.map(c => `<option value="${c.id_Contenedor}">${esc(c.nombre)}</option>`).join('')}</select></div>
+                </div>
+                <div class="ui-row r4">
+                    <div class="ui-f"><label>País origen</label><select id="tPO">${paises}</select></div>
+                    <div class="ui-f"><label>Origen *</label><input id="tOri" maxlength="30"><span class="msg"></span></div>
+                    <div class="ui-f"><label>País destino</label><select id="tPD">${paises}</select></div>
+                    <div class="ui-f"><label>Destino *</label><input id="tDes" maxlength="1500"><span class="msg"></span></div>
+                </div>
+                <div class="ui-f"><label>Imagen (URL)</label><input id="tImg" maxlength="300" placeholder="https://…"></div>
+                <div class="ui-f"><label>Descripción <em>en circuitos es el nombre que se ve</em></label><textarea id="tDesc" rows="2"></textarea></div>
+            </div>
+            <div class="ui-sec"><div class="ui-sec-t"><span>2</span> Precio y notas</div>
+                <div class="ui-row r3">
+                    <div class="ui-f"><label>Precio "desde"</label><div class="ui-money"><b>€</b><input id="tPre" type="number" min="0" step="1"></div></div>
+                    <div class="ui-f"><label>Noches</label><input id="tNoc" type="number" min="0" max="60"></div>
+                    <div class="ui-f"><label class="ui-switch" style="margin-top:28px"><input type="checkbox" id="tEstF"><span class="tr"></span> Visible en la web</label></div>
+                </div>
+                <div class="ui-f"><label>Notas</label><textarea id="tNot" rows="2" maxlength="1000"></textarea></div>
+            </div>`;
+        $('#tTipoF').value = v.tipo_Servicio; $('#tCam').value = String(v.id_Campanya || cat.campanyas.find(c => c.texto === 'DTGeneral')?.valor || cat.campanyas[0].valor);
+        $('#tSecF').value = v.id_Contenedor ?? ''; $('#tPO').value = (v.id_Pais_Origen || 'ES').toUpperCase(); $('#tPD').value = (v.id_PaisDestino || 'DO').toUpperCase();
+        $('#tOri').value = v.origen || ''; $('#tDes').value = v.id_Destino || ''; $('#tImg').value = v.caratulaDestino || ''; $('#tDesc').value = v.descripcion || '';
+        $('#tPre').value = v.precioWeb != null ? Math.round(v.precioWeb) : ''; $('#tNoc').value = v.noches ?? ''; $('#tNot').value = v.notas || ''; $('#tEstF').checked = v.estado !== false;
+        const prev = () => { const u = $('#tImg').value.trim(); $('#tdPrev').innerHTML = u && (EV.esUrl(u) || u.startsWith('/')) ? `<img src="${esc(u)}" alt="" style="width:100%;max-height:200px;object-fit:cover;display:block" onerror="this.remove()">` : ''; };
+        $('#tImg').addEventListener('input', EV.debounce(prev, 300)); prev();
+        EV.picker($('#tOri'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#tPO').value)}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo' }), onSelect: m => $('#tOri').value = m.valor });
+        EV.picker($('#tDes'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#tPD').value)}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo-alt' }), onSelect: m => $('#tDes').value = m.valor });
+        dT.abrir();
+    }
+
+    async function guardarTarjeta() {
+        const dto = {
+            Id: tarjetaActual?.id ?? null, Tipo_Servicio: $('#tTipoF').value, Id_Campanya: +$('#tCam').value, Id_Pais_Origen: $('#tPO').value, Origen: $('#tOri').value.trim(),
+            Id_PaisDestino: $('#tPD').value, Id_Destino: $('#tDes').value.trim(), CaratulaDestino: $('#tImg').value.trim() || null, Descripcion: $('#tDesc').value.trim(),
+            PrecioWeb: $('#tPre').value === '' ? null : +$('#tPre').value, Id_Contenedor: $('#tSecF').value ? +$('#tSecF').value : null,
+            Noches: $('#tNoc').value === '' ? null : +$('#tNoc').value, Notas: $('#tNot').value.trim() || null, Estado: $('#tEstF').checked
+        };
+        $$('#tdForm .ui-f.err').forEach(f => f.classList.remove('err'));
+        const falta = (id, m) => { const f = $(id).closest('.ui-f'); f.classList.add('err'); f.querySelector('.msg').textContent = m; EV.toast(m, 'err'); };
+        if (!dto.Origen) return falta('#tOri', 'Escribe el origen');
+        if (!dto.Id_Destino) return falta('#tDes', 'Escribe el destino');
+        const b = $('#tdGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
+        try { const r = await EV.post('/HomeWeb/GuardarTarjeta', dto); EV.toast(r.mensaje); dT.cerrar(); cargar(); }
+        catch (e) { EV.toast(e.message, 'err'); }
+        finally { b.disabled = false; b.innerHTML = html; }
+    }
+
+    async function estadoTarjeta(id) {
+        const t = todas().find(x => x.id === id); if (!t) return;
+        try { const r = await EV.post('/HomeWeb/EstadoTarjeta', { Id: id, Estado: !t.estado }); EV.toast(r.mensaje, 'ok', { texto: 'Deshacer', accion: async () => { await EV.post('/HomeWeb/EstadoTarjeta', { Id: id, Estado: t.estado }); cargar(); } }); cargar(); }
+        catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    // ===================== TABLA =====================
+    function pintarTabla() {
+        const q = $('#tQ').value.trim().toLowerCase(), tipo = $('#tTipo').value, sec = $('#tSec').value, est = $('#tEst').value;
+        const filas = todas().filter(t => (!q || [t.id_Destino, t.origen, t.descripcion, t.campanya, String(t.id_Servicio)].some(x => (x || '').toLowerCase().includes(q)))
+            && (!tipo || t.tipo_Servicio === tipo) && (!sec || (sec === '-1' ? !t.id_Contenedor || !D.contenedores.some(c => c.id_Contenedor === t.id_Contenedor) : t.id_Contenedor === +sec))
+            && (!est || (est === 'v' ? t.vigente === false : String(+t.estado) === est)));
+        $('#tLista').innerHTML = !filas.length ? '<div class="ui-empty"><i class="bi bi-postcard big"></i><h3>No hay tarjetas con esos filtros</h3><p>Pulsa "Traer ofertas a la Home" para llenarla con lo que está a la venta.</p></div>'
+            : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th></th><th>Destino</th><th>Tipo</th><th>Origen</th><th>Campaña</th><th class="num">Precio</th><th>Sección</th><th>Pos.</th><th>Visible</th><th></th></tr></thead><tbody>
+              ${filas.map(t => `<tr data-tt="${t.id}" style="cursor:pointer"><td>${carat(t) ? `<img class="hw-mini" src="${esc(carat(t))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<span class="hw-mini"></span>'}</td>
+                <td><b>${esc(t.tipo_Servicio === 'CIRCUITO' ? t.descripcion : t.id_Destino)}</b>${t.vigente === false ? ' <span class="ui-chip" style="background:#FEE4E2;color:#B42318;padding:2px 8px;font-size:11px">ya no se vende</span>' : ''}<br><small style="color:var(--ev-muted)">${t.id_Servicio > 0 ? '#' + t.id_Servicio : 'manual'}</small></td>
+                <td>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</td><td>${esc(t.origen)}</td><td>${esc(t.campanya || t.id_Campanya)}</td>
+                <td class="num">${t.precioWeb ? EV.fmt(t.precioWeb) + ' €' : '—'}</td><td>${esc(t.contenedor || '—')}</td><td>${t.posicion_Destino ?? '—'}</td>
+                <td><label class="ui-switch" onclick="event.stopPropagation()"><input type="checkbox" data-tvis="${t.id}" ${t.estado ? 'checked' : ''}><span class="tr"></span></label></td>
+                <td><button type="button" class="ui-ibtn" title="Editar"><i class="bi bi-pencil"></i></button></td></tr>`).join('')}
+              </tbody></table></div>`;
+    }
+
+    // ===================== INICIO =====================
+    async function iniciar() {
+        if (location.hash === '#carrusel') tabs.ir('pCarrusel');
+        window.addEventListener('hashchange', () => location.hash === '#carrusel' && tabs.ir('pCarrusel'));
+        try { await cargar(); } catch (e) { $('#hwSecciones').innerHTML = `<div class="ui-empty"><h3>No se pudo cargar la Home</h3><p>${esc(e.message)}</p></div>`; return; }
+
+        $('#hwDev').addEventListener('click', e => { const b = e.target.closest('[data-dev]'); if (!b) return; dev = b.dataset.dev; $$('#hwDev button').forEach(x => x.classList.toggle('on', x === b)); $('#hwMarco').dataset.dev = dev; pintarSlider(); });
+        $('#hwSlider').onclick = () => tabs.ir('pCarrusel');
+        $('#hwNuevaSec').onclick = async () => {
+            const nombre = prompt('Nombre de la nueva sección (ej. CARIBE, OFERTAS DE VERANO):');
+            if (!nombre?.trim()) return;
+            try { const r = await EV.post('/HomeWeb/Seccion', { Nombre: nombre.trim(), Estado: true }); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
+        };
+        document.addEventListener('click', async e => {
+            const ojo = e.target.closest('[data-ojo]'); if (ojo) { e.stopPropagation(); return estadoTarjeta(+ojo.dataset.ojo); }
+            const add = e.target.closest('[data-addsec]'); if (add) return abrirTarjeta(null, +add.dataset.addsec);
+            const card = e.target.closest('.hw-card'); if (card) return abrirTarjeta(todas().find(t => t.id === +card.dataset.t));
+            const tr = e.target.closest('[data-tt]'); if (tr) return abrirTarjeta(todas().find(t => t.id === +tr.dataset.tt));
+            const sed = e.target.closest('[data-sed]'); if (sed) return abrirSlide(+sed.dataset.sed);
+            const so = e.target.closest('[data-secojo]');
+            if (so) { const c = D.contenedores.find(x => x.id_Contenedor === +so.dataset.secojo); try { const r = await EV.post('/HomeWeb/Seccion', { Id_Contenedor: c.id_Contenedor, Nombre: c.nombre, Estado: !c.estado }); EV.toast(c.estado ? 'Sección oculta en la web.' : 'Sección visible en la web.'); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
+            const sr = e.target.closest('[data-secren]');
+            if (sr) { const c = D.contenedores.find(x => x.id_Contenedor === +sr.dataset.secren); const n = prompt('Nuevo nombre de la sección:', c.nombre); if (!n?.trim() || n.trim() === c.nombre) return;
+                try { const r = await EV.post('/HomeWeb/Seccion', { Id_Contenedor: c.id_Contenedor, Nombre: n.trim(), Estado: c.estado }); EV.toast(r.mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
+            const sd = e.target.closest('[data-secdel]');
+            if (sd) { const c = D.contenedores.find(x => x.id_Contenedor === +sd.dataset.secdel);
+                if (!await EV.confirmar({ titulo: `¿Eliminar la sección ${c.nombre}?`, peligro: true, si: 'Sí, eliminar', texto: c.tarjetas.length ? `Sus <b>${c.tarjetas.length}</b> tarjetas NO se borran: pasan a «Sin sección».` : 'La sección está vacía.' })) return;
+                try { const r = await EV.post(`/HomeWeb/EliminarSeccion?id=${c.id_Contenedor}`, {}); EV.toast(r.mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } }
+        });
+        document.addEventListener('change', async e => {
+            const sa = e.target.closest('[data-sact]');
+            if (sa) { const s = D.slides.find(x => x.id_Carrusel === +sa.dataset.sact);
+                try { await EV.post('/HomeWeb/Slide', { Id_Carrusel: s.id_Carrusel, Orientacion: s.orientacion, Url: s.url, Activo: sa.checked }); EV.toast(sa.checked ? 'Slide activo en la web.' : 'Slide desactivado.'); cargar(); } catch (er) { EV.toast(er.message, 'err'); sa.checked = !sa.checked; } }
+            const tv = e.target.closest('[data-tvis]'); if (tv) estadoTarjeta(+tv.dataset.tvis);
+        });
+        $('#crFiltro').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; crFiltro = b.dataset.v; $$('#crFiltro .ui-pick').forEach(x => x.classList.toggle('on', x === b)); pintarCarrusel(); });
+        ['#tQ', '#tTipo', '#tSec', '#tEst'].forEach(id => $(id).addEventListener('input', EV.debounce(pintarTabla, 150)));
+
+        $('#tdGuardar').onclick = guardarTarjeta;
+        $('#tdEliminar').onclick = async () => {
+            const t = tarjetaActual; if (!t) return;
+            if (!await EV.confirmar({ titulo: '¿Quitar esta tarjeta de la Home?', peligro: true, si: 'Sí, quitar', texto: `Se quita <b>${esc(t.id_Destino)}</b> de la Home. La oferta NO se borra.${t.id_Servicio > 0 ? ' Si la quieres de vuelta, usa "Traer ofertas a la Home".' : ''} Si solo quieres que no se vea, usa el ojo para ocultarla.` })) return;
+            try { const r = await EV.post(`/HomeWeb/EliminarTarjeta?id=${t.id}`, {}); EV.toast(r.mensaje); dT.cerrar(); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
+        };
+        $('#sdGuardar').onclick = guardarSlide;
+        $('#sdEliminar').onclick = async () => {
+            const s = slideActual; if (!s) return;
+            if (!await EV.confirmar({ titulo: '¿Eliminar este slide?', peligro: true, si: 'Sí, eliminar', texto: `Se quita <b>${esc(s.ruta)}</b> del carrusel (web, tablet y móvil) con sus precios. Si solo quieres que no salga, desactívalo.` })) return;
+            try { const r = await EV.post(`/HomeWeb/EliminarSlide?id=${s.id_Carrusel}`, {}); EV.toast(r.mensaje); dS.cerrar(); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
+        };
+        $$('[data-cerrar]').forEach(b => b.onclick = () => { dT.cerrar(); dS.cerrar(); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { dT.cerrar(); dS.cerrar(); }
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { if (dT.abierto()) { e.preventDefault(); guardarTarjeta(); } else if (dS.abierto()) { e.preventDefault(); guardarSlide(); } }
+        });
+
+        $('#hwTraer').onclick = async () => {
+            if (!await EV.confirmar({ titulo: '¿Traer ofertas a la Home?', si: 'Sí, traer', icono: 'magic',
+                texto: 'Para cada destino a la venta se pone la oferta (o circuito) más barata. Se respetan las secciones, el orden y lo que ocultaste.' })) return;
+            const b = $('#hwTraer'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Trayendo…';
+            try { const r = await EV.post('/HomeWeb/TraerOfertas', {}); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
+            finally { b.disabled = false; b.innerHTML = html; }
+        };
+        $('#hwRecalc').onclick = async () => {
+            const b = $('#hwRecalc'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Calculando…';
+            try { const r = await EV.post('/HomeWeb/RecalcularPrecios', {}); EV.toast(r.mensaje, 'info'); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
+            finally { b.disabled = false; b.innerHTML = html; }
+        };
+        $('#hwAjustes').onclick = async () => {
+            const a = await EV.api('/HomeWeb/Ajustes');
+            const v = prompt('Precio base mínimo (ninguna oferta se puede cargar con un precio base menor):', a.precioBaseMinimo);
+            if (v == null) return;
+            const n = parseFloat(String(v).replace(',', '.'));
+            if (isNaN(n) || n < 0) { EV.toast('Escribe un número válido.', 'err'); return; }
+            try { const r = await EV.post('/HomeWeb/GuardarAjustes', { PrecioBaseMinimo: n }); EV.toast(r.mensaje); } catch (e) { EV.toast(e.message, 'err'); }
+        };
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+
+    return { nuevaTarjeta: () => abrirTarjeta(null), nuevoSlide };
+})();
+</script>
+}

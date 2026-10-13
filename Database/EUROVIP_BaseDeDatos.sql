@@ -2301,6 +2301,16 @@ GO
                (nombre de la foto antigua de ViajeVDT, restaurado con UPDATE en Eurovip.usuario).
                "Marcar todo como leído" dejó guardada notif_leidas_hasta para ARodriguez.
 
+   13/10/2026  Pantalla "Home de la web" (Inicio2 + Carrusel). Cambios de datos al probar:
+               • Carrusel: los 5 slides activos tenían posiciones repetidas (dos con orden 1, así
+                 venían de ViajeVDT). Se renumeraron 1-5 desde la pantalla, respetando el orden.
+               • Se creó y luego se quitó una tarjeta de prueba (inicio id 2). Quedó su "memoria"
+                 de posición en home_contenido #3051 (Punta Cana · Madrid · campaña 3170 →
+                 sección ISLAS, posición 1): si un día se carga esa combinación, aparecerá en ISLAS.
+                 PENDIENTE: borrarla (DELETE FROM Eurovip.home_contenido WHERE id_home_contenido = 3051).
+               • "Traer ofertas a la Home" puso el circuito "Prueba" de la usuaria (inicio id 3,
+                 770 €, sin sección). Se dejó porque quitarlo requiere su confirmación.
+
    PENDIENTE   Copiar los demás usuarios, módulos y permisos (rol, UsuarioAcceso,
                UsuarioModulos). Se hará cuando se confirme desde qué base copiarlos.
    ########################################################################################## */

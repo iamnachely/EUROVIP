@@ -1,0 +1,23 @@
+@{
+    var icono = ViewData["Icono"] as string ?? "bi-hourglass-split";
+}
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .pr-caja { max-width: 640px; margin: 40px auto; text-align: center; padding: 50px 30px; border-radius: 32px; background: var(--ev-surface); border: 1px solid var(--ev-line); position: relative; overflow: hidden; }
+    .pr-caja::before { content: ""; position: absolute; inset: 0; background: radial-gradient(400px 200px at 50% -10%, color-mix(in srgb, var(--ev-aqua) 45%, transparent), transparent 70%); pointer-events: none; }
+    .pr-ico { width: 96px; height: 96px; margin: 0 auto 18px; border-radius: 30px; background: var(--ev-grad); display: grid; place-items: center; font-size: 42px; position: relative; animation: prFlota 4s ease-in-out infinite; }
+    @@keyframes prFlota { 50% { transform: translateY(-8px) rotate(-4deg); } }
+    .pr-caja h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -1px; position: relative; }
+    .pr-caja p { color: var(--ev-muted); font-weight: 500; max-width: 46ch; margin: 10px auto 22px; position: relative; }
+    .pr-chip { display: inline-flex; gap: 8px; align-items: center; padding: 7px 14px; border-radius: 99px; background: var(--ev-ink); color: var(--ev-aqua); font: 800 12px var(--ev-font); margin-bottom: 14px; position: relative; }
+    @@media (prefers-reduced-motion: reduce) { .pr-ico { animation: none; } }
+</style>
+}
+<div class="pr-caja ev-rise">
+    <span class="pr-chip"><i class="bi bi-cone-striped"></i> En construcción</span>
+    <div class="pr-ico"><i class="bi @icono"></i></div>
+    <h1>@ViewData["Title"]</h1>
+    <p>@ViewData["Texto"]</p>
+    <a class="ev-btn" href="/HomeWeb/Index"><i class="bi bi-window-sidebar"></i> Mientras tanto, ir a la Home de la web</a>
+</div>
