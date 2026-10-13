@@ -57,6 +57,11 @@ builder.Services.AddScoped<EuroVip.Repositories.IHerramientasRepository, EuroVip
 builder.Services.AddScoped<EuroVip.Repositories.IHomeWebRepository, EuroVip.Repositories.HomeWebRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.IPerfilRepository, EuroVip.Repositories.PerfilRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.IConsultaRepository, EuroVip.Repositories.ConsultaRepository>();
+builder.Services.AddScoped<EuroVip.Repositories.IFlyerRepository, EuroVip.Repositories.FlyerRepository>();
+builder.Services.AddScoped<EuroVip.Services.IFlyerImagenService, EuroVip.Services.FlyerImagenService>();
+builder.Services.AddScoped<EuroVip.Services.WhatsAppService>();
+builder.Services.AddSingleton<EuroVip.Services.FlyerEnvioJob>();
+builder.Services.AddHttpClient("whatsapp");
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(o =>

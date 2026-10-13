@@ -73,6 +73,8 @@
    CAMBIO 38 (13/10/2026)  Buscador general de servicios (fnFiltro), con o sin vuelo.
    CAMBIO 39 (13/10/2026)  Editar servicios uno a uno o en masa (spEditaServicio).
    CAMBIO 40 (13/10/2026)  Duplicar servicios, también a otras fechas (spDuplicaServicio).
+   --- FASE 9: FLYERS ---
+   CAMBIO 41 (13/10/2026)  Tablas de FLYERS copiadas de ViajeVDT (config, precios, 178 contactos, envíos).
    BITÁCORA de cambios de datos puntuales (al final).
    ########################################################################################## */
 
@@ -2393,6 +2395,111 @@ END
 GO
 
 /* ##########################################################################################
+   FASE 9 — FLYERS  (13/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: la pantalla "Flyers" (como /Flyer/Hub de BackTiTan) arma imágenes con los precios
+   más bajos de cada destino, las guarda en una galería y las envía por WhatsApp a una lista de
+   contactos (cuenta de WhatsApp de BackTiTan; las claves van SOLO en appsettings.Local.json).
+   Decisión de la usuaria (13/10/2026): copiar también los contactos de ViajeVDT.
+
+   CAMBIO 41  Tablas copiadas de ViajeVDT (solo lectura), con sus datos:
+              flyer_config 11 · flyer_datos 25 · flyer_contactos 178 · flyer_envios 1 ·
+              flyer_oferta 1 · flyer_oferta_token 0 · contactos_vdt 1.
+              (Se conservaron los números de cada fila.)
+   ########################################################################################## */
+/* ---------- CAMBIO 41: tablas de FLYERS (copiadas de ViajeVDT) ---------- */
+IF OBJECT_ID('Eurovip.flyer_config') IS NULL
+CREATE TABLE Eurovip.flyer_config (            -- qué destinos/campañas salen en los flyers
+    id               INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_flyer_config PRIMARY KEY,
+    nombre_config    NVARCHAR(100) NULL,
+    id_tipo_servicio VARCHAR(30)   NOT NULL,
+    id_campanya      INT           NOT NULL,
+    id_idioma        VARCHAR(10)   NOT NULL,
+    id_moneda        VARCHAR(10)   NOT NULL,
+    activo_servicio  INT           NOT NULL,
+    origen           NVARCHAR(100) NOT NULL,
+    id_regimen       VARCHAR(20)   NOT NULL,
+    id_destino       NVARCHAR(100) NOT NULL,
+    nombre_destino   NVARCHAR(200) NULL,
+    fecha_creacion   DATETIME      NULL CONSTRAINT DF_Eurovip_flyer_config_fecha DEFAULT (GETDATE()),
+    url_destino      NVARCHAR(500) NULL,       -- imagen de fondo del flyer
+    tipo             NVARCHAR(20)  NULL
+);
+GO
+IF OBJECT_ID('Eurovip.flyer_datos') IS NULL
+CREATE TABLE Eurovip.flyer_datos (             -- precios calculados que se pintan en cada flyer
+    id                  INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_flyer_datos PRIMARY KEY,
+    id_destino          VARCHAR(30)   NULL,
+    nombre_destino      NVARCHAR(200) NULL,
+    nombre_hotel        NVARCHAR(300) NULL,
+    nombre_habitacion   NVARCHAR(200) NULL,
+    regimen             NVARCHAR(150) NULL,
+    precio_final        INT           NULL,
+    posicion            TINYINT       NULL,
+    fecha_actualizacion DATETIME      NULL,
+    activo              BIT           NULL
+);
+GO
+IF OBJECT_ID('Eurovip.flyer_contactos') IS NULL
+CREATE TABLE Eurovip.flyer_contactos (         -- a quién se envían por WhatsApp
+    id              INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_flyer_contactos PRIMARY KEY,
+    activo          BIT           NOT NULL CONSTRAINT DF_Eurovip_flyer_contactos_activo DEFAULT (1),
+    created_at      DATETIME      NOT NULL CONSTRAINT DF_Eurovip_flyer_contactos_fecha DEFAULT (GETDATE()),
+    nombre_completo NVARCHAR(200) NULL,
+    numero          NVARCHAR(30)  NOT NULL,
+    email           NVARCHAR(200) NULL
+);
+GO
+IF OBJECT_ID('Eurovip.flyer_envios') IS NULL
+CREATE TABLE Eurovip.flyer_envios (            -- historial de envíos
+    id              INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_flyer_envios PRIMARY KEY,
+    fecha_envio     DATETIME      NOT NULL,
+    carpeta_fecha   NVARCHAR(20)  NOT NULL,
+    total_contactos INT           NOT NULL,
+    enviados_ok     INT           NOT NULL,
+    errores         INT           NOT NULL,
+    imagenes_count  INT           NOT NULL,
+    texto_mensaje   NVARCHAR(MAX) NULL,
+    estado          NVARCHAR(50)  NULL
+);
+GO
+IF OBJECT_ID('Eurovip.flyer_oferta') IS NULL
+CREATE TABLE Eurovip.flyer_oferta (
+    id_oferta      INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_flyer_oferta PRIMARY KEY,
+    titulo         NVARCHAR(200) NOT NULL,
+    subtitulo      NVARCHAR(300) NULL,
+    fecha_desde    DATE          NULL,
+    fecha_hasta    DATE          NULL,
+    notas          NVARCHAR(MAX) NULL,
+    hoteles_json   NVARCHAR(MAX) NOT NULL,
+    estado         INT           NOT NULL,
+    fecha_creacion DATETIME      NOT NULL
+);
+GO
+IF OBJECT_ID('Eurovip.flyer_oferta_token') IS NULL
+CREATE TABLE Eurovip.flyer_oferta_token (
+    id_token         INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_flyer_oferta_token PRIMARY KEY,
+    id_oferta        INT           NOT NULL,
+    token            NVARCHAR(100) NOT NULL,
+    nombre_usuario   NVARCHAR(200) NULL,
+    email_usuario    NVARCHAR(200) NULL,
+    fecha_creacion   DATETIME      NOT NULL,
+    fecha_expiracion DATETIME      NULL,
+    activo           INT           NOT NULL
+);
+GO
+IF OBJECT_ID('Eurovip.contactos_vdt') IS NULL
+CREATE TABLE Eurovip.contactos_vdt (
+    id_contacto    INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_contactos_vdt PRIMARY KEY,
+    nombre         NVARCHAR(200) NOT NULL,
+    telefono       NVARCHAR(50)  NOT NULL,
+    correo         NVARCHAR(200) NULL,
+    activo         INT           NOT NULL,
+    fecha_creacion DATETIME      NOT NULL
+);
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -2489,6 +2596,18 @@ GO
                de una transacción deshecha (ROLLBACK) sobre el servicio #10 del circuito "Prueba":
                no quedó nada guardado (servicio sigue con 14 filas). Solo se "gastaron" los números
                automáticos 68 y 69 (el próximo servicio nuevo será #70 o mayor; es normal).
+
+   13/10/2026  Pantalla "Flyers". Al probar "Generar flyers" se recalcularon los precios: las 25
+               filas de flyer_datos copiadas de ViajeVDT (precios de las ofertas de ViajeVDT, no de
+               Eurovip) se borraron porque Eurovip todavía no tiene ofertas activas a futuro. Es el
+               comportamiento correcto: se llenará solo cuando haya ofertas cargadas.
+               • Se corrigió que dos configuraciones del mismo destino (campañas 199 y 99) se pisaban:
+                 ahora se juntan y quedan los 5 hoteles más baratos.
+               • Se insertaron 3 filas de prueba ('PRUEBA ...') en flyer_datos y se borraron
+                 enseguida (flyer_datos quedó con 0 filas).
+               • NO se envió ningún WhatsApp.
+               OJO: las configuraciones 1-5 (campaña 199, idioma 'EX') vienen de ViajeVDT y la
+               campaña 199 no existe en Eurovip: revisarlas o borrarlas desde la pantalla.
 
    PENDIENTE   Copiar los demás usuarios, módulos y permisos (rol, UsuarioAcceso,
                UsuarioModulos). Se hará cuando se confirme desde qué base copiarlos.

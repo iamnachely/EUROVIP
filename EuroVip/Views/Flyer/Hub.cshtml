@@ -1,0 +1,403 @@
+@{
+    ViewData["Title"] = "Flyers";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    .fl-hero { position: relative; overflow: hidden; border-radius: 30px; padding: 26px 30px; background: var(--ev-ink); color: #fff; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; isolation: isolate; }
+    .fl-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(560px 280px at 95% -20%, rgba(43,212,196,.55), transparent 60%), radial-gradient(380px 220px at 0% 130%, rgba(179,255,243,.22), transparent 60%); }
+    .fl-hero h1 { margin: 0; font-size: clamp(26px, 3vw, 34px); font-weight: 800; letter-spacing: -1.2px; }
+    .fl-hero p { margin: 4px 0 0; color: rgba(232,255,251,.72); font-weight: 500; max-width: 62ch; }
+    .fl-hero .sp { flex: 1; }
+    .fl-hero .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+    .fl-hero .ev-btn.light { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(116,242,230,.3); }
+    .fl-kpis { display: flex; gap: 10px; flex-wrap: wrap; width: 100%; }
+    .fl-kpi { padding: 10px 16px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid rgba(116,242,230,.18); }
+    .fl-kpi b { font-size: 20px; font-weight: 800; display: block; line-height: 1.1; }
+    .fl-kpi small { color: rgba(232,255,251,.6); font-weight: 600; font-size: 12px; }
+    .fl-kpi.ok b { color: var(--ev-aqua); }
+    .fl-kpi.mal { border-color: #F79009; }
+
+    .fl-dest { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+    .fl-card { border-radius: 24px; overflow: hidden; background: var(--ev-surface); border: 1px solid var(--ev-line); display: flex; flex-direction: column; transition: transform .25s var(--ev-ease), box-shadow .25s; }
+    .fl-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
+    .fl-card .foto { position: relative; height: 150px; background: var(--ev-grad); }
+    .fl-card .foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .fl-card .foto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgba(11,18,21,.75)); }
+    .fl-card .foto h3 { position: absolute; left: 16px; bottom: 10px; margin: 0; color: #fff; font-size: 22px; font-weight: 800; z-index: 1; letter-spacing: -.5px; }
+    .fl-card .foto .desde { position: absolute; right: 12px; top: 12px; z-index: 1; padding: 7px 12px; border-radius: 14px; background: var(--ev-aqua); color: var(--ev-ink); font-weight: 800; font-size: 13px; }
+    .fl-card .foto .sin { background: #FEF3C7; color: #92400E; }
+    .fl-card .foto label { position: absolute; left: 12px; top: 12px; z-index: 1; padding: 6px 10px; border-radius: 11px; background: rgba(255,255,255,.92); font: 800 11.5px var(--ev-font); cursor: pointer; opacity: 0; transition: opacity .2s; }
+    .fl-card:hover .foto label { opacity: 1; }
+    .fl-card .cuerpo { padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .fl-card .meta { display: flex; gap: 6px; flex-wrap: wrap; }
+    .fl-card .meta span { font: 700 11.5px var(--ev-font); padding: 4px 9px; border-radius: 9px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    .fl-card ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+    .fl-card li { display: flex; gap: 8px; font-size: 12.5px; font-weight: 600; align-items: baseline; }
+    .fl-card li i { font-style: normal; width: 18px; height: 18px; border-radius: 6px; display: inline-grid; place-items: center; background: var(--ev-surface-2); font-size: 11px; font-weight: 800; flex-shrink: 0; }
+    .fl-card li span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fl-card li b { white-space: nowrap; }
+    .fl-card .pie { display: flex; gap: 6px; margin-top: auto; padding-top: 6px; }
+    .fl-card .pie .sp { flex: 1; }
+    .fl-nuevo { border: 2px dashed var(--ev-line); border-radius: 24px; background: transparent; min-height: 300px; display: grid; place-items: center; color: var(--ev-muted); font: 800 14px var(--ev-font); cursor: pointer; }
+    .fl-nuevo:hover { border-color: var(--ev-teal); color: var(--ev-deep); background: var(--ev-grad-soft); }
+    .fl-nuevo i { font-size: 30px; display: block; margin-bottom: 6px; }
+
+    .fl-gal { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+    .fl-img { position: relative; border-radius: 18px; overflow: hidden; background: var(--ev-surface); border: 2px solid var(--ev-line); cursor: pointer; transition: border-color .2s, transform .2s; }
+    .fl-img:hover { transform: translateY(-2px); }
+    .fl-img.sel { border-color: var(--ev-teal); box-shadow: 0 0 0 4px rgba(116,242,230,.35); }
+    .fl-img img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; object-position: top; display: block; background: var(--ev-surface-2); }
+    .fl-img .chk { position: absolute; left: 10px; top: 10px; width: 28px; height: 28px; border-radius: 9px; background: rgba(255,255,255,.92); display: grid; place-items: center; font-size: 16px; color: var(--ev-deep); }
+    .fl-img .tx { padding: 8px 10px; font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; gap: 6px; }
+    .fl-img .tx small { color: var(--ev-muted); font-weight: 600; }
+    .fl-img .acc { position: absolute; right: 8px; top: 8px; display: flex; gap: 4px; opacity: 0; transition: opacity .2s; }
+    .fl-img:hover .acc { opacity: 1; }
+    .fl-img .acc button, .fl-img .acc a { width: 30px; height: 30px; border-radius: 9px; border: 0; background: rgba(255,255,255,.92); display: grid; place-items: center; cursor: pointer; color: var(--ev-text); }
+    .fl-dia { font: 800 12px var(--ev-font); letter-spacing: .06em; text-transform: uppercase; color: var(--ev-muted); margin: 14px 0 8px; grid-column: 1 / -1; }
+
+    .fl-env { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+    .fl-paso { border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line); padding: 20px 22px; }
+    .fl-paso + .fl-paso { margin-top: 14px; }
+    .fl-paso h3 { margin: 0 0 12px; font-size: 16px; font-weight: 800; display: flex; gap: 10px; align-items: center; }
+    .fl-paso h3 span { width: 28px; height: 28px; border-radius: 9px; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-size: 13px; }
+    .fl-elegidas { display: flex; gap: 8px; flex-wrap: wrap; }
+    .fl-elegidas img { width: 70px; height: 90px; object-fit: cover; object-position: top; border-radius: 10px; border: 1px solid var(--ev-line); }
+    .fl-opc { display: grid; gap: 8px; }
+    .fl-opc label { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; border: 1.5px solid var(--ev-line); cursor: pointer; }
+    .fl-opc label:has(input:checked) { border-color: var(--ev-teal); background: var(--ev-grad-soft); }
+    .fl-opc input { width: 18px; height: 18px; min-width: 0; margin-top: 2px; accent-color: var(--ev-ink); }
+    .fl-opc b { display: block; }
+    .fl-opc small { color: var(--ev-muted); font-weight: 600; }
+    .fl-prog { border-radius: 24px; background: var(--ev-ink); color: #fff; padding: 20px 22px; }
+    .fl-prog .barra { height: 12px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; margin: 12px 0; }
+    .fl-prog .barra i { display: block; height: 100%; background: linear-gradient(90deg, var(--ev-aqua), var(--ev-teal)); border-radius: 99px; transition: width .5s var(--ev-ease); }
+    .fl-prog .nums { display: flex; gap: 16px; flex-wrap: wrap; font-weight: 700; font-size: 13px; color: rgba(232,255,251,.75); }
+    .fl-prog .nums b { color: #fff; font-size: 18px; }
+    .fl-prog pre { margin: 12px 0 0; max-height: 200px; overflow: auto; font: 500 12px/1.5 ui-monospace, Consolas, monospace; color: rgba(232,255,251,.8); background: rgba(255,255,255,.05); border-radius: 12px; padding: 10px; white-space: pre-wrap; }
+    .fl-wa { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); font-weight: 700; font-size: 13px; }
+    .fl-wa i { font-size: 22px; color: #16A34A; }
+    @@media (max-width: 1100px) { .fl-env { grid-template-columns: 1fr; } }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="fl-hero ev-rise">
+    <div>
+        <h1><i class="bi bi-file-earmark-richtext" style="color:var(--ev-aqua)"></i> Flyers</h1>
+        <p>Flyers con los precios más bajos de cada destino, listos para descargar o enviar por WhatsApp a tus contactos.</p>
+    </div>
+    <span class="sp"></span>
+    <div class="acts">
+        <button type="button" class="ev-btn light sm" id="flPrecios"><i class="bi bi-arrow-repeat"></i> Actualizar precios</button>
+        <button type="button" class="ev-btn aqua sm" id="flGenerar"><i class="bi bi-magic"></i> Generar flyers</button>
+    </div>
+    <div class="fl-kpis" id="flKpis"></div>
+</section>
+
+<div class="ui-tabs" id="flTabs" style="margin-top:18px">
+    <button type="button" data-tab="tDest" class="on"><i class="bi bi-geo-alt"></i> Destinos y precios</button>
+    <button type="button" data-tab="tGal"><i class="bi bi-images"></i> Galería <span class="n" id="nGal">0</span></button>
+    <button type="button" data-tab="tCon"><i class="bi bi-people"></i> Contactos <span class="n" id="nCon">0</span></button>
+    <button type="button" data-tab="tEnv"><i class="bi bi-whatsapp"></i> Enviar</button>
+    <button type="button" data-tab="tHis"><i class="bi bi-clock-history"></i> Historial</button>
+</div>
+
+<!-- DESTINOS -->
+<section class="ui-pane on" id="tDest" style="margin-top:14px">
+    <div class="ui-note info" style="margin-top:0"><i class="bi bi-info-circle"></i><div>Cada destino toma los <b>5 hoteles más baratos</b> a la venta con su campaña, origen y régimen. Pasa el ratón sobre la foto para cambiar el fondo del flyer.</div></div>
+    <div class="fl-dest" id="flDest"><div class="ui-skel" style="height:300px"></div></div>
+</section>
+
+<!-- GALERÍA -->
+<section class="ui-pane" id="tGal" style="margin-top:14px">
+    <div class="ui-toolbar" style="margin-top:0">
+        <span class="hw-tip" style="color:var(--ev-muted);font-weight:600"><i class="bi bi-hand-index"></i> Toca los flyers para elegirlos</span>
+        <span style="flex:1"></span>
+        <span id="gSel" style="font-weight:800"></span>
+        <button type="button" class="ev-btn ghost sm" id="gTodos"><i class="bi bi-check2-all"></i> Elegir los de hoy</button>
+        <button type="button" class="ev-btn ghost sm" id="gZip"><i class="bi bi-download"></i> Descargar</button>
+        <button type="button" class="ev-btn sm" id="gEnviar"><i class="bi bi-whatsapp"></i> Enviar elegidos</button>
+    </div>
+    <div class="fl-gal" id="flGal"></div>
+</section>
+
+<!-- CONTACTOS -->
+<section class="ui-pane" id="tCon" style="margin-top:14px">
+    <div class="ui-toolbar" style="margin-top:0">
+        <label class="ui-search"><i class="bi bi-search"></i><input id="cQ" type="search" placeholder="Buscar nombre, número o correo…"></label>
+        <select class="ui-select" id="cEst"><option value="">Todos</option><option value="1">Activos</option><option value="0">Inactivos</option></select>
+        <button type="button" class="ev-btn ghost sm" id="cImportar"><i class="bi bi-clipboard-plus"></i> Pegar números</button>
+        <button type="button" class="ev-btn sm" id="cNuevo"><i class="bi bi-person-plus"></i> Nuevo contacto</button>
+    </div>
+    <div id="flCon"></div>
+</section>
+
+<!-- ENVIAR -->
+<section class="ui-pane" id="tEnv" style="margin-top:14px">
+    <div class="fl-env">
+        <div>
+            <div class="fl-paso"><h3><span>1</span> Flyers a enviar</h3><div class="fl-elegidas" id="eImgs"></div><div class="ui-help" id="eImgsAyuda"></div></div>
+            <div class="fl-paso"><h3><span>2</span> Mensaje <small style="color:var(--ev-muted);font-weight:600;font-size:12px">opcional · {nombre} pone el nombre del contacto</small></h3>
+                <textarea id="eTexto" class="ui-input" rows="3" maxlength="1000" style="width:100%">Hola {nombre} 👋 Estas son nuestras ofertas de la semana a República Dominicana. ¡Escríbenos para reservar!</textarea></div>
+            <div class="fl-paso"><h3><span>3</span> ¿A quién?</h3>
+                <div class="fl-opc">
+                    <label><input type="radio" name="aQuien" value="prueba" checked><span><b>Prueba a un número</b><small>Recomendado antes de enviar a todos.</small><input id="eNum" class="ui-input" placeholder="34600111222 (con código de país)" style="margin-top:8px;width:100%"></span></label>
+                    <label><input type="radio" name="aQuien" value="todos"><span><b>Todos los contactos activos</b><small id="eTotal"></small></span></label>
+                </div></div>
+        </div>
+        <div>
+            <div class="fl-wa" id="eWa"><span class="ui-spin"></span> Comprobando WhatsApp…</div>
+            <div style="display:flex;gap:8px;margin:12px 0">
+                <button type="button" class="ev-btn ghost" id="eProbar"><i class="bi bi-plug"></i> Probar conexión</button>
+                <button type="button" class="ev-btn" id="eEnviar" style="flex:1;justify-content:center"><i class="bi bi-send"></i> Enviar</button>
+            </div>
+            <div class="fl-prog" id="eProg" hidden>
+                <b id="pTit">Enviando…</b>
+                <div class="barra"><i id="pBar" style="width:0"></i></div>
+                <div class="nums"><span><b id="pOk">0</b> enviados</span><span><b id="pErr">0</b> errores</span><span><b id="pTot">0</b> total</span><span id="pAct"></span></div>
+                <pre id="pLog"></pre>
+                <button type="button" class="ev-btn light sm" id="pCancel" style="margin-top:10px;background:rgba(255,255,255,.1);color:#fff"><i class="bi bi-stop-circle"></i> Cancelar envío</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HISTORIAL -->
+<section class="ui-pane" id="tHis" style="margin-top:14px"><div id="flHis"></div></section>
+
+<!-- PANEL -->
+<aside class="ui-drawer" id="flDrawer" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px" id="dIco"><i class="bi bi-geo-alt"></i></div>
+        <div style="min-width:0"><h2 id="dTit"></h2><small id="dSub"></small></div>
+        <button class="ui-ibtn x" type="button" data-cerrar aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="dCuerpo"></div>
+    <div class="ui-df" id="dPie"></div>
+</aside>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script>
+(() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    let D = null, cat = null, contactos = [], elegidas = new Set(), sondeo = null;
+    const drawer = EV.drawer($('#flDrawer'));
+    const tabs = EV.tabs($('#flTabs'), id => { if (id === 'tCon' && !contactos.length) cargarContactos(); if (id === 'tEnv') pintarEnvio(); });
+    const clave = g => `${g.carpeta}/${g.archivo}`;
+
+    async function cargar() {
+        D = await EV.api('/Flyer/Datos');
+        const conPrecio = D.configs.filter(c => c.hoteles > 0).length, hoy = new Date().toISOString().slice(0, 10);
+        $('#flKpis').innerHTML = [
+            [D.configs.length, 'destinos configurados'], [conPrecio, 'con precios', conPrecio < D.configs.length ? 'mal' : 'ok'],
+            [D.galeria.filter(g => g.carpeta === hoy).length, 'flyers de hoy'], [D.contactos.activos, `contactos activos de ${D.contactos.total}`],
+            [D.whatsapp ? 'Lista' : 'Sin configurar', 'cuenta de WhatsApp', D.whatsapp ? 'ok' : 'mal']
+        ].map(([b, s, c]) => `<div class="fl-kpi ${c || ''}"><b>${typeof b === 'number' ? EV.fmt(b) : esc(b)}</b><small>${s}</small></div>`).join('');
+        $('#nGal').textContent = D.galeria.length; $('#nCon').textContent = D.contactos.total;
+        pintarDestinos(); pintarGaleria(); pintarHistorial();
+        if (D.estado.enCurso) { tabs.ir('tEnv'); seguir(); }
+    }
+
+    // ---------------- destinos ----------------
+    function pintarDestinos() {
+        const datos = Object.fromEntries(D.destinos.map(d => [d.id_Destino.toLowerCase(), d]));
+        $('#flDest').innerHTML = `<button type="button" class="fl-nuevo" data-cfg="0"><span><i class="bi bi-plus-circle"></i>Agregar destino</span></button>` + D.configs.map(c => {
+            const d = datos[c.id_Destino.toLowerCase()], nombre = c.nombre_Destino || c.id_Destino;
+            return `<article class="fl-card">
+                <div class="foto">${c.fondo ? `<img src="${esc(c.fondo)}" alt="" loading="lazy">` : ''}<h3>${esc(nombre)}</h3>
+                    ${c.precioDesde ? `<span class="desde">desde ${EV.fmt(c.precioDesde)} €</span>` : '<span class="desde sin">Sin precios</span>'}
+                    <label title="Cambiar la foto de fondo"><input type="file" accept="image/jpeg,image/png" data-fondo="${esc(nombre)}" hidden><i class="bi bi-camera"></i> Fondo</label></div>
+                <div class="cuerpo">
+                    <div class="meta"><span><i class="bi bi-geo"></i> ${esc(c.origen)}</span><span>${esc(c.campanya || '#' + c.id_Campanya)}</span><span>${esc(c.id_Regimen)}</span><span>${esc(c.id_Tipo_Servicio)}</span></div>
+                    ${d && d.hoteles.length ? `<ol>${d.hoteles.map(h => `<li><i>${h.posicion}</i><span title="${esc(h.nombre_Hotel)}">${esc(h.nombre_Hotel)}</span><b>${EV.fmt(h.precio_Final)} €</b></li>`).join('')}</ol>`
+                        : '<div class="ui-help" style="margin:0">No hay ofertas a la venta con esta campaña, origen y régimen. Revisa la configuración o carga ofertas.</div>'}
+                    <div class="pie"><button type="button" class="ev-btn ghost sm" data-actu="${c.id}"><i class="bi bi-arrow-repeat"></i> Precios</button><span class="sp"></span>
+                        <button type="button" class="ui-ibtn" data-cfg="${c.id}" title="Editar"><i class="bi bi-pencil"></i></button><button type="button" class="ui-ibtn danger" data-delcfg="${c.id}" title="Quitar"><i class="bi bi-trash3"></i></button></div>
+                </div></article>`;
+        }).join('');
+    }
+
+    async function editarConfig(id) {
+        cat ??= await EVC.catalogos();
+        const c = D.configs.find(x => x.id === id) || { id: 0, id_Tipo_Servicio: 'OFERTA', id_Moneda: 'EUR', activo_Servicio: 1, origen: 'Madrid', id_Regimen: 'TI', id_Destino: '', nombre_Destino: '', id_Campanya: +(cat.campanyas.find(x => x.texto === 'DTGeneral')?.valor || 0) };
+        $('#dTit').textContent = id ? `Editar ${c.nombre_Destino || c.id_Destino}` : 'Nuevo destino'; $('#dSub').textContent = 'Qué ofertas se usan para calcular los precios del flyer';
+        $('#dIco').innerHTML = '<i class="bi bi-geo-alt"></i>';
+        $('#dCuerpo').innerHTML = `<div class="ui-row r2">
+                <div class="ui-f"><label>Destino *</label><input id="cDes" value="${esc(c.id_Destino)}" placeholder="Punta Cana"></div>
+                <div class="ui-f"><label>Nombre en el flyer</label><input id="cNom" maxlength="200" value="${esc(c.nombre_Destino || '')}" placeholder="Igual que el destino"></div></div>
+            <div class="ui-row r3">
+                <div class="ui-f"><label>Tipo</label><select id="cTipo"><option>OFERTA</option><option>CIRCUITO</option></select></div>
+                <div class="ui-f"><label>Campaña *</label><select id="cCam">${cat.campanyas.map(x => `<option value="${esc(x.valor)}">${esc(x.texto)}</option>`).join('')}</select></div>
+                <div class="ui-f"><label>Moneda</label><select id="cMon">${cat.monedas.map(m => `<option>${esc(m.valor)}</option>`).join('')}</select></div></div>
+            <div class="ui-row r2">
+                <div class="ui-f"><label>Origen de venta *</label><input id="cOri" value="${esc(c.origen)}"></div>
+                <div class="ui-f"><label>Régimen *</label><select id="cReg">${cat.regimenes.map(r => `<option value="${esc(r.valor)}">${esc(r.valor)} · ${esc(r.texto)}</option>`).join('')}</select></div></div>
+            <label class="ui-switch"><input type="checkbox" id="cAct" ${c.activo_Servicio ? 'checked' : ''}><span class="tr"></span> Solo ofertas activas</label>`;
+        $('#cTipo').value = c.id_Tipo_Servicio; $('#cCam').value = String(c.id_Campanya); $('#cMon').value = c.id_Moneda; $('#cReg').value = c.id_Regimen.trim();
+        EV.picker($('#cDes'), { url: q => `/Circuitos/Destinos?q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: x.extra, icono: 'bi-geo-alt' }), onSelect: m => $('#cDes').value = m.valor });
+        EV.picker($('#cOri'), { url: q => `/Circuitos/Destinos?pais=ES&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo' }), onSelect: m => $('#cOri').value = m.valor });
+        $('#dPie').innerHTML = `<button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button><span style="flex:1"></span><button class="ev-btn" type="button" id="dOk"><i class="bi bi-check2-circle"></i> Guardar y calcular precios</button>`;
+        $$('#flDrawer [data-cerrar]').forEach(b => b.onclick = () => drawer.cerrar());
+        $('#dOk').onclick = async () => {
+            const dto = { Id: c.id, Id_Destino: $('#cDes').value.trim(), Nombre_Destino: $('#cNom').value.trim() || null, Id_Tipo_Servicio: $('#cTipo').value, Id_Campanya: +$('#cCam').value,
+                Id_Moneda: $('#cMon').value, Origen: $('#cOri').value.trim(), Id_Regimen: $('#cReg').value, Activo_Servicio: $('#cAct').checked ? 1 : 0, Url_Destino: c.url_Destino || null, Tipo: c.tipo || null };
+            if (!dto.Id_Destino || !dto.Origen) { EV.toast('Escribe el destino y el origen.', 'err'); return; }
+            try { const r = await EV.post('/Flyer/Config', dto); await EV.post(`/Flyer/ActualizarPrecios?id=${r.id}`, {}); EV.toast(r.mensaje); drawer.cerrar(); cargar(); }
+            catch (e) { EV.toast(e.message, 'err'); }
+        };
+        drawer.abrir();
+    }
+
+    // ---------------- galería ----------------
+    function pintarGaleria() {
+        if (!D.galeria.length) { $('#flGal').innerHTML = '<div class="ui-empty" style="grid-column:1/-1"><i class="bi bi-images big"></i><h3>Todavía no hay flyers</h3><p>Pulsa "Generar flyers" arriba.</p></div>'; selInfo(); return; }
+        let dia = '';
+        $('#flGal').innerHTML = D.galeria.map(g => {
+            const sep = g.carpeta !== dia ? `<div class="fl-dia">${EV.fecha(g.carpeta)}</div>` : ''; dia = g.carpeta;
+            const k = clave(g);
+            return sep + `<div class="fl-img ${elegidas.has(k) ? 'sel' : ''}" data-k="${esc(k)}"><img src="${esc(g.url)}" alt="${esc(g.archivo)}" loading="lazy">
+                ${elegidas.has(k) ? '<span class="chk"><i class="bi bi-check-lg"></i></span>' : ''}
+                <div class="acc"><a href="${esc(g.url)}" target="_blank" title="Ver grande" onclick="event.stopPropagation()"><i class="bi bi-arrows-fullscreen"></i></a><button type="button" data-delimg="${esc(k)}" title="Eliminar"><i class="bi bi-trash3"></i></button></div>
+                <div class="tx"><span>${esc(g.archivo.replace(/^flyer_|_\d{6}\.png$/g, '').replace(/-/g, ' '))}</span><small>${new Date(g.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</small></div></div>`;
+        }).join('');
+        selInfo();
+    }
+    const selInfo = () => { $('#gSel').textContent = elegidas.size ? `${elegidas.size} elegido(s)` : ''; };
+
+    // ---------------- contactos ----------------
+    async function cargarContactos() { contactos = await EV.api('/Flyer/Contactos'); pintarContactos(); }
+    function pintarContactos() {
+        const q = $('#cQ').value.trim().toLowerCase(), est = $('#cEst').value;
+        const l = contactos.filter(c => (!q || [c.nombre_Completo, c.numero, c.email].some(x => (x || '').toLowerCase().includes(q))) && (!est || String(+c.activo) === est));
+        $('#flCon').innerHTML = !l.length ? '<div class="ui-empty"><p>No hay contactos con ese filtro.</p></div>' : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Nombre</th><th>Número</th><th>Correo</th><th>Alta</th><th>Activo</th><th style="width:90px"></th></tr></thead><tbody>
+            ${l.map(c => `<tr><td><b>${esc(c.nombre_Completo || '—')}</b></td><td style="font-family:ui-monospace,Consolas,monospace">+${esc(c.numero)}</td><td>${esc(c.email || '—')}</td><td>${EV.fecha(c.created_At.slice(0, 10))}</td>
+                <td><label class="ui-switch"><input type="checkbox" data-cact="${c.id}" ${c.activo ? 'checked' : ''}><span class="tr"></span></label></td>
+                <td style="text-align:right;white-space:nowrap"><button class="ui-ibtn" data-ced="${c.id}" title="Editar"><i class="bi bi-pencil"></i></button><button class="ui-ibtn danger" data-cdel="${c.id}" title="Eliminar"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
+            </tbody></table></div><div class="ui-help">${l.length} de ${contactos.length} contactos · ${contactos.filter(c => c.activo).length} activos reciben los envíos.</div>`;
+    }
+    function editarContacto(c) {
+        c ??= { id: 0, activo: true, numero: '', nombre_Completo: '', email: '' };
+        $('#dTit').textContent = c.id ? 'Editar contacto' : 'Nuevo contacto'; $('#dSub').textContent = 'Recibe los flyers por WhatsApp'; $('#dIco').innerHTML = '<i class="bi bi-person"></i>';
+        $('#dCuerpo').innerHTML = `<div class="ui-f"><label>Nombre</label><input id="kNom" maxlength="200" value="${esc(c.nombre_Completo || '')}"></div>
+            <div class="ui-f"><label>WhatsApp * <em>con código de país, sin + ni espacios</em></label><input id="kNum" maxlength="30" inputmode="tel" value="${esc(c.numero)}" placeholder="34600111222"></div>
+            <div class="ui-f"><label>Correo</label><input id="kMail" maxlength="200" type="email" value="${esc(c.email || '')}"></div>
+            <label class="ui-switch"><input type="checkbox" id="kAct" ${c.activo ? 'checked' : ''}><span class="tr"></span> Activo (recibe envíos)</label>`;
+        $('#dPie').innerHTML = `<button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button><span style="flex:1"></span><button class="ev-btn" type="button" id="dOk"><i class="bi bi-check2-circle"></i> Guardar</button>`;
+        $$('#flDrawer [data-cerrar]').forEach(b => b.onclick = () => drawer.cerrar());
+        $('#dOk').onclick = async () => {
+            try { const r = await EV.post('/Flyer/Contacto', { Id: c.id, Nombre_Completo: $('#kNom').value.trim() || null, Numero: $('#kNum').value.trim(), Email: $('#kMail').value.trim() || null, Activo: $('#kAct').checked });
+                  EV.toast(r.mensaje); drawer.cerrar(); await cargarContactos(); cargar(); }
+            catch (e) { EV.toast(e.message, 'err'); }
+        };
+        drawer.abrir();
+    }
+    function importar() {
+        $('#dTit').textContent = 'Pegar números'; $('#dSub').textContent = 'Uno por línea. Puedes poner "Nombre; número; correo".'; $('#dIco').innerHTML = '<i class="bi bi-clipboard-plus"></i>';
+        $('#dCuerpo').innerHTML = `<textarea id="iTxt" class="ui-input" rows="12" style="width:100%" placeholder="34600111222\nMaría Pérez; 34611222333; maria@correo.com"></textarea>
+            <div class="ui-help">Los números repetidos se saltan. Se aceptan de 8 a 15 dígitos.</div>`;
+        $('#dPie').innerHTML = `<button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button><span style="flex:1"></span><button class="ev-btn" type="button" id="dOk"><i class="bi bi-upload"></i> Agregar</button>`;
+        $$('#flDrawer [data-cerrar]').forEach(b => b.onclick = () => drawer.cerrar());
+        $('#dOk').onclick = async () => { try { const r = await EV.post('/Flyer/Importar', { Texto: $('#iTxt').value }); EV.toast(r.mensaje); drawer.cerrar(); await cargarContactos(); cargar(); } catch (e) { EV.toast(e.message, 'err'); } };
+        drawer.abrir();
+    }
+
+    // ---------------- envío ----------------
+    function pintarEnvio() {
+        const imgs = D.galeria.filter(g => elegidas.has(clave(g)));
+        $('#eImgs').innerHTML = imgs.map(g => `<img src="${esc(g.url)}" alt="">`).join('');
+        $('#eImgsAyuda').innerHTML = imgs.length ? `${imgs.length} flyer(s) elegido(s). <a href="#" onclick="document.querySelector('[data-tab=tGal]').click();return false">Cambiar</a>` : 'Elige los flyers en la pestaña <b>Galería</b> (tócalos y pulsa "Enviar elegidos").';
+        $('#eTotal').textContent = `${EV.fmt(D.contactos.activos)} contacto(s) activo(s) recibirán ${imgs.length || 0} imagen(es)${$('#eTexto').value.trim() ? ' y el mensaje' : ''}.`;
+        $('#eWa').innerHTML = D.whatsapp ? '<i class="bi bi-whatsapp"></i> Cuenta de WhatsApp configurada (la misma de BackTiTan).' : '<i class="bi bi-exclamation-triangle" style="color:#B54708"></i> WhatsApp no está configurado en este servidor.';
+        $('#eEnviar').disabled = !D.whatsapp || !D.puedeEnviar || !imgs.length;
+        if (!D.puedeEnviar) $('#eWa').innerHTML += '<br><small style="color:var(--ev-muted)">Solo un administrador puede enviar.</small>';
+    }
+    async function enviar() {
+        const imgs = D.galeria.filter(g => elegidas.has(clave(g))).map(clave), quien = $('input[name=aQuien]:checked').value;
+        const dto = { Imagenes: imgs, Texto: $('#eTexto').value.trim() || null, NumeroPrueba: quien === 'prueba' ? $('#eNum').value.trim() : null, Contactos: [] };
+        if (quien === 'prueba' && !dto.NumeroPrueba) { EV.toast('Escribe el número de prueba.', 'err'); return; }
+        const ok = quien === 'prueba'
+            ? await EV.confirmar({ titulo: '¿Enviar la prueba?', texto: `Se enviarán ${imgs.length} flyer(s)${dto.Texto ? ' y el mensaje' : ''} al <b>+${esc(dto.NumeroPrueba.replace(/\D/g, ''))}</b>.`, si: 'Enviar prueba', icono: 'whatsapp' })
+            : await EV.confirmar({ titulo: `¿Enviar a ${EV.fmt(D.contactos.activos)} contactos?`, peligro: true, si: 'Sí, enviar a todos', escribir: 'ENVIAR',
+                texto: `Se enviarán <b>${imgs.length}</b> flyer(s)${dto.Texto ? ' y el mensaje' : ''} por WhatsApp a <b>${EV.fmt(D.contactos.activos)}</b> clientes reales. Esto no se puede deshacer.` });
+        if (!ok) return;
+        try { const r = await EV.post('/Flyer/Enviar', dto); EV.toast(r.mensaje); seguir(); }
+        catch (e) { EV.toast(e.message, 'err'); }
+    }
+    function seguir() {
+        $('#eProg').hidden = false;
+        clearInterval(sondeo);
+        const paso = async () => {
+            const s = await EV.api('/Flyer/Estado').catch(() => null); if (!s) return;
+            const hechos = s.enviados + s.errores;
+            $('#pBar').style.width = s.total ? `${Math.round(hechos * 100 / s.total)}%` : '0';
+            $('#pOk').textContent = s.enviados; $('#pErr').textContent = s.errores; $('#pTot').textContent = s.total;
+            $('#pAct').textContent = s.actual ? `→ ${s.actual}` : '';
+            $('#pLog').textContent = s.registro.join('\n'); $('#pLog').scrollTop = 1e9;
+            $('#pTit').textContent = s.enCurso ? 'Enviando…' : s.cancelado ? 'Envío cancelado' : s.errores ? 'Terminado con errores' : '¡Envío completado!';
+            $('#pCancel').hidden = !s.enCurso;
+            if (!s.enCurso) { clearInterval(sondeo); cargar(); }
+        };
+        paso(); sondeo = setInterval(paso, 2000);
+    }
+
+    // ---------------- historial ----------------
+    function pintarHistorial() {
+        $('#flHis').innerHTML = !D.envios.length ? '<div class="ui-empty"><p>Todavía no hay envíos.</p></div>' : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Fecha</th><th>Flyers del</th><th class="num">Contactos</th><th class="num">Enviados</th><th class="num">Errores</th><th class="num">Imágenes</th><th>Estado</th><th>Mensaje</th></tr></thead><tbody>
+            ${D.envios.map(e => `<tr><td>${new Date(e.fecha_Envio).toLocaleString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td><td>${esc(e.carpeta_Fecha)}</td>
+                <td class="num">${e.total_Contactos}</td><td class="num">${e.enviados_Ok}</td><td class="num" style="color:${e.errores ? '#B42318' : 'inherit'}">${e.errores}</td><td class="num">${e.imagenes_Count}</td>
+                <td><span class="ui-chip ${e.estado === 'Completado' ? '' : 'ghost'}" style="padding:2px 9px">${esc(e.estado || '—')}</span></td><td style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(e.texto_Mensaje || '')}">${esc(e.texto_Mensaje || '—')}</td></tr>`).join('')}
+            </tbody></table></div>`;
+    }
+
+    // ---------------- eventos ----------------
+    async function iniciar() {
+        try { await cargar(); } catch (e) { $('#flDest').innerHTML = `<div class="ui-empty"><h3>No se pudo cargar</h3><p>${esc(e.message)}</p></div>`; return; }
+        const conBoton = async (b, fn) => { const h = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Un momento…'; try { await fn(); } finally { b.disabled = false; b.innerHTML = h; } };
+        $('#flPrecios').onclick = () => conBoton($('#flPrecios'), async () => { try { const r = await EV.post('/Flyer/ActualizarPrecios', {}); EV.toast(r.mensaje); await cargar(); } catch (e) { EV.toast(e.message, 'err'); } });
+        $('#flGenerar').onclick = () => conBoton($('#flGenerar'), async () => {
+            try { const r = await EV.post('/Flyer/Generar', {}); EV.toast(r.mensaje); elegidas = new Set(r.imagenes.map(clave)); await cargar(); if (r.imagenes.length) tabs.ir('tGal'); }
+            catch (e) { EV.toast(e.message, 'err'); } });
+        document.addEventListener('click', async e => {
+            const cfg = e.target.closest('[data-cfg]'); if (cfg) return editarConfig(+cfg.dataset.cfg);
+            const act = e.target.closest('[data-actu]'); if (act) { try { const r = await EV.post(`/Flyer/ActualizarPrecios?id=${act.dataset.actu}`, {}); EV.toast(r.mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
+            const del = e.target.closest('[data-delcfg]');
+            if (del) { const c = D.configs.find(x => x.id === +del.dataset.delcfg); if (!await EV.confirmar({ titulo: `¿Quitar ${esc(c.nombre_Destino || c.id_Destino)} de los flyers?`, texto: 'Las ofertas no se tocan; solo deja de salir en los flyers.', si: 'Quitar', peligro: true })) return;
+                try { const r = await EV.post(`/Flyer/EliminarConfig?id=${c.id}`, {}); EV.toast(r.mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
+            const di = e.target.closest('[data-delimg]');
+            if (di) { e.stopPropagation(); const [carp, arch] = di.dataset.delimg.split('/'); if (!await EV.confirmar({ titulo: '¿Eliminar este flyer?', texto: 'Se borra la imagen de la galería.', si: 'Eliminar', peligro: true })) return;
+                try { const r = await EV.post(`/Flyer/EliminarImagen?carpeta=${encodeURIComponent(carp)}&archivo=${encodeURIComponent(arch)}`, {}); elegidas.delete(di.dataset.delimg); EV.toast(r.mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
+            const im = e.target.closest('.fl-img'); if (im) { const k = im.dataset.k; elegidas.has(k) ? elegidas.delete(k) : elegidas.add(k); pintarGaleria(); return; }
+            const ced = e.target.closest('[data-ced]'); if (ced) return editarContacto(contactos.find(c => c.id === +ced.dataset.ced));
+            const cdel = e.target.closest('[data-cdel]');
+            if (cdel) { const c = contactos.find(x => x.id === +cdel.dataset.cdel); if (!await EV.confirmar({ titulo: '¿Eliminar contacto?', texto: `Se borra <b>${esc(c.nombre_Completo || '+' + c.numero)}</b>. Si solo no quieres que reciba envíos, desactívalo.`, si: 'Eliminar', peligro: true })) return;
+                try { const r = await EV.post(`/Flyer/EliminarContacto?id=${c.id}`, {}); EV.toast(r.mensaje); await cargarContactos(); cargar(); } catch (er) { EV.toast(er.message, 'err'); } }
+        });
+        document.addEventListener('change', async e => {
+            const f = e.target.closest('[data-fondo]');
+            if (f && f.files[0]) { const fd = new FormData(); fd.append('destino', f.dataset.fondo); fd.append('archivo', f.files[0]);
+                try { const r = await EV.post('/Flyer/Fondo', fd); EV.toast(r.mensaje + ' Genera los flyers de nuevo para usarlo.'); cargar(); } catch (er) { EV.toast(er.message, 'err'); } }
+            const ca = e.target.closest('[data-cact]');
+            if (ca) { try { await EV.post('/Flyer/EstadoContactos', { Ids: [+ca.dataset.cact], Activo: ca.checked }); contactos.find(c => c.id === +ca.dataset.cact).activo = ca.checked; EV.toast(ca.checked ? 'Contacto activo.' : 'Contacto desactivado.'); cargar(); } catch (er) { EV.toast(er.message, 'err'); ca.checked = !ca.checked; } }
+        });
+        $('#gTodos').onclick = () => { const hoy = new Date().toISOString().slice(0, 10); D.galeria.filter(g => g.carpeta === hoy).forEach(g => elegidas.add(clave(g))); pintarGaleria(); };
+        $('#gZip').onclick = () => { if (!elegidas.size) { EV.toast('Elige los flyers a descargar.', 'err'); return; } location.href = '/Flyer/Descargar?' + [...elegidas].map(k => 'f=' + encodeURIComponent(k)).join('&'); };
+        $('#gEnviar').onclick = () => { if (!elegidas.size) { EV.toast('Elige los flyers a enviar.', 'err'); return; } tabs.ir('tEnv'); pintarEnvio(); };
+        $('#cQ').addEventListener('input', EV.debounce(pintarContactos, 200)); $('#cEst').onchange = pintarContactos;
+        $('#cNuevo').onclick = () => editarContacto(null); $('#cImportar').onclick = importar;
+        $('#eTexto').addEventListener('input', EV.debounce(pintarEnvio, 300));
+        $('#eProbar').onclick = () => conBoton($('#eProbar'), async () => { try { const r = await EV.post('/Flyer/Probar', {}); EV.toast(r.mensaje); $('#eWa').innerHTML = `<i class="bi bi-whatsapp"></i> ${esc(r.mensaje)}`; } catch (e) { EV.toast(e.message, 'err'); } });
+        $('#eEnviar').onclick = enviar;
+        $('#pCancel').onclick = async () => { try { const r = await EV.post('/Flyer/Cancelar', {}); EV.toast(r.mensaje, 'info'); } catch (e) { EV.toast(e.message, 'err'); } };
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') drawer.cerrar(); });
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+})();
+</script>
+}
