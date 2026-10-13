@@ -61,11 +61,16 @@ namespace EuroVip.Models
         [StringLength(150, ErrorMessage = "Máximo 150 caracteres")]
         public string Id_Destino { get; set; } = "";
 
-        [Required(ErrorMessage = "Escribe una descripción o el régimen")]
+        // Igual que ViajeVDT.dbo.inicio (tipo_servicio = Hotel):
+        //   Id_Destino = nombre del hotel · CaratulaDestino = nombre del destino · Descripcion = "Régimen -CódigoHotel"
+        [Required(ErrorMessage = "Elige el régimen y escribe el código del hotel")]
         [StringLength(2000, ErrorMessage = "Máximo 2000 caracteres")]
+        [RegularExpression(@"^.+?\s*-\s*\d{3,12}\s*$", ErrorMessage = "La descripción debe ser «Régimen -Código» (ej. Solo Habitación -603258)")]
         public string Descripcion { get; set; } = "";
 
+        [Required(ErrorMessage = "Escribe el destino (ej. Costa del Sol)")]
         [StringLength(300, ErrorMessage = "Máximo 300 caracteres")]
+        [RegularExpression(@"^(?!https?://).+$", ErrorMessage = "Aquí va el nombre del destino, no una dirección web")]
         public string? CaratulaDestino { get; set; }
 
         // Solo informativo: el servidor siempre guarda ES (HotelRepository.IdiomaHotel).
@@ -114,5 +119,6 @@ namespace EuroVip.Models
     {
         public IEnumerable<CodigoNombre> Monedas { get; set; } = Enumerable.Empty<CodigoNombre>();
         public HotelEstadisticas Estadisticas { get; set; } = new();
+        public IEnumerable<string> Destinos { get; set; } = Enumerable.Empty<string>();
     }
 }

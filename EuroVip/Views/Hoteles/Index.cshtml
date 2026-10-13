@@ -7,7 +7,7 @@
         ("RO", "Rumanía"), ("US", "Estados Unidos"), ("MX", "México"), ("CU", "Cuba"), ("CO", "Colombia"),
         ("AR", "Argentina"), ("DE", "Alemania"), ("GB", "Reino Unido"), ("CH", "Suiza")
     };
-    var regimenes = new[] { "Todo Incluido", "Solo Habitación", "Alojamiento y Desayuno", "Media Pensión", "Pensión Completa" };
+    var regimenes = new[] { "Solo Habitación", "Alojamiento y Desayuno", "Media Pensión", "Pensión Completa", "Todo Incluido", "Room Only" };
     var ciudades = new[] { "Madrid", "Barcelona", "Málaga", "Valencia", "Bilbao", "Lisboa", "Oporto", "Roma", "Milán", "París", "Bucarest", "Santo Domingo", "Punta Cana" };
 }
 
@@ -222,7 +222,16 @@
     .hx-money { position: relative; }
     .hx-money input { padding-left: 34px; font-weight: 800; }
     .hx-money b { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ev-muted); }
-    .hx-qchips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .hx-qchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .hx-ayuda { display: block; margin-top: 5px; color: var(--ev-muted); font-size: 12px; font-weight: 600; }
+    .hx-guia { margin: 0 0 16px; border-radius: 16px; background: var(--ev-mint); border: 1px solid var(--ev-line); padding: 12px 14px; font-size: 13px; }
+    .hx-guia summary { cursor: pointer; font-weight: 800; color: var(--ev-deep); list-style: none; display: flex; gap: 8px; align-items: center; }
+    .hx-guia summary::-webkit-details-marker { display: none; }
+    .hx-guia p { margin: 10px 0 6px; font-weight: 600; color: var(--ev-text); }
+    .hx-guia table { width: 100%; border-collapse: collapse; background: var(--ev-surface); border-radius: 12px; overflow: hidden; font-size: 12.5px; }
+    .hx-guia th, .hx-guia td { padding: 7px 9px; text-align: left; border-bottom: 1px solid var(--ev-line); }
+    .hx-guia th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ev-muted); }
+    .hx-guia code { background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 8px; padding: 2px 8px; font-weight: 700; }
     .hx-qchips { gap: 8px; }
     .hx-qchips button { border: 1px dashed var(--ev-line); background: var(--ev-surface); border-radius: 99px; padding: 7px 13px; font: 700 12.5px var(--ev-font); cursor: pointer; color: var(--ev-text); }
     .hx-qchips button:hover { border-style: solid; border-color: var(--ev-teal); background: var(--ev-mint); }
@@ -385,30 +394,68 @@
             </div>
         </div>
 
-        <!-- 1. Hotel -->
+        <!-- 1. Hotel: se guarda igual que ViajeVDT.dbo.inicio (tipo_servicio = Hotel) -->
         <div class="hx-sec">
             <div class="hx-sec-t"><span>1</span> El hotel</div>
+            <details class="hx-guia">
+                <summary><i class="bi bi-lightbulb"></i> ¿Cómo se llena? Mira ejemplos reales</summary>
+                <p>Así están cargados los hoteles en la web (datos reales de ViajeVDT):</p>
+                <table>
+                    <thead><tr><th>Nombre del hotel</th><th>Destino</th><th>Régimen</th><th>Código</th></tr></thead>
+                    <tbody>
+                        <tr><td>Hotel Kristal</td><td>Costa del Sol</td><td>Solo Habitación</td><td>603258</td></tr>
+                        <tr><td>Costa Brava Blanes</td><td>Costa Brava</td><td>Alojamiento y Desayuno</td><td>6023506</td></tr>
+                        <tr><td>Hotel Adsubia</td><td>Costa Blanca</td><td>Solo Habitación</td><td>6221339</td></tr>
+                        <tr><td>Hotel El Convento</td><td>Costa de la Luz</td><td>Solo Habitación</td><td>6046406</td></tr>
+                        <tr><td>4R Salou Park Resort I</td><td>Costa Dorada</td><td>Room Only</td><td>6025856</td></tr>
+                    </tbody>
+                </table>
+                <p>El régimen y el código se guardan juntos en la descripción: <code id="pvDesc">Solo Habitación -603258</code></p>
+            </details>
             <div class="hx-f">
                 <label for="Id_Destino">Nombre del hotel <em>obligatorio</em></label>
-                <input id="Id_Destino" name="Id_Destino" maxlength="150" placeholder="Ej. Hotel Riu Palace Bávaro" />
+                <input id="Id_Destino" name="Id_Destino" maxlength="150" placeholder="Ej. Hotel Kristal" />
+                <small class="hx-ayuda">Solo el nombre del hotel, sin la zona. Ej. «Hotel Adsubia», no «Costa Blanca».</small>
                 <span class="msg"></span>
             </div>
             <div class="hx-f">
-                <label for="Descripcion">Régimen / descripción <em>obligatorio</em></label>
-                <div class="hx-qchips">
-                    @foreach (var r in regimenes)
+                <label for="CaratulaDestino">Destino <em>obligatorio</em></label>
+                <input id="CaratulaDestino" name="CaratulaDestino" maxlength="300" list="dlDestinos" placeholder="Ej. Costa del Sol" />
+                <datalist id="dlDestinos">
+                    @foreach (var d in Model.Destinos)
                     {
-                        <button type="button" data-reg="@r">@r</button>
+                        <option value="@d"></option>
                     }
+                </datalist>
+                <small class="hx-ayuda">La zona donde está el hotel (no es una imagen). Escribe y elige de la lista.</small>
+                <span class="msg"></span>
+            </div>
+            <div class="hx-row">
+                <div class="hx-f">
+                    <label for="Regimen">Régimen <em>obligatorio</em></label>
+                    <input id="Regimen" name="Regimen" maxlength="150" list="dlRegimenes" placeholder="Ej. Solo Habitación" />
+                    <datalist id="dlRegimenes">
+                        @foreach (var r in regimenes)
+                        {
+                            <option value="@r"></option>
+                        }
+                    </datalist>
+                    <div class="hx-qchips">
+                        @foreach (var r in regimenes)
+                        {
+                            <button type="button" data-reg="@r">@r</button>
+                        }
+                    </div>
+                    <span class="msg"></span>
                 </div>
-                <textarea id="Descripcion" name="Descripcion" maxlength="2000" placeholder="Ej. Todo Incluido — frente a la playa de Bávaro"></textarea>
-                <span class="msg"></span>
+                <div class="hx-f">
+                    <label for="CodigoHotel">Código del hotel <em>obligatorio</em></label>
+                    <input id="CodigoHotel" name="CodigoHotel" maxlength="12" inputmode="numeric" placeholder="Ej. 603258" />
+                    <small class="hx-ayuda">El número del hotel en el proveedor. Solo números.</small>
+                    <span class="msg"></span>
+                </div>
             </div>
-            <div class="hx-f">
-                <label for="CaratulaDestino">Imagen de portada <em>URL (opcional)</em></label>
-                <input id="CaratulaDestino" name="CaratulaDestino" maxlength="300" placeholder="https://photos.dominicanatours.com/imagenes/hotel/…/1.jpg" />
-                <span class="msg"></span>
-            </div>
+            <input type="hidden" id="Descripcion" name="Descripcion" />
         </div>
 
         <!-- 2. Precio y campaña -->
@@ -576,6 +623,9 @@ const HX = (() => {
     const fmt = n => n == null ? '—' : Math.round(n).toLocaleString('es-ES');
     const iniciales = t => (t || '?').replace(/^hotel\s+/i, '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
     const esUrl = s => /^https?:\/\//i.test(s || '');
+    // Descripción de un hotel = "Régimen -Código" (igual que ViajeVDT.dbo.inicio). Ej. "Solo Habitación -603258"
+    const partirDesc = d => { const m = (d || '').match(/^(.*?)\s*-\s*(\d+)\s*$/); return m ? { reg: m[1].trim(), cod: m[2] } : { reg: (d || '').trim(), cod: '' }; };
+    const armarDesc = (reg, cod) => reg && cod ? `${reg} -${cod}` : (reg || '');
     const olaSvg = '<svg viewBox="0 0 200 60" preserveAspectRatio="none"><path d="M0 30 Q 25 18 50 30 T 100 30 T 150 30 T 200 30 V60 H0Z" fill="rgba(255,255,255,.55)"/><path d="M0 42 Q 25 32 50 42 T 100 42 T 150 42 T 200 42 V60 H0Z" fill="rgba(14,143,134,.35)"/></svg>';
     const imagen = (h, alt) => esUrl(h.caratulaDestino)
         ? `<img src="${esc(h.caratulaDestino)}" alt="${esc(alt)}" data-ini="${esc(iniciales(alt))}" loading="lazy" onerror="HX._sinImagen(this)">`
@@ -675,6 +725,7 @@ const HX = (() => {
                     <h3>${esc(h.id_Destino)}</h3>
                     <span class="hx-reg" title="${esc(h.descripcion)}">${esc(h.descripcion)}</span>
                     <div class="hx-meta">
+                        ${h.caratulaDestino && !esUrl(h.caratulaDestino) ? `<span><i class="bi bi-geo-alt"></i> ${esc(h.caratulaDestino)}</span>` : ''}
                         <span><i class="bi bi-airplane"></i> ${esc(h.origen)} → ${esc(h.id_PaisDestino)}</span>
                         ${h.contenedor ? `<span><i class="bi bi-grid"></i> ${esc(h.contenedor)}${h.posicion_Destino != null ? ' · #' + h.posicion_Destino : ''}</span>` : ''}
                         ${h.nombre_Campanya ? `<span><i class="bi bi-megaphone"></i> ${esc(h.nombre_Campanya)}</span>` : ''}
@@ -697,7 +748,7 @@ const HX = (() => {
             <tbody>${items.map((h, n) => `
                 <tr style="--n:${n}">
                     <td>${esUrl(h.caratulaDestino) ? `<img class="hx-thumb" src="${esc(h.caratulaDestino)}" alt="" data-ini="${esc(iniciales(h.id_Destino))}" loading="lazy" onerror="HX._sinMini(this)">` : `<div class="hx-thumb">${esc(iniciales(h.id_Destino))}</div>`}</td>
-                    <td><div class="hx-name">${esc(h.id_Destino)}</div><small style="color:var(--ev-muted)">#${h.id_Servicio}${h.nombre_Campanya ? ' · ' + esc(h.nombre_Campanya) : ''}</small></td>
+                    <td><div class="hx-name">${esc(h.id_Destino)}</div><small style="color:var(--ev-muted)">${h.caratulaDestino && !esUrl(h.caratulaDestino) ? esc(h.caratulaDestino) + ' · ' : ''}#${h.id_Servicio}${h.nombre_Campanya ? ' · ' + esc(h.nombre_Campanya) : ''}</small></td>
                     <td><span class="hx-reg">${esc(h.descripcion)}</span></td>
                     <td><b>${h.precioWeb != null ? fmt(h.precioWeb) + ' ' + simbolo(h.id_Moneda) : '—'}</b></td>
                     <td>${esc(h.origen)} → ${esc(h.id_PaisDestino)}</td>
@@ -765,19 +816,22 @@ const HX = (() => {
     function limpiarErrores() { $$('.hx-f.err', frm).forEach(f => { f.classList.remove('err'); $('.msg', f).textContent = ''; }); }
 
     function marcarError(nombre, msg) {
+        if (/^descripcion$/i.test(nombre)) nombre = 'CodigoHotel';   // la descripción se arma con régimen + código
         const el = campo(nombre); if (!el) return;
-        const f = el.closest('.hx-f'); f.classList.add('err'); $('.msg', f).textContent = msg;
+        const f = el.closest('.hx-f'); if (!f) return; f.classList.add('err'); $('.msg', f).textContent = msg;
     }
 
     function preview() {
         const nombre = campo('Id_Destino').value.trim() || 'Nombre del hotel';
-        const reg = campo('Descripcion').value.trim() || 'Régimen';
-        const img = campo('CaratulaDestino').value.trim();
+        campo('Descripcion').value = armarDesc(campo('Regimen').value.trim(), campo('CodigoHotel').value.trim());
+        const reg = campo('Descripcion').value || 'Régimen -Código';
+        $('#pvDesc').textContent = reg;
+        const img = '';
         const precio = campo('PrecioWeb').value;
         const moneda = campo('Id_Moneda').value;
         $('#pvNombre').textContent = nombre;
         $('#pvReg').textContent = reg.length > 60 ? reg.slice(0, 60) + '…' : reg;
-        $('#pvRuta').innerHTML = `<i class="bi bi-airplane"></i> ${esc(campo('Origen').value || 'Origen')} (${esc(campo('Id_Pais_Origen').value)}) → ${esc(campo('Id_PaisDestino').value)}`;
+        $('#pvRuta').innerHTML = `<i class="bi bi-geo-alt"></i> ${esc(campo('CaratulaDestino').value || 'Destino')} · <i class="bi bi-airplane"></i> ${esc(campo('Origen').value || 'Origen')} (${esc(campo('Id_Pais_Origen').value)}) → ${esc(campo('Id_PaisDestino').value)}`;
         $('#pvPrecio').innerHTML = precio ? `${fmt(+precio)} ${simbolo(moneda)} <small>desde${campo('Noches').value ? ' · ' + campo('Noches').value + ' noches' : ''}</small>` : '— <small>sin precio</small>';
         $('#mSim').textContent = simbolo(moneda);
         const pi = $('#pvImg');
@@ -823,8 +877,9 @@ const HX = (() => {
             frm.reset();
             limpiarErrores();
             const set = (n, v) => { if (campo(n)) campo(n).value = v ?? ''; };
-            set('Id_Servicio', h.id_Servicio); set('Id_Destino', h.id_Destino); set('Descripcion', h.descripcion);
-            set('CaratulaDestino', h.caratulaDestino); set('PrecioWeb', h.precioWeb != null ? Math.round(h.precioWeb) : '');
+            set('Id_Servicio', h.id_Servicio); set('Id_Destino', (h.id_Destino || '').trim()); set('Descripcion', h.descripcion);
+            const pd = partirDesc(h.descripcion); set('Regimen', pd.reg); set('CodigoHotel', pd.cod);
+            set('CaratulaDestino', esUrl(h.caratulaDestino) ? '' : (h.caratulaDestino || '').trim()); set('PrecioWeb', h.precioWeb != null ? Math.round(h.precioWeb) : '');
             set('Id_Moneda', (h.id_Moneda || '').trim()); set('Noches', h.noches); set('Id_Pais_Origen', (h.id_Pais_Origen || '').trim());
             set('Origen', h.origen); set('Id_PaisDestino', (h.id_PaisDestino || '').trim()); set('Latitud', h.latitud); set('Longitud', h.longitud);
             set('Posicion_Destino', h.posicion_Destino); set('Notas', h.notas);
@@ -846,7 +901,7 @@ const HX = (() => {
         const num = n => v(n) === '' ? null : Number(v(n));
         const dto = {
             Id_Servicio: editandoId,
-            Id_Destino: v('Id_Destino'), Descripcion: v('Descripcion'), CaratulaDestino: v('CaratulaDestino') || null,
+            Id_Destino: v('Id_Destino'), Descripcion: armarDesc(v('Regimen'), v('CodigoHotel')), CaratulaDestino: v('CaratulaDestino') || null,
             Id_Idioma: 'ES', Id_Campanya: num('Id_Campanya'), Id_Moneda: v('Id_Moneda'),
             PrecioWeb: num('PrecioWeb'), Noches: num('Noches'),
             Id_Pais_Origen: v('Id_Pais_Origen'), Origen: v('Origen'), Id_PaisDestino: v('Id_PaisDestino'),
@@ -858,10 +913,12 @@ const HX = (() => {
         // Validación amigable en el navegador (el servidor vuelve a validar)
         const faltan = [];
         if (!dto.Id_Destino) faltan.push(['Id_Destino', 'Escribe el nombre del hotel']);
-        if (!dto.Descripcion) faltan.push(['Descripcion', 'Elige un régimen o escribe una descripción']);
+        if (!dto.CaratulaDestino) faltan.push(['CaratulaDestino', 'Escribe el destino (ej. Costa del Sol)']);
+        else if (esUrl(dto.CaratulaDestino)) faltan.push(['CaratulaDestino', 'Aquí va el nombre del destino, no una dirección web']);
+        if (!v('Regimen')) faltan.push(['Regimen', 'Elige el régimen']);
+        if (!/^\d{3,12}$/.test(v('CodigoHotel'))) faltan.push(['CodigoHotel', 'Escribe el código del hotel (solo números)']);
         if (!dto.Id_Campanya) faltan.push(['Id_Campanya', 'Elige la campaña']);
         if (!dto.Origen) faltan.push(['Origen', 'Escribe la ciudad de salida']);
-        if (dto.CaratulaDestino && !esUrl(dto.CaratulaDestino)) faltan.push(['CaratulaDestino', 'Debe empezar por http:// o https://']);
         if (dto.PrecioWeb != null && dto.PrecioWeb < 0) faltan.push(['PrecioWeb', 'El precio no puede ser negativo']);
         if (faltan.length) {
             faltan.forEach(([n, m]) => marcarError(n, m));
@@ -899,13 +956,12 @@ const HX = (() => {
             $('#detBody').innerHTML = `
                 <div class="hx-det-img">${imagen(h, h.id_Destino)}${h.precioWeb != null ? `<div class="hx-price"><small>desde</small>${fmt(h.precioWeb)} ${simbolo(h.id_Moneda)}</div>` : ''}</div>
                 <dl class="hx-dl">
-                    ${fila('Régimen / descripción', h.descripcion, true)}
+                    ${fila('Destino', esUrl(h.caratulaDestino) ? null : h.caratulaDestino)}${fila('Régimen', partirDesc(h.descripcion).reg)}${fila('Código del hotel', partirDesc(h.descripcion).cod || '⚠ Falta')}
                     ${fila('Idioma', h.id_Idioma)}${fila('Campaña', camp ? `${camp} (#${h.id_Campanya})` : '#' + h.id_Campanya)}
-                    ${fila('Salida', `${h.origen} (${h.id_Pais_Origen})`)}${fila('Destino', h.id_PaisDestino)}
+                    ${fila('Salida', `${h.origen} (${h.id_Pais_Origen})`)}${fila('País destino', h.id_PaisDestino)}
                     ${fila('Sección web', h.contenedor ? `${h.contenedor} · posición ${h.posicion_Contenedor ?? '—'}` : null)}${fila('Posición en la sección', h.posicion_Destino)}
                     ${fila('Noches', h.noches)}${fila('Moneda', h.id_Moneda)}
                     ${fila('Latitud', h.latitud)}${fila('Longitud', h.longitud)}
-                    ${fila('Imagen', h.caratulaDestino, true)}
                     ${fila('Notas internas', h.notas, true)}
                 </dl>
                 ${h.latitud && h.longitud ? `<a class="ev-btn ghost" style="margin-top:14px" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${encodeURIComponent(h.latitud + ',' + h.longitud)}"><i class="bi bi-geo-alt"></i> Ver en el mapa</a>` : ''}`;
@@ -1003,12 +1059,10 @@ const HX = (() => {
         frm.addEventListener('input', e => { e.target.closest('.hx-f')?.classList.remove('err'); preview(); });
         frm.addEventListener('change', preview);
         $$('[data-reg]').forEach(b => b.addEventListener('click', () => {
-            const d = campo('Descripcion');
-            const actual = d.value.trim();
-            const regs = $$('[data-reg]').map(x => x.dataset.reg);
-            const resto = regs.reduce((t, r) => t.startsWith(r) ? t.slice(r.length).replace(/^\s*[—-]\s*/, '') : t, actual);
-            d.value = resto ? `${b.dataset.reg} — ${resto}` : b.dataset.reg;
-            d.dispatchEvent(new Event('input', { bubbles: true }));
+            const r = campo('Regimen');
+            r.value = b.dataset.reg;
+            r.dispatchEvent(new Event('input', { bubbles: true }));
+            campo('CodigoHotel').focus();
         }));
 
         $('#hxBackdrop').addEventListener('click', () => { if (!$('#hxModal').classList.contains('open')) cerrar(); });

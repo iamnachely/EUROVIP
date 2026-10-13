@@ -24,7 +24,8 @@ namespace EuroVip.Controllers
             var modelo = new HotelesPaginaViewModel
             {
                 Monedas = await _repo.MonedasAsync(),
-                Estadisticas = await _repo.EstadisticasAsync()
+                Estadisticas = await _repo.EstadisticasAsync(),
+                Destinos = await _repo.DestinosAsync()
             };
             return View(modelo);
         }
@@ -58,6 +59,11 @@ namespace EuroVip.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Guardar([FromBody] HotelGuardarDto dto)
         {
+            // Limpia espacios y deja la descripción con el formato de ViajeVDT: "Régimen -Código"
+            dto.Id_Destino = dto.Id_Destino?.Trim() ?? "";
+            dto.CaratulaDestino = dto.CaratulaDestino?.Trim();
+            var d = System.Text.RegularExpressions.Regex.Match(dto.Descripcion ?? "", @"^(.+?)\s*-\s*(\d+)\s*$");
+            if (d.Success) dto.Descripcion = $"{d.Groups[1].Value.Trim()} -{d.Groups[2].Value}";
             if (!ModelState.IsValid)
             {
                 var errores = ModelState.Where(x => x.Value?.Errors.Count > 0)

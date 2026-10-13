@@ -2688,6 +2688,31 @@ GO
                PENDIENTE (a confirmar con la usuaria): home_contenido (64 filas) y carrucelDestino
                (27 filas) copiados de ViajeVDT siguen apuntando a campañas ya borradas.
 
+   13/10/2026  Habitaciones repetidas: a pedido de la usuaria, en cada hotel queda UNA sola
+               habitación por nombre (solo servidor 93, esquema Eurovip; ViajeVDT NO se tocó).
+               • Repetida = mismo id_alojamiento + idioma + nombre (sin espacios de más, sin
+                 distinguir mayúsculas). Se conserva la que tiene codigo_newblue y, si empatan, la
+                 de id_habitacion más bajo.
+               • Se borraron 46.834 filas de 1.724 hoteles; quedan 83.109 y 0 repetidas.
+                 Ninguna salida (servicio_habitacion) usaba las borradas.
+               • COPIA DE SEGURIDAD de lo borrado: Eurovip.alojamiento_habitacion_borradas_20261013.
+                 Para devolver una: INSERT INTO Eurovip.alojamiento_habitacion SELECT * FROM
+                 Eurovip.alojamiento_habitacion_borradas_20261013 WHERE id_alojamiento = … ;
+                 Cuando se confirme que todo está bien, se puede borrar la copia (DROP TABLE).
+               Script usado:
+                   ;WITH r AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY id_alojamiento, id_idioma, UPPER(LTRIM(RTRIM(nombre)))
+                               ORDER BY CASE WHEN ISNULL(codigo_newblue,'') <> '' THEN 0 ELSE 1 END, id_habitacion) rn
+                               FROM Eurovip.alojamiento_habitacion)
+                   SELECT <columnas> INTO Eurovip.alojamiento_habitacion_borradas_20261013 FROM r WHERE rn > 1;
+                   DELETE h FROM Eurovip.alojamiento_habitacion h JOIN Eurovip.alojamiento_habitacion_borradas_20261013 b
+                     ON b.id_alojamiento = h.id_alojamiento AND b.id_habitacion = h.id_habitacion AND b.id_idioma = h.id_idioma;
+
+   13/10/2026  Carga de Hoteles (/Hoteles/Index) corregida para guardar como ViajeVDT.dbo.inicio
+               (tipo_servicio = Hotel): id_destino = nombre del hotel, caratulaDestino = nombre del
+               destino (antes la pantalla pedía una URL de imagen) y descripcion = "Régimen -Código".
+               Los 2 hoteles ya cargados en Eurovip (inicio 1 y 12) no se tocaron: no tienen código
+               y en el nombre tienen el destino; hay que corregirlos desde la pantalla.
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

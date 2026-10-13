@@ -18,6 +18,7 @@ namespace EuroVip.Repositories
         Task<Inicio?> EliminarAsync(int id);
         Task<IEnumerable<CodigoNombre>> IdiomasAsync();
         Task<IEnumerable<CodigoNombre>> MonedasAsync();
+        Task<IEnumerable<string>> DestinosAsync();
         Task<IEnumerable<Campanya>> CampanyasAsync(string idioma);
         Task<IEnumerable<Contenedor>> ContenedoresAsync(string idioma);
         Task AuditarAsync(string tipo, int id, object cambios, string usuario, string? ip, string? navegador);
@@ -193,6 +194,17 @@ namespace EuroVip.Repositories
             using var cn = Conexion();
             return await cn.QueryAsync<CodigoNombre>("SELECT id_moneda AS Codigo, nombre AS Nombre FROM Eurovip.moneda ORDER BY id_moneda");
         }
+
+        /// <summary>Destinos (zonas) para el campo "Destino" del hotel: los de Eurovip.destino y los ya usados en hoteles.</summary>
+        public async Task<IEnumerable<string>> DestinosAsync()
+        {
+            using var cn = Conexion();
+            return await cn.QueryAsync<string>(@"
+                SELECT d FROM (SELECT LTRIM(RTRIM(id_destino)) d FROM Eurovip.destino WHERE id_idioma = 'ES'
+                               UNION SELECT LTRIM(RTRIM(caratulaDestino)) FROM Eurovip.inicio WHERE tipo_servicio = 'HOTEL') x
+                WHERE ISNULL(d, '') <> '' AND d NOT LIKE 'http%' ORDER BY d");
+        }
+
 
         public async Task<IEnumerable<Campanya>> CampanyasAsync(string idioma)
         {
