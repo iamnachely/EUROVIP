@@ -66,6 +66,18 @@ namespace EuroVip.Controllers
         [HttpGet] public async Task<IActionResult> Resumen() => Json(await _repo.ResumenAsync());
         [HttpGet] public async Task<IActionResult> Actividad() => Json(await _repo.ActividadAsync(8));
 
+        /// <summary>Datos inconsistentes ya guardados en un mantenimiento (nombres basura, repetidos, país que no concuerda…).</summary>
+        [HttpGet]
+        public async Task<IActionResult> Revisar(string id)
+        {
+            var c = HrCatalogos.Buscar(id);
+            if (c is null) return NotFound(new { mensaje = "Catálogo desconocido." });
+            return Json(await _repo.RevisarAsync(c));
+        }
+
+        /// <summary>Cuántos datos a revisar tiene cada mantenimiento (tablero de Herramientas).</summary>
+        [HttpGet] public async Task<IActionResult> RevisarResumen() => Json(await _repo.RevisarResumenAsync());
+
         [HttpGet]
         public async Task<IActionResult> Buscar(string? q)
         {

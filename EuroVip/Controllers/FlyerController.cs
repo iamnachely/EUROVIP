@@ -57,6 +57,7 @@ namespace EuroVip.Controllers
         public async Task<IActionResult> Config([FromBody] FlyerConfig c)
         {
             if (!ModelState.IsValid) return Error();
+            if (await _repo.ErrorDestinoAsync(c.Id_Destino) is string mal) return BadRequest(new { mensaje = mal });
             var id = await _repo.GuardarConfigAsync(c);
             await Auditar(c.Id > 0 ? "Flyer_ConfigEditar" : "Flyer_ConfigCrear", c);
             return Json(new { ok = true, id, mensaje = c.Id > 0 ? "Destino guardado." : "Destino agregado a los flyers." });

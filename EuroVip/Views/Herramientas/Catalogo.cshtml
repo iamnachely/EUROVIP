@@ -50,6 +50,26 @@
     @@media (max-width: 640px) { .hc-img { grid-template-columns: 1fr; } }
     .hc-prev img { width: 100%; max-height: 180px; object-fit: cover; display: block; }
     .ui-f input.may { text-transform: uppercase; }
+    /* Datos a revisar (inconsistencias ya guardadas) */
+    .hc-rev-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 14px; border: 1px solid #FCD34D; background: #FEF3C7; color: #92400E;
+                  font: 800 13px var(--ev-font); cursor: pointer; }
+    .hc-rev-btn.ok { border-color: var(--ev-line); background: var(--ev-surface-2); color: var(--ev-muted); cursor: default; }
+    .hc-rev-btn[aria-expanded="true"] { background: #92400E; color: #FEF3C7; border-color: #92400E; }
+    .hc-rev { margin: 0 0 16px; border-radius: 20px; border: 1px solid #FCD34D; background: #FFFBEB; padding: 16px 18px; }
+    .hc-rev h3 { margin: 0 0 4px; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: #92400E; }
+    .hc-rev > p { margin: 0 0 12px; color: #92400E; font-weight: 600; font-size: 13px; }
+    .hc-rev-g { background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 16px; margin-top: 10px; overflow: hidden; }
+    .hc-rev-g summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 14px; }
+    .hc-rev-g summary::-webkit-details-marker { display: none; }
+    .hc-rev-g summary .n { min-width: 28px; height: 24px; padding: 0 8px; border-radius: 8px; background: #FEF3C7; color: #92400E; display: inline-grid; place-items: center; font-size: 12.5px; }
+    .hc-rev-g summary small { color: var(--ev-muted); font-weight: 600; font-size: 12.5px; flex: 1; }
+    .hc-rev-g[open] summary .bi-chevron-down { transform: rotate(180deg); }
+    .hc-rev-g table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .hc-rev-g td { padding: 8px 14px; border-top: 1px solid var(--ev-line); }
+    .hc-rev-g td.v { font-weight: 700; white-space: pre; }
+    .hc-rev-g td.d { color: var(--ev-muted); font-weight: 600; }
+    .hc-rev-g tr[data-r] { cursor: pointer; }
+    .hc-rev-g tr[data-r]:hover { background: var(--ev-surface-2); }
     .hb-form { padding: 14px; border-radius: 16px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); margin-bottom: 12px; }
     @@media (max-width: 1100px) { .hc { grid-template-columns: 1fr; } .hc-nav { position: static; display: flex; flex-wrap: wrap; } .hc-nav .g { display: none; } }
 </style>
@@ -87,7 +107,11 @@
             <label class="ui-search"><i class="bi bi-search"></i><input id="hcQ" type="search" placeholder="Buscar en @Model.Titulo.ToLower()…" autocomplete="off"></label>
             <span id="hcFiltros" style="display:contents"></span>
             <select class="ui-select" id="hcTam" title="Filas por página"><option>25</option><option>50</option><option>100</option></select>
+            <button type="button" class="hc-rev-btn ok" id="hcRevBtn" aria-expanded="false" aria-controls="hcRev" disabled><i class="bi bi-hourglass-split"></i> Revisando datos…</button>
         </div>
+
+        <!-- Datos inconsistentes ya guardados: se pueden abrir y corregir desde aquí -->
+        <section class="hc-rev" id="hcRev" hidden aria-live="polite"></section>
 
         <div id="hcLista"></div>
         <div class="hc-pager" id="hcPager" hidden><small id="hcRango"></small><div class="hc-pages" id="hcPages"></div></div>
@@ -371,7 +395,7 @@ const HC = (() => {
         try {
             const r = await EV.post(`/Herramientas/Guardar?id=${DEF.clave}`, { Datos: datos, Nuevo: nuevo });
             EV.toast(r.mensaje);
-            cargar();
+            cargar(); revisar();
             if (DEF.especial === 'alojamiento' && nuevo) { await abrir(r.clave); tabs.ir('ePaneHabs'); EV.toast('Ahora agrega sus habitaciones.', 'info'); }
             else drawer.cerrar();
         } catch (e) { EV.toast(e.message, 'err'); }
@@ -383,7 +407,7 @@ const HC = (() => {
         const nombre = fila.nombre || fila.descripcion || claves.map(c => fila[c]).join(' · ');
         if (!await EV.confirmar({ titulo: `¿Eliminar ${DEF.el} ${DEF.singular}?`, peligro: true, si: 'Sí, eliminar',
             texto: `Se eliminará <b>${esc(nombre)}</b>${DEF.especial === 'alojamiento' ? ' con todas sus habitaciones' : ''}. No se puede deshacer. Si se usa en ofertas o circuitos, no te dejará.` })) return;
-        try { const r = await EV.post(`/Herramientas/Eliminar?id=${DEF.clave}`, { Clave: k }); EV.toast(r.mensaje); drawer.cerrar(); cargar(); }
+        try { const r = await EV.post(`/Herramientas/Eliminar?id=${DEF.clave}`, { Clave: k }); EV.toast(r.mensaje); drawer.cerrar(); cargar(); revisar(); }
         catch (e) { EV.toast(e.message, 'err'); }
     }
 
@@ -420,8 +444,34 @@ const HC = (() => {
         $('#hbForm input:not([readonly])')?.focus();
     }
 
+    // ---------------- DATOS A REVISAR ----------------
+    let revFilas = [];
+    async function revisar() {
+        const b = $('#hcRevBtn');
+        let grupos = [];
+        try { grupos = await EV.api('/Herramientas/Revisar?id=' + DEF.clave); } catch { b.hidden = true; return; }
+        const total = grupos.reduce((s, g) => s + g.total, 0);
+        if (!total) {
+            b.className = 'hc-rev-btn ok'; b.disabled = true; b.setAttribute('aria-expanded', 'false');
+            b.innerHTML = '<i class="bi bi-check2-circle"></i> Sin datos a revisar';
+            $('#hcRev').hidden = true; return;
+        }
+        b.className = 'hc-rev-btn'; b.disabled = false;
+        b.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i> ${EV.fmt(total)} dato${total === 1 ? '' : 's'} a revisar`;
+        revFilas = [];
+        $('#hcRev').innerHTML = `<h3><i class="bi bi-exclamation-triangle-fill"></i> Datos a revisar en ${esc(DEF.titulo.toLowerCase())}</h3>
+            <p>Estos registros ya estaban guardados y no cumplen las reglas (ahora no se dejan cargar así). Pulsa uno para abrirlo y corregirlo.</p>
+            ${grupos.map((g, gi) => `<details class="hc-rev-g" ${gi === 0 ? 'open' : ''}><summary><span class="n">${EV.fmt(g.total)}</span> ${esc(g.motivo)} <small>${esc(g.ayuda)}</small><i class="bi bi-chevron-down"></i></summary>
+                <table><tbody>${g.filas.map(f => { revFilas.push(f); return `<tr data-r="${revFilas.length - 1}"><td class="v">${esc(f.valor ?? '—')}</td><td class="d">${esc(f.detalle ?? '')}</td>
+                    <td style="text-align:right"><span class="ui-ibtn" title="Abrir"><i class="bi bi-pencil"></i></span></td></tr>`; }).join('')}</tbody></table>
+                ${g.total > g.filas.length ? `<div class="ui-help" style="margin:8px 14px">Se muestran ${g.filas.length} de ${EV.fmt(g.total)}.</div>` : ''}</details>`).join('')}`;
+    }
+
     // ---------------- INICIO ----------------
     async function iniciar() {
+        $('#hcRevBtn').onclick = () => { const p = $('#hcRev'), abierto = p.hidden; p.hidden = !abierto; $('#hcRevBtn').setAttribute('aria-expanded', String(abierto)); };
+        $('#hcRev').addEventListener('click', e => { const tr = e.target.closest('tr[data-r]'); if (tr) abrir(revFilas[+tr.dataset.r]); });
+        revisar();
         $('#hcQ').value = st.q;
         await pintarFiltros();
         $('#hcQ').addEventListener('input', EV.debounce(e => { st.q = e.target.value.trim(); st.pagina = 1; cargar(); }, 300));

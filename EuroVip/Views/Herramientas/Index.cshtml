@@ -87,6 +87,7 @@
     .ht-card:hover .nuevo, .ht-card:focus-within .nuevo { opacity: 1; transform: none; }
     .ht-card b.t { font-size: 17px; font-weight: 800; letter-spacing: -.3px; margin-top: 12px; position: relative; flex-shrink: 0; }
     .ht-card p { margin: 3px 0 0; color: var(--ev-muted); font-weight: 500; font-size: 13px; position: relative; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex-shrink: 0; }
+    .ht-rev { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 4px 10px; border-radius: 10px; background: #FEF3C7; color: #92400E; font: 800 12px var(--ev-font); align-self: flex-start; position: relative; }
     .ht-card .pie { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; position: relative; }
     .ht-card .num { font-size: 30px; font-weight: 800; letter-spacing: -1.4px; line-height: 1; }
     .ht-card .num small { display: block; font-size: 11.5px; letter-spacing: 0; color: var(--ev-muted); font-weight: 700; margin-top: 3px; }
@@ -183,6 +184,7 @@
                     {
                         <div class="extra"><span id="xHab">— habitaciones</span><span id="xDest">— destinos</span><span><i class="bi bi-shield-check"></i> con protección al borrar</span></div>
                     }
+                    <span class="ht-rev" data-rev="@c.Clave" hidden></span>
                     <div class="pie"><span class="num"><span data-n="@c.Clave">—</span><small>registros</small></span><span class="ir"><i class="bi bi-arrow-right"></i></span></div>
                 </a>
             }
@@ -233,6 +235,12 @@
         $('#xHab').textContent = `${EV.fmt(m.habitaciones || 0)} habitaciones`;
         $('#xDest').textContent = `${EV.fmt(m.destinos || 0)} destinos`;
     }).catch(() => {});
+
+    // datos a revisar (inconsistencias guardadas) por mantenimiento
+    EV.api('/Herramientas/RevisarResumen').then(r => Object.entries(r).forEach(([k, n]) => {
+        const el = document.querySelector(`[data-rev="${k}"]`); if (!el) return;
+        el.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i> ${EV.fmt(n)} a revisar`; el.hidden = false;
+    })).catch(() => {});
 
     // actividad reciente
     const verbo = { Crear: ['Creó', 'bi-plus-lg'], Editar: ['Editó', 'bi-pencil'], Eliminar: ['Eliminó', 'bi-trash3'] };

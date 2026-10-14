@@ -1,10 +1,13 @@
 using Dapper;
 using EuroVip.Models;
+using EuroVip.Services;
 
 namespace EuroVip.Repositories
 {
     public interface IFlyerRepository
     {
+        /// <summary>El destino del flyer tiene que existir en Herramientas › Destinos. Devuelve el error o null.</summary>
+        Task<string?> ErrorDestinoAsync(string? destino);
         Task<List<FlyerConfig>> ConfigsAsync();
         Task<int> GuardarConfigAsync(FlyerConfig c);
         Task<bool> EliminarConfigAsync(int id);
@@ -58,6 +61,12 @@ namespace EuroVip.Repositories
                        (SELECT MIN(precio_final) FROM Eurovip.flyer_datos d WHERE d.id_destino = f.id_destino) AS PrecioDesde
                 FROM Eurovip.flyer_config f LEFT JOIN Eurovip.campanya c ON c.id_campanya = f.id_campanya AND c.id_idioma = 'ES'
                 ORDER BY ISNULL(f.nombre_destino, f.id_destino)")).ToList();
+        }
+
+        public async Task<string?> ErrorDestinoAsync(string? destino)
+        {
+            using var cn = _db.Conexion();
+            return await ReglasDatos.ErrorDestinoAsync(cn, destino);
         }
 
         public async Task<int> GuardarConfigAsync(FlyerConfig c)

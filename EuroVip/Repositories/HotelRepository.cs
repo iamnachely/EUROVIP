@@ -1,6 +1,7 @@
 using Common.Data.Entities;
 using Dapper;
 using EuroVip.Models;
+using EuroVip.Services;
 using System.Data;
 using System.Data.SqlClient;
 using System.Text.Json;
@@ -9,6 +10,8 @@ namespace EuroVip.Repositories
 {
     public interface IHotelRepository
     {
+        /// <summary>El destino de la tarjeta tiene que existir en Herramientas › Destinos. Devuelve el error o null.</summary>
+        Task<string?> ErrorDestinoAsync(string? destino);
         Task<PaginaResultado<HotelListaItem>> ListarAsync(HotelFiltro f);
         Task<HotelEstadisticas> EstadisticasAsync();
         Task<Inicio?> ObtenerAsync(int id);
@@ -208,10 +211,15 @@ namespace EuroVip.Repositories
         public async Task<IEnumerable<string>> DestinosAsync()
         {
             using var cn = Conexion();
+            // Solo destinos reales de Herramientas › Destinos (antes se sumaban los escritos a mano en tarjetas viejas).
             return await cn.QueryAsync<string>(@"
-                SELECT d FROM (SELECT LTRIM(RTRIM(id_destino)) d FROM Eurovip.destino WHERE id_idioma = 'ES'
-                               UNION SELECT LTRIM(RTRIM(caratulaDestino)) FROM Eurovip.inicio WHERE tipo_servicio = 'HOTEL') x
-                WHERE ISNULL(d, '') <> '' AND d NOT LIKE 'http%' ORDER BY d");
+                SELECT DISTINCT LTRIM(RTRIM(id_destino)) FROM Eurovip.destino WHERE id_idioma = 'ES' AND ISNULL(id_destino, '') <> '' ORDER BY 1");
+        }
+
+        public async Task<string?> ErrorDestinoAsync(string? destino)
+        {
+            using var cn = Conexion();
+            return await ReglasDatos.ErrorDestinoAsync(cn, destino);
         }
 
 

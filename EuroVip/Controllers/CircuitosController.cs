@@ -57,6 +57,10 @@ namespace EuroVip.Controllers
             if (await _repo.CodigoExisteAsync(dto.Codigo, excepto)) errores.Add($"Ya existe un circuito con el código \"{dto.Codigo}\".");
             if (await _repo.NombreExisteAsync(dto.Nombre, excepto)) errores.Add($"Ya existe un circuito llamado \"{dto.Nombre}\".");
             if (dto.Destinos.Count == 0) errores.Add("Agrega al menos un destino.");
+            // Cada destino tiene que existir en Herramientas › Destinos y ser del país indicado (nada de "-pego", "65401"…).
+            using (var cn = _repo.Conexion())
+                foreach (var d in dto.Destinos)
+                    if (await ReglasDatos.ErrorDestinoAsync(cn, d.Id_Destino, d.Id_Pais) is string e) errores.Add(e);
             if (errores.Count > 0) return BadRequest(new { mensaje = errores[0], lista = errores });
 
             try

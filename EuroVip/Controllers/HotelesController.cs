@@ -76,6 +76,13 @@ namespace EuroVip.Controllers
                     .ToDictionary(x => x.Key, x => x.Value!.Errors.First().ErrorMessage);
                 return BadRequest(new { mensaje = "Revisa los campos marcados.", errores });
             }
+            // Nada de nombres basura ("222") ni destinos que no existen o están mal escritos.
+            dto.Id_Destino = ReglasDatos.Limpiar(dto.Id_Destino);
+            dto.CaratulaDestino = ReglasDatos.Limpiar(dto.CaratulaDestino);
+            if (ReglasDatos.Nombre("nombre de hotel", dto.Id_Destino, 3) is string malHotel)
+                return BadRequest(new { mensaje = malHotel, errores = new Dictionary<string, string> { ["Id_Destino"] = malHotel } });
+            if (await _repo.ErrorDestinoAsync(dto.CaratulaDestino) is string malDestino)
+                return BadRequest(new { mensaje = malDestino, errores = new Dictionary<string, string> { ["CaratulaDestino"] = malDestino } });
 
             try
             {
