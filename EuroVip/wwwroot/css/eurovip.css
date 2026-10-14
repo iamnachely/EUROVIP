@@ -511,3 +511,19 @@ button.ev-nav-label i { font-size: 11px; transition: transform .3s var(--ev-ease
 /* Opciones del menú lateral que solo hacen falta en el móvil (arriba se ocultan las pestañas) */
 .solo-movil { display: none; }
 @media (max-width: 900px) { .solo-movil { display: block; } }
+
+/* Buscador global (resultados bajo la barra de arriba) */
+.ev-search { position: relative; }
+.ev-busq { position: absolute; top: calc(100% + 8px); left: 0; right: 0; min-width: 320px; max-height: 70vh; overflow-y: auto; z-index: 300;
+           background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 18px; box-shadow: var(--ev-shadow-lg); padding: 6px; }
+.ev-busq .g { font: 800 11px var(--ev-font); letter-spacing: .06em; text-transform: uppercase; color: var(--ev-muted); padding: 10px 10px 4px; }
+.ev-busq a { display: flex; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 12px; color: var(--ev-text); text-decoration: none; }
+.ev-busq a i { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--ev-mint); color: var(--ev-deep); flex-shrink: 0; }
+.ev-busq a span { display: grid; min-width: 0; }
+.ev-busq a b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-busq a small { color: var(--ev-muted); font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-busq a:hover, .ev-busq a.act { background: var(--ev-surface-2); }
+.ev-busq a.act { box-shadow: inset 3px 0 0 var(--ev-teal); }
+.ev-busq .vacio { padding: 14px; color: var(--ev-muted); font-weight: 600; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.ev-busq-spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ev-line); border-top-color: var(--ev-teal); animation: evGiro .7s linear infinite; }
+@keyframes evGiro { to { transform: rotate(360deg); } }

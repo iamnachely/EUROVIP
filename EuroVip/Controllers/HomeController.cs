@@ -15,13 +15,100 @@ namespace EuroVip.Controllers
         private readonly ILogger<HomeController> _logger;
         private readonly IHomeWebRepository _home;
         private readonly IImagenesLocales _img;
+        private readonly IHerramientasRepository _herr;
 
-        public HomeController(IConfiguration configuration, ILogger<HomeController> logger, IHomeWebRepository home, IImagenesLocales img)
+        public HomeController(IConfiguration configuration, ILogger<HomeController> logger, IHomeWebRepository home, IImagenesLocales img, IHerramientasRepository herr)
         {
             _configuration = configuration;
             _logger = logger;
             _home = home;
             _img = img;
+            _herr = herr;
+        }
+
+        // Pantallas y accesos directos que encuentra el buscador de arriba (texto, palabras clave, dirección, módulo, icono)
+        private static readonly (string Titulo, string Claves, string Url, string? Modulo, string Icono)[] Pantallas =
+        {
+            ("Nueva oferta (Express)", "cargar oferta hotel express nueva carga manual", "/CargaManual/Express", "carga_manual", "bi-lightning-charge"),
+            ("Nueva oferta con Excel (Clásica)", "cargar oferta excel clasica", "/CargaManual/Clasica", "carga_manual", "bi-file-earmark-excel"),
+            ("Ofertas cargadas", "lista ofertas editar desactivar", "/Ofertas/Index", "carga_manual", "bi-pencil-square"),
+            ("Nuevo hotel", "crear hotel vitrina", "/Hoteles/Index?nuevo=1", "hoteles", "bi-building-add"),
+            ("Hoteles", "hotel fotos vitrina", "/Hoteles/Index", "hoteles", "bi-building"),
+            ("Nuevo circuito", "crear circuito itinerario", "/Circuitos/Index?nuevo=1", "circuitos", "bi-signpost-split"),
+            ("Cargar salidas de circuito", "circuito salidas express fechas", "/CargaCircuitos/Express", "circuitos", "bi-calendar-plus"),
+            ("Circuitos", "circuito lista", "/Circuitos/Index", "circuitos", "bi-signpost-split"),
+            ("Home de la web", "home portada inicio web tarjetas secciones", "/HomeWeb/Index", "home_web", "bi-window-sidebar"),
+            ("Carrusel (slider) de la Home", "carrusel slider slide banner", "/HomeWeb/Index#carrusel", "home_web", "bi-images"),
+            ("Consultar ofertas", "buscar consultar duplicar editar en masa", "/ConsultarOferta/Index", "consultar_ofertas", "bi-search-heart"),
+            ("Flyers", "flyer whatsapp contactos imagenes", "/Flyer/Hub", "flyers", "bi-file-earmark-richtext"),
+            ("Herramientas (catálogos)", "herramientas catalogos destinos monedas campañas paises tasas regimen proveedores", "/Herramientas/Index", "herramientas", "bi-tools"),
+            ("Usuarios y accesos", "usuarios permisos accesos contraseña", "/Usuarios/Index", "usuarios", "bi-people"),
+            ("Historial de cargas", "cargas historial log errores revisar", "/Cargas/Index", "historial_cargas", "bi-clock-history"),
+            ("Reportes", "reportes salidas estadisticas", "/Reportes/Index", "reportes", "bi-bar-chart-line"),
+            ("Mi perfil", "perfil foto nombre telefono", "/Perfil/Index", null, "bi-person-circle"),
+        };
+
+        private static string SinAcentos(string s) =>
+            new string((s ?? "").Normalize(System.Text.NormalizationForm.FormD)
+                .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark).ToArray()).ToLowerInvariant();
+
+        /// <summary>
+        /// Buscador de la barra de arriba (Ctrl+K): pantallas y accesos directos, circuitos, hoteles, ofertas por hotel y destino,
+        /// y catálogos de Herramientas. Solo devuelve lo de los módulos a los que el usuario tiene acceso.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Buscar(string? q)
+        {
+            q = (q ?? "").Trim();
+            if (q.Length < 2) return Json(Array.Empty<object>());
+            var p = HttpContext.Items[AccesoModuloFilter.ClavePermisos] as PermisosUsuario;
+            bool Puede(string? m) => m is null || (p?.Puede(m) ?? true);
+            var res = new List<object>();
+            void Agregar(string grupo, string icono, string titulo, string? sub, string url) => res.Add(new { grupo, icono, titulo, sub, url });
+
+            var qn = SinAcentos(q);
+            foreach (var x in Pantallas.Where(x => Puede(x.Modulo) && (SinAcentos(x.Titulo).Contains(qn) || SinAcentos(x.Claves).Contains(qn))).Take(5))
+                Agregar("Ir a", x.Icono, x.Titulo, null, x.Url);
+
+            try
+            {
+                using var cn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var like = $"%{q}%";
+                if (Puede("circuitos"))
+                    foreach (var c in await cn.QueryAsync<(string Id, string Nombre)>(
+                        "SELECT TOP 5 id, nombre_circuito FROM Eurovip.circuito WHERE id_idioma = 'ES' AND (nombre_circuito LIKE @like OR id LIKE @like) ORDER BY nombre_circuito", new { like }))
+                        Agregar("Circuitos", "bi-signpost-split", c.Nombre, $"Código {c.Id}", "/Circuitos/Index?editar=" + Uri.EscapeDataString(c.Id));
+                if (Puede("hoteles"))
+                    foreach (var h in await cn.QueryAsync<(int Id, string Nombre, string? Destino)>(
+                        "SELECT TOP 5 id_servicio, LTRIM(RTRIM(id_destino)), caratulaDestino FROM Eurovip.inicio WHERE tipo_servicio = 'HOTEL' AND (id_destino LIKE @like OR caratulaDestino LIKE @like) ORDER BY id_destino", new { like }))
+                        Agregar("Hoteles de la web", "bi-building", h.Nombre, h.Destino, "/Hoteles/Index?editar=" + h.Id);
+                if (Puede("carga_manual"))
+                {
+                    foreach (var o in await cn.QueryAsync<(string Hotel, int N)>(@"
+                        SELECT TOP 5 a.nombre, COUNT(*) FROM Eurovip.servicio s
+                            JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
+                            JOIN Eurovip.alojamiento a ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
+                        WHERE s.id_tipo_servicio = 'OFERTA' AND s.activo = 1 AND sd.desde > CAST(GETDATE() AS date) AND a.nombre LIKE @like
+                        GROUP BY a.nombre ORDER BY a.nombre", new { like }))
+                        Agregar("Ofertas", "bi-pencil-square", o.Hotel, $"{o.N} oferta{(o.N == 1 ? "" : "s")} a la venta", "/Ofertas/Index?q=" + Uri.EscapeDataString(o.Hotel));
+                    foreach (var d in await cn.QueryAsync<(string Destino, int N)>(@"
+                        SELECT TOP 3 d.destino, COUNT(*) FROM Eurovip.servicio_destino d JOIN Eurovip.servicio s ON s.id_servicio = d.id_servicio
+                        WHERE s.activo = 1 AND d.destino LIKE @like GROUP BY d.destino ORDER BY d.destino", new { like }))
+                        Agregar("Ofertas", "bi-geo-alt", $"Ofertas de {d.Destino}", $"{d.N} oferta{(d.N == 1 ? "" : "s")} activas", "/Ofertas/Index?destino=" + Uri.EscapeDataString(d.Destino));
+                }
+            }
+            catch (Exception ex) { _logger.LogError(ex, "Error en el buscador global"); }
+
+            if (Puede("herramientas"))
+            {
+                try
+                {
+                    foreach (var g in (await _herr.BuscarGlobalAsync(q)).Take(4))
+                        Agregar("Catálogos", g.Icono, $"Ver en {g.Titulo}", "Herramientas", $"/Herramientas/Catalogo/{g.Clave}?q={Uri.EscapeDataString(q)}");
+                }
+                catch (Exception ex) { _logger.LogError(ex, "Error buscando en catálogos"); }
+            }
+            return Json(res);
         }
 
         /// <summary>
