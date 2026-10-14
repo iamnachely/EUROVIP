@@ -89,7 +89,13 @@
                 <div class="ui-row r3">
                     <div class="ui-f"><label>Tour operador</label><input id="nProveedor" placeholder="Busca el tour operador…"><span class="msg"></span></div>
                     <div class="ui-f"><label>Noches</label><input id="nNoches" type="number" min="1" max="60" value="7"><span class="msg"></span></div>
-                    <div class="ui-f"><label>Imagen <em>URL opcional</em></label><input id="nCaratula" maxlength="200" placeholder="https://…"></div>
+                    <div class="ui-f"><label>Portada <em>opcional</em></label>
+                        <input type="hidden" id="nCaratula">
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <span id="nCarPrev" style="width:54px;height:40px;border-radius:10px;overflow:hidden;background:var(--ev-grad);display:grid;place-items:center;flex-shrink:0"><i class="bi bi-image"></i></span>
+                            <label class="ev-btn ghost sm" style="cursor:pointer"><input type="file" id="nCarArchivo" accept="image/jpeg,image/png,image/webp" hidden><i class="bi bi-upload"></i> <span id="nCarTxt">Subir</span></label>
+                        </div>
+                        <span class="msg"></span></div>
                 </div>
                 <div class="ui-row">
                     <div class="ui-f"><label>País de los destinos</label><select id="nPais"></select></div>
@@ -470,6 +476,22 @@ const XP = (() => {
         $$('[data-modo]').forEach(b => b.addEventListener('click', () => XP.modo(b.dataset.modo)));
         $('#xpBuscar').addEventListener('input', EV.debounce(cargarCircuitos, 300));
         $('#xpCircs').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) elegir(b.dataset.c); });
+        // Portada del circuito nuevo: se sube a imagenes/circuitos/{Nombre}.webp (igual que en Circuitos)
+        $('#nCarArchivo').addEventListener('change', async e => {
+            const f = e.target.files[0]; if (!f) return;
+            const nombre = $('#nNombre').value.trim();
+            if (!nombre) { EV.toast('Primero escribe el nombre del circuito: la portada se guarda con ese nombre.', 'err'); e.target.value = ''; return; }
+            if (!/^image\/(jpeg|png|webp)$/.test(f.type) || f.size > 10e6) { EV.toast('Elige una imagen JPG, PNG o WebP de hasta 10 MB.', 'err'); e.target.value = ''; return; }
+            const fd = new FormData(); fd.append('nombre', nombre); fd.append('archivo', f);
+            try {
+                const r = await EV.post('/Circuitos/SubirPortada', fd);
+                $('#nCaratula').value = r.caratula;
+                $('#nCarPrev').innerHTML = `<img src="${EV.esc(r.url)}" alt="" style="width:100%;height:100%;object-fit:cover">`;
+                $('#nCarTxt').textContent = 'Cambiar';
+                EV.toast('Portada cargada. Se guarda con el circuito al terminar la carga.');
+            } catch (er) { EV.toast(er.message, 'err'); }
+            finally { e.target.value = ''; }
+        });
         $('#nNombre').addEventListener('input', () => { if (!$('#nCodigo').dataset.tocado) $('#nCodigo').value = $('#nNombre').value.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9 ]/g, ''); resumen(); });
         $('#nCodigo').addEventListener('input', () => $('#nCodigo').dataset.tocado = '1');
         $('#nNoches').addEventListener('input', () => { pintarSalidas(); });
