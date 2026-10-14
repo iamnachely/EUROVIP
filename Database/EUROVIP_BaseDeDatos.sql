@@ -2771,6 +2771,46 @@ GO
                spEliminaServicio sin error; no quedó nada guardado (servicio_destino sigue con 122).
                Solo se "gastó" el número automático 192.
 
+   14/10/2026  LIMPIEZA DE DATOS (a pedido de la usuaria): destinos, países y hoteles mal creados.
+               Solo servidor 93, esquema Eurovip; ViajeVDT (10.10.10.29) NO se tocó. Casi todo
+               venía así copiado de ViajeVDT. Script completo al final de este archivo
+               ("LIMPIEZA 14/10/2026"); se ensayó antes con ROLLBACK y luego se aplicó.
+               • Hoteles basura: 5 borrados ("222", "2222", "333", "3333", "6666", en Madrid).
+               • Países repetidos: IM (Islas Mauricio) -> MU (Mauricio) y E1 (Arabia Saudi) -> SA
+                 en todas las tablas; IM y E1 borrados de pais (quedan 140 países).
+               • País que no concordaba: RIYADH y JEDDAH estaban en Argentina -> Arabia Saudí;
+                 un hotel de Atenas (Grecia) apuntaba a "Athens" (EE.UU.) -> "Atenas";
+                 11 hoteles con el país mal (Cartagena de Indias en Antigua y Barbuda, Cancún en
+                 Colombia, Isla de Sal en Baleares…) toman el país de su destino.
+               • Destino inexistente: "Havana" -> "La Habana"; "Mauricio" -> "Isla Mauricio";
+                 4 hoteles de Barbados sin destino ni país -> "Barbados" (BD).
+               • Espacios de más: 10 destinos (" Dubrovnik", "Bergen "…) y nombres de hotel;
+                 " Dubrovnik" se borró porque ya existía "Dubrovnik".
+                 130 hoteles con el destino en otras mayúsculas ("RIVIERA MAYA") -> igual que en
+                 la tabla de destinos ("Riviera Maya").
+               • Destinos basura borrados (13, ninguno con hoteles): "-pego", "65401", "Al", "t",
+                 "falta" (x4), "Por cuenta del cliente" (x2), "Lima 41", "Orleans Cedex 1" y
+                 "TROU D EAU DOUCE" de España (queda el de Mauricio). Corregidos:
+                 "Miraflores 18.lima" -> "Miraflores", "Mazara del Vall0" -> "Mazara del Vallo",
+                 "Ringko99bing" -> "Ringkobing".
+               • HOTELES REPETIDOS: 162 hoteles estaban copiados ~107 veces. Queda 1 por hotel
+                 (el activo; si no, el de número más bajo). Se borraron 7.446 copias y sus
+                 35.818 habitaciones; antes, 540 habitaciones que solo tenía alguna copia se
+                 pasaron al hotel que queda. El circuito "Prueba" apuntaba a una copia: ahora
+                 apunta al hotel que queda. Ninguna oferta usaba copias.
+               • Resultado: 2.109 hoteles, 47.831 habitaciones, 7.306 destinos, 140 países;
+                 0 repetidos, 0 hoteles sin destino válido, 0 países inexistentes.
+               • COPIAS DE SEGURIDAD (tablas completas de antes): Eurovip.destino_respaldo_20261014,
+                 alojamiento_respaldo_20261014, alojamiento_habitacion_respaldo_20261014,
+                 pais_respaldo_20261014, estacion_respaldo_20261014 y
+                 servicio_circuito_alojamiento_respaldo_20261014. Cuando se confirme que todo
+                 está bien, se pueden borrar (DROP TABLE).
+               NO SE TOCÓ (a decidir): los destinos "MX" y "TH" (son códigos de país, no
+               destinos) porque los usan 2 filas activas de la Home (home_contenido 2076 y 2857,
+               campaña 17); y ~57 nombres de destino repetidos en dos países que pueden ser
+               ciudades distintas (Toledo ES/US, Boston GB/US…) o Baleares/Canarias (BB/CC) frente
+               a España (ES).
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
@@ -2778,3 +2818,155 @@ GO
 
 
 
+
+
+/* ##########################################################################################
+   LIMPIEZA 14/10/2026 — destinos, países y hoteles mal creados (explicación en la BITÁCORA).
+   Script tal cual se aplicó (primero se ensayó con ROLLBACK en lugar de COMMIT).
+   ########################################################################################## */
+/* Limpieza de datos Eurovip (servidor 93, TropitoursVDT, esquema Eurovip) — 14/10/2026
+   ViajeVDT (10.10.10.29) NO se toca. Todo en una transacción; al final COMMIT o ROLLBACK (ensayo). */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRAN;
+
+/* ---------- 0) Copias de seguridad (tablas completas, antes de tocar nada) ---------- */
+IF OBJECT_ID('Eurovip.destino_respaldo_20261014') IS NULL SELECT * INTO Eurovip.destino_respaldo_20261014 FROM Eurovip.destino;
+IF OBJECT_ID('Eurovip.alojamiento_respaldo_20261014') IS NULL SELECT * INTO Eurovip.alojamiento_respaldo_20261014 FROM Eurovip.alojamiento;
+IF OBJECT_ID('Eurovip.alojamiento_habitacion_respaldo_20261014') IS NULL SELECT * INTO Eurovip.alojamiento_habitacion_respaldo_20261014 FROM Eurovip.alojamiento_habitacion;
+IF OBJECT_ID('Eurovip.pais_respaldo_20261014') IS NULL SELECT * INTO Eurovip.pais_respaldo_20261014 FROM Eurovip.pais;
+IF OBJECT_ID('Eurovip.estacion_respaldo_20261014') IS NULL SELECT * INTO Eurovip.estacion_respaldo_20261014 FROM Eurovip.estacion;
+IF OBJECT_ID('Eurovip.servicio_circuito_alojamiento_respaldo_20261014') IS NULL SELECT * INTO Eurovip.servicio_circuito_alojamiento_respaldo_20261014 FROM Eurovip.servicio_circuito_alojamiento;
+PRINT 'Copias de seguridad creadas (_respaldo_20261014).';
+
+/* ---------- 1) Hoteles basura: nombre sin ninguna letra ("222", "2222", "333", "3333", "6666") ---------- */
+DELETE h FROM Eurovip.alojamiento_habitacion h JOIN Eurovip.alojamiento a ON a.id_alojamiento = h.id_alojamiento WHERE a.nombre NOT LIKE '%[a-zA-Z]%';
+DELETE FROM Eurovip.alojamiento WHERE nombre NOT LIKE '%[a-zA-Z]%';
+PRINT CONCAT('1) Hoteles basura borrados: ', @@ROWCOUNT);
+
+/* ---------- 2) Países duplicados: IM (Islas Mauricio) -> MU (Mauricio), E1 (Arabia Saudi) -> SA ---------- */
+-- destino y estacion tienen el país en la clave: si ya existe la misma fila con el código bueno, sobra la vieja.
+DELETE d FROM Eurovip.destino d WHERE d.id_pais IN ('IM','E1')
+   AND EXISTS (SELECT 1 FROM Eurovip.destino x WHERE x.id_destino = d.id_destino AND x.id_idioma = d.id_idioma AND x.id_pais = CASE d.id_pais WHEN 'IM' THEN 'MU' ELSE 'SA' END);
+UPDATE Eurovip.destino SET id_pais = CASE id_pais WHEN 'IM' THEN 'MU' ELSE 'SA' END WHERE id_pais IN ('IM','E1');
+DELETE e FROM Eurovip.estacion e WHERE e.id_pais IN ('IM','E1')
+   AND EXISTS (SELECT 1 FROM Eurovip.estacion x WHERE x.id_estacion = e.id_estacion AND x.id_destino = e.id_destino AND x.id_idioma = e.id_idioma AND x.id_pais = CASE e.id_pais WHEN 'IM' THEN 'MU' ELSE 'SA' END);
+DECLARE @sql nvarchar(max) = N'';
+SELECT @sql += N'UPDATE Eurovip.' + QUOTENAME(TABLE_NAME) + N' SET ' + QUOTENAME(COLUMN_NAME) + N' = CASE ' + QUOTENAME(COLUMN_NAME)
+            + N' WHEN ''IM'' THEN ''MU'' ELSE ''SA'' END WHERE ' + QUOTENAME(COLUMN_NAME) + N' IN (''IM'',''E1'');' + CHAR(10)
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'Eurovip' AND COLUMN_NAME LIKE '%pais%' AND TABLE_NAME NOT IN ('pais','destino')
+  AND TABLE_NAME NOT LIKE '%respaldo%' AND TABLE_NAME NOT LIKE '%borradas%' AND DATA_TYPE IN ('char','varchar','nchar','nvarchar');
+EXEC sp_executesql @sql;
+DELETE FROM Eurovip.pais WHERE id_pais IN ('IM','E1');
+PRINT '2) Países IM -> MU y E1 -> SA unificados; IM y E1 borrados de pais.';
+
+/* ---------- 3) País del hotel que no concuerda con su destino ---------- */
+-- El destino estaba mal: Riyadh y Jeddah figuraban en Argentina (AR) y sus hoteles en Arabia Saudí.
+UPDATE Eurovip.destino SET id_pais = 'SA' WHERE id_destino IN ('RIYADH','JEDDAH') AND id_pais = 'AR'
+   AND NOT EXISTS (SELECT 1 FROM Eurovip.destino x WHERE x.id_destino = Eurovip.destino.id_destino AND x.id_idioma = Eurovip.destino.id_idioma AND x.id_pais = 'SA');
+-- Hotel griego apuntando a "Athens" (Estados Unidos): pasa a "Atenas" (Grecia).
+UPDATE Eurovip.alojamiento SET id_destino = 'Atenas' WHERE id_destino = 'Athens' AND id_pais = 'GR';
+-- El resto: el hotel tenía mal el país (Cartagena de Indias en Antigua y Barbuda, Cancún en Colombia,
+-- Isla de Sal en Baleares): toma el país de su destino.
+UPDATE a SET id_pais = d.id_pais
+FROM Eurovip.alojamiento a
+JOIN Eurovip.destino d ON d.id_destino = a.id_destino AND d.id_idioma = a.id_idioma
+WHERE ISNULL(a.id_pais,'') <> d.id_pais
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.destino d2 WHERE d2.id_destino = a.id_destino AND d2.id_idioma = a.id_idioma AND d2.id_pais = a.id_pais)
+  AND (SELECT COUNT(*) FROM Eurovip.destino d3 WHERE d3.id_destino = a.id_destino AND d3.id_idioma = a.id_idioma) = 1;
+PRINT CONCAT('3) Hoteles con el país corregido según su destino: ', @@ROWCOUNT);
+
+/* ---------- 4) Hoteles con un destino que no existe ---------- */
+UPDATE Eurovip.alojamiento SET id_destino = 'La Habana', id_pais = 'CU' WHERE id_destino = 'Havana';
+UPDATE Eurovip.alojamiento SET id_destino = 'Isla Mauricio', id_pais = 'MU' WHERE id_destino = 'Mauricio';
+UPDATE Eurovip.alojamiento SET id_destino = 'Barbados', id_pais = 'BD' WHERE id_alojamiento IN (9766, 9767, 9768, 9769) AND LTRIM(RTRIM(ISNULL(id_destino,''))) = '';
+PRINT '4) Hoteles reasignados: Havana -> La Habana, Mauricio -> Isla Mauricio, 4 de Barbados sin destino -> Barbados.';
+
+/* ---------- 5) Espacios de más y mayúsculas distintas ---------- */
+-- " Dubrovnik" sobra: ya existe "Dubrovnik" (y no lo usa nadie).
+DELETE d FROM Eurovip.destino d WHERE (d.id_destino LIKE ' %' OR d.id_destino LIKE '% ')
+   AND EXISTS (SELECT 1 FROM Eurovip.destino x WHERE x.id_destino = LTRIM(RTRIM(d.id_destino)) AND DATALENGTH(x.id_destino) = DATALENGTH(LTRIM(RTRIM(d.id_destino))) AND x.id_idioma = d.id_idioma AND x.id_pais = d.id_pais);
+UPDATE Eurovip.destino SET id_destino = LTRIM(RTRIM(id_destino)) WHERE id_destino LIKE ' %' OR id_destino LIKE '% ';
+SET @sql = N'';
+SELECT @sql += N'UPDATE Eurovip.' + QUOTENAME(TABLE_NAME) + N' SET id_destino = LTRIM(RTRIM(id_destino)) WHERE id_destino LIKE '' %'' OR id_destino LIKE ''% '';' + CHAR(10)
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'Eurovip' AND COLUMN_NAME = 'id_destino' AND TABLE_NAME <> 'destino'
+  AND TABLE_NAME NOT LIKE '%respaldo%' AND TABLE_NAME NOT LIKE '%borradas%';
+EXEC sp_executesql @sql;
+UPDATE Eurovip.alojamiento SET nombre = LTRIM(RTRIM(nombre)) WHERE nombre LIKE ' %' OR nombre LIKE '% ';
+-- El destino del hotel se escribe igual que en la tabla de destinos ("RIVIERA MAYA" -> "Riviera Maya").
+UPDATE a SET id_destino = d.id_destino
+FROM Eurovip.alojamiento a
+JOIN Eurovip.destino d ON d.id_destino = a.id_destino AND d.id_idioma = a.id_idioma AND d.id_pais = a.id_pais
+WHERE a.id_destino COLLATE Latin1_General_CS_AS <> d.id_destino COLLATE Latin1_General_CS_AS;
+PRINT CONCAT('5) Hoteles con el destino escrito como en la tabla de destinos: ', @@ROWCOUNT);
+
+/* ---------- 6) Destinos basura (ninguno tiene hoteles) ---------- */
+-- Nombres con error que no existen bien escritos: se corrigen.
+UPDATE Eurovip.destino SET id_destino = 'Miraflores' WHERE id_destino = 'Miraflores 18.lima' AND NOT EXISTS (SELECT 1 FROM Eurovip.destino x WHERE x.id_destino = 'Miraflores' AND x.id_pais = 'PE');
+UPDATE Eurovip.destino SET id_destino = 'Mazara del Vallo' WHERE id_destino = 'Mazara del Vall0' AND NOT EXISTS (SELECT 1 FROM Eurovip.destino x WHERE x.id_destino = 'Mazara del Vallo' AND x.id_pais = 'IT');
+UPDATE Eurovip.destino SET id_destino = 'Ringkobing' WHERE id_destino = 'Ringko99bing' AND NOT EXISTS (SELECT 1 FROM Eurovip.destino x WHERE x.id_destino = 'Ringkobing' AND x.id_pais = 'DK');
+-- Los que no son destinos o ya existen bien escritos: se borran (solo si nadie los usa).
+DELETE d FROM Eurovip.destino d
+WHERE (d.id_destino IN ('-pego', '65401', 'Al', 't', 'falta', 'Por cuenta del cliente', 'Lima 41', 'Orleans Cedex 1', 'Miraflores 18.lima', 'Mazara del Vall0', 'Ringko99bing')
+       OR (d.id_destino = 'TROU D EAU DOUCE' AND d.id_pais = 'ES'))
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.alojamiento a WHERE a.id_destino = d.id_destino)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.estacion e WHERE e.id_destino = d.id_destino AND e.id_pais = d.id_pais)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.home_contenido h WHERE h.id_destino = d.id_destino)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.circuito_destino c WHERE c.id_destino = d.id_destino);
+PRINT CONCAT('6) Destinos basura borrados: ', @@ROWCOUNT);
+
+/* ---------- 7) Hoteles repetidos: mismo nombre y destino -> queda 1 (el activo; si no, el de número más bajo) ---------- */
+IF OBJECT_ID('tempdb..#copias') IS NOT NULL DROP TABLE #copias;
+;WITH g AS (
+    SELECT id_alojamiento,
+           ROW_NUMBER()  OVER (PARTITION BY id_idioma, nombre, id_destino ORDER BY activo DESC, id_alojamiento) rn,
+           FIRST_VALUE(id_alojamiento) OVER (PARTITION BY id_idioma, nombre, id_destino ORDER BY activo DESC, id_alojamiento) canon
+    FROM Eurovip.alojamiento)
+SELECT id_alojamiento AS copia, canon INTO #copias FROM g WHERE rn > 1;
+DECLARE @nc int = (SELECT COUNT(*) FROM #copias), @nh int = (SELECT COUNT(DISTINCT canon) FROM #copias);
+PRINT CONCAT('7) Copias encontradas: ', @nc, ' de ', @nh, ' hoteles');
+
+-- 7a) Habitaciones que solo tenía alguna copia: se pasan al hotel que queda (una por nombre).
+;WITH nuevas AS (
+    SELECT c.canon, h.*, ROW_NUMBER() OVER (PARTITION BY c.canon, h.nombre ORDER BY h.id_alojamiento, h.id_habitacion) rn
+    FROM Eurovip.alojamiento_habitacion h JOIN #copias c ON c.copia = h.id_alojamiento
+    WHERE NOT EXISTS (SELECT 1 FROM Eurovip.alojamiento_habitacion x WHERE x.id_alojamiento = c.canon AND x.id_idioma = h.id_idioma AND x.nombre = h.nombre)),
+n2 AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY canon ORDER BY nombre) k FROM nuevas WHERE rn = 1)
+INSERT INTO Eurovip.alojamiento_habitacion (id_alojamiento, id_habitacion, id_idioma, id_tipo_habitacion, codigo, nombre, grupo, nota, precio, codigo_newblue, nombre_newblue)
+SELECT n2.canon, ISNULL((SELECT MAX(x.id_habitacion) FROM Eurovip.alojamiento_habitacion x WHERE x.id_alojamiento = n2.canon), 0) + n2.k,
+       n2.id_idioma, n2.id_tipo_habitacion, n2.codigo, n2.nombre, n2.grupo, n2.nota, n2.precio, n2.codigo_newblue, n2.nombre_newblue
+FROM n2;
+PRINT CONCAT('7a) Habitaciones pasadas al hotel que queda: ', @@ROWCOUNT);
+
+-- 7b) Lo que apunte a una copia pasa al hotel que queda.
+UPDATE s SET id_alojamiento = c.canon FROM Eurovip.servicio_circuito_alojamiento s JOIN #copias c ON c.copia = s.id_alojamiento
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.servicio_circuito_alojamiento x WHERE x.nombre_circuito = s.nombre_circuito AND x.id_idioma = s.id_idioma AND x.categoria = s.categoria AND x.id_alojamiento = c.canon);
+DELETE s FROM Eurovip.servicio_circuito_alojamiento s JOIN #copias c ON c.copia = s.id_alojamiento;
+UPDATE s SET id_alojamiento = c.canon FROM Eurovip.servicio_detalle s JOIN #copias c ON c.copia = s.id_alojamiento;
+UPDATE s SET id_alojamiento = c.canon FROM Eurovip.alojamiento_destino s JOIN #copias c ON c.copia = s.id_alojamiento;
+IF EXISTS (SELECT 1 FROM Eurovip.servicio_habitacion s JOIN #copias c ON c.copia = s.id_alojamiento)
+    THROW 50001, 'Hay salidas (servicio_habitacion) que usan habitaciones de una copia: revisar antes de borrar.', 1;
+
+-- 7c) Se borran las copias y sus habitaciones.
+DELETE h FROM Eurovip.alojamiento_habitacion h JOIN #copias c ON c.copia = h.id_alojamiento;
+PRINT CONCAT('7c) Habitaciones de copias borradas: ', @@ROWCOUNT);
+DELETE a FROM Eurovip.alojamiento a JOIN #copias c ON c.copia = a.id_alojamiento;
+PRINT CONCAT('7c) Copias de hoteles borradas: ', @@ROWCOUNT);
+
+/* ---------- Comprobación final ---------- */
+SELECT 'hoteles' que, COUNT(*) n FROM Eurovip.alojamiento
+UNION ALL SELECT 'habitaciones', COUNT(*) FROM Eurovip.alojamiento_habitacion
+UNION ALL SELECT 'destinos', COUNT(*) FROM Eurovip.destino
+UNION ALL SELECT 'paises', COUNT(*) FROM Eurovip.pais
+UNION ALL SELECT 'hoteles repetidos', COUNT(*) FROM (SELECT 1 x FROM Eurovip.alojamiento GROUP BY id_idioma, nombre, id_destino HAVING COUNT(*) > 1) r
+UNION ALL SELECT 'hoteles sin destino valido', COUNT(*) FROM Eurovip.alojamiento a WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = a.id_destino AND d.id_pais = a.id_pais)
+UNION ALL SELECT 'hoteles con pais inexistente', COUNT(*) FROM Eurovip.alojamiento a WHERE NOT EXISTS (SELECT 1 FROM Eurovip.pais p WHERE p.id_pais = a.id_pais)
+UNION ALL SELECT 'destinos con pais inexistente', COUNT(*) FROM Eurovip.destino d WHERE NOT EXISTS (SELECT 1 FROM Eurovip.pais p WHERE p.id_pais = d.id_pais)
+UNION ALL SELECT 'destinos con espacios', COUNT(*) FROM Eurovip.destino WHERE id_destino LIKE ' %' OR id_destino LIKE '% '
+UNION ALL SELECT 'hoteles basura', COUNT(*) FROM Eurovip.alojamiento WHERE nombre NOT LIKE '%[a-zA-Z]%';
+
+SELECT a.id_alojamiento, a.nombre, a.id_destino, a.id_pais FROM Eurovip.alojamiento a WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = a.id_destino AND d.id_pais = a.id_pais);
+
+COMMIT;
