@@ -157,7 +157,7 @@
             <div class="cx-glob">
                 <div class="t"><i class="bi bi-sliders2"></i> Ajustes globales para TODOS los hoteles</div>
                 <div class="ui-row">
-                    <div class="ui-f"><label>Tasas</label><div class="ui-money"><b class="sim">€</b><input type="number" id="gTasa" min="0" step="0.01" placeholder="0"></div></div>
+                    <div class="ui-f"><label>Tasas</label><div class="ui-money"><b class="sim">RD$</b><input type="number" id="gTasa" min="0" step="0.01" placeholder="0"></div></div>
                     <div class="ui-f"><label>Régimen</label><select id="gRegimen"></select></div>
                 </div>
                 <button type="button" class="ev-btn aqua sm" style="width:100%;justify-content:center" onclick="CL.aplicarGlobales()"><i class="bi bi-arrow-down-circle"></i> Aplicar datos globales</button>
@@ -214,7 +214,7 @@ const CL = (() => {
     // Cada hotel del Excel: { texto, estado, candidatos, elegido:{id,nombre,destino}|null, habs:[], idHab, regimen, omitir, filas:[{desde,tasas,total}] }
     let H = [], actual = 0;
 
-    const moneda = () => $('#iDivisa').value || 'EUR';
+    const moneda = () => $('#iDivisa').value || EV.MONEDA;
     const noches = () => parseInt($('#iNoches').value, 10) || 0;
     const conVuelo = () => !$('#vSin').checked;
     const tasasSup = () => suplementos ? suplementos.total() : 0;
@@ -455,7 +455,7 @@ const CL = (() => {
         campanyas = EVC.filas($('#iCampanyas'), { opciones: cat.campanyas.map(c => ({ ...c, extra: '#' + c.valor })), etiqueta: 'Campaña', valorEtiqueta: 'Porcentaje %', sufijo: '%', onChange: limpiarRevision, placeholder: 'Elige la campaña…' });
         const gen = cat.campanyas.find(c => c.texto === 'DTGeneral') || cat.campanyas.find(c => /general/i.test(c.texto));
         campanyas.agregar(gen?.valor || '', 0);
-        suplementos = EVC.filas($('#iSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento', valorEtiqueta: 'Valor', sufijo: '€', onChange: () => { if (H.length) pintar(); limpiarRevision(); }, placeholder: 'Elige el suplemento…' });
+        suplementos = EVC.filas($('#iSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento', valorEtiqueta: 'Valor', sufijo: EV.simbolo(), onChange: () => { if (H.length) pintar(); limpiarRevision(); }, placeholder: 'Elige el suplemento…' });
 
         vIda = EVC.vuelos($('#vIda'), { tipo: 'ida', onChange: limpiarRevision });
         vVuelta = EVC.vuelos($('#vVuelta'), { tipo: 'vuelta', onChange: limpiarRevision });

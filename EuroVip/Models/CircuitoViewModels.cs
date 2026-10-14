@@ -194,7 +194,7 @@ namespace EuroVip.Models
         [StringLength(10)] public string? Id_Proveedor { get; set; }
         [Range(1, 60)] public short? Noches { get; set; }
         [Required(ErrorMessage = "Elige la categoría de hoteles")] public string Categoria { get; set; } = "";
-        [Required] public string Divisa { get; set; } = "EUR";
+        [Required] public string Divisa { get; set; } = "DOP";
 
         [Required(ErrorMessage = "Elige la ciudad de origen")] public string Origen { get; set; } = "";
         [Required(ErrorMessage = "Elige el país de origen")] public string Id_Pais_Origen { get; set; } = "";

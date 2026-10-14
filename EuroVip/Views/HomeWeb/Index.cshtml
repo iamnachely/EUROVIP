@@ -323,7 +323,7 @@ const HW = (() => {
         const mostrar = k => {
             $$('#hwSlider img').forEach((im, j) => im.classList.toggle('on', j === k)); $$('#hwSlider .puntos i').forEach((p, j) => p.classList.toggle('on', j === k));
             const pr = act[k].destinos.filter(d => d.precio > 0).sort((a, b) => a.precio - b.precio)[0];
-            const el = $('#hwPrecio'); el.hidden = !pr; if (pr) el.innerHTML = `${esc(pr.destino)} desde <b>${EV.fmt(pr.precio)} €</b>`;
+            const el = $('#hwPrecio'); el.hidden = !pr; if (pr) el.innerHTML = `${esc(pr.destino)} desde <b>${EV.dinero(pr.precio)}</b>`;
         };
         mostrar(0);
         if (act.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) rot = setInterval(() => { i = (i + 1) % act.length; mostrar(i); }, 3800);
@@ -338,7 +338,7 @@ const HW = (() => {
                 <div class="acc"><button type="button" class="edt" title="Editar tarjeta" aria-label="Editar tarjeta"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="ojo" data-ojo="${t.id}" title="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}" aria-label="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div></div>
             <div class="tx"><b>${esc(t.descripcion && t.tipo_Servicio === 'CIRCUITO' ? t.descripcion : t.id_Destino)}</b><small>${esc(t.origen)} · ${esc(t.campanya || '#' + t.id_Campanya)}${t.noches ? ` · ${t.noches} noches` : ''}</small>
-                <div class="pr">${t.precioWeb ? `desde <b>${EV.fmt(t.precioWeb)} €</b>` : 'sin precio'}</div></div></div>`;
+                <div class="pr">${t.precioWeb ? `desde <b>${EV.dinero(t.precioWeb)}</b>` : 'sin precio'}</div></div></div>`;
     };
 
     function pintarSecciones() {
@@ -426,8 +426,8 @@ const HW = (() => {
                     ${s.activo ? `<span class="ord">${s.orden}</span>` : ''}<span class="ori">${s.orientacion === 'V' ? '▯ Vertical' : '▭ Horizontal'}</span></div>
                 <div class="cr-body"><div class="nombre" title="${esc(s.ruta)}">${esc(s.ruta)}</div>
                     <div class="cr-fmt"><span>Web</span><span class="${s.tieneTablet ? '' : 'no'}">Tablet</span><span class="${s.tieneMovil ? '' : 'no'}">Móvil</span>${s.url ? '<span style="background:var(--ev-surface-2);color:var(--ev-text)"><i class="bi bi-link-45deg"></i> enlace</span>' : ''}</div>
-                    <div class="cr-precios">${s.destinos.length ? s.destinos.slice(0, 3).map(d => `<span class="${d.precio > 0 && d.precio < PRECIO_ALERTA ? 'mal' : ''}" title="${esc(d.origen)} → ${esc(d.destino)} · campaña ${d.id_Campanya}">${esc(d.destino)} ${d.precio > 0 ? EV.fmt(d.precio) + ' €' : 'sin precio'}</span>`).join('') + (s.destinos.length > 3 ? `<span>+${s.destinos.length - 3}</span>` : '') : '<span style="color:var(--ev-muted)">Sin precio "desde"</span>'}</div>
-                    ${malos ? `<div class="ui-help" style="color:#B54708;margin-top:6px"><i class="bi bi-exclamation-triangle"></i> ${malos} precio(s) menores a ${PRECIO_ALERTA} €: revísalos</div>` : ''}
+                    <div class="cr-precios">${s.destinos.length ? s.destinos.slice(0, 3).map(d => `<span class="${d.precio > 0 && d.precio < PRECIO_ALERTA ? 'mal' : ''}" title="${esc(d.origen)} → ${esc(d.destino)} · campaña ${d.id_Campanya}">${esc(d.destino)} ${d.precio > 0 ? EV.dinero(d.precio) : 'sin precio'}</span>`).join('') + (s.destinos.length > 3 ? `<span>+${s.destinos.length - 3}</span>` : '') : '<span style="color:var(--ev-muted)">Sin precio "desde"</span>'}</div>
+                    ${malos ? `<div class="ui-help" style="color:#B54708;margin-top:6px"><i class="bi bi-exclamation-triangle"></i> ${malos} precio(s) menores a ${EV.dinero(PRECIO_ALERTA)}: revísalos</div>` : ''}
                     <div class="cr-pie"><label class="ui-switch" title="Activo en la web"><input type="checkbox" data-sact="${s.id_Carrusel}" ${s.activo ? 'checked' : ''}><span class="tr"></span> ${s.activo ? 'Activo' : 'Inactivo'}</label>
                         <span class="sp"></span><button type="button" class="ev-btn ghost sm" data-sed="${s.id_Carrusel}"><i class="bi bi-pencil"></i> Editar</button></div></div></article>`;
         }).join('');
@@ -453,13 +453,13 @@ const HW = (() => {
                 <div id="sPrecios"></div>
                 <div class="hb-form" style="padding:14px;border-radius:16px;background:var(--ev-grad-soft);border:1px solid var(--ev-line);margin-top:10px">
                     <b style="display:block;margin-bottom:8px"><i class="bi bi-plus-circle"></i> Agregar precio</b>
-                    <div class="ui-f" style="margin-bottom:8px"><label>Tomarlo de una tarjeta de la Home <em>opcional, llena todo solo</em></label><select id="sDesdeHome"><option value="">— Elige una tarjeta —</option>${todas().filter(t => t.tipo_Servicio !== 'HOTEL').map(t => `<option value="${t.id}">${esc(t.id_Destino)} desde ${esc(t.origen)} · ${esc(t.campanya || t.id_Campanya)}${t.precioWeb ? ' · ' + EV.fmt(t.precioWeb) + ' €' : ''}</option>`).join('')}</select></div>
+                    <div class="ui-f" style="margin-bottom:8px"><label>Tomarlo de una tarjeta de la Home <em>opcional, llena todo solo</em></label><select id="sDesdeHome"><option value="">— Elige una tarjeta —</option>${todas().filter(t => t.tipo_Servicio !== 'HOTEL').map(t => `<option value="${t.id}">${esc(t.id_Destino)} desde ${esc(t.origen)} · ${esc(t.campanya || t.id_Campanya)}${t.precioWeb ? ' · ' + EV.dinero(t.precioWeb) : ''}</option>`).join('')}</select></div>
                     <div class="cr-dest">
                         <div class="ui-f"><label>Origen</label><input id="pOri" placeholder="Madrid"></div>
                         <div class="ui-f"><label>Destino</label><input id="pDes" placeholder="Punta Cana"></div>
                         <div class="ui-f"><label>Campaña</label><select id="pCam">${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)}</option>`).join('')}</select></div>
                         <div class="ui-f"><label>Régimen</label><select id="pReg"><option value="">Cualquiera</option>${cat.regimenes.map(r => `<option value="${esc(r.texto)}">${esc(r.texto)}</option>`).join('')}</select></div>
-                        <div class="ui-f"><label>Precio</label><div class="ui-money"><b>€</b><input id="pPre" type="number" min="0" step="1"></div></div>
+                        <div class="ui-f"><label>Precio</label><div class="ui-money"><b>RD$</b><input id="pPre" type="number" min="0" step="1"></div></div>
                         <div style="display:flex;gap:6px"><button type="button" class="ev-btn ghost sm" id="pCalc" title="Calcular con las ofertas a la venta"><i class="bi bi-calculator"></i></button><button type="button" class="ev-btn sm" id="pAdd"><i class="bi bi-plus-lg"></i></button></div>
                     </div></div></div>`;
         $('#sOri').value = s.orientacion === 'V' ? 'V' : 'H';
@@ -471,7 +471,7 @@ const HW = (() => {
         $('#pCalc').onclick = async () => {
             if (!$('#pOri').value || !$('#pDes').value) { EV.toast('Elige origen y destino.', 'err'); return; }
             const r = await EV.api(`/HomeWeb/PrecioMinimo?origen=${encodeURIComponent($('#pOri').value)}&destino=${encodeURIComponent($('#pDes').value)}&campanya=${$('#pCam').value}&regimen=${encodeURIComponent($('#pReg').value)}`);
-            if (r.precio) { $('#pPre').value = Math.round(r.precio); EV.toast(`Precio más bajo a la venta: ${EV.fmt(r.precio)} €`); } else EV.toast('No hay ofertas a la venta con esos datos.', 'info');
+            if (r.precio) { $('#pPre').value = Math.round(r.precio); EV.toast(`Precio más bajo a la venta: ${EV.dinero(r.precio)}`); } else EV.toast('No hay ofertas a la venta con esos datos.', 'info');
         };
         $('#pAdd').onclick = async () => {
             const dto = { Id_Carrusel: s.id_Carrusel, Origen: $('#pOri').value.trim(), Destino: $('#pDes').value.trim(), Id_Campanya: +$('#pCam').value, Regimen: $('#pReg').value || null, Precio: +$('#pPre').value || 0 };
@@ -493,7 +493,7 @@ const HW = (() => {
         $('#sPrecios').innerHTML = !s.destinos.length ? '<div class="ui-help">Este slide no muestra precio. Agrega uno abajo si quieres que diga "desde …".</div>'
             : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Origen → destino</th><th>Campaña</th><th>Régimen</th><th style="width:130px">Precio</th><th style="width:96px"></th></tr></thead><tbody>
               ${s.destinos.map((d, i) => `<tr class="${d.precio > 0 && d.precio < PRECIO_ALERTA ? 'bad' : ''}"><td><b>${esc(d.origen)}</b> → ${esc(d.destino)}</td><td>${esc(cat.campanyas.find(c => +c.valor === d.id_Campanya)?.texto || d.id_Campanya)}</td><td>${esc(d.regimen || '—')}</td>
-                <td><div class="ui-money"><b>€</b><input type="number" min="0" step="1" value="${Math.round(d.precio)}" data-dp="${i}"></div></td>
+                <td><div class="ui-money"><b>RD$</b><input type="number" min="0" step="1" value="${Math.round(d.precio)}" data-dp="${i}"></div></td>
                 <td style="text-align:right;white-space:nowrap"><button type="button" class="ui-ibtn" data-dcalc="${i}" title="Recalcular con lo que está a la venta"><i class="bi bi-calculator"></i></button><button type="button" class="ui-ibtn danger" data-ddel="${i}" title="Quitar"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
               </tbody></table></div>`;
         $$('[data-dp]', $('#sPrecios')).forEach(inp => inp.onchange = async () => { const d = s.destinos[+inp.dataset.dp]; d.precio = +inp.value || 0; await guardarPrecio(d); });
@@ -596,7 +596,7 @@ const HW = (() => {
             </div>
             <div class="ui-sec"><div class="ui-sec-t"><span>2</span> Precio y notas</div>
                 <div class="ui-row r3">
-                    <div class="ui-f"><label>Precio "desde"</label><div class="ui-money"><b>€</b><input id="tPre" type="number" min="0" step="1"></div></div>
+                    <div class="ui-f"><label>Precio "desde"</label><div class="ui-money"><b>RD$</b><input id="tPre" type="number" min="0" step="1"></div></div>
                     <div class="ui-f"><label>Noches</label><input id="tNoc" type="number" min="0" max="60"></div>
                     <div class="ui-f"><label class="ui-switch" style="margin-top:28px"><input type="checkbox" id="tEstF"><span class="tr"></span> Visible en la web</label></div>
                 </div>
@@ -652,7 +652,7 @@ const HW = (() => {
               ${filas.map(t => `<tr data-tt="${t.id}" style="cursor:pointer"><td>${carat(t) ? `<img class="hw-mini" src="${esc(carat(t))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<span class="hw-mini"></span>'}</td>
                 <td><b>${esc(t.tipo_Servicio === 'CIRCUITO' ? t.descripcion : t.id_Destino)}</b>${t.vigente === false ? ' <span class="ui-chip" style="background:#FEE4E2;color:#B42318;padding:2px 8px;font-size:11px">ya no se vende</span>' : ''}<br><small style="color:var(--ev-muted)">${t.id_Servicio > 0 ? '#' + t.id_Servicio : 'manual'}</small></td>
                 <td>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</td><td>${esc(t.origen)}</td><td>${esc(t.campanya || t.id_Campanya)}</td>
-                <td class="num">${t.precioWeb ? EV.fmt(t.precioWeb) + ' €' : '—'}</td><td>${esc(t.contenedor || '—')}</td><td>${t.posicion_Destino ?? '—'}</td>
+                <td class="num">${t.precioWeb ? EV.dinero(t.precioWeb) : '—'}</td><td>${esc(t.contenedor || '—')}</td><td>${t.posicion_Destino ?? '—'}</td>
                 <td><label class="ui-switch" onclick="event.stopPropagation()"><input type="checkbox" data-tvis="${t.id}" ${t.estado ? 'checked' : ''}><span class="tr"></span></label></td>
                 <td><button type="button" class="ui-ibtn" title="Editar"><i class="bi bi-pencil"></i></button></td></tr>`).join('')}
               </tbody></table></div>`;
@@ -731,7 +731,7 @@ const HW = (() => {
         };
         $('#hwAjustes').onclick = async () => {
             const a = await EV.api('/HomeWeb/Ajustes');
-            const v = await EV.pedir({ titulo: 'Precio base mínimo', etiqueta: 'Precio base mínimo (€)', valor: a.precioBaseMinimo, tipo: 'number', min: 0, icono: 'sliders',
+            const v = await EV.pedir({ titulo: 'Precio base mínimo', etiqueta: `Precio base mínimo (${EV.simbolo()})`, valor: a.precioBaseMinimo, tipo: 'number', min: 0, icono: 'sliders',
                 ayuda: 'Ninguna oferta ni circuito se puede cargar con un precio base menor a este valor.' });
             if (v == null) return;
             const n = parseFloat(String(v).replace(',', '.'));

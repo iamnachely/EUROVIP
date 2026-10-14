@@ -11,7 +11,7 @@ namespace EuroVip.Models
         [Required] public string Id_Tipo_Servicio { get; set; } = "OFERTA";
         [Range(1, int.MaxValue, ErrorMessage = "Elige la campaña")] public int Id_Campanya { get; set; }
         public string Id_Idioma { get; set; } = "ES";
-        [Required] public string Id_Moneda { get; set; } = "EUR";
+        [Required] public string Id_Moneda { get; set; } = "DOP";
         public int Activo_Servicio { get; set; } = 1;
         [Required(ErrorMessage = "Elige el origen")] [StringLength(100)] public string Origen { get; set; } = "";
         [Required(ErrorMessage = "Elige el régimen")] [StringLength(20)] public string Id_Regimen { get; set; } = "TI";

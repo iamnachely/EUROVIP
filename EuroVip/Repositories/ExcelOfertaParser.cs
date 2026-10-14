@@ -59,7 +59,7 @@ namespace EuroVip.Repositories
                 {
                     if (!porPos.TryGetValue((fila.Fila, col), out var c)) continue;
                     decimal? precio = c.Numero is > 0 ? (decimal)c.Numero.Value
-                        : c.Texto is not null && c.Texto.Trim() != "//" && decimal.TryParse(c.Texto.Replace("€", "").Trim(), NumberStyles.Any, new CultureInfo("es-ES"), out var p) && p > 0 ? p : null;
+                        : c.Texto is not null && c.Texto.Trim() != "//" && decimal.TryParse(c.Texto.Replace("€", "").Replace("RD$", "").Trim(), NumberStyles.Any, new CultureInfo("es-ES"), out var p) && p > 0 ? p : null;
                     if (precio is not null && !precios.Any(x => x.Fecha == f!.Value))
                         precios.Add(new ExcelFecha { Fecha = f!.Value, Precio = Math.Round(precio.Value, 2) });
                 }

@@ -536,7 +536,7 @@
             <div class="hx-row r3">
                 <div class="hx-f">
                     <label for="PrecioWeb">Precio desde</label>
-                    <div class="hx-money"><b id="mSim">€</b><input id="PrecioWeb" name="PrecioWeb" type="number" min="0" step="1" placeholder="0" /></div>
+                    <div class="hx-money"><b id="mSim">RD$</b><input id="PrecioWeb" name="PrecioWeb" type="number" min="0" step="1" placeholder="0" /></div>
                     <span class="msg"></span>
                 </div>
                 <div class="hx-f">
@@ -702,7 +702,7 @@ const HX = (() => {
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
     const token = $('input[name="__RequestVerificationToken"]').value;
     const esc = s => (s ?? '').toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const simbolo = m => ({ EUR: '€', USD: 'US$', DOP: 'RD$' }[m] || m || '€');
+    const simbolo = m => EV.simbolo(m || EV.MONEDA);
     const fmt = n => n == null ? '—' : Math.round(n).toLocaleString('es-ES');
     const iniciales = t => (t || '?').replace(/^hotel\s+/i, '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
     const esUrl = s => /^https?:\/\//i.test(s || '');

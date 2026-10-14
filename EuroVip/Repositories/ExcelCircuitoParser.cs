@@ -56,7 +56,7 @@ namespace EuroVip.Repositories
 
             r.Aerolinea = ValorDe("aerolinea", "aerolineas", "compania aerea");
             var tasa = ValorDe("tasa", "tasas");
-            if (tasa is not null && decimal.TryParse(tasa.Replace("€", "").Replace(",", ".").Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var t)) r.Tasa = t;
+            if (tasa is not null && decimal.TryParse(tasa.Replace("€", "").Replace("RD$", "").Replace(",", ".").Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var t)) r.Tasa = t;
             r.Segmento1 = ValorDe("segmento 1", "ida");
             r.Segmento2 = ValorDe("segmento 2", "vuelta");
 

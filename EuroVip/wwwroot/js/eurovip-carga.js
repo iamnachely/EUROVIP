@@ -303,7 +303,7 @@
 
     // ------------------------------------------------------------------ MATRIZ DE PRECIOS hotel × fecha (ofertas)
     // Filas = fechas de entrada, columnas = hoteles. Celda vacía = ese hotel no se vende esa fecha.
-    // cfg: { hoteles: () => [{uid, nombre}], noches: () => n, moneda: () => 'EUR', tasas: () => total, minimo, onChange }
+    // cfg: { hoteles: () => [{uid, nombre}], noches: () => n, moneda: () => 'DOP', tasas: () => total, minimo, onChange }
     EVC.matriz = (cont, cfg) => {
         const fechas = new Set();
         const precios = new Map();             // `${uid}|${fecha}` → precio total

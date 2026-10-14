@@ -139,7 +139,7 @@ namespace EuroVip.Models
         public string Id_Destino { get; set; } = "";
         public string Origen { get; set; } = "";
         public string Id_Pais_Origen { get; set; } = "ES";
-        public string Id_Moneda { get; set; } = "EUR";
+        public string Id_Moneda { get; set; } = "DOP";
     }
 
     public class HwSlideDto

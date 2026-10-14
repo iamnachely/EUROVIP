@@ -71,7 +71,8 @@ namespace EuroVip.Services
             Resalte = SKColor.Parse("F3F4F6");          // fondo gris claro de la fila más barata
 
         private static readonly CultureInfo Es = new("es-ES");
-        private static string Euros(int v) => v.ToString("N0", Es) + " €";
+        /// <summary>Precio en pesos dominicanos: "RD$ 1.089".</summary>
+        private static string Precio(int v) => "RD$ " + v.ToString("N0", Es);
         private const string Legal = "Precio por persona · sujeto a disponibilidad";
 
         private enum Estilo { Lado, Vertical, Centrado, Marco }
@@ -148,7 +149,7 @@ namespace EuroVip.Services
             if (e == Estilo.Vertical)
             {
                 Texto(c, "desde", x1, y - 72, f.Normal, 22, Suave2, SKTextAlign.Right);
-                Pastilla(c, Euros(min), f.Negrita, 50, x1, y - 4, Amarillo, Texto2, derecha: true);
+                Pastilla(c, Precio(min), f.Negrita, 50, x1, y - 4, Amarillo, Texto2, derecha: true);
                 y += 44;
             }
             else
@@ -158,10 +159,10 @@ namespace EuroVip.Services
                 using var fn = new SKFont(f.Normal, 24 * esc);
                 using var fp = new SKFont(f.Negrita, 30 * esc);
                 using var fr = new SKFont(f.Normal, 24 * esc);
-                float w1 = fn.MeasureText(txt), w2 = fp.MeasureText(Euros(min)) + 30 * esc * .9f, w3 = fr.MeasureText("  por persona");
+                float w1 = fn.MeasureText(txt), w2 = fp.MeasureText(Precio(min)) + 30 * esc * .9f, w3 = fr.MeasureText("  por persona");
                 float xi = centro ? xc - (w1 + w2 + w3) / 2 : x0;
                 Texto(c, txt, xi, y, f.Normal, 24 * esc, Suave2);
-                Pastilla(c, Euros(min), f.Negrita, 30 * esc, xi + w1, y, Amarillo, Texto2);
+                Pastilla(c, Precio(min), f.Negrita, 30 * esc, xi + w1, y, Amarillo, Texto2);
                 Texto(c, "  por persona", xi + w1 + w2, y, f.Normal, 24 * esc, Suave2);
                 y += 40 * esc;
             }
@@ -208,7 +209,7 @@ namespace EuroVip.Services
             float tn = 27 * esc, td = 18 * esc, tp = 30 * esc;
             // nombre + detalle centrados en la fila
             float bloque = tn * .72f + td + 10 * esc, base1 = y + (fila - bloque) / 2 + tn * .72f, base2 = base1 + td + 10 * esc;
-            var precio = Euros(h.Precio_Final);
+            var precio = Precio(h.Precio_Final);
             using var fp = new SKFont(f.Negrita, tp);
             var wp = fp.MeasureText(precio) + tp * .9f;
             var wl = barato ? Ancho(f.Negrita, "MEJOR PRECIO", 12 * esc, .25f) : 0;
@@ -254,7 +255,7 @@ namespace EuroVip.Services
             for (var i = 0; i < lin.Count; i++) { Texto(c, lin[i], pad, y, f.Titulo, tam, Blanco, sombra: true); if (i < lin.Count - 1) y += tam * .98f; }
             Texto(c, "Ofertas de la semana · precio por persona", pad, y + 66, f.Normal, 30, Blanco.WithAlpha(220));
             Espaciado(c, "DESDE", pad, y + 168, f.Negrita, 28, Amarillo, .08f);
-            Texto(c, Euros(Minimo(d)), pad, y + 270, f.Titulo, 110, Amarillo, sombra: true);
+            Texto(c, Precio(Minimo(d)), pad, y + 270, f.Titulo, 110, Amarillo, sombra: true);
 
             // tarjetas de hoteles
             var hs = d.Hoteles.Take(5).ToList();
@@ -266,7 +267,7 @@ namespace EuroVip.Services
                 var r = new SKRect(pad, top, W - pad, top + alto);
                 bool b = i == barato;
                 if (b) Rect(c, r, Blanco.WithAlpha(248), 30); else Rect(c, r, Blanco.WithAlpha(34), 30, borde: Blanco.WithAlpha(95));
-                var precio = Euros(h.Precio_Final);
+                var precio = Precio(h.Precio_Final);
                 using var fp = new SKFont(f.Titulo, 50);
                 var anchoTxt = r.Width - 64 - fp.MeasureText(precio) - 30;
                 float yn = b ? r.MidY + 6 : r.MidY - 4, yd = yn + 40;

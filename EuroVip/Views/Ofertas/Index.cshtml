@@ -130,7 +130,7 @@
         <div class="ui-sec">
             <div class="ui-sec-t"><span>2</span> Precio y campaña</div>
             <div class="ui-row r3">
-                <div class="ui-f"><label>Precio total <em>lo que paga el cliente</em></label><div class="ui-money"><b class="sim">€</b><input type="number" id="eTotal" min="1" step="1"></div></div>
+                <div class="ui-f"><label>Precio total <em>lo que paga el cliente</em></label><div class="ui-money"><b class="sim">RD$</b><input type="number" id="eTotal" min="1" step="1"></div></div>
                 <div class="ui-f"><label>Descuento %</label><input type="number" id="eDescuento" min="0" max="100" step="0.5"></div>
                 <div class="ui-f"><label>Campaña</label><select id="eCampanya"></select></div>
             </div>
@@ -255,7 +255,7 @@ const OF = (() => {
             $('#eCampanya').value = String(o.id_Campanya);
             $('#eTotal').value = Math.round((o.precio_Base + o.tasas) * 100) / 100; $('#eDescuento').value = o.descuento;
             $('#eActivo').checked = o.activo;
-            sups = EVC.filas($('#eSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento / tasa', valorEtiqueta: 'Importe', sufijo: '€', onChange: precioVivo, placeholder: 'Elige…', inicial: o.tasasDetalle.map(t => ({ opcion: t.id_Tasa, valor: t.valor })) });
+            sups = EVC.filas($('#eSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento / tasa', valorEtiqueta: 'Importe', sufijo: EV.simbolo(), onChange: precioVivo, placeholder: 'Elige…', inicial: o.tasasDetalle.map(t => ({ opcion: t.id_Tasa, valor: t.valor })) });
             const marcadas = new Map(o.habitacionesDetalle.map(h => [h.id_Habitacion, h.precio]));
             // marcadas primero; con muchas habitaciones, buscador
             habsHotel.sort((a, b) => (marcadas.has(b.id_Habitacion) ? 1 : 0) - (marcadas.has(a.id_Habitacion) ? 1 : 0));
@@ -380,7 +380,7 @@ const OF = (() => {
         },
         ajustar: async () => {
             const v = await EV.pedir({ titulo: `Ajustar el precio de ${sel.size} oferta${sel.size === 1 ? '' : 's'}`, etiqueta: 'Cuánto sumar (o restar con -)', tipo: 'number', icono: 'currency-euro',
-                ayuda: 'Ej: 50 suma 50 € · -30 resta 30 €. Antes de aplicar te pedimos confirmación.', si: 'Continuar' });
+                ayuda: 'Ej: 50 suma 50 · -30 resta 30. Antes de aplicar te pedimos confirmación.', si: 'Continuar' });
             if (v == null) return;
             const n = parseFloat(String(v).replace(',', '.'));
             if (isNaN(n) || !n) { EV.toast('Escribe un número distinto de 0.', 'err'); return; }

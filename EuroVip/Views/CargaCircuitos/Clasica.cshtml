@@ -140,7 +140,7 @@
             <div class="ui-sec-t"><span><i class="bi bi-airplane"></i></span> Datos generales del circuito <small>detectados del Excel · puedes editarlos</small></div>
             <div class="ui-row r4">
                 <div class="ui-f"><label>Aerolínea</label><input id="xAerolinea" placeholder="Ej. IBEROJET"></div>
-                <div class="ui-f"><label>Tasa <em>se pone en todas las filas</em></label><div class="ui-money"><b class="sim">€</b><input type="number" id="xTasa" min="0" step="0.01" placeholder="0"></div></div>
+                <div class="ui-f"><label>Tasa <em>se pone en todas las filas</em></label><div class="ui-money"><b class="sim">RD$</b><input type="number" id="xTasa" min="0" step="0.01" placeholder="0"></div></div>
                 <div class="ui-f"><label>Segmento 1</label><input id="xSeg1" placeholder="Ej. MADRID - SAN JOSE"></div>
                 <div class="ui-f"><label>Segmento 2</label><input id="xSeg2" placeholder="Ej. SAN JOSE - MADRID"></div>
             </div>
@@ -447,7 +447,7 @@ const CL = (() => {
         campanyas = EVC.filas($('#iCampanyas'), { opciones: cat.campanyas.map(c => ({ ...c, extra: '#' + c.valor })), etiqueta: 'Campaña', valorEtiqueta: 'Porcentaje %', sufijo: '%', onChange: invalidar, placeholder: 'Elige la campaña…' });
         const circ = cat.campanyas.find(c => /circuito/i.test(c.texto));
         campanyas.agregar(circ?.valor || '', 0);
-        suplementos = EVC.filas($('#iSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento', valorEtiqueta: 'Valor', sufijo: '€', onChange: () => recalcular(), placeholder: 'Elige el suplemento…' });
+        suplementos = EVC.filas($('#iSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento', valorEtiqueta: 'Valor', sufijo: EV.simbolo(), onChange: () => recalcular(), placeholder: 'Elige el suplemento…' });
         const tOrigen = cat.tasas.find(x => /tasas de origen/i.test(x.texto));
         if (tOrigen) suplementos.agregar(tOrigen.valor, '');
 

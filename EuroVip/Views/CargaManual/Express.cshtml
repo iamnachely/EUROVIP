@@ -75,7 +75,7 @@
                 <div class="ui-f"><label>Desde <em>mañana o después</em></label><input type="date" id="gDesde" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")"></div>
                 <div class="ui-f"><label>Hasta</label><input type="date" id="gHasta" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")"></div>
                 <div class="ui-f"><label>Noches</label><input type="number" id="gNoches" min="1" max="60" value="7"><span class="msg"></span></div>
-                <div class="ui-f"><label>Precio total <em>opcional</em></label><div class="ui-money"><b class="sim">€</b><input type="number" id="gPrecio" min="0" step="1" placeholder="1290"></div></div>
+                <div class="ui-f"><label>Precio total <em>opcional</em></label><div class="ui-money"><b class="sim">RD$</b><input type="number" id="gPrecio" min="0" step="1" placeholder="1290"></div></div>
                 <div class="ui-f"><label>Solo los días</label><div class="xp-dias" id="gDias">
                     @foreach (var (d, i) in new[] { ("L", 1), ("M", 2), ("X", 3), ("J", 4), ("V", 5), ("S", 6), ("D", 0) })
                     {
@@ -88,7 +88,7 @@
             <div style="display:flex;gap:10px;align-items:center;margin:18px 0 10px;flex-wrap:wrap">
                 <b style="font-size:15px"><span id="xpNumFechas">0</span> fechas</b>
                 <span class="sp" style="flex:1"></span>
-                <div class="ui-money" style="width:150px"><b class="sim">€</b><input class="ui-input" type="number" id="xpTodas" placeholder="Precio para todo" style="padding:9px 10px 9px 30px"></div>
+                <div class="ui-money" style="width:150px"><b class="sim">RD$</b><input class="ui-input" type="number" id="xpTodas" placeholder="Precio para todo" style="padding:9px 10px 9px 30px"></div>
                 <button type="button" class="ev-btn ghost sm" onclick="XP.precioTodas()">Aplicar a toda la tabla</button>
                 <button type="button" class="ev-btn ghost sm" onclick="XP.limpiarFechas()"><i class="bi bi-eraser"></i> Quitar todas</button>
             </div>
@@ -186,7 +186,7 @@ const XP = (() => {
     let cat, campanyas, suplementos, vIda, vVuelta, cal, mx;
 
     const noches = () => parseInt($('#gNoches').value, 10) || 0;
-    const moneda = () => $('#cDivisa').value || 'EUR';
+    const moneda = () => $('#cDivisa').value || EV.MONEDA;
     const hoteles = () => S.bloques.filter(b => b.comp.hotel()).map(b => ({ uid: b.uid, nombre: b.comp.hotel().nombre }));
     const servicios = () => hoteles().reduce((s, h) => s + mx.salidas(h.uid).length, 0) * Math.max(1, campanyas?.datos().length || 0);
 
@@ -374,7 +374,7 @@ const XP = (() => {
         campanyas = EVC.filas($('#cCampanyas'), { opciones: cat.campanyas.map(c => ({ ...c, extra: '#' + c.valor })), etiqueta: 'Campaña', valorEtiqueta: 'Descuento %', sufijo: '%', onChange: resumen, placeholder: 'Elige la campaña…' });
         const hot = cat.campanyas.find(c => c.texto === 'DTGeneral') || cat.campanyas.find(c => /general/i.test(c.texto));
         campanyas.agregar(hot?.valor || '', 0);
-        suplementos = EVC.filas($('#cSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento / tasa', valorEtiqueta: 'Importe', sufijo: '€', onChange: () => { desglose(); resumen(); }, placeholder: 'Elige el suplemento…' });
+        suplementos = EVC.filas($('#cSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento / tasa', valorEtiqueta: 'Importe', sufijo: EV.simbolo(), onChange: () => { desglose(); resumen(); }, placeholder: 'Elige el suplemento…' });
 
         vIda = EVC.vuelos($('#vIda'), { tipo: 'ida', onChange: resumen });
         vVuelta = EVC.vuelos($('#vVuelta'), { tipo: 'vuelta', onChange: resumen });

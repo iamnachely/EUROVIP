@@ -251,7 +251,7 @@ const CO = (() => {
     }
 
     function pintarResumen(r) {
-        const rango = r.precioMin != null ? (r.precioMin === r.precioMax ? EV.fmt(r.precioMin) + ' €' : `${EV.fmt(r.precioMin)} – ${EV.fmt(r.precioMax)} €`) : '—';
+        const rango = r.precioMin != null ? (r.precioMin === r.precioMax ? EV.dinero(r.precioMin) : `${EV.dinero(r.precioMin)} – ${EV.fmt(r.precioMax)}`) : '—';
         const fechas = r.primeraEntrada ? `${EV.fecha(r.primeraEntrada.slice(0, 10))} → ${EV.fecha(r.ultimaEntrada.slice(0, 10))}` : '—';
         $('#coRes').innerHTML = [[EV.fmt(r.total), 'resultados'], [EV.fmt(r.ofertas), 'ofertas de hotel'], [EV.fmt(r.circuitos), 'salidas de circuito'], [EV.fmt(r.activas), 'activas'], [EV.fmt(r.conVuelo), 'con vuelo'], [rango, 'precio web'], [fechas, 'entradas']]
             .map(([b, s]) => `<div><b>${b}</b><small>${s}</small></div>`).join('');
@@ -366,10 +366,10 @@ const CO = (() => {
                 <div class="ui-sec"><div class="ui-sec-t"><span>1</span> Precio</div>
                     <div class="ui-row r3">
                         <div class="ui-f"><label>¿Qué hacer con el precio base?</label><select id="eModo"><option value="">No cambiar</option><option value="fijar">Fijar un precio</option><option value="sumar">Sumar o restar</option></select></div>
-                        <div class="ui-f"><label id="eValLab">Importe</label><div class="ui-money"><b>€</b><input type="number" id="eVal" step="1" disabled placeholder="—"></div><span class="ui-help" style="margin:4px 0 0">Para restar escribe un número negativo (−50)</span></div>
+                        <div class="ui-f"><label id="eValLab">Importe</label><div class="ui-money"><b>RD$</b><input type="number" id="eVal" step="1" disabled placeholder="—"></div><span class="ui-help" style="margin:4px 0 0">Para restar escribe un número negativo (−50)</span></div>
                         <div class="ui-f"><label>Descuento %</label><input type="number" id="eDesc" min="0" max="100" step="0.5" placeholder="No cambiar"></div>
                     </div>
-                    <div class="ui-row r3"><div class="ui-f"><label>Ajuste más/menos</label><div class="ui-money"><b>€</b><input type="number" id="eMasMenos" step="1" placeholder="No cambiar"></div></div></div></div>
+                    <div class="ui-row r3"><div class="ui-f"><label>Ajuste más/menos</label><div class="ui-money"><b>RD$</b><input type="number" id="eMasMenos" step="1" placeholder="No cambiar"></div></div></div></div>
                 <div class="ui-sec"><div class="ui-sec-t"><span>2</span> Comercial</div>
                     <div class="ui-row r3">
                         <div class="ui-f"><label>Campaña</label><select id="eCamp"><option value="">No cambiar</option>${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)}</option>`).join('')}</select></div>
@@ -442,7 +442,7 @@ const CO = (() => {
             titulo: `Tasas en ${EV.fmt(n)} oferta${n === 1 ? '' : 's'}`, icono: 'bi-receipt', sub: 'El precio base no cambia: el precio web sube o baja con la tasa.',
             cuerpo: `<div class="ui-row r3">
                     <div class="ui-f"><label>Suplemento / tasa</label><select id="tTasa">${cat.tasas.map(t => `<option value="${esc(t.valor)}">${esc(t.texto)}</option>`).join('')}</select></div>
-                    <div class="ui-f"><label>Valor</label><div class="ui-money"><b>€</b><input type="number" id="tVal" min="0" step="0.01" value="0"></div></div>
+                    <div class="ui-f"><label>Valor</label><div class="ui-money"><b>RD$</b><input type="number" id="tVal" min="0" step="0.01" value="0"></div></div>
                     <div class="ui-f"><label>Acción</label><select id="tAcc"><option value="poner">Poner este valor</option><option value="quitar">Quitar la tasa</option></select></div>
                 </div>
                 <div class="ui-note info"><i class="bi bi-info-circle"></i><div>Si la oferta ya tiene esa tasa, se reemplaza por el nuevo valor.</div></div>`,

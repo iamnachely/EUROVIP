@@ -33,7 +33,7 @@ namespace EuroVip.Models
         [Required(ErrorMessage = "Elige el proveedor")] [StringLength(10)] public string Id_Proveedor { get; set; } = "";
         [StringLength(50)] public string? Nombre { get; set; }
         [Range(1, 60, ErrorMessage = "Entre 1 y 60 noches")] public short Noches { get; set; } = 7;
-        [Required] public string Divisa { get; set; } = "EUR";
+        [Required] public string Divisa { get; set; } = "DOP";
         [Required(ErrorMessage = "Elige la ciudad de origen")] public string Origen { get; set; } = "";
         [Required(ErrorMessage = "Elige el país de origen")] public string Id_Pais_Origen { get; set; } = "";
 

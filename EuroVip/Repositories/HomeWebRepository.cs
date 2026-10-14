@@ -211,7 +211,7 @@ namespace EuroVip.Repositories
                     DECLARE @sid int = (SELECT ISNULL(MIN(CASE WHEN id_servicio < 0 THEN id_servicio END), 0) - 1 FROM Eurovip.inicio WITH (UPDLOCK, HOLDLOCK));
                     INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino, id_destino,
                            caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor, posicion_contenedor, posicion_destino, estado, notas, noches)
-                    SELECT @sid, @Idioma, @tipo, @Id_Campanya, 'EUR', @ps, @origen, @pd, @destino, @car, @desc, d.latitud, d.longitud, @PrecioWeb, @ic, @nom, @pc,
+                    SELECT @sid, @Idioma, @tipo, @Id_Campanya, 'DOP', @ps, @origen, @pd, @destino, @car, @desc, d.latitud, d.longitud, @PrecioWeb, @ic, @nom, @pc,
                            (SELECT ISNULL(MAX(posicion_destino), 0) + 1 FROM Eurovip.inicio WHERE id_contenedor = @ic), @Estado, @notas, @Noches
                     FROM (SELECT 1 x) uno LEFT JOIN Eurovip.destino d ON d.id_destino = @destino AND d.id_pais = @pd AND d.id_idioma = @Idioma;
                     SELECT CAST(SCOPE_IDENTITY() AS int);", p, tx);

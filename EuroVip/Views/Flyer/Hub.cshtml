@@ -265,11 +265,11 @@
             const d = datos[c.id_Destino.toLowerCase()], nombre = c.nombre_Destino || c.id_Destino;
             return `<article class="fl-card">
                 <div class="foto">${c.fondo ? `<img src="${esc(c.fondo)}" alt="" loading="lazy">` : ''}<h3>${esc(nombre)}</h3>
-                    ${c.precioDesde ? `<span class="desde"><small>desde</small>${EV.fmt(c.precioDesde)} €</span>` : '<span class="desde sin">Sin precios</span>'}
+                    ${c.precioDesde ? `<span class="desde"><small>desde</small>${EV.dinero(c.precioDesde)}</span>` : '<span class="desde sin">Sin precios</span>'}
                     <label title="Cambiar la foto de fondo"><input type="file" accept="image/jpeg,image/png" data-fondo="${esc(nombre)}" hidden><i class="bi bi-camera"></i> Fondo</label></div>
                 <div class="cuerpo">
                     <div class="meta"><span><i class="bi bi-geo"></i> ${esc(c.origen)}</span><span>${esc(c.campanya || '#' + c.id_Campanya)}</span><span>${esc(c.id_Regimen)}</span><span>${esc(c.id_Tipo_Servicio)}</span></div>
-                    ${d && d.hoteles.length ? `<div class="tit-hot"><span>Hotel</span><span>Precio por persona</span></div><ol>${d.hoteles.map(h => `<li><i>${h.posicion}</i><span>${esc(h.nombre_Hotel)}</span><b>${EV.fmt(h.precio_Final)} €</b></li>`).join('')}</ol>`
+                    ${d && d.hoteles.length ? `<div class="tit-hot"><span>Hotel</span><span>Precio por persona</span></div><ol>${d.hoteles.map(h => `<li><i>${h.posicion}</i><span>${esc(h.nombre_Hotel)}</span><b>${EV.dinero(h.precio_Final)}</b></li>`).join('')}</ol>`
                         : '<div class="ui-help" style="margin:0">No hay ofertas a la venta con esta campaña, origen y régimen. Revisa la configuración o carga ofertas.</div>'}
                     <div class="pie"><button type="button" class="ev-btn ghost sm" data-actu="${c.id}"><i class="bi bi-arrow-repeat"></i> Precios</button><span class="sp"></span>
                         <button type="button" class="ui-ibtn" data-cfg="${c.id}" title="Editar"><i class="bi bi-pencil"></i></button><button type="button" class="ui-ibtn danger" data-delcfg="${c.id}" title="Quitar"><i class="bi bi-trash3"></i></button></div>
@@ -279,7 +279,7 @@
 
     async function editarConfig(id) {
         cat ??= await EVC.catalogos();
-        const c = D.configs.find(x => x.id === id) || { id: 0, id_Tipo_Servicio: 'OFERTA', id_Moneda: 'EUR', activo_Servicio: 1, origen: 'Madrid', id_Regimen: 'TI', id_Destino: '', nombre_Destino: '', id_Campanya: +(cat.campanyas.find(x => x.texto === 'DTGeneral')?.valor || 0) };
+        const c = D.configs.find(x => x.id === id) || { id: 0, id_Tipo_Servicio: 'OFERTA', id_Moneda: EV.MONEDA, activo_Servicio: 1, origen: 'Madrid', id_Regimen: 'TI', id_Destino: '', nombre_Destino: '', id_Campanya: +(cat.campanyas.find(x => x.texto === 'DTGeneral')?.valor || 0) };
         $('#dTit').textContent = id ? `Editar ${c.nombre_Destino || c.id_Destino}` : 'Nuevo destino'; $('#dSub').textContent = 'Qué ofertas se usan para calcular los precios del flyer';
         $('#dIco').innerHTML = '<i class="bi bi-geo-alt"></i>';
         $('#dCuerpo').innerHTML = `<div class="ui-row r2">
