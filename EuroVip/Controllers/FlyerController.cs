@@ -106,7 +106,7 @@ namespace EuroVip.Controllers
         {
             var p = FlyerPlantillas.Buscar(plantilla);
             var destinos = await _repo.DestinosAsync();
-            var d = destinos.FirstOrDefault(x => x.Hoteles.Count > 0 && (destino is null || string.Equals(x.Nombre_Destino, destino, StringComparison.OrdinalIgnoreCase)))
+            var d = destinos.FirstOrDefault(x => x.Hoteles.Count > 0 && (destino is null || string.Equals(x.Id_Destino, destino, StringComparison.OrdinalIgnoreCase) || string.Equals(x.Nombre_Destino, destino, StringComparison.OrdinalIgnoreCase)))
                     ?? destinos.FirstOrDefault(x => x.Hoteles.Count > 0);
             return File(_img.Muestra(p.Clave, d), "image/png");
         }

@@ -24,9 +24,33 @@
     .fl-pl-h h2 { margin: 0; font-size: 17px; font-weight: 800; }
     .fl-pl-h small { color: var(--ev-muted); font-weight: 600; }
     .fl-pl-l { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
-    .fl-pl-it { border: 2px solid var(--ev-line); border-radius: 18px; padding: 8px; background: var(--ev-surface-2); cursor: pointer; text-align: left; font: inherit; color: inherit;
+    .fl-pl-it { border: 2px solid var(--ev-line); border-radius: 18px; padding: 8px; background: var(--ev-surface-2); position: relative;
                 display: flex; flex-direction: column; gap: 8px; transition: border-color .2s, transform .2s, box-shadow .2s; }
-    .fl-pl-it:hover { transform: translateY(-2px); }
+    .fl-pl-it .pick { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 8px; border-radius: 12px; }
+    .fl-pl-it .pick:focus-visible { outline: 3px solid var(--ev-teal); outline-offset: 2px; }
+    .fl-pl-it .ver { border: 1px solid var(--ev-line); background: var(--ev-surface); color: var(--ev-text); border-radius: 11px; padding: 8px 10px; font: 800 12.5px var(--ev-font);
+                     cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: auto; }
+    .fl-pl-it .ver:hover { background: var(--ev-aqua); color: var(--ev-ink); border-color: transparent; }
+    /* Vista previa grande */
+    .fl-pv .box { width: min(760px, 100%); padding: 22px 24px; }
+    .fl-pv-h { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .fl-pv-h > div { flex: 1; }
+    .fl-pv .fl-pv-h h3 { text-align: left; margin: 0; font-size: 22px; }
+    .fl-pv-h small { color: var(--ev-muted); font-weight: 700; font-size: 13px; }
+    .fl-pv-c { display: flex; align-items: center; gap: 10px; }
+    .fl-pv-img { flex: 1; position: relative; max-height: 64vh; margin: 0 auto; border-radius: 16px; overflow: hidden; background: #0B1215; display: grid; place-items: center; }
+    .fl-pv-img img { width: 100%; height: 100%; object-fit: contain; display: block; transition: opacity .2s; }
+    .fl-pv-img .ui-spin { position: absolute; display: none; }
+    .fl-pv-img.cargando img { opacity: .25; }
+    .fl-pv-img.cargando .ui-spin { display: block; }
+    .fl-pv-nav { flex-shrink: 0; width: 44px; height: 44px; border-radius: 14px; border: 1px solid var(--ev-line); background: var(--ev-surface-2); color: var(--ev-text); font-size: 18px; cursor: pointer; display: grid; place-items: center; }
+    .fl-pv-nav:hover { background: var(--ev-aqua); color: var(--ev-ink); }
+    .fl-pv .box > p { margin: 12px 0 14px; font-size: 14px; }
+    .fl-pv-f { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .fl-pv-des { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px; font: 800 12px var(--ev-font); color: var(--ev-muted); }
+    .fl-pv-nota { flex: 1; color: var(--ev-muted); font-weight: 600; }
+    @@media (max-width: 560px) { .fl-pv-nav { width: 34px; height: 34px; } .fl-pv .box { padding: 18px 14px; } .fl-pv-f .ev-btn { flex: 1; justify-content: center; } }
+    .fl-pl-it:hover { transform: translateY(-2px); box-shadow: var(--ev-shadow); }
     .fl-pl-it.on { border-color: var(--ev-teal); box-shadow: 0 0 0 4px rgba(116,242,230,.35); background: var(--ev-surface); }
     .fl-pl-it .im { border-radius: 12px; overflow: hidden; background: var(--ev-grad); aspect-ratio: 4 / 5; display: grid; place-items: center; position: relative; }
     .fl-pl-it .im img { width: 100%; height: 100%; object-fit: contain; background: #0B1215; display: block; }
@@ -36,25 +60,28 @@
     .fl-pl-it small { color: var(--ev-muted); font-weight: 600; font-size: 12px; line-height: 1.35; }
     .fl-pl-it .fmt { font: 800 11px var(--ev-font); color: var(--ev-deep); }
 
-    .fl-dest { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+    .fl-dest { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); gap: 18px; }
     .fl-card { border-radius: 24px; overflow: hidden; background: var(--ev-surface); border: 1px solid var(--ev-line); display: flex; flex-direction: column; transition: transform .25s var(--ev-ease), box-shadow .25s; }
     .fl-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
-    .fl-card .foto { position: relative; height: 150px; background: var(--ev-grad); }
+    .fl-card .foto { position: relative; height: 180px; background: var(--ev-grad); }
     .fl-card .foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .fl-card .foto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgba(11,18,21,.75)); }
-    .fl-card .foto h3 { position: absolute; left: 16px; bottom: 10px; margin: 0; color: #fff; font-size: 22px; font-weight: 800; z-index: 1; letter-spacing: -.5px; }
-    .fl-card .foto .desde { position: absolute; right: 12px; top: 12px; z-index: 1; padding: 7px 12px; border-radius: 14px; background: var(--ev-aqua); color: var(--ev-ink); font-weight: 800; font-size: 13px; }
+    .fl-card .foto h3 { position: absolute; left: 18px; right: 18px; bottom: 12px; margin: 0; color: #fff; font-size: 27px; font-weight: 800; z-index: 1; letter-spacing: -.6px; line-height: 1.1; }
+    .fl-card .foto .desde { position: absolute; right: 12px; top: 12px; z-index: 1; padding: 8px 14px; border-radius: 14px; background: var(--ev-aqua); color: var(--ev-ink); font-weight: 800; font-size: 16px; white-space: nowrap; }
+    .fl-card .foto .desde small { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-right: 4px; }
     .fl-card .foto .sin { background: #FEF3C7; color: #92400E; }
     .fl-card .foto label { position: absolute; left: 12px; top: 12px; z-index: 1; padding: 6px 10px; border-radius: 11px; background: rgba(255,255,255,.92); font: 800 11.5px var(--ev-font); cursor: pointer; opacity: 1; transition: opacity .2s; }
     .fl-card .foto label:hover { background: var(--ev-aqua); }   /* siempre visible: en táctil no hay "pasar el ratón" */
-    .fl-card .cuerpo { padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .fl-card .cuerpo { padding: 16px 18px 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
     .fl-card .meta { display: flex; gap: 6px; flex-wrap: wrap; }
-    .fl-card .meta span { font: 700 11.5px var(--ev-font); padding: 4px 9px; border-radius: 9px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
-    .fl-card ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
-    .fl-card li { display: flex; gap: 8px; font-size: 12.5px; font-weight: 600; align-items: baseline; }
-    .fl-card li i { font-style: normal; width: 18px; height: 18px; border-radius: 6px; display: inline-grid; place-items: center; background: var(--ev-surface-2); font-size: 11px; font-weight: 800; flex-shrink: 0; }
-    .fl-card li span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .fl-card li b { white-space: nowrap; }
+    .fl-card .meta span { font: 700 12.5px var(--ev-font); padding: 5px 10px; border-radius: 9px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    .fl-card .tit-hot { font: 800 12px var(--ev-font); letter-spacing: .06em; text-transform: uppercase; color: var(--ev-muted); display: flex; justify-content: space-between; }
+    .fl-card ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+    .fl-card li { display: flex; gap: 12px; font-size: 15px; font-weight: 600; align-items: center; padding: 9px 10px; border-radius: 12px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    .fl-card li:first-child { background: var(--ev-mint); border-color: transparent; }
+    .fl-card li i { font-style: normal; width: 26px; height: 26px; border-radius: 8px; display: inline-grid; place-items: center; background: var(--ev-surface); font-size: 13px; font-weight: 800; flex-shrink: 0; }
+    .fl-card li span { flex: 1; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }   /* el nombre baja de línea, no se corta */
+    .fl-card li b { white-space: nowrap; flex-shrink: 0; font-size: 17px; font-weight: 800; color: var(--ev-ink); font-variant-numeric: tabular-nums; }
     .fl-card .pie { display: flex; gap: 6px; margin-top: auto; padding-top: 6px; }
     .fl-card .pie .sp { flex: 1; }
     .fl-nuevo { border: 2px dashed var(--ev-line); border-radius: 24px; background: transparent; min-height: 300px; display: grid; place-items: center; color: var(--ev-muted); font: 800 14px var(--ev-font); cursor: pointer; }
@@ -236,11 +263,11 @@
             const d = datos[c.id_Destino.toLowerCase()], nombre = c.nombre_Destino || c.id_Destino;
             return `<article class="fl-card">
                 <div class="foto">${c.fondo ? `<img src="${esc(c.fondo)}" alt="" loading="lazy">` : ''}<h3>${esc(nombre)}</h3>
-                    ${c.precioDesde ? `<span class="desde">desde ${EV.fmt(c.precioDesde)} €</span>` : '<span class="desde sin">Sin precios</span>'}
+                    ${c.precioDesde ? `<span class="desde"><small>desde</small>${EV.fmt(c.precioDesde)} €</span>` : '<span class="desde sin">Sin precios</span>'}
                     <label title="Cambiar la foto de fondo"><input type="file" accept="image/jpeg,image/png" data-fondo="${esc(nombre)}" hidden><i class="bi bi-camera"></i> Fondo</label></div>
                 <div class="cuerpo">
                     <div class="meta"><span><i class="bi bi-geo"></i> ${esc(c.origen)}</span><span>${esc(c.campanya || '#' + c.id_Campanya)}</span><span>${esc(c.id_Regimen)}</span><span>${esc(c.id_Tipo_Servicio)}</span></div>
-                    ${d && d.hoteles.length ? `<ol>${d.hoteles.map(h => `<li><i>${h.posicion}</i><span title="${esc(h.nombre_Hotel)}">${esc(h.nombre_Hotel)}</span><b>${EV.fmt(h.precio_Final)} €</b></li>`).join('')}</ol>`
+                    ${d && d.hoteles.length ? `<div class="tit-hot"><span>Hotel</span><span>Precio por persona</span></div><ol>${d.hoteles.map(h => `<li><i>${h.posicion}</i><span>${esc(h.nombre_Hotel)}</span><b>${EV.fmt(h.precio_Final)} €</b></li>`).join('')}</ol>`
                         : '<div class="ui-help" style="margin:0">No hay ofertas a la venta con esta campaña, origen y régimen. Revisa la configuración o carga ofertas.</div>'}
                     <div class="pie"><button type="button" class="ev-btn ghost sm" data-actu="${c.id}"><i class="bi bi-arrow-repeat"></i> Precios</button><span class="sp"></span>
                         <button type="button" class="ui-ibtn" data-cfg="${c.id}" title="Editar"><i class="bi bi-pencil"></i></button><button type="button" class="ui-ibtn danger" data-delcfg="${c.id}" title="Quitar"><i class="bi bi-trash3"></i></button></div>
@@ -383,26 +410,88 @@
     // ---------------- eventos ----------------
     // ---------------- plantillas ----------------
     let plantilla = (() => { try { return localStorage.getItem('ev-flyer-plantilla') || 'postal'; } catch { return 'postal'; } })();
+    let plantillas = [];
+    const urlMuestra = (pl, des) => `/Flyer/Muestra?plantilla=${encodeURIComponent(pl)}${des ? '&destino=' + encodeURIComponent(des) : ''}`;
+
+    function elegirPlantilla(clave, avisar = true) {
+        const p = plantillas.find(x => x.clave === clave); if (!p) return;
+        plantilla = clave;
+        try { localStorage.setItem('ev-flyer-plantilla', plantilla); } catch { }
+        $$('#flPlantillas .fl-pl-it').forEach(x => { const on = x.dataset.pl === clave; x.classList.toggle('on', on); x.querySelector('[data-pick]').setAttribute('aria-pressed', String(on)); });
+        $('#flGenerar').innerHTML = `<i class="bi bi-magic"></i> Generar flyers · ${esc(p.nombre)}`;
+        if (avisar) EV.toast(`Plantilla "${p.nombre}" elegida. Pulsa "Generar flyers".`, 'info');
+    }
+
     async function pintarPlantillas() {
-        let l = [];
-        try { l = await EV.api('/Flyer/Plantillas'); } catch (e) { $('#flPlantillas').innerHTML = `<div class="ui-empty"><p>${esc(e.message)}</p></div>`; return; }
-        if (!l.some(p => p.clave === plantilla)) plantilla = l[0]?.clave;
-        $('#flPlantillas').innerHTML = l.map(p => `<button type="button" class="fl-pl-it ${p.clave === plantilla ? 'on' : ''}" data-pl="${esc(p.clave)}" aria-pressed="${p.clave === plantilla}">
-                <span class="im"><img src="/Flyer/Muestra?plantilla=${encodeURIComponent(p.clave)}" alt="Vista previa ${esc(p.nombre)}" loading="lazy"><span class="ok"><i class="bi bi-check-lg"></i></span></span>
-                <b>${esc(p.nombre)}</b><span class="fmt">${p.ancho}×${p.alto} · ${esc(p.uso)}</span><small>${esc(p.descripcion)}</small></button>`).join('');
-        const sel = l.find(p => p.clave === plantilla);
-        $('#flGenerar').innerHTML = `<i class="bi bi-magic"></i> Generar flyers${sel ? ' · ' + esc(sel.nombre) : ''}`;
+        try { plantillas = await EV.api('/Flyer/Plantillas'); } catch (e) { $('#flPlantillas').innerHTML = `<div class="ui-empty"><p>${esc(e.message)}</p></div>`; return; }
+        if (!plantillas.some(p => p.clave === plantilla)) plantilla = plantillas[0]?.clave;
+        $('#flPlantillas').innerHTML = plantillas.map(p => `<div class="fl-pl-it ${p.clave === plantilla ? 'on' : ''}" data-pl="${esc(p.clave)}">
+                <button type="button" class="pick" data-pick aria-pressed="${p.clave === plantilla}" title="Usar la plantilla ${esc(p.nombre)}">
+                    <span class="im"><img src="${urlMuestra(p.clave)}" alt="Vista previa ${esc(p.nombre)}" loading="lazy"><span class="ok"><i class="bi bi-check-lg"></i></span></span>
+                    <b>${esc(p.nombre)}</b><span class="fmt">${p.ancho}×${p.alto} · ${esc(p.uso)}</span><small>${esc(p.descripcion)}</small></button>
+                <button type="button" class="ver" data-ver title="Ver en grande"><i class="bi bi-eye"></i> Vista previa</button></div>`).join('');
+        elegirPlantilla(plantilla, false);
+    }
+
+    // Vista previa en grande: cambia de plantilla con las flechas y de destino con el selector
+    function verPlantilla(clave) {
+        let i = Math.max(0, plantillas.findIndex(p => p.clave === clave));
+        const conPrecio = (D?.configs || []).filter(c => c.hoteles > 0);
+        let destino = conPrecio[0]?.id_Destino || '';
+        const bd = document.createElement('div'); bd.className = 'ui-backdrop'; bd.style.zIndex = 115;
+        const m = document.createElement('div'); m.className = 'ui-modal fl-pv';
+        m.innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-label="Vista previa de la plantilla">
+            <div class="fl-pv-h"><div><h3 id="pvNom"></h3><small id="pvFmt"></small></div>
+                <button type="button" class="ev-btn ghost sm" data-cerrar aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></div>
+            <div class="fl-pv-c">
+                <button type="button" class="fl-pv-nav" data-mov="-1" aria-label="Plantilla anterior"><i class="bi bi-chevron-left"></i></button>
+                <div class="fl-pv-img"><span class="ui-spin"></span><img id="pvImg" alt=""></div>
+                <button type="button" class="fl-pv-nav" data-mov="1" aria-label="Plantilla siguiente"><i class="bi bi-chevron-right"></i></button>
+            </div>
+            <p id="pvDesc"></p>
+            <div class="fl-pv-f">
+                ${conPrecio.length ? `<label class="fl-pv-des"><span>Ver con el destino</span><select class="ui-input" id="pvDes">${conPrecio.map(c => `<option value="${esc(c.id_Destino)}">${esc(c.nombre_Destino || c.id_Destino)}</option>`).join('')}</select></label>`
+                                   : `<small class="fl-pv-nota"><i class="bi bi-info-circle"></i> Todavía no hay destinos con precios: se muestran datos de ejemplo.</small>`}
+                <a class="ev-btn ghost" id="pvBajar" download><i class="bi bi-download"></i> Descargar</a>
+                <button type="button" class="ev-btn" id="pvUsar"><i class="bi bi-check2-circle"></i> Usar esta plantilla</button>
+            </div></div>`;
+        document.body.append(bd, m);
+        const img = m.querySelector('#pvImg'), caja = m.querySelector('.fl-pv-img');
+        img.onload = () => caja.classList.remove('cargando');
+        img.onerror = () => { caja.classList.remove('cargando'); EV.toast('No se pudo generar la vista previa.', 'err'); };
+        const pintar = () => {
+            const p = plantillas[i], url = urlMuestra(p.clave, destino);
+            m.querySelector('#pvNom').textContent = p.nombre;
+            m.querySelector('#pvFmt').textContent = `${p.ancho}×${p.alto} px · ${p.uso} · ${i + 1} de ${plantillas.length}`;
+            m.querySelector('#pvDesc').textContent = p.descripcion;
+            caja.classList.add('cargando'); caja.style.aspectRatio = `${p.ancho} / ${p.alto}`;
+            img.src = url; img.alt = `Vista previa de la plantilla ${p.nombre}`;
+            m.querySelector('#pvBajar').href = url; m.querySelector('#pvBajar').download = `muestra_${p.clave}.png`;
+            const usada = p.clave === plantilla, b = m.querySelector('#pvUsar');
+            b.disabled = usada; b.innerHTML = usada ? '<i class="bi bi-check2-circle"></i> Es la plantilla elegida' : '<i class="bi bi-check2-circle"></i> Usar esta plantilla';
+        };
+        const mover = d => { i = (i + d + plantillas.length) % plantillas.length; pintar(); };
+        const cerrar = () => { m.classList.remove('open'); bd.classList.remove('open'); document.removeEventListener('keydown', tecla, true); setTimeout(() => { m.remove(); bd.remove(); }, 300); };
+        const tecla = e => {
+            if (e.key === 'Escape') { e.stopPropagation(); cerrar(); }
+            else if (e.key === 'ArrowLeft' && e.target.tagName !== 'SELECT') mover(-1);
+            else if (e.key === 'ArrowRight' && e.target.tagName !== 'SELECT') mover(1);
+        };
+        document.addEventListener('keydown', tecla, true);
+        bd.onclick = cerrar; m.querySelector('[data-cerrar]').onclick = cerrar;
+        m.addEventListener('click', e => { if (e.target === m) cerrar(); const n = e.target.closest('[data-mov]'); if (n) mover(+n.dataset.mov); });
+        m.querySelector('#pvDes')?.addEventListener('change', e => { destino = e.target.value; pintar(); });
+        m.querySelector('#pvUsar').onclick = () => { elegirPlantilla(plantillas[i].clave); cerrar(); };
+        pintar();
+        requestAnimationFrame(() => { bd.classList.add('open'); m.classList.add('open'); m.querySelector('[data-cerrar]').focus(); });
     }
 
     async function iniciar() {
         pintarPlantillas();
         $('#flPlantillas').addEventListener('click', e => {
-            const b = e.target.closest('[data-pl]'); if (!b) return;
-            plantilla = b.dataset.pl;
-            try { localStorage.setItem('ev-flyer-plantilla', plantilla); } catch { }
-            $$('#flPlantillas [data-pl]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); });
-            $('#flGenerar').innerHTML = `<i class="bi bi-magic"></i> Generar flyers · ${esc(b.querySelector('b').textContent)}`;
-            EV.toast(`Plantilla "${b.querySelector('b').textContent}" elegida. Pulsa "Generar flyers".`, 'info');
+            const card = e.target.closest('.fl-pl-it'); if (!card) return;
+            if (e.target.closest('[data-ver]')) verPlantilla(card.dataset.pl);
+            else if (e.target.closest('[data-pick]')) elegirPlantilla(card.dataset.pl);
         });
         try { await cargar(); } catch (e) { $('#flDest').innerHTML = `<div class="ui-empty"><h3>No se pudo cargar</h3><p>${esc(e.message)}</p></div>`; return; }
         const conBoton = async (b, fn) => { const h = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Un momento…'; try { await fn(); } finally { b.disabled = false; b.innerHTML = h; } };
