@@ -76,7 +76,7 @@ namespace EuroVip.Services
 
         // ---------------- dibujo: las plantillas están en FlyerPlantillas.cs ----------------
         private SKBitmap? FotoDe(string destino) { var f = FondoFisico(destino); return f is null ? null : SKBitmap.Decode(f); }
-        private string Web => _cfg["Eurovip:Flyer:Web"] ?? "www.dominicanatours.com";
+        private string Web => _cfg["Eurovip:Flyer:Marca"] ?? "EUROVIP";
 
         public async Task<List<FlyerImagen>> GenerarAsync(IEnumerable<FlyerDestino> destinos, string? plantilla = null)
         {
