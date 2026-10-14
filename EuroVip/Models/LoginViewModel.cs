@@ -60,7 +60,10 @@ namespace EuroVip.Models
         public string? Rol { get; set; }
         public int UsuariosActivos { get; set; }
         public int ModulosConAcceso { get; set; }
-        public int TablasEurovip { get; set; }
+        /// <summary>Salidas de ofertas activas desde mañana (a la venta).</summary>
+        public int OfertasVenta { get; set; }
+        /// <summary>Circuitos con alguna salida activa desde mañana.</summary>
+        public int CircuitosVenta { get; set; }
         public List<ModuloHome> ModulosCarga { get; set; } = new();
         public List<ModuloHome> ModulosAdministracion { get; set; } = new();
     }

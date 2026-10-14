@@ -207,6 +207,23 @@
             .h-scene *, .h-bubbles i, .h-wave-hand, .g-l, .g-icon, .g-icon i, .g-star, .g-underline path, .ev-kpi-icon, .ev-module::before, .ev-step.now::after, .h-db * { animation: none !important; }
             .h-ring-arc { stroke-dashoffset: var(--off); animation: none; }
         }
+        /* Tus pendientes */
+        .h-pend { margin-top: 18px; }
+        .h-pend:empty { display: none; }
+        .h-pend-box { border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line); padding: 16px 18px; }
+        .h-pend-h { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .h-pend-h h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.3px; }
+        .h-pend-h span { font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: var(--ev-ink); color: var(--ev-aqua); }
+        .h-pend-l { display: grid; gap: 8px; }
+        .h-pend-it { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 16px; border: 1px solid var(--ev-line); background: var(--ev-surface-2); }
+        .h-pend-it .ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; font-size: 17px; background: var(--ev-mint); color: var(--ev-deep); }
+        .h-pend-it.aviso .ic { background: #FEF3C7; color: #B54708; }
+        .h-pend-it.error .ic { background: #FEE4E2; color: #B42318; }
+        .h-pend-it .tx { flex: 1; min-width: 0; display: grid; gap: 2px; }
+        .h-pend-it .tx b { font-size: 14px; }
+        .h-pend-it .tx small { color: var(--ev-muted); font-weight: 600; font-size: 12.5px; }
+        .h-pend-ok { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-radius: 18px; background: #ECFDF3; color: #067647; border: 1px solid #ABEFC6; font-weight: 700; font-size: 14px; }
+        @@media (max-width: 640px) { .h-pend-it { flex-wrap: wrap; } .h-pend-it .ev-btn { width: 100%; justify-content: center; } }
     </style>
 }
 
@@ -353,10 +370,13 @@
                 <p>Este es el BackOffice de Eurovip. Carga hoteles, excursiones, traslados y circuitos por toda República Dominicana — los vuelos son opcionales.</p>
                 <div style="display:flex;gap:10px;flex-wrap:wrap">
                     <a href="#cargas" class="ev-btn"><i class="bi bi-plus-lg"></i> Nueva carga</a>
-                    <a href="#" class="ev-btn light"><i class="bi bi-signpost-split"></i> Circuitos</a>
+                    <a href="/Circuitos/Index" class="ev-btn light"><i class="bi bi-signpost-split"></i> Circuitos</a>
                 </div>
             </div>
         </section>
+
+        <!-- Tus pendientes: lo que conviene revisar hoy (se carga solo, con botón para resolver cada cosa) -->
+        <section class="h-pend ev-rise" id="hPend" aria-live="polite"></section>
 
         <!-- KPIs -->
         <section class="ev-kpis">
@@ -369,12 +389,12 @@
                 <div><div class="ev-kpi-value" data-count="@Model.ModulosConAcceso">0</div><div class="ev-kpi-label">Tus módulos</div></div>
             </div>
             <div class="ev-card ev-kpi ev-rise d3">
-                <div class="ev-kpi-icon"><i class="bi bi-database"></i></div>
-                <div><div class="ev-kpi-value" data-count="@Model.TablasEurovip">0</div><div class="ev-kpi-label">Tablas esquema Eurovip</div></div>
+                <div class="ev-kpi-icon"><i class="bi bi-calendar-check"></i></div>
+                <div><div class="ev-kpi-value" data-count="@Model.OfertasVenta">0</div><div class="ev-kpi-label">Ofertas a la venta</div></div>
             </div>
             <div class="ev-card ev-kpi ev-rise d4">
-                <div class="ev-kpi-icon"><i class="bi bi-airplane"></i></div>
-                <div><div class="ev-kpi-value">Opc.</div><div class="ev-kpi-label">Vuelos en cargas</div></div>
+                <div class="ev-kpi-icon"><i class="bi bi-signpost-split"></i></div>
+                <div><div class="ev-kpi-value" data-count="@Model.CircuitosVenta">0</div><div class="ev-kpi-label">Circuitos a la venta</div></div>
             </div>
         </section>
 
@@ -470,7 +490,7 @@
         <div class="ev-card ev-rise d4 h-db" style="background:var(--ev-ink);color:#fff;border-color:var(--ev-ink)">
             <span class="ev-chip" style="margin-bottom:12px"><i class="bi bi-database-check"></i> Base de datos</span>
             <div style="font-weight:800;font-size:18px;letter-spacing:-.3px">TropitoursVDT · Eurovip</div>
-            <small style="opacity:.7">Servidor 93 · réplica de estructura ViajeVDT (10.10.10.29)</small>
+            <small style="opacity:.7">Todo lo que cargas aquí es solo de Eurovip.</small>
             <svg viewBox="0 0 320 46" preserveAspectRatio="none" aria-hidden="true">
                 <g class="h-w1"><path d="M-240 20 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L360 46 L-240 46 Z" fill="#74F2E6" /></g>
             </svg>
@@ -480,6 +500,23 @@
 
 @section Scripts {
     <script>
+        // ---- Tus pendientes (lo que conviene revisar hoy) ----
+        (async function () {
+            const caja = document.getElementById('hPend');
+            const esc = s => (s ?? '').toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            try {
+                const r = await fetch('/Home/Pendientes', { headers: { Accept: 'application/json' } });
+                if (!r.ok) return;
+                const l = await r.json();
+                caja.innerHTML = !l.length
+                    ? '<div class="h-pend-ok"><i class="bi bi-check-circle-fill"></i> Todo al día: no hay nada pendiente por revisar.</div>'
+                    : `<div class="h-pend-box"><div class="h-pend-h"><i class="bi bi-list-check" style="font-size:20px;color:var(--ev-deep)"></i><h2>Tus pendientes</h2><span>${l.length}</span></div>
+                        <div class="h-pend-l">${l.map(x => `<div class="h-pend-it ${esc(x.nivel)}"><span class="ic"><i class="bi ${esc(x.icono)}"></i></span>
+                            <div class="tx"><b>${esc(x.titulo)}</b><small>${esc(x.detalle)}</small></div>
+                            ${x.url ? `<a class="ev-btn" style="padding:9px 14px;font-size:13px;border-radius:12px;white-space:nowrap" href="${esc(x.url)}">${esc(x.accion || 'Ver')} <i class="bi bi-arrow-right"></i></a>` : ''}</div>`).join('')}</div></div>`;
+            } catch { /* sin pendientes visibles si falla */ }
+        })();
+
         (function () {
             const reducir = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 

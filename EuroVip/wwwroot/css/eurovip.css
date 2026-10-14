@@ -507,3 +507,7 @@ button.ev-nav-label i { font-size: 11px; transition: transform .3s var(--ev-ease
 
 /* Foco visible al moverse con el teclado (botones, enlaces, tarjetas) — accesibilidad */
 :where(a, button, [tabindex], summary, label.ev-btn):focus-visible { outline: 3px solid var(--ev-teal); outline-offset: 2px; border-radius: 10px; }
+
+/* Opciones del menú lateral que solo hacen falta en el móvil (arriba se ocultan las pestañas) */
+.solo-movil { display: none; }
+@media (max-width: 900px) { .solo-movil { display: block; } }

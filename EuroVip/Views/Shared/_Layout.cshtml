@@ -62,11 +62,14 @@
                     </ul>
                 </div>
 
-                <div class="ev-grupo" data-grupo="admin" hidden="@(!(Ve("herramientas") || Ve("usuarios")))">
+                <div class="ev-grupo" data-grupo="admin" hidden="@(!(Ve("herramientas") || Ve("usuarios") || Ve("historial_cargas") || Ve("reportes")))">
                     <button type="button" class="ev-nav-label" aria-expanded="true"><span>Administración</span><i class="bi bi-chevron-down"></i></button>
                     <ul class="ev-nav">
                         @if (Ve("herramientas")) { <li><a asp-controller="Herramientas" asp-action="Index" class="@Activo("Herramientas")"><i class="bi bi-tools"></i> Herramientas</a></li> }
                         @if (Ve("usuarios")) { <li><a asp-controller="Usuarios" asp-action="Index" class="@Activo("Usuarios")"><i class="bi bi-people"></i> Usuarios y accesos</a></li> }
+                        @* En el móvil las pestañas de arriba (Cargas, Reportes) se ocultan: se ofrecen aquí *@
+                        @if (Ve("historial_cargas")) { <li class="solo-movil"><a asp-controller="Cargas" asp-action="Index" class="@Activo("Cargas")"><i class="bi bi-clock-history"></i> Historial de cargas</a></li> }
+                        @if (Ve("reportes")) { <li class="solo-movil"><a asp-controller="Reportes" asp-action="Index" class="@Activo("Reportes")"><i class="bi bi-bar-chart-line"></i> Reportes</a></li> }
                     </ul>
                 </div>
             </nav>
@@ -84,7 +87,7 @@
                     <i class="bi bi-list"></i>
                 </button>
                 <nav class="ev-tabs">
-                    <a asp-controller="Home" asp-action="Index" class="@(Activo("Cargas") == "" && Activo("Reportes") == "" ? "active" : "")">Resumen</a>
+                    <a asp-controller="Home" asp-action="Index" class="@Activo("Home")">Resumen</a>
                     @if (Ve("historial_cargas")) { <a asp-controller="Cargas" asp-action="Index" class="@Activo("Cargas")">Cargas</a> }
                     @if (Ve("reportes")) { <a asp-controller="Reportes" asp-action="Index" class="@Activo("Reportes")">Reportes</a> }
                 </nav>
