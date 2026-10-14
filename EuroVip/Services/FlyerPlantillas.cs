@@ -46,7 +46,7 @@ namespace EuroVip.Services
 
     /// <summary>
     /// Plantillas de flyer minimalistas dibujadas con SkiaSharp: fondo claro, mucho aire, tipografía fina
-    /// y un único color de acento (naranja suave) para el precio más barato. Sin negro ni azules; marca EUROVIP.
+    /// y precios en pastillas amarillas; el más barato con fondo gris y pastilla gris oscuro. Sin negro, azul, naranja ni beige; marca EUROVIP.
     /// No se muestra el origen de salida: el flyer vende el destino.
     /// </summary>
     public static class FlyerPlantillas
@@ -63,10 +63,11 @@ namespace EuroVip.Services
         public static FlyerPlantilla Buscar(string? clave) => Todas.FirstOrDefault(p => p.Clave == clave) ?? Todas[0];
 
         // ---------------- colores ----------------
-        private static readonly SKColor Fondo = SKColor.Parse("FCFAF7"), Blanco = SKColors.White,
-            Acento = SKColor.Parse("E8743B"),           // naranja suave: solo para lo que tiene que resaltar
-            Texto2 = SKColor.Parse("3A322D"),           // marrón muy oscuro (no negro)
-            Suave2 = SKColor.Parse("9A8F87"), Linea2 = SKColor.Parse("E9E2DA");
+        private static readonly SKColor Fondo = SKColors.White, Blanco = SKColors.White,
+            Amarillo = SKColor.Parse("FACC15"),         // amarillo llamativo: todos los precios
+            Texto2 = SKColor.Parse("374151"),           // gris oscuro (no negro)
+            Suave2 = SKColor.Parse("6B7280"), Linea2 = SKColor.Parse("E5E7EB"),
+            Resalte = SKColor.Parse("F3F4F6");          // fondo gris claro de la fila más barata
 
         private static readonly CultureInfo Es = new("es-ES");
         private static string Euros(int v) => v.ToString("N0", Es) + " €";
@@ -124,7 +125,10 @@ namespace EuroVip.Services
             // gancho + destino
             var gancho = Gancho(d);
             var tg = 15 * esc;
-            Espaciado(c, gancho, centro ? xc - Ancho(f.Negrita, gancho, tg, .3f) / 2 : x0, y, f.Negrita, tg, Acento, .3f);
+            var wg = Ancho(f.Negrita, gancho, tg, .3f);
+            var xg = centro ? xc - wg / 2 : x0;
+            Espaciado(c, gancho, xg, y, f.Negrita, tg, Texto2, .3f);
+            Rect(c, new SKRect(xg, y + 8, xg + (centro ? wg : 44), y + 13), Amarillo, 2);
             var (lin, tam) = Medir(d.Nombre_Destino, e == Estilo.Vertical ? ancho - 260 : ancho, f.Fina, (e == Estilo.Lado ? 92 : 104) * esc, 52 * esc, 2);
             var yLinea = y + 24 + tam * .82f;
             foreach (var l in lin)
@@ -138,8 +142,8 @@ namespace EuroVip.Services
             var min = Minimo(d);
             if (e == Estilo.Vertical)
             {
-                Texto(c, "desde", x1, y - 54, f.Normal, 22, Suave2, SKTextAlign.Right);
-                Texto(c, Euros(min), x1, y, f.Fina, 62, Acento, SKTextAlign.Right);
+                Texto(c, "desde", x1, y - 72, f.Normal, 22, Suave2, SKTextAlign.Right);
+                Pastilla(c, Euros(min), f.Negrita, 50, x1, y - 4, Amarillo, Texto2, derecha: true);
                 y += 44;
             }
             else
@@ -148,11 +152,13 @@ namespace EuroVip.Services
                 var txt = "desde ";
                 using var fn = new SKFont(f.Normal, 24 * esc);
                 using var fp = new SKFont(f.Negrita, 30 * esc);
-                float w1 = fn.MeasureText(txt), w2 = fp.MeasureText(Euros(min)), xi = centro ? xc - (w1 + w2) / 2 : x0;
+                using var fr = new SKFont(f.Normal, 24 * esc);
+                float w1 = fn.MeasureText(txt), w2 = fp.MeasureText(Euros(min)) + 30 * esc * .9f, w3 = fr.MeasureText("  por persona");
+                float xi = centro ? xc - (w1 + w2 + w3) / 2 : x0;
                 Texto(c, txt, xi, y, f.Normal, 24 * esc, Suave2);
-                Texto(c, Euros(min), xi + w1, y, f.Negrita, 30 * esc, Acento);
-                Texto(c, " por persona", xi + w1 + w2, y, f.Normal, 24 * esc, Suave2);
-                y += 38 * esc;
+                Pastilla(c, Euros(min), f.Negrita, 30 * esc, xi + w1, y, Amarillo, Texto2);
+                Texto(c, "  por persona", xi + w1 + w2, y, f.Normal, 24 * esc, Suave2);
+                y += 40 * esc;
             }
 
             // hoteles
@@ -188,7 +194,10 @@ namespace EuroVip.Services
             }
         }
 
-        /// <summary>Fila de hotel: nombre y detalle a la izquierda, precio a la derecha. El más barato: precio en acento + "Mejor precio".</summary>
+        /// <summary>
+        /// Fila de hotel: nombre y detalle a la izquierda, precio en pastilla amarilla a la derecha.
+        /// El más barato: fila con fondo gris claro, pastilla gris oscuro con el precio en amarillo y "MEJOR PRECIO".
+        /// </summary>
         private static void FilaHotel(SKCanvas c, FlyerFuentes f, FlyerHotel h, float x0, float x1, float y, float fila, bool barato, float esc)
         {
             float tn = 27 * esc, td = 18 * esc, tp = 30 * esc;
@@ -196,13 +205,25 @@ namespace EuroVip.Services
             float bloque = tn * .72f + td + 10 * esc, base1 = y + (fila - bloque) / 2 + tn * .72f, base2 = base1 + td + 10 * esc;
             var precio = Euros(h.Precio_Final);
             using var fp = new SKFont(f.Negrita, tp);
-            var wp = fp.MeasureText(precio);
+            var wp = fp.MeasureText(precio) + tp * .9f;
             var wl = barato ? Ancho(f.Negrita, "MEJOR PRECIO", 12 * esc, .25f) : 0;
             var ancho = x1 - x0 - Math.Max(wp, wl) - 28;
+            if (barato) Rect(c, new SKRect(x0 - 16, y + 5, x1 + 16, y + fila - 6), Resalte, 14);
             TextoCorto(c, h.Nombre_Hotel, x0, base1, ancho, f.Negrita, tn, Texto2);
             TextoCorto(c, Detalle(h), x0, base2, ancho, f.Normal, td, Suave2);
-            Texto(c, precio, x1, base1 + 2, f.Negrita, tp, barato ? Acento : Texto2, SKTextAlign.Right);
-            if (barato) Espaciado(c, "MEJOR PRECIO", x1 - wl, base2, f.Negrita, 12 * esc, Acento, .25f);
+            float bp = barato ? base1 : y + fila / 2 + tp * .35f;
+            Pastilla(c, precio, f.Negrita, tp, x1, bp, barato ? Texto2 : Amarillo, barato ? Amarillo : Texto2, derecha: true);
+            if (barato) Espaciado(c, "MEJOR PRECIO", x1 - wl, base2 + 8 * esc, f.Negrita, 12 * esc, Texto2, .25f);
+        }
+
+        /// <summary>Precio dentro de una pastilla de color. y = línea base del texto. Devuelve el ancho.</summary>
+        private static float Pastilla(SKCanvas c, string s, SKTypeface t, float tam, float x, float y, SKColor fondo, SKColor texto, bool derecha = false)
+        {
+            using var font = new SKFont(t, tam);
+            float pad = tam * .45f, w = font.MeasureText(s) + 2 * pad, left = derecha ? x - w : x;
+            Rect(c, new SKRect(left, y - tam * .98f, left + w, y + tam * .34f), fondo, tam * .3f);
+            Texto(c, s, left + pad, y, t, tam, texto);
+            return w;
         }
 
         private static void FotoRedondeada(SKCanvas c, SKBitmap? foto, SKRect r, float radio)
