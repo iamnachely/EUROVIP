@@ -702,7 +702,8 @@ const HX = (() => {
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
     const token = $('input[name="__RequestVerificationToken"]').value;
     const esc = s => (s ?? '').toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const simbolo = m => EV.simbolo(m || EV.MONEDA);
+    // Esta pantalla no carga eurovip-ui.js (no hay EV): símbolo propio, DOP por defecto como el resto del sistema.
+    const simbolo = m => ({ EUR: '€', USD: 'US$', DOP: 'RD$' }[m] || m || 'RD$');
     const fmt = n => n == null ? '—' : Math.round(n).toLocaleString('es-ES');
     const iniciales = t => (t || '?').replace(/^hotel\s+/i, '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
     const esUrl = s => /^https?:\/\//i.test(s || '');
