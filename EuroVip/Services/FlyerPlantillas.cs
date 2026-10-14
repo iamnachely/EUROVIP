@@ -15,12 +15,17 @@ namespace EuroVip.Services
         public SKTypeface Titulo { get; }
         public SKTypeface Negrita { get; }
         public SKTypeface Normal { get; }
+        /// <summary>Titulares finos (estilo minimalista): Bahnschrift Light o, si no está, Segoe UI Light.</summary>
+        public SKTypeface Fina { get; }
 
         public FlyerFuentes()
         {
             Titulo = Tipo(true, "Segoe UI Black", "Segoe UI", "Arial Black", "Arial");
             Negrita = Tipo(true, "Segoe UI Semibold", "Segoe UI", "Arial");
             Normal = Tipo(false, "Segoe UI", "Arial");
+            var l = SKTypeface.FromFamilyName("Bahnschrift", SKFontStyleWeight.Light, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
+            Fina = l is not null && string.Equals(l.FamilyName, "Bahnschrift", StringComparison.OrdinalIgnoreCase)
+                ? l : SKTypeface.FromFamilyName("Segoe UI Light") ?? Tipo(false, "Segoe UI", "Arial");
             var b = SKTypeface.FromFamilyName("Bahnschrift", SKFontStyleWeight.Bold, SKFontStyleWidth.Condensed, SKFontStyleSlant.Upright);
             Display = b is not null && string.Equals(b.FamilyName, "Bahnschrift", StringComparison.OrdinalIgnoreCase)
                 ? b : Tipo(true, "Segoe UI Black", "Arial Black", "Arial");
@@ -36,208 +41,174 @@ namespace EuroVip.Services
             return SKTypeface.FromFamilyName(null, negrita ? SKFontStyle.Bold : SKFontStyle.Normal);
         }
 
-        public void Dispose() { Display.Dispose(); Titulo.Dispose(); Negrita.Dispose(); Normal.Dispose(); }
+        public void Dispose() { Display.Dispose(); Titulo.Dispose(); Negrita.Dispose(); Normal.Dispose(); Fina.Dispose(); }
     }
 
     /// <summary>
-    /// Plantillas de flyer de marketing dibujadas con SkiaSharp, con colores cálidos de atardecer
-    /// (naranjas, ámbar y crema; sin negro ni azules) y la marca EUROVIP.
-    /// El hotel más barato siempre se destaca. No se muestra el origen de salida: el flyer vende el destino.
+    /// Plantillas de flyer minimalistas dibujadas con SkiaSharp: fondo claro, mucho aire, tipografía fina
+    /// y un único color de acento (naranja suave) para el precio más barato. Sin negro ni azules; marca EUROVIP.
+    /// No se muestra el origen de salida: el flyer vende el destino.
     /// </summary>
     public static class FlyerPlantillas
     {
         public static readonly FlyerPlantilla[] Todas =
         {
-            new("tropical", "Ola",           "Foto con borde de ola, fondo crema y hoteles en tarjetas. El más barato resaltado.", 1080, 1080, "Cuadrado · Instagram (1:1)"),
-            new("ola45",    "Ola vertical",  "La Ola en formato alto, con los 5 hoteles en tarjetas.", 1080, 1350, "WhatsApp · Instagram (4:5)"),
-            new("postal",   "Editorial",     "Foto arriba con el destino en grande y ranking de hoteles al mejor precio.", 1080, 1350, "WhatsApp · Instagram (4:5)"),
-            new("clasica",  "Póster",        "Foto enmarcada con sticker de precio y hoteles en tarjetas.", 900, 1190, "WhatsApp"),
+            new("tropical", "Minimal",          "Foto a un lado y la información al otro. Limpio y elegante.", 1080, 1080, "Cuadrado · Instagram (1:1)"),
+            new("ola45",    "Minimal vertical", "Foto enmarcada arriba, destino en letra fina y lista de hoteles.", 1080, 1350, "WhatsApp · Instagram (4:5)"),
+            new("postal",   "Centrado",         "Foto a sangre arriba y todo el texto centrado, estilo revista.", 1080, 1350, "WhatsApp · Instagram (4:5)"),
+            new("clasica",  "Marco",            "Ficha con marco fino, foto y lista de hoteles.", 900, 1190, "WhatsApp"),
         };
 
-        /// <summary>Busca la plantilla; las que ya no existen (historia, minimal) caen en la primera.</summary>
+        /// <summary>Busca la plantilla; las que ya no existen (historia, minimal…) caen en la primera.</summary>
         public static FlyerPlantilla Buscar(string? clave) => Todas.FirstOrDefault(p => p.Clave == clave) ?? Todas[0];
 
-        // ---------------- colores (atardecer) ----------------
-        private static readonly SKColor Naranja = SKColor.Parse("F97316"), NaranjaOsc = SKColor.Parse("EA580C"), Ambar = SKColor.Parse("F59E0B"),
-            Melocoton = SKColor.Parse("FED7AA"), Crema = SKColor.Parse("FFF7ED"), Arena = SKColor.Parse("FFEDD5"),
-            Texto2 = SKColor.Parse("3F2D23"), Suave2 = SKColor.Parse("8C7466"), Linea2 = SKColor.Parse("F3E3D3"),
-            Tostado = SKColor.Parse("431407"), Blanco = SKColors.White;
-        private static readonly SKColor[] Atardecer = { SKColor.Parse("FBBF24"), SKColor.Parse("F97316"), SKColor.Parse("EA580C") };
+        // ---------------- colores ----------------
+        private static readonly SKColor Fondo = SKColor.Parse("FCFAF7"), Blanco = SKColors.White,
+            Acento = SKColor.Parse("E8743B"),           // naranja suave: solo para lo que tiene que resaltar
+            Texto2 = SKColor.Parse("3A322D"),           // marrón muy oscuro (no negro)
+            Suave2 = SKColor.Parse("9A8F87"), Linea2 = SKColor.Parse("E9E2DA");
 
         private static readonly CultureInfo Es = new("es-ES");
         private static string Euros(int v) => v.ToString("N0", Es) + " €";
         private const string Legal = "Precio por persona · sujeto a disponibilidad";
-        private const string Lema = "TU AGENCIA DE CONFIANZA";
+
+        private enum Estilo { Lado, Vertical, Centrado, Marco }
 
         public static SKData Dibujar(string? clave, FlyerDestino d, SKBitmap? foto, FlyerFuentes f, string marca)
         {
             var p = Buscar(clave);
             using var surf = SKSurface.Create(new SKImageInfo(p.Ancho, p.Alto));
             var c = surf.Canvas;
-            c.Clear(Crema);
+            c.Clear(Fondo);
             var m = string.IsNullOrWhiteSpace(marca) ? "EUROVIP" : marca.Trim().ToUpperInvariant();
-            switch (p.Clave)
-            {
-                case "ola45": Ola(c, p, d, foto, f, m, vertical: true); break;
-                case "postal": Editorial(c, p, d, foto, f, m); break;
-                case "clasica": Poster(c, p, d, foto, f, m); break;
-                default: Ola(c, p, d, foto, f, m, vertical: false); break;
-            }
+            var e = p.Clave switch { "ola45" => Estilo.Vertical, "postal" => Estilo.Centrado, "clasica" => Estilo.Marco, _ => Estilo.Lado };
+            Minimal(c, p, d, foto, f, m, e);
             using var img = surf.Snapshot();
             return img.Encode(SKEncodedImageFormat.Png, 100);
         }
 
         // =====================================================================================
-        // 1) OLA — foto con borde de ola, fondo crema, tarjetas blancas; el más barato en naranja
+        // Una sola composición minimalista con cuatro encuadres
         // =====================================================================================
-        private static void Ola(SKCanvas c, FlyerPlantilla p, FlyerDestino d, SKBitmap? foto, FlyerFuentes f, string marca, bool vertical)
+        private static void Minimal(SKCanvas c, FlyerPlantilla p, FlyerDestino d, SKBitmap? foto, FlyerFuentes f, string marca, Estilo e)
         {
-            float W = p.Ancho, H = p.Alto, pad = 60, yw = vertical ? 520 : 460;
-            c.Clear(Crema);
-            using var ola = new SKPath();
-            ola.MoveTo(0, 0); ola.LineTo(W, 0); ola.LineTo(W, yw);
-            ola.CubicTo(W * .78f, yw + 100, W * .57f, yw - 60, W * .37f, yw + 30);
-            ola.CubicTo(W * .21f, yw + 100, W * .1f, yw + 50, 0, yw + 10);
-            ola.Close();
-            // ola de color por detrás, un poco más abajo
-            c.Save(); c.Translate(0, 24);
-            using (var pa = new SKPaint { IsAntialias = true, Shader = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint(W, 0), Atardecer, null, SKShaderTileMode.Clamp) })
-                c.DrawPath(ola, pa);
-            c.Restore();
-            c.Save(); c.ClipPath(ola, SKClipOperation.Intersect, antialias: true);
-            Foto(c, foto, new SKRect(0, 0, W, yw + 110));
-            Degradado(c, new SKRect(0, 0, W, 220), Tostado.WithAlpha(120), SKColors.Transparent, vertical: true);
-            c.Restore();
+            float W = p.Ancho, H = p.Alto;
+            float x0, x1, y;            // columna de texto
+            bool centro = e == Estilo.Centrado;
+            int maxHoteles = 5;
 
-            Chip(c, f, Gancho(d), pad, 50, Blanco.WithAlpha(235), NaranjaOsc, 20);
-            Marca(c, f, marca, W - pad, 86, 40, Blanco, derecha: true, sombra: true);
-
-            var (lin, tam) = Medir(d.Nombre_Destino, W - 2 * pad - 280, f.Display, vertical ? 118 : 104, 60, 2);
-            var yTit = vertical ? yw + 220 : yw + 236;
-            Lineas(c, lin, pad, yTit - (lin.Count - 1) * tam * .9f, f.Display, tam, Texto2, .9f);
-            Sello(c, f, W - 170, yw + 150, 116, Minimo(d), grados: 8);
-
-            var hs = d.Hoteles.Take(vertical ? 5 : 4).ToList();
-            var barato = Barato(hs);
-            if (!vertical)
+            switch (e)
             {
-                float top = 748, alto = 100, gap = 16, col = (W - 2 * pad - gap) / 2;
-                for (var i = 0; i < hs.Count; i++)
-                {
-                    float x = pad + (i % 2) * (col + gap), y = top + (i / 2) * (alto + gap);
-                    TarjetaHotel(c, f, hs[i], new SKRect(x, y, x + col, y + alto), i == barato, 25, 17, 38);
-                }
+                case Estilo.Lado:
+                    FotoRedondeada(c, foto, new SKRect(48, 48, 450, H - 48), 18);
+                    x0 = 510; x1 = W - 56; y = 112;
+                    break;
+                case Estilo.Vertical:
+                    FotoRedondeada(c, foto, new SKRect(60, 60, W - 60, 540), 18);
+                    x0 = 72; x1 = W - 72; y = 618;
+                    break;
+                case Estilo.Centrado:
+                    Foto(c, foto, new SKRect(0, 0, W, 490));
+                    x0 = 96; x1 = W - 96; y = 566;
+                    break;
+                default: // Marco
+                    using (var st = new SKPaint { Color = Linea2, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2 })
+                        c.DrawRect(new SKRect(22, 22, W - 22, H - 22), st);
+                    Foto(c, foto, new SKRect(48, 48, W - 48, 460));
+                    x0 = 76; x1 = W - 76; y = 524;
+                    break;
+            }
+            float ancho = x1 - x0, xc = (x0 + x1) / 2;
+            var esc = e == Estilo.Marco ? .84f : 1f;   // la plantilla de 900 px va un poco más pequeña
+
+            // gancho + destino
+            var gancho = Gancho(d);
+            var tg = 15 * esc;
+            Espaciado(c, gancho, centro ? xc - Ancho(f.Negrita, gancho, tg, .3f) / 2 : x0, y, f.Negrita, tg, Acento, .3f);
+            var (lin, tam) = Medir(d.Nombre_Destino, e == Estilo.Vertical ? ancho - 260 : ancho, f.Fina, (e == Estilo.Lado ? 92 : 104) * esc, 52 * esc, 2);
+            var yLinea = y + 24 + tam * .82f;
+            foreach (var l in lin)
+            {
+                Texto(c, l, centro ? xc : x0, yLinea, f.Fina, tam, Texto2, centro ? SKTextAlign.Center : SKTextAlign.Left);
+                yLinea += tam * .98f;
+            }
+            y = yLinea - tam * .98f;
+
+            // "desde" — a la derecha del título en la vertical; debajo en el resto
+            var min = Minimo(d);
+            if (e == Estilo.Vertical)
+            {
+                Texto(c, "desde", x1, y - 54, f.Normal, 22, Suave2, SKTextAlign.Right);
+                Texto(c, Euros(min), x1, y, f.Fina, 62, Acento, SKTextAlign.Right);
+                y += 44;
             }
             else
             {
-                float top = 818, alto = 74, gap = 12;
-                for (var i = 0; i < hs.Count; i++)
-                    TarjetaHotel(c, f, hs[i], new SKRect(pad, top + i * (alto + gap), W - pad, top + i * (alto + gap) + alto), i == barato, 26, 17, 40);
+                y += 50 * esc;
+                var txt = "desde ";
+                using var fn = new SKFont(f.Normal, 24 * esc);
+                using var fp = new SKFont(f.Negrita, 30 * esc);
+                float w1 = fn.MeasureText(txt), w2 = fp.MeasureText(Euros(min)), xi = centro ? xc - (w1 + w2) / 2 : x0;
+                Texto(c, txt, xi, y, f.Normal, 24 * esc, Suave2);
+                Texto(c, Euros(min), xi + w1, y, f.Negrita, 30 * esc, Acento);
+                Texto(c, " por persona", xi + w1 + w2, y, f.Normal, 24 * esc, Suave2);
+                y += 38 * esc;
             }
 
-            var yPie = H - 64;
-            Marca(c, f, marca, pad, yPie, 40, Naranja);
-            Espaciado(c, Lema, pad, yPie + 26, f.Negrita, 14, Suave2, .2f);
-            Texto(c, Legal, pad, yPie + 48, f.Normal, 14, Suave2);
-            Boton(c, f, "Reserva ahora  →", W - pad, yPie + 4, alinearDerecha: true, tam: 25, alto: 70);
-        }
-
-        // =====================================================================================
-        // 2) EDITORIAL — foto arriba con el destino, ranking de hoteles en blanco (como el flyer de siempre, renovado)
-        // =====================================================================================
-        private static void Editorial(SKCanvas c, FlyerPlantilla p, FlyerDestino d, SKBitmap? foto, FlyerFuentes f, string marca)
-        {
-            float W = p.Ancho, H = p.Alto, pad = 72, hero = 600;
-            c.Clear(Blanco);
-            Foto(c, foto, new SKRect(0, 0, W, hero));
-            Degradado(c, new SKRect(0, 0, W, hero), SKColors.Transparent, Tostado.WithAlpha(210), vertical: true, desde: .35f);
-            Rect(c, new SKRect(0, 0, W, 10), Naranja);
-            using (var g = new SKPaint { IsAntialias = true, Shader = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint(W, 0), Atardecer, null, SKShaderTileMode.Clamp) })
-                c.DrawRect(0, 0, W, 10, g);
-
-            // pestaña de marca arriba al centro
-            using (var fm = new SKFont(f.Display, 38))
-            {
-                var wm = Ancho(f.Display, marca, 38, .08f) + 70;
-                var tab = new SKRect(W / 2 - wm / 2, -30, W / 2 + wm / 2, 92);
-                Rect(c, tab, Blanco, 26, sombra: true);
-                Marca(c, f, marca, W / 2 - (wm - 70) / 2, 70, 38, Naranja);
-            }
-
-            var (lin, tam) = Medir(d.Nombre_Destino, W - 2 * pad - 250, f.Display, 150, 84, 2);
-            Lineas(c, lin, pad, 500 - (lin.Count - 1) * tam * .92f, f.Display, tam, Blanco, .92f, sombra: true);
-            Espaciado(c, Gancho(d), pad, 556, f.Negrita, 22, Melocoton, .16f);
-            Sello(c, f, W - 170, hero - 60, 116, Minimo(d), grados: -8);
-
-            Espaciado(c, "TOP HOTELES AL MEJOR PRECIO", pad, 690, f.Negrita, 20, NaranjaOsc, .2f);
-            Rect(c, new SKRect(pad + Ancho(f.Negrita, "TOP HOTELES AL MEJOR PRECIO", 20, .2f) + 24, 682, W - pad - 250, 684), Linea2);
-
-            var hs = d.Hoteles.Take(5).ToList();
+            // hoteles
+            Rect(c, new SKRect(x0, y, x1, y + 1.5f), Linea2);
+            var hs = d.Hoteles.Take(maxHoteles).ToList();
             var barato = Barato(hs);
-            float y = 716, fila = Math.Min(100, (H - 150 - y) / Math.Max(1, hs.Count));
+            float pie = H - (e == Estilo.Lado ? 130 : e == Estilo.Marco ? 116 : 128);
+            float fila = Math.Min((e == Estilo.Lado ? 120 : 104) * esc, (pie - 20 - y) / Math.Max(1, hs.Count));
             for (var i = 0; i < hs.Count; i++)
             {
-                var h = hs[i];
-                var r = new SKRect(0, y, W, y + fila);
-                bool top = i == barato;
-                if (top)
-                {
-                    using (var g = new SKPaint { IsAntialias = true, Shader = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint(W, 0), new[] { Arena, Blanco }, null, SKShaderTileMode.Clamp) })
-                        c.DrawRect(r, g);
-                    Rect(c, new SKRect(0, r.Top, 8, r.Bottom), Naranja);
-                }
-                Texto(c, (i + 1).ToString(), pad, r.MidY + 16, f.Display, 46, top ? Naranja : Melocoton);
-                float x = pad + 64, ancho = W - pad - x - 230;
-                TextoCorto(c, h.Nombre_Hotel, x, r.MidY - (top ? 10 : 2), ancho, f.Negrita, 31, Texto2);
-                TextoCorto(c, Detalle(h), x, r.MidY + (top ? 18 : 28), ancho, f.Normal, 20, Suave2);
-                if (top) Espaciado(c, "MEJOR PRECIO", x, r.MidY + 42, f.Titulo, 15, Ambar, .2f);
-                Texto(c, Euros(h.Precio_Final), W - pad, r.MidY + 18, f.Display, top ? 56 : 46, top ? Naranja : Texto2, SKTextAlign.Right);
-                if (i < hs.Count - 1) Rect(c, new SKRect(pad, r.Bottom - 1, W - pad, r.Bottom), Linea2);
+                FilaHotel(c, f, hs[i], x0, x1, y, fila, i == barato, esc * (e == Estilo.Lado ? .92f : 1f));
                 y += fila;
+                Rect(c, new SKRect(x0, y - 1.5f, x1, y), Linea2);
             }
 
-            var pie = new SKRect(0, H - 120, W, H);
-            Rect(c, pie, Crema);
-            Marca(c, f, marca, pad, H - 64, 40, Naranja);
-            Espaciado(c, Lema, pad, H - 38, f.Negrita, 14, Suave2, .2f);
-            Texto(c, Legal, pad, H - 16, f.Normal, 13, Suave2);
-            Boton(c, f, "Reserva ahora  →", W - pad, H - 60, alinearDerecha: true, tam: 26, alto: 72);
+            // pie: marca + leyenda
+            float yp = H - (e == Estilo.Marco ? 58 : 64);
+            if (e == Estilo.Lado)
+            {
+                Espaciado(c, marca, x0, yp - 10, f.Display, 26, Texto2, .3f);
+                Texto(c, Legal, x0, yp + 22, f.Normal, 15, Suave2);
+            }
+            else if (centro)
+            {
+                Espaciado(c, marca, xc - Ancho(f.Display, marca, 28, .3f) / 2, yp - 4, f.Display, 28, Texto2, .3f);
+                Texto(c, Legal, xc, yp + 28, f.Normal, 15, Suave2, SKTextAlign.Center);
+            }
+            else
+            {
+                var tm = 28 * esc;
+                Espaciado(c, marca, x0, yp + 6, f.Display, tm, Texto2, .3f);
+                Texto(c, Legal, x1, yp + 4, f.Normal, 15 * esc, Suave2, SKTextAlign.Right);
+            }
         }
 
-        // =====================================================================================
-        // 3) PÓSTER — foto enmarcada, sticker y hoteles en tarjetas sobre crema
-        // =====================================================================================
-        private static void Poster(SKCanvas c, FlyerPlantilla p, FlyerDestino d, SKBitmap? foto, FlyerFuentes f, string marca)
+        /// <summary>Fila de hotel: nombre y detalle a la izquierda, precio a la derecha. El más barato: precio en acento + "Mejor precio".</summary>
+        private static void FilaHotel(SKCanvas c, FlyerFuentes f, FlyerHotel h, float x0, float x1, float y, float fila, bool barato, float esc)
         {
-            float W = p.Ancho, H = p.Alto, PAD = 56;
-            c.Clear(Crema);
-            var hero = new SKRect(24, 24, W - 24, 600);
-            c.Save(); c.ClipRoundRect(new SKRoundRect(hero, 40, 40), SKClipOperation.Intersect, antialias: true);
-            Foto(c, foto, hero);
-            Degradado(c, hero, SKColors.Transparent, Tostado.WithAlpha(215), vertical: true, desde: .4f);
-            c.Restore();
+            float tn = 27 * esc, td = 18 * esc, tp = 30 * esc;
+            // nombre + detalle centrados en la fila
+            float bloque = tn * .72f + td + 10 * esc, base1 = y + (fila - bloque) / 2 + tn * .72f, base2 = base1 + td + 10 * esc;
+            var precio = Euros(h.Precio_Final);
+            using var fp = new SKFont(f.Negrita, tp);
+            var wp = fp.MeasureText(precio);
+            var wl = barato ? Ancho(f.Negrita, "MEJOR PRECIO", 12 * esc, .25f) : 0;
+            var ancho = x1 - x0 - Math.Max(wp, wl) - 28;
+            TextoCorto(c, h.Nombre_Hotel, x0, base1, ancho, f.Negrita, tn, Texto2);
+            TextoCorto(c, Detalle(h), x0, base2, ancho, f.Normal, td, Suave2);
+            Texto(c, precio, x1, base1 + 2, f.Negrita, tp, barato ? Acento : Texto2, SKTextAlign.Right);
+            if (barato) Espaciado(c, "MEJOR PRECIO", x1 - wl, base2, f.Negrita, 12 * esc, Acento, .25f);
+        }
 
-            Chip(c, f, Gancho(d), PAD, 56, Blanco.WithAlpha(235), NaranjaOsc, 16);
-            Marca(c, f, marca, W - PAD, 86, 32, Blanco, derecha: true, sombra: true);
-            var (lin, tam) = Medir(d.Nombre_Destino, W - 2 * PAD - 210, f.Display, 124, 64, 2);
-            Lineas(c, lin, PAD, 548 - (lin.Count - 1) * tam * .9f, f.Display, tam, Blanco, .9f, sombra: true);
-            Sello(c, f, W - 140, 580, 100, Minimo(d), grados: -8);
-
-            Espaciado(c, "HOTELES DESTACADOS", PAD, 690, f.Negrita, 16, NaranjaOsc, .2f);
-            var hs = d.Hoteles.Take(5).ToList();
-            var barato = Barato(hs);
-            float y = 718, fila = Math.Min(70, (H - 136 - y) / Math.Max(1, hs.Count));
-            for (var i = 0; i < hs.Count; i++)
-            {
-                TarjetaHotel(c, f, hs[i], new SKRect(PAD - 14, y, W - PAD + 14, y + fila - 10), i == barato, 22, 15, 32);
-                y += fila;
-            }
-
-            var pie = new SKRect(24, H - 112, W - 24, H - 24);
-            Rect(c, pie, Blanco, 32, sombra: true);
-            Marca(c, f, marca, pie.Left + 32, pie.MidY + 4, 34, Naranja);
-            Espaciado(c, Lema, pie.Left + 32, pie.MidY + 28, f.Negrita, 12, Suave2, .2f);
-            Boton(c, f, "Reserva ya  →", pie.Right - 18, pie.MidY, alinearDerecha: true, tam: 22, alto: 58);
+        private static void FotoRedondeada(SKCanvas c, SKBitmap? foto, SKRect r, float radio)
+        {
+            c.Save(); c.ClipRoundRect(new SKRoundRect(r, radio, radio), SKClipOperation.Intersect, antialias: true);
+            Foto(c, foto, r); c.Restore();
         }
 
         // ---------------- textos comunes ----------------
@@ -255,42 +226,12 @@ namespace EuroVip.Services
                 ? "VACACIONES TODO INCLUIDO" : "OFERTAS DE LA SEMANA";
 
         // ---------------- piezas de dibujo ----------------
-        /// <summary>Marca EUROVIP en letra de cartel espaciada.</summary>
-        private static void Marca(SKCanvas c, FlyerFuentes f, string marca, float x, float y, float tam, SKColor color, bool derecha = false, bool sombra = false)
-        {
-            if (derecha) x -= Ancho(f.Display, marca, tam, .08f);
-            if (sombra) Espaciado(c, marca, x + 1, y + 2, f.Display, tam, Tostado.WithAlpha(90), .08f);
-            Espaciado(c, marca, x, y, f.Display, tam, color, .08f);
-        }
-
-        /// <summary>Tarjeta de hotel: blanca con sombra suave; la del más barato en degradado naranja con la etiqueta "MEJOR PRECIO".</summary>
-        private static void TarjetaHotel(SKCanvas c, FlyerFuentes f, FlyerHotel h, SKRect r, bool barato, float tNombre, float tDetalle, float tPrecio)
-        {
-            if (barato) RectDegradado(c, r, 22); else Rect(c, r, Blanco, 22, sombra: true);
-            var precio = Euros(h.Precio_Final);
-            using var fp = new SKFont(f.Display, tPrecio);
-            var wp = fp.MeasureText(precio);
-            float ancho = r.Width - 44 - wp - 18;
-            TextoCorto(c, h.Nombre_Hotel, r.Left + 22, r.MidY - 3, ancho, f.Negrita, tNombre, barato ? Blanco : Texto2);
-            TextoCorto(c, Detalle(h), r.Left + 22, r.MidY + tDetalle + 7, ancho, f.Normal, tDetalle, barato ? Blanco.WithAlpha(225) : Suave2);
-            Texto(c, precio, r.Right - 22, r.MidY + tPrecio * .36f, f.Display, tPrecio, barato ? Blanco : NaranjaOsc, SKTextAlign.Right);
-            if (barato)
-            {
-                // etiqueta pegada al borde de arriba, como una pegatina
-                using var fe = new SKFont(f.Titulo, 13);
-                var we = Ancho(f.Titulo, "MEJOR PRECIO", 13, .16f) + 26;
-                var et = new SKRect(r.Right - 22 - we, r.Top - 17, r.Right - 22, r.Top + 9);
-                Rect(c, et, Blanco, 13, sombra: true);
-                Espaciado(c, "MEJOR PRECIO", et.Left + 13, et.MidY + 5, f.Titulo, 13, NaranjaOsc, .16f);
-            }
-        }
-
-        /// <summary>Foto "cover" (llena el rectángulo recortando lo que sobra) o, si no hay, un degradado de atardecer.</summary>
+        /// <summary>Foto "cover" (llena el rectángulo recortando lo que sobra) o, si no hay, un fondo neutro.</summary>
         private static void Foto(SKCanvas c, SKBitmap? bmp, SKRect r, SKPaint? paint = null)
         {
             if (bmp is null)
             {
-                using var g = new SKPaint { Shader = SKShader.CreateLinearGradient(new SKPoint(r.Left, r.Top), new SKPoint(r.Right, r.Bottom), new[] { Melocoton, Ambar, Naranja, NaranjaOsc }, null, SKShaderTileMode.Clamp) };
+                using var g = new SKPaint { Shader = SKShader.CreateLinearGradient(new SKPoint(r.Left, r.Top), new SKPoint(r.Right, r.Bottom), new[] { Linea2, Fondo }, null, SKShaderTileMode.Clamp) };
                 c.DrawRect(r, g);
                 return;
             }
@@ -300,17 +241,6 @@ namespace EuroVip.Services
             c.Save(); c.ClipRect(r);
             c.DrawImage(img, new SKRect(r.MidX - bw / 2, r.MidY - bh / 2, r.MidX + bw / 2, r.MidY + bh / 2), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), paint);
             c.Restore();
-        }
-
-        private static void RectDegradado(SKCanvas c, SKRect r, float radio)
-        {
-            using var p = new SKPaint
-            {
-                IsAntialias = true,
-                Shader = SKShader.CreateLinearGradient(new SKPoint(r.Left, r.Top), new SKPoint(r.Right, r.Bottom), Atardecer, null, SKShaderTileMode.Clamp),
-                ImageFilter = SKImageFilter.CreateDropShadow(0, 8, 14, 14, NaranjaOsc.WithAlpha(90))
-            };
-            c.DrawRoundRect(r, radio, radio, p);
         }
 
         private static void Degradado(SKCanvas c, SKRect r, SKColor a, SKColor b, bool vertical, float desde = 0)
@@ -324,7 +254,7 @@ namespace EuroVip.Services
         private static void Rect(SKCanvas c, SKRect r, SKColor color, float radio = 0, SKColor? borde = null, bool sombra = false)
         {
             using var p = new SKPaint { Color = color, IsAntialias = true };
-            if (sombra) p.ImageFilter = SKImageFilter.CreateDropShadow(0, 6, 14, 14, Tostado.WithAlpha(34));
+            if (sombra) p.ImageFilter = SKImageFilter.CreateDropShadow(0, 6, 14, 14, Texto2.WithAlpha(30));
             if (radio > 0) c.DrawRoundRect(r, radio, radio, p); else c.DrawRect(r, p);
             if (borde is not null)
             {
@@ -333,17 +263,11 @@ namespace EuroVip.Services
             }
         }
 
-        private static void Circulo(SKCanvas c, float cx, float cy, float r, SKColor color)
-        {
-            using var p = new SKPaint { Color = color, IsAntialias = true };
-            c.DrawCircle(cx, cy, r, p);
-        }
-
         private static void Texto(SKCanvas c, string s, float x, float y, SKTypeface t, float tam, SKColor color, SKTextAlign al = SKTextAlign.Left, bool sombra = false)
         {
             using var font = new SKFont(t, tam);
             using var p = new SKPaint { Color = color, IsAntialias = true };
-            if (sombra) p.ImageFilter = SKImageFilter.CreateDropShadow(0, tam * .03f, tam * .08f, tam * .08f, Tostado.WithAlpha(120));
+            if (sombra) p.ImageFilter = SKImageFilter.CreateDropShadow(0, tam * .03f, tam * .08f, tam * .08f, Texto2.WithAlpha(110));
             c.DrawText(s ?? "", x, y, al, font, p);
         }
 
@@ -413,84 +337,10 @@ namespace EuroVip.Services
             return res;
         }
 
-        private static void Lineas(SKCanvas c, List<string> lineas, float x, float yPrimera, SKTypeface t, float tam, SKColor color, float interlineado, bool sombra = false)
-        {
-            for (var i = 0; i < lineas.Count; i++) Texto(c, lineas[i], x, yPrimera + i * tam * interlineado, t, tam, color, sombra: sombra);
-        }
-
-        /// <summary>Precio grande con el "€" pequeño arriba. Devuelve el ancho dibujado.</summary>
-        private static float PrecioGrande(SKCanvas c, FlyerFuentes f, float x, float y, int precio, float tam, SKColor numero, SKColor simbolo)
-        {
-            var n = precio.ToString("N0", Es);
-            using var fn = new SKFont(f.Display, tam);
-            using var fe = new SKFont(f.Display, tam * .5f);
-            float wn = fn.MeasureText(n), sep = tam * .05f;
-            Texto(c, n, x, y, f.Display, tam, numero, sombra: true);
-            Texto(c, "€", x + wn + sep, y - tam * .34f, f.Display, tam * .5f, simbolo);
-            return wn + sep + fe.MeasureText("€");
-        }
-
-        /// <summary>Pastilla de precio alineada a la derecha. Devuelve su ancho.</summary>
-        private static float Pildora(SKCanvas c, string s, SKTypeface t, float tam, float xDerecha, float yCentro, SKColor fondo, SKColor texto, float alto)
-        {
-            using var font = new SKFont(t, tam);
-            var w = font.MeasureText(s) + 40;
-            var r = new SKRect(xDerecha - w, yCentro - alto / 2, xDerecha, yCentro + alto / 2);
-            Rect(c, r, fondo, alto / 2);
-            Texto(c, s, r.MidX, yCentro + tam * .35f, t, tam, texto, SKTextAlign.Center);
-            return w;
-        }
-
-        private static void Chip(SKCanvas c, FlyerFuentes f, string s, float x, float y, SKColor fondo, SKColor texto, float tam, SKColor? borde = null)
-        {
-            using var font = new SKFont(f.Negrita, tam);
-            float tr = tam * .12f, wTxt = s.Sum(ch => font.MeasureText(ch.ToString()) + tr) - tr;
-            var r = new SKRect(x, y, x + wTxt + tam * 1.8f, y + tam * 2.1f);
-            Rect(c, r, fondo, r.Height / 2, borde);
-            Espaciado(c, s, x + tam * .9f, r.MidY + tam * .36f, f.Negrita, tam, texto, .12f);
-        }
-
-        /// <summary>Sticker circular de precio "desde" en degradado de atardecer, con aro blanco, sombra y algo girado.</summary>
-        private static void Sello(SKCanvas c, FlyerFuentes f, float cx, float cy, float r, int precio, float grados = 0)
-        {
-            var texto = Blanco;
-            c.Save();
-            c.RotateDegrees(grados, cx, cy);
-            using (var p = new SKPaint
-            {
-                IsAntialias = true,
-                Shader = SKShader.CreateLinearGradient(new SKPoint(cx - r, cy - r), new SKPoint(cx + r, cy + r), Atardecer, null, SKShaderTileMode.Clamp),
-                ImageFilter = SKImageFilter.CreateDropShadow(0, 10, 18, 18, NaranjaOsc.WithAlpha(110))
-            })
-                c.DrawCircle(cx, cy, r, p);
-            using (var b = new SKPaint { Color = Blanco, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = r * .06f })
-                c.DrawCircle(cx, cy, r, b);
-            using (var b = new SKPaint { Color = Blanco.WithAlpha(110), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = r * .02f })
-                c.DrawCircle(cx, cy, r * .86f, b);
-            Espaciado(c, "DESDE", cx - Ancho(f.Negrita, "DESDE", r * .15f, .2f) / 2, cy - r * .32f, f.Negrita, r * .15f, texto, .2f);
-            var n = Euros(precio);
-            using var font = new SKFont(f.Display, r * .5f);
-            while (font.MeasureText(n) > r * 1.5f && font.Size > 10) font.Size -= 2;
-            Texto(c, n, cx, cy + font.Size * .3f, f.Display, font.Size, texto, SKTextAlign.Center);
-            Texto(c, "por persona", cx, cy + r * .52f, f.Normal, r * .14f, texto, SKTextAlign.Center);
-            c.Restore();
-        }
-
         private static float Ancho(SKTypeface t, string s, float tam, float tracking)
         {
             using var font = new SKFont(t, tam);
             return s.Sum(ch => font.MeasureText(ch.ToString()) + tam * tracking) - tam * tracking;
-        }
-
-        /// <summary>Botón de llamada a la acción en degradado de atardecer con texto blanco.</summary>
-        private static void Boton(SKCanvas c, FlyerFuentes f, string s, float x, float yCentro, bool alinearDerecha = false, float tam = 24, float alto = 60)
-        {
-            using var font = new SKFont(f.Titulo, tam);
-            var w = font.MeasureText(s) + alto * .9f;
-            var left = alinearDerecha ? x - w : x;
-            var r = new SKRect(left, yCentro - alto / 2, left + w, yCentro + alto / 2);
-            RectDegradado(c, r, alto / 2);
-            Texto(c, s, r.MidX, yCentro + tam * .36f, f.Titulo, tam, Blanco, SKTextAlign.Center);
         }
 
         /// <summary>Destino de ejemplo para la vista previa de las plantillas (cuando todavía no hay precios cargados).</summary>
