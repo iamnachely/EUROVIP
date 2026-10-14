@@ -198,7 +198,7 @@
     <div class="cl-bar">
         <div class="info"><span>Hoteles listos</span> <b id="bHot">0</b> <span>Ofertas</span> <b id="bOf">0</b> <span>Vuelo</span> <b id="bVue">No</b></div>
         <button type="button" class="ev-btn aqua" id="bRevisar"><i class="bi bi-search"></i> REVISAR FORMULARIO</button>
-        <button type="button" class="ev-btn light" id="bGuardar"><i class="bi bi-cloud-arrow-up"></i> GUARDAR TODOS</button>
+        <button type="button" class="ev-btn light" id="bGuardar"><i class="bi bi-cloud-arrow-up"></i> Guardar todos</button>
     </div>
 </div>
 
@@ -428,6 +428,7 @@ const CL = (() => {
                 <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><a class="ev-btn sm" href="/Ofertas/Index"><i class="bi bi-eye"></i> Ver las ofertas</a><a class="ev-btn ghost sm" href="/CargaManual/Clasica"><i class="bi bi-arrow-repeat"></i> Nueva carga</a></div></div></div>`;
             $('#clRevision').scrollIntoView({ behavior: 'smooth', block: 'center' });
             EV.toast(r.mensaje, 'ok');
+            guardia?.liberar();
             EV.confeti();
         } catch (e) {
             const lista = e.data?.errores || [e.message];
@@ -439,7 +440,10 @@ const CL = (() => {
     // ================= INICIO =================
     const tabs = EV.tabs($('#clTabs'), id => { if (id === 'pExcel' && H.length) pintar(); });
 
+    // Aviso al salir de la página (menú, recargar, cerrar pestaña) si hay una carga a medias. Se apaga al guardar bien.
+    let guardia = null;
     async function iniciar() {
+        guardia = EV.protegerSalida(() => { try { return H.length > 0; } catch { return false; } });
         cat = await EVC.catalogos();
         $('#iDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)}</option>`).join('');
         $('#iPaisOrigen').innerHTML = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');

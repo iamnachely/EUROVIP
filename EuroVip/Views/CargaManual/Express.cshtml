@@ -345,6 +345,7 @@ const XP = (() => {
                     <a class="ev-btn" href="/Ofertas/Index"><i class="bi bi-eye"></i> Ver las ofertas</a>
                     <a class="ev-btn ghost" href="/CargaManual/Express"><i class="bi bi-arrow-repeat"></i> Hacer otra carga</a></div>`;
             ir('ok');
+            guardia?.liberar();
             EV.confeti();
         } catch (e) {
             const lista = e.data?.errores || [e.message];
@@ -354,7 +355,10 @@ const XP = (() => {
     }
 
     // ===================== INICIO =====================
+    // Aviso al salir de la página (menú, recargar, cerrar pestaña) si hay una carga a medias. Se apaga al guardar bien.
+    let guardia = null;
     async function iniciar() {
+        guardia = EV.protegerSalida(() => { try { return S.bloques.some(b => b.comp.hotel()) || (mx ? mx.fechas().length > 0 : false); } catch { return false; } });
         cat = await EVC.catalogos();
         $('#cDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)} · ${esc(m.texto)}</option>`).join('');
         $('#cPaisOrigen').innerHTML = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');

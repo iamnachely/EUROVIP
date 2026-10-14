@@ -427,6 +427,7 @@ const XP = (() => {
                     <a class="ev-btn" href="/Circuitos/Index?editar=${encodeURIComponent(dto.CodigoCircuito || dto.NuevoCircuito.Codigo)}"><i class="bi bi-eye"></i> Ver el circuito</a>
                     <a class="ev-btn ghost" href="/CargaCircuitos/Express"><i class="bi bi-arrow-repeat"></i> Hacer otra carga</a></div>`;
             ir('ok');
+            guardia?.liberar();
             EV.confeti();
         } catch (e) {
             const lista = e.data?.errores || [e.message];
@@ -436,7 +437,10 @@ const XP = (() => {
     }
 
     // ===================== INICIO =====================
+    // Aviso al salir de la página (menú, recargar, cerrar pestaña) si hay una carga a medias. Se apaga al guardar bien.
+    let guardia = null;
     async function iniciar() {
+        guardia = EV.protegerSalida(() => { try { return !!S.circuito || S.salidas.size > 0 || S.nuevo.destinos.length > 0; } catch { return false; } });
         cat = await EVC.catalogos();
         // selects
         $('#cDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)} · ${esc(m.texto)}</option>`).join('');

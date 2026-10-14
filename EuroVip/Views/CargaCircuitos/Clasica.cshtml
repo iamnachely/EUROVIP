@@ -181,7 +181,7 @@
     <div class="cl-bar">
         <div class="info"><span>Circuito</span> <b id="bCirc">—</b> <span>Salidas</span> <b id="bSal">0</b> <span>Vuelo</span> <b id="bVue">No</b></div>
         <button type="button" class="ev-btn aqua" id="bRevisar"><i class="bi bi-search"></i> REVISAR FORMULARIO</button>
-        <button type="button" class="ev-btn light" id="bGuardar" disabled><i class="bi bi-cloud-arrow-up"></i> GUARDAR</button>
+        <button type="button" class="ev-btn light" id="bGuardar" disabled><i class="bi bi-cloud-arrow-up"></i> Guardar salidas</button>
     </div>
 </div>
 
@@ -391,7 +391,7 @@ const CL = (() => {
             revisado = r.ok;
             $('#bGuardar').disabled = !r.ok;
             $('#clRevision').innerHTML = r.ok
-                ? `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div>Formulario correcto. Al guardar se crearán <b>${r.servicios}</b> salidas. Ya puedes pulsar <b>GUARDAR</b>.</div></div>`
+                ? `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div>Formulario correcto. Al guardar se crearán <b>${r.servicios}</b> salidas. Ya puedes pulsar <b>Guardar salidas</b>.</div></div>`
                 : `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>Revisa esto:<ul>${r.errores.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div></div>`;
             if (r.ok) EV.toast('Formulario revisado: todo bien.'); else EV.toast(r.errores[0], 'err');
             return r.ok;
@@ -408,6 +408,7 @@ const CL = (() => {
         btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Guardando…';
         try {
             const r = await EV.post('/CargaCircuitos/Guardar', dto);
+            guardia?.liberar();
             EV.confeti();
             $('#clRevision').innerHTML = `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div><b>${esc(r.mensaje)}</b><br>Código ${esc(r.codigo)} · salidas #${r.ids[0]}–#${r.ids[r.ids.length - 1]} · registro #${r.logId}.
                 <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><a class="ev-btn sm" href="/Circuitos/Index?editar=${encodeURIComponent(circuito.codigo)}">Ver salidas del circuito</a><a class="ev-btn ghost sm" href="/CargaCircuitos/Clasica">Nueva carga</a></div></div></div>`;
@@ -433,7 +434,10 @@ const CL = (() => {
     // ================= INICIO =================
     const tabs = EV.tabs($('#clTabs'));
 
+    // Aviso al salir de la página (menú, recargar, cerrar pestaña) si hay una carga a medias. Se apaga al guardar bien.
+    let guardia = null;
     async function iniciar() {
+        guardia = EV.protegerSalida(() => { try { return filas().some(f => f.desde || f.total); } catch { return false; } });
         cat = await EVC.catalogos();
         $('#iDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)}</option>`).join('');
         $('#iPaisOrigen').innerHTML = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
