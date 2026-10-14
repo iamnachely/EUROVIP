@@ -159,7 +159,8 @@
                     const f = EV.iso(new Date(primero.getFullYear(), primero.getMonth(), d));
                     const sel = mapa.has(f);
                     const p = mapa.get(f);
-                    html += `<button type="button" data-f="${f}" class="${sel ? 'sel' : ''} ${f === hoy ? 'hoy' : ''}" ${f < hoy ? 'disabled' : ''} title="${sel ? 'Quitar' : 'Agregar'} ${EV.fecha(f)}">${d}${sel && p ? `<em>${EV.fmt(p)}</em>` : ''}</button>`;
+                    // Hoy y los días pasados no se pueden elegir: esas salidas no se venden ni salen en la web.
+                    html += `<button type="button" data-f="${f}" class="${sel ? 'sel' : ''} ${f === hoy ? 'hoy' : ''}" ${f <= hoy ? 'disabled' : ''} title="${f <= hoy ? 'Solo desde mañana: las salidas de hoy o pasadas no salen en la web' : (sel ? 'Quitar ' : 'Agregar ') + EV.fecha(f)}">${d}${sel && p ? `<em>${EV.fmt(p)}</em>` : ''}</button>`;
                 }
                 html += '</div></div>';
             }

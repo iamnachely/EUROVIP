@@ -18,6 +18,7 @@ namespace EuroVip.Repositories
         Task<bool> EliminarTarjetaAsync(int id);
         Task<int> ActualizarDesdeOfertasAsync(HwActualizarDto? solo);
         Task<IEnumerable<HwActualizarDto>> ClavesOfertasAsync();
+        Task<List<HwFuera>> FueraDeHomeAsync();
 
         Task OrdenSlidesAsync(List<int> ids);
         Task<bool> EditarSlideAsync(HwSlideDto dto);
@@ -223,6 +224,56 @@ namespace EuroVip.Repositories
         {
             using var cn = _db.Conexion();
             return await cn.ExecuteAsync("DELETE FROM Eurovip.inicio WHERE id = @id AND id_idioma = @Idioma", new { id, Idioma }) > 0;
+        }
+
+        /// <summary>
+        /// Circuitos y destinos de ofertas cargados que NO tienen tarjeta visible en la Home, con el motivo en palabras sencillas.
+        /// "A la venta" = salidas activas desde mañana (igual que fnServicioMinimo / fnServicioMinimoCircuito).
+        /// </summary>
+        public async Task<List<HwFuera>> FueraDeHomeAsync()
+        {
+            using var cn = _db.Conexion();
+            var filas = (await cn.QueryAsync<HwFuera>(@"
+                SELECT 'CIRCUITO' AS Tipo, c.nombre_circuito AS Nombre, c.id AS Codigo,
+                       ISNULL(SUM(CASE WHEN s.activo = 1 THEN 1 ELSE 0 END), 0) AS Total,
+                       MIN(CASE WHEN s.activo = 1 AND sc.desde > CAST(GETDATE() AS date) THEN sc.desde END) AS Proxima,
+                       MAX(CASE WHEN s.activo = 1 THEN sc.desde END) AS Ultima
+                FROM Eurovip.circuito c
+                    LEFT JOIN Eurovip.servicio_circuito sc ON sc.nombre_circuito = c.nombre_circuito AND sc.id_idoma = c.id_idioma
+                    LEFT JOIN Eurovip.servicio s ON s.id_servicio = sc.id_servicio
+                WHERE c.id_idioma = @Idioma
+                  AND NOT EXISTS (SELECT 1 FROM Eurovip.inicio i JOIN Eurovip.servicio_circuito x ON x.id_servicio = i.id_servicio
+                                  WHERE i.tipo_servicio = 'CIRCUITO' AND ISNULL(i.estado, 1) = 1 AND x.nombre_circuito = c.nombre_circuito)
+                GROUP BY c.nombre_circuito, c.id
+                UNION ALL
+                SELECT 'OFERTA', d.destino, NULL,
+                       SUM(CASE WHEN s.activo = 1 THEN 1 ELSE 0 END),
+                       MIN(CASE WHEN s.activo = 1 AND sd.desde > CAST(GETDATE() AS date) THEN sd.desde END),
+                       MAX(CASE WHEN s.activo = 1 THEN sd.desde END)
+                FROM Eurovip.servicio_destino d
+                    JOIN Eurovip.servicio s ON s.id_servicio = d.id_servicio
+                    JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
+                WHERE s.id_tipo_servicio = 'OFERTA' AND s.id_idioma = @Idioma
+                  AND NOT EXISTS (SELECT 1 FROM Eurovip.inicio i WHERE i.tipo_servicio = 'OFERTA' AND ISNULL(i.estado, 1) = 1 AND i.id_destino = d.destino)
+                GROUP BY d.destino", new { Idioma })).ToList();
+
+            var manana = DateTime.Today.AddDays(1).ToString("dd/MM/yyyy");
+            foreach (var f in filas)
+            {
+                var que = f.Tipo == "CIRCUITO" ? "salidas" : "fechas";
+                if (f.Total == 0)
+                    f.Motivo = f.Tipo == "CIRCUITO" ? "No tiene salidas activas cargadas." : "No tiene ofertas activas.";
+                else if (f.Proxima is null)
+                    f.Motivo = $"Sus {que} son de hoy o ya pasaron (la última: {f.Ultima:dd/MM/yyyy}). Solo sale en la Home lo que tiene {que} desde mañana ({manana}).";
+                else
+                    f.Motivo = $"Tiene {que} a la venta (la próxima: {f.Proxima:dd/MM/yyyy}), pero en la Home va solo lo más barato de cada " +
+                               (f.Tipo == "CIRCUITO" ? "país" : "destino") + ". Si no aparece, pulsa \"Traer ofertas a la Home\".";
+                if (f.Proxima is null)
+                    (f.Accion, f.Url) = f.Tipo == "CIRCUITO"
+                        ? ("Cargar salidas", "/CargaCircuitos/Express?circuito=" + Uri.EscapeDataString(f.Codigo ?? f.Nombre))
+                        : ("Cargar ofertas", "/CargaManual/Express");
+            }
+            return filas.OrderBy(f => f.Proxima is null ? 0 : 1).ThenBy(f => f.Tipo).ThenBy(f => f.Nombre).ToList();
         }
 
         /// <summary>Claves (tipo, campaña, destino, origen…) de todo lo que está a la venta: lo que puede ir a la Home.</summary>

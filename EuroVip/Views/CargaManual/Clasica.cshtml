@@ -253,7 +253,7 @@ const CL = (() => {
             actual = 0;
             const ok = H.filter(h => h.estado === 'found').length;
             $('#xEstado').innerHTML = `<i class="bi bi-check-circle-fill" style="color:#16A34A"></i> ${esc(archivo.name)}: ${H.length} hoteles (${ok} encontrados) · ${r.fechas.length} fechas`;
-            const avisos = [...r.avisos]; if (pasadas) avisos.push(`Se omitieron ${pasadas} precios de fechas pasadas.`);
+            const avisos = [...r.avisos]; if (pasadas) avisos.push(`Se omitieron ${pasadas} precios de fechas de hoy o pasadas: no se venden ni saldrían en la web.`);
             if (avisos.length) EV.toast(avisos.join(' '), 'info');
             pintar();
         } catch (e) { $('#xEstado').innerHTML = `<span style="color:#B42318"><i class="bi bi-exclamation-octagon"></i> ${esc(e.message)}</span>`; }
@@ -330,7 +330,7 @@ const CL = (() => {
             ${malTasa ? `<div class="ui-note warn" style="margin-bottom:10px"><i class="bi bi-exclamation-triangle"></i><div>La tasa de las filas no coincide con la suma de suplementos de INICIO (${EV.dinero(ts, m)}). Ajusta los suplementos o usa "Aplicar datos globales".</div></div>` : ''}
             <div class="ui-table-wrap cx-tabla" style="max-height:440px;overflow:auto"><table class="ui-table"><thead><tr><th>Fecha desde</th><th>Fecha hasta</th><th style="width:140px">Tasas</th><th style="width:160px">Precio total</th><th class="num">Precio base</th><th style="width:52px"></th></tr></thead><tbody>
             ${h.filas.length ? h.filas.map((f, i) => { const base = num(f.total) - num(f.tasas), bad = f.total > 0 && base < cat.minimo; return `<tr class="${bad ? 'bad' : ''}">
-                <td><input type="date" data-f="${i}" data-c="desde" value="${f.desde}"></td>
+                <td><input type="date" data-f="${i}" data-c="desde" value="${f.desde}" min="${EV.sumarDias(EV.hoy(), 1)}" title="Solo fechas desde mañana"${f.desde && f.desde <= EV.hoy() ? ' style="border-color:#D92D20;color:#B42318"' : ''}></td>
                 <td>${f.desde && n ? EV.fecha(EV.sumarDias(f.desde, n)) : '—'}</td>
                 <td><div class="ui-money"><b>${sim}</b><input type="number" min="0" step="0.01" data-f="${i}" data-c="tasas" value="${f.tasas}"></div></td>
                 <td><div class="ui-money"><b>${sim}</b><input type="number" min="0" step="1" data-f="${i}" data-c="total" value="${f.total || ''}"></div></td>
@@ -387,6 +387,8 @@ const CL = (() => {
             if (h.elegido && !filasOk(h).length) e.push({ tab: 'pExcel', hotel: i, msg: `${et}: no tiene precios.` });
             const bajas = h.filas.filter(f => f.total > 0 && num(f.total) - num(f.tasas) < cat.minimo).length;
             if (bajas) e.push({ tab: 'pExcel', hotel: i, msg: `${et}: ${bajas} fila(s) con precio base menor a ${EV.fmt(cat.minimo)}.` });
+            const viejas = h.filas.filter(f => f.desde && f.desde <= EV.hoy()).length;
+            if (viejas) e.push({ tab: 'pExcel', hotel: i, msg: `${et}: ${viejas} fecha(s) de hoy o pasadas. Solo se cargan fechas desde mañana (${EV.fecha(EV.sumarDias(EV.hoy(), 1))}): si no, la oferta no sale en la web.` });
         });
         if (conVuelo()) {
             if (!vIda.cantidad() || !vVuelta.cantidad()) e.push({ tab: 'pVuelos', msg: 'Con vuelo: agrega al menos un vuelo de ida y uno de vuelta.' });

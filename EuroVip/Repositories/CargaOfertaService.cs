@@ -92,7 +92,8 @@ namespace EuroVip.Repositories
                 foreach (var s in h.Salidas)
                 {
                     var f = s.Desde.ToString("dd/MM/yyyy");
-                    if (s.Desde.Date < DateTime.Today) e.Add($"{et}: la fecha {f} ya pasó.");
+                    // Las fechas de hoy o pasadas no se venden ni salen en la web: solo desde mañana.
+                    if (s.Desde.Date <= DateTime.Today) e.Add($"{et}: la fecha {f} es de hoy o ya pasó. Solo se cargan fechas desde mañana ({DateTime.Today.AddDays(1):dd/MM/yyyy}), si no la oferta no sale en la web.");
                     if (s.PrecioTotal <= 0) e.Add($"{et}: la fecha {f} no tiene precio.");
                     else if (s.PrecioTotal - (s.Tasas ?? tasas) < minimo) e.Add($"{et}, {f}: el precio base ({s.PrecioTotal - (s.Tasas ?? tasas):N0}) queda por debajo del mínimo ({minimo:N0}).");
                     if (s.Tasas is not null && Math.Abs(s.Tasas.Value - tasas) > 0.009m)

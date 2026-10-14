@@ -7,6 +7,11 @@
 <style>
     /* Tarjetas de circuitos */
     .cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+    .cx-home { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; padding: 9px 11px; border-radius: 12px; font-size: 12.5px; font-weight: 600; line-height: 1.4; }
+    .cx-home i { margin-top: 1px; }
+    .cx-home.ok { background: #ECFDF3; color: #067647; border: 1px solid #ABEFC6; }
+    .cx-home.mal { background: #FFFAEB; color: #93370D; border: 1px solid #FEDF89; }
+    .cx-home.info { background: #ECFEFB; color: #0E6F68; border: 1px solid #B3FFF3; }
     .cx-card { display: flex; flex-direction: column; overflow: hidden; border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line);
                transition: transform .35s var(--ev-ease), box-shadow .35s, border-color .3s; animation: uiFade .45s var(--ev-ease) both; animation-delay: calc(var(--n,0) * 40ms); }
     .cx-card:hover { transform: translateY(-5px); box-shadow: var(--ev-shadow); border-color: var(--ev-aqua); }
@@ -279,6 +284,7 @@ const CX = (() => {
                         <div><b>${c.salidasActivas}</b><small>salidas</small></div>
                         <div><b style="font-size:12px;line-height:19px">${c.proximaSalida ? EV.fecha(c.proximaSalida).replace(/ de /g, ' ') : '—'}</b><small>próxima</small></div>
                     </div>
+                    ${estadoHome(c)}
                 </div>
                 <div class="cx-foot">
                     <a class="ev-btn sm aqua" href="/CargaCircuitos/Express?circuito=${encodeURIComponent(c.codigo)}"><i class="bi bi-lightning-charge"></i> Cargar salidas</a>
@@ -286,6 +292,17 @@ const CX = (() => {
                     <button class="ui-ibtn danger" title="Eliminar" onclick="CX.eliminar('${esc(c.codigo)}')"><i class="bi bi-trash3"></i></button>
                 </div>
             </article>`).join('')}</div>`;
+    }
+
+    /** ¿Sale en la Home de la web? Y si no, por qué (el usuario no tiene que adivinarlo). */
+    function estadoHome(c) {
+        if (c.enHome) return '<div class="cx-home ok"><i class="bi bi-check-circle-fill"></i> Sale en la Home de la web</div>';
+        if (!c.proximaSalida) {
+            const por = !c.salidasActivas ? 'no tiene salidas cargadas'
+                : `sus salidas son de hoy o ya pasaron (la última: ${EV.fecha(String(c.ultimaSalida).slice(0, 10))})`;
+            return `<div class="cx-home mal"><i class="bi bi-exclamation-triangle-fill"></i><span><b>No sale en la Home:</b> ${por}. Carga salidas desde mañana.</span></div>`;
+        }
+        return '<div class="cx-home info"><i class="bi bi-info-circle-fill"></i><span><b>Aún no está en la Home.</b> En la Home va el circuito más barato de cada país; pulsa "Traer ofertas a la Home" en Home de la web.</span></div>';
     }
 
     // ======================= EDITOR =======================

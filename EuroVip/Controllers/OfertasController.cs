@@ -47,6 +47,9 @@ namespace EuroVip.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(new { mensaje = ModelState.Values.SelectMany(v => v.Errors).First().ErrorMessage });
             var antes = await _repo.ObtenerAsync(dto.Id_Servicio);
+            // Si se cambia la fecha de entrada, tiene que ser desde mañana (las de hoy o pasadas no se venden ni salen en la web).
+            if (antes is not null && dto.Desde.Date != antes.Desde.Date && dto.Desde.Date <= DateTime.Today)
+                return BadRequest(new { mensaje = $"La fecha de entrada tiene que ser desde mañana ({DateTime.Today.AddDays(1):dd/MM/yyyy}). Con una fecha de hoy o pasada la oferta no se vende ni sale en la web." });
             var error = await _repo.EditarAsync(dto);
             if (error is not null) return BadRequest(new { mensaje = error });
             await Auditar("Oferta_Editar", new[] { dto.Id_Servicio }, new { antes, despues = dto });

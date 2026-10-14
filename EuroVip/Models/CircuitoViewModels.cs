@@ -20,6 +20,10 @@ namespace EuroVip.Models
         public int Salidas { get; set; }
         public int SalidasActivas { get; set; }
         public DateTime? ProximaSalida { get; set; }
+        /// <summary>Última salida activa (aunque ya haya pasado): para explicar por qué no sale en la Home.</summary>
+        public DateTime? UltimaSalida { get; set; }
+        /// <summary>true si una tarjeta visible de la Home de la web es de este circuito.</summary>
+        public bool EnHome { get; set; }
         public decimal? PrecioDesde { get; set; }
     }
 

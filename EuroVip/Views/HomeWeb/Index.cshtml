@@ -15,6 +15,22 @@
     .hw-hero .ev-btn.light { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(116,242,230,.3); }
     .hw-kpis { display: flex; gap: 10px; flex-wrap: wrap; width: 100%; }
     .hw-kpi { padding: 10px 16px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid rgba(116,242,230,.18); }
+    /* Aviso "no sale en la Home" */
+    .hw-fuera { margin-top: 14px; border-radius: 20px; border: 1px solid #B3FFF3; background: #ECFEFB; color: #0E6F68; overflow: hidden; }
+    .hw-fuera.mal { border-color: #FEDF89; background: #FFFAEB; color: #93370D; }
+    .hw-fuera summary { list-style: none; cursor: pointer; display: flex; gap: 10px; align-items: center; padding: 14px 18px; font-size: 14px; flex-wrap: wrap; }
+    .hw-fuera summary::-webkit-details-marker { display: none; }
+    .hw-fuera summary span { font-weight: 600; opacity: .85; font-size: 13px; }
+    .hw-fuera summary .fl { margin-left: auto; transition: transform .2s; }
+    .hw-fuera[open] summary .fl { transform: rotate(180deg); }
+    .hw-fuera-l { display: grid; gap: 8px; padding: 0 14px 14px; }
+    .hw-fuera-l .it { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--ev-surface); color: var(--ev-text); border: 1px solid var(--ev-line); }
+    .hw-fuera-l .ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--ev-mint); color: var(--ev-deep); flex-shrink: 0; font-size: 17px; }
+    .hw-fuera-l .ic.mal { background: #FEF3C7; color: #B54708; }
+    .hw-fuera-l .tx { flex: 1; min-width: 0; display: grid; gap: 2px; }
+    .hw-fuera-l .tx b { font-size: 14px; }
+    .hw-fuera-l .tx small { font-weight: 700; color: var(--ev-muted); font-size: 11.5px; margin-left: 4px; }
+    .hw-fuera-l .tx span { font-size: 13px; color: var(--ev-muted); font-weight: 600; }
     .hw-kpi b { font-size: 20px; font-weight: 800; display: block; line-height: 1.1; }
     .hw-kpi small { color: rgba(232,255,251,.6); font-weight: 600; font-size: 12px; }
     .hw-kpi.alerta { border-color: #F79009; background: rgba(247,144,9,.12); }
@@ -145,6 +161,9 @@
     <div class="hw-kpis" id="hwKpis"></div>
 </section>
 
+<!-- Lo que está cargado pero NO sale en la Home, con el motivo -->
+<div id="hwFuera"></div>
+
 <div class="hw-barra">
     <div class="ui-tabs" id="hwTabs" style="margin:0">
         <button type="button" data-tab="pVista" class="on"><i class="bi bi-eye"></i> Vista de la Home</button>
@@ -252,7 +271,28 @@ const HW = (() => {
         pintarTodo();
     }
 
+    /** Aviso: circuitos y destinos de ofertas que no salen en la Home y por qué (para no tener que adivinarlo). */
+    function pintarFuera() {
+        const f = D.fuera || [];
+        const sinVenta = f.filter(x => !x.proxima);
+        if (!f.length) { $('#hwFuera').innerHTML = ''; return; }
+        $('#hwFuera').innerHTML = `
+            <details class="hw-fuera ${sinVenta.length ? 'mal' : ''}" ${sinVenta.length ? 'open' : ''}>
+                <summary><i class="bi ${sinVenta.length ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}"></i>
+                    <b>${f.length} ${f.length === 1 ? 'cosa cargada no sale' : 'cosas cargadas no salen'} en la Home</b>
+                    <span>${sinVenta.length ? `${sinVenta.length} sin fechas a la venta · ` : ''}toca para ver por qué</span><i class="bi bi-chevron-down fl"></i></summary>
+                <div class="hw-fuera-l">${f.map(x => `
+                    <div class="it">
+                        <span class="ic ${x.proxima ? '' : 'mal'}"><i class="bi ${x.tipo === 'CIRCUITO' ? 'bi-signpost-split' : 'bi-building'}"></i></span>
+                        <div class="tx"><b>${esc(x.nombre)} <small>${x.tipo === 'CIRCUITO' ? 'Circuito' : 'Ofertas de hotel'}</small></b><span>${esc(x.motivo)}</span></div>
+                        ${x.url ? `<a class="ev-btn sm" href="${esc(x.url)}"><i class="bi bi-plus-lg"></i> ${esc(x.accion)}</a>` : ''}
+                    </div>`).join('')}
+                </div>
+            </details>`;
+    }
+
     function pintarTodo() {
+        pintarFuera();
         const ts = todas(), vencidas = ts.filter(t => t.vigente === false && t.estado).length, ocultas = ts.filter(t => !t.estado).length;
         const activos = D.slides.filter(s => s.activo).length;
         $('#hwKpis').innerHTML = [

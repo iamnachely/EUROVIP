@@ -118,7 +118,7 @@
         <div class="ui-sec">
             <div class="ui-sec-t"><span>1</span> Fechas y régimen</div>
             <div class="ui-row r4">
-                <div class="ui-f"><label>Entrada</label><input type="date" id="eDesde"></div>
+                <div class="ui-f"><label>Entrada <em>desde mañana</em></label><input type="date" id="eDesde" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" title="Con fecha de hoy o pasada la oferta no se vende ni sale en la web"></div>
                 <div class="ui-f"><label>Noches</label><input type="number" id="eNoches" min="1" max="60"></div>
                 <div class="ui-f"><label>Salida</label><input id="eHasta" readonly tabindex="-1"></div>
                 <div class="ui-f"><label>Régimen</label><select id="eRegimen"></select></div>

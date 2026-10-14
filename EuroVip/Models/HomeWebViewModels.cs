@@ -80,7 +80,23 @@ namespace EuroVip.Models
         public List<HwContenedor> Contenedores { get; set; } = new();
         public List<HwTarjeta> SinContenedor { get; set; } = new();
         public List<HwSlide> Slides { get; set; } = new();
+        /// <summary>Circuitos y destinos de ofertas que NO salen en la Home, con el motivo (para que el usuario lo vea).</summary>
+        public List<HwFuera> Fuera { get; set; } = new();
         public HwImagenes Imagenes { get; set; } = new();
+    }
+
+    /// <summary>Algo cargado que no aparece en la Home y por qué.</summary>
+    public class HwFuera
+    {
+        public string Tipo { get; set; } = "";          // CIRCUITO · OFERTA
+        public string Nombre { get; set; } = "";        // circuito o destino de las ofertas
+        public string? Codigo { get; set; }             // código del circuito (para "Cargar salidas")
+        public int Total { get; set; }                  // salidas/fechas activas
+        public DateTime? Proxima { get; set; }          // primera salida desde mañana
+        public DateTime? Ultima { get; set; }           // última salida activa
+        public string Motivo { get; set; } = "";
+        public string? Accion { get; set; }             // texto del botón
+        public string? Url { get; set; }                // a dónde lleva el botón
     }
 
     // ---------- DTOs ----------

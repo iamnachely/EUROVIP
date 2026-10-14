@@ -113,8 +113,8 @@
             <h2>Fechas de salida y precio</h2>
             <p class="sub">Genera varias fechas de una vez o toca los días en el calendario. El precio es lo que paga el cliente (incluye tasas).</p>
             <div class="xp-gen">
-                <div class="ui-f"><label>Desde</label><input type="date" id="gDesde"></div>
-                <div class="ui-f"><label>Hasta</label><input type="date" id="gHasta"></div>
+                <div class="ui-f"><label>Desde <em>mañana o después</em></label><input type="date" id="gDesde" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")"></div>
+                <div class="ui-f"><label>Hasta</label><input type="date" id="gHasta" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")"></div>
                 <div class="ui-f"><label>Precio total</label><div class="ui-money"><b class="sim">€</b><input type="number" id="gPrecio" min="0" step="1" placeholder="1290"></div></div>
                 <div class="ui-f"><label>Solo los días</label><div class="xp-dias" id="gDias">
                     @foreach (var (d, i) in new[] { ("L", 1), ("M", 2), ("X", 3), ("J", 4), ("V", 5), ("S", 6), ("D", 0) })
@@ -547,7 +547,7 @@ const XP = (() => {
             if (!dias.length) { EV.toast('Elige al menos un día de la semana.', 'err'); return; }
             const hoy = EV.hoy(); let n = 0;
             for (let f = d; f <= h; f = EV.sumarDias(f, 1)) {
-                if (f < hoy) continue;
+                if (f <= hoy) continue;   // solo desde mañana: hoy no sale en la web
                 if (!dias.includes(new Date(f + 'T00:00:00').getDay())) continue;
                 if (S.salidas.size + n >= 400) break;
                 S.salidas.set(f, precio || S.salidas.get(f) || 0); n++;

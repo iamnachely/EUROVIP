@@ -42,6 +42,7 @@ namespace EuroVip.Controllers
             var d = await _repo.DatosAsync();
             d.Imagenes = new HwImagenes { Web = Slider("Url"), Tablet = Slider("UrlMd"), Movil = Slider("UrlSm") };
             foreach (var t in d.Contenedores.SelectMany(c => c.Tarjetas).Concat(d.SinContenedor)) PonerImagen(t);
+            d.Fuera = await _repo.FueraDeHomeAsync();   // qué no sale en la Home y por qué (aviso en la pantalla)
             return Json(d);
         }
 

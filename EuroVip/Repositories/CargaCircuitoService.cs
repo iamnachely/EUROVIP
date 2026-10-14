@@ -94,7 +94,8 @@ namespace EuroVip.Repositories
             foreach (var s in dto.Salidas)
             {
                 var etiqueta = s.Desde.ToString("dd/MM/yyyy");
-                if (s.Desde.Date < hoy) errores.Add($"La salida del {etiqueta} ya pasó.");
+                // Las salidas de hoy o pasadas no se venden ni salen en la web: solo desde mañana.
+                if (s.Desde.Date <= hoy) errores.Add($"La salida del {etiqueta} es de hoy o ya pasó: solo se cargan salidas desde mañana ({hoy.AddDays(1):dd/MM/yyyy}), si no el circuito no sale en la web.");
                 if (s.PrecioTotal <= 0) errores.Add($"La salida del {etiqueta} no tiene precio.");
                 var base_ = s.PrecioTotal - (s.Tasas ?? tasasSuplementos);
                 if (s.PrecioTotal > 0 && base_ < minimo)

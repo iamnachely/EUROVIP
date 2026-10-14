@@ -72,8 +72,8 @@
             <h2>Fechas de entrada y precios</h2>
             <p class="sub">Genera varias fechas de una vez o toca los días en el calendario. Luego completa la tabla: cada columna es un hotel. El precio es lo que paga el cliente (incluye tasas). Vacío = ese hotel no se vende esa fecha.</p>
             <div class="xp-gen">
-                <div class="ui-f"><label>Desde</label><input type="date" id="gDesde"></div>
-                <div class="ui-f"><label>Hasta</label><input type="date" id="gHasta"></div>
+                <div class="ui-f"><label>Desde <em>mañana o después</em></label><input type="date" id="gDesde" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")"></div>
+                <div class="ui-f"><label>Hasta</label><input type="date" id="gHasta" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")"></div>
                 <div class="ui-f"><label>Noches</label><input type="number" id="gNoches" min="1" max="60" value="7"><span class="msg"></span></div>
                 <div class="ui-f"><label>Precio total <em>opcional</em></label><div class="ui-money"><b class="sim">€</b><input type="number" id="gPrecio" min="0" step="1" placeholder="1290"></div></div>
                 <div class="ui-f"><label>Solo los días</label><div class="xp-dias" id="gDias">

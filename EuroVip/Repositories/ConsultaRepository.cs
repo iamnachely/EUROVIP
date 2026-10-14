@@ -164,6 +164,15 @@ namespace EuroVip.Repositories
             var nuevos = new List<int>();
             using var cn = _db.Conexion();
             await cn.OpenAsync();
+
+            // Ninguna copia puede quedar con salida de hoy o pasada (no se vendería ni saldría en la web).
+            var primera = await cn.ExecuteScalarAsync<DateTime?>(@"
+                SELECT MIN(f) FROM (SELECT sd.desde AS f FROM Eurovip.servicio_detalle sd WHERE sd.id_servicio IN @ids
+                                    UNION ALL SELECT sc.desde FROM Eurovip.servicio_circuito sc WHERE sc.id_servicio IN @ids) x", new { ids });
+            if (primera is not null && primera.Value.Date.AddDays(Math.Min(d.Dias, d.Dias * veces)) <= DateTime.Today)
+                throw new InvalidOperationException($"Alguna copia quedaría con salida de hoy o pasada ({primera.Value.Date.AddDays(Math.Min(d.Dias, d.Dias * veces)):dd/MM/yyyy}). " +
+                    $"Las salidas tienen que ser desde mañana ({DateTime.Today.AddDays(1):dd/MM/yyyy}): cambia los días a mover.");
+
             using (var tx = cn.BeginTransaction())
             {
                 foreach (var id in ids)

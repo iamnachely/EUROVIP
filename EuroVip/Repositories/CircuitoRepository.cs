@@ -70,14 +70,20 @@ namespace EuroVip.Repositories
                        (SELECT STRING_AGG(x.id_pais, ',') FROM (SELECT DISTINCT cd.id_pais FROM Eurovip.circuito_destino cd WHERE cd.nombre_circuito = c.nombre_circuito AND cd.id_idioma = c.id_idioma) x) AS Paises,
                        (SELECT COUNT(*) FROM Eurovip.servicio_circuito_alojamiento h WHERE h.nombre_circuito = c.nombre_circuito AND h.id_idioma = c.id_idioma) AS Hoteles,
                        (SELECT COUNT(*) FROM Eurovip.circuito_itinerario d WHERE d.nombre_circuito = c.nombre_circuito AND d.id_idioma = c.id_idioma) AS Dias,
-                       ISNULL(sal.Salidas, 0) AS Salidas, ISNULL(sal.Activas, 0) AS SalidasActivas, sal.Proxima AS ProximaSalida, sal.Desde AS PrecioDesde
+                       ISNULL(sal.Salidas, 0) AS Salidas, ISNULL(sal.Activas, 0) AS SalidasActivas, sal.Proxima AS ProximaSalida, sal.Desde AS PrecioDesde,
+                       sal.Ultima AS UltimaSalida,
+                       CAST(CASE WHEN EXISTS (SELECT 1 FROM Eurovip.inicio i JOIN Eurovip.servicio_circuito sci ON sci.id_servicio = i.id_servicio
+                                              WHERE i.tipo_servicio = 'CIRCUITO' AND ISNULL(i.estado, 1) = 1 AND sci.nombre_circuito = c.nombre_circuito)
+                                 THEN 1 ELSE 0 END AS bit) AS EnHome
                 FROM Eurovip.circuito c
                 LEFT JOIN Eurovip.proveedor p ON p.id_proveedor = c.id_proveedor
                 OUTER APPLY (
                     SELECT COUNT(*) AS Salidas,
                            SUM(CASE WHEN s.activo = 1 THEN 1 ELSE 0 END) AS Activas,
-                           MIN(CASE WHEN s.activo = 1 AND sc.desde >= CAST(GETDATE() AS date) THEN sc.desde END) AS Proxima,
-                           MIN(CASE WHEN s.activo = 1 AND sc.desde >= CAST(GETDATE() AS date) THEN Eurovip.fnPrecioWeb(s.id_servicio) END) AS Desde
+                           -- a la venta = desde mañana (las de hoy o pasadas no salen en la web)
+                           MIN(CASE WHEN s.activo = 1 AND sc.desde > CAST(GETDATE() AS date) THEN sc.desde END) AS Proxima,
+                           MIN(CASE WHEN s.activo = 1 AND sc.desde > CAST(GETDATE() AS date) THEN Eurovip.fnPrecioWeb(s.id_servicio) END) AS Desde,
+                           MAX(CASE WHEN s.activo = 1 THEN sc.desde END) AS Ultima
                     FROM Eurovip.servicio_circuito sc JOIN Eurovip.servicio s ON s.id_servicio = sc.id_servicio
                     WHERE sc.nombre_circuito = c.nombre_circuito AND sc.id_idoma = c.id_idioma
                 ) sal
