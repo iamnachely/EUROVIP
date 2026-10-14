@@ -11,12 +11,21 @@ namespace EuroVip.Services
     {
         private readonly IHttpClientFactory _http;
         private readonly IConfiguration _cfg;
+        private readonly ILogger<WhatsAppService> _logger;
 
-        public WhatsAppService(IHttpClientFactory http, IConfiguration cfg)
+        public WhatsAppService(IHttpClientFactory http, IConfiguration cfg, ILogger<WhatsAppService> logger)
         {
             _http = http;
             _cfg = cfg;
+            _logger = logger;
         }
+
+        /// <summary>
+        /// Plantilla aprobada por Meta con cabecera de imagen y {{1}} = nombre (la misma "cliente" que usa BackTiTan).
+        /// Sin plantilla, WhatsApp solo entrega a quien escribió en las últimas 24 h (Meta responde OK pero no llega).
+        /// </summary>
+        private string PlantillaFlyer => _cfg["WhatsApp:PlantillaFlyer"] is { Length: > 0 } p ? p : "cliente";
+        private string IdiomaPlantilla => _cfg["WhatsApp:IdiomaPlantilla"] is { Length: > 0 } i ? i : "en";
 
         private string Token => _cfg["WhatsApp:AccessToken"] ?? "";
         private string NumeroId => _cfg["WhatsApp:PhoneNumberId"] ?? "";
@@ -71,10 +80,31 @@ namespace EuroVip.Services
         public async Task EnviarImagenAsync(string numero, string mediaId) =>
             await Mandar(new { messaging_product = "whatsapp", to = numero, type = "image", image = new { id = mediaId } });
 
+        /// <summary>Flyer con la plantilla aprobada: llega aunque el contacto no haya escrito antes.</summary>
+        public async Task EnviarFlyerAsync(string numero, string mediaId, string? nombre) =>
+            await Mandar(new
+            {
+                messaging_product = "whatsapp",
+                to = numero,
+                type = "template",
+                template = new
+                {
+                    name = PlantillaFlyer,
+                    language = new { code = IdiomaPlantilla },
+                    components = new object[]
+                    {
+                        new { type = "header", parameters = new object[] { new { type = "image", image = new { id = mediaId } } } },
+                        new { type = "body", parameters = new object[] { new { type = "text", text = string.IsNullOrWhiteSpace(nombre) ? "viajero" : nombre.Trim().Split(' ')[0] } } }
+                    }
+                }
+            });
+
         private async Task Mandar(object cuerpo)
         {
             var r = await Cliente().PostAsync($"{Base}/messages", new StringContent(JsonSerializer.Serialize(cuerpo), Encoding.UTF8, "application/json"));
-            if (!r.IsSuccessStatusCode) throw new InvalidOperationException($"Meta {(int)r.StatusCode}: {Error(await r.Content.ReadAsStringAsync())}");
+            var resp = await r.Content.ReadAsStringAsync();
+            _logger.LogInformation("WhatsApp {Status}: {Respuesta}", (int)r.StatusCode, resp.Length > 400 ? resp[..400] : resp);
+            if (!r.IsSuccessStatusCode) throw new InvalidOperationException($"Meta {(int)r.StatusCode}: {Error(resp)}");
         }
 
         private static string Error(string json)
@@ -131,8 +161,10 @@ namespace EuroVip.Services
                         lock (_lock) _estado.Actual = nombre ?? numero;
                         try
                         {
+                            // Primero los flyers con la plantilla aprobada (siempre llegan); el texto libre después,
+                            // porque WhatsApp solo lo entrega si el contacto escribió en las últimas 24 h.
+                            foreach (var m in medias) { await wa.EnviarFlyerAsync(numero, m, nombre); await Task.Delay(300, ct); }
                             if (!string.IsNullOrWhiteSpace(texto)) { await wa.EnviarTextoAsync(numero, texto.Replace("{nombre}", (nombre ?? "").Split(' ')[0])); await Task.Delay(300, ct); }
-                            foreach (var m in medias) { await wa.EnviarImagenAsync(numero, m); await Task.Delay(300, ct); }
                             lock (_lock) _estado.Enviados++;
                         }
                         catch (OperationCanceledException) { throw; }
