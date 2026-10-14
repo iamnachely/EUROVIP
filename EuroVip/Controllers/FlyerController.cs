@@ -79,13 +79,14 @@ namespace EuroVip.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> Generar([FromQuery] bool actualizar = true)
+        public async Task<IActionResult> Generar([FromQuery] bool actualizar = true, [FromQuery] string? plantilla = null)
         {
             try
             {
                 if (actualizar) await _repo.ActualizarPreciosAsync();
-                var imgs = await _img.GenerarAsync(await _repo.DestinosAsync());
-                await Auditar("Flyer_Generar", new { imagenes = imgs.Select(i => i.Archivo) });
+                var p = FlyerPlantillas.Buscar(plantilla);
+                var imgs = await _img.GenerarAsync(await _repo.DestinosAsync(), p.Clave);
+                await Auditar("Flyer_Generar", new { plantilla = p.Clave, imagenes = imgs.Select(i => i.Archivo) });
                 return Json(new { ok = true, imagenes = imgs, mensaje = imgs.Count == 0 ? "No se generó ningún flyer: ningún destino tiene precios." : $"Se generaron {imgs.Count} flyer(s)." });
             }
             catch (Exception ex)
@@ -93,6 +94,21 @@ namespace EuroVip.Controllers
                 _logger.LogError(ex, "Error generando flyers");
                 return StatusCode(500, new { mensaje = "No se pudieron generar: " + ex.Message });
             }
+        }
+
+        // ---------------- plantillas ----------------
+        [HttpGet]
+        public IActionResult Plantillas() => Json(FlyerPlantillas.Todas);
+
+        /// <summary>Vista previa (PNG) de una plantilla: con un destino que tenga precios o, si no hay, con datos de ejemplo.</summary>
+        [HttpGet, ResponseCache(Duration = 60, Location = ResponseCacheLocation.Client)]
+        public async Task<IActionResult> Muestra(string? plantilla, string? destino)
+        {
+            var p = FlyerPlantillas.Buscar(plantilla);
+            var destinos = await _repo.DestinosAsync();
+            var d = destinos.FirstOrDefault(x => x.Hoteles.Count > 0 && (destino is null || string.Equals(x.Nombre_Destino, destino, StringComparison.OrdinalIgnoreCase)))
+                    ?? destinos.FirstOrDefault(x => x.Hoteles.Count > 0);
+            return File(_img.Muestra(p.Clave, d), "image/png");
         }
 
         [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(10_000_000)]
