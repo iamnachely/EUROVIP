@@ -2811,6 +2811,39 @@ GO
                ciudades distintas (Toledo ES/US, Boston GB/US…) o Baleares/Canarias (BB/CC) frente
                a España (ES).
 
+   14/10/2026  LIMPIEZA 2 (a pedido de la usuaria: "resolver" lo que marcaba "Datos a revisar").
+               Solo servidor 93, esquema Eurovip. Script al final ("LIMPIEZA 2 14/10/2026");
+               se ensayó con ROLLBACK y luego se aplicó.
+               • Proveedores: espacios de más fuera; 44 repetidos borrados (las aerolíneas estaban
+                 dos veces: "AIR EUROPA " tour operador y "Air Europa" UX); queda el que se usa o la
+                 aerolínea con código IATA. Borrada la fila de relleno "Elegir un Proveedor".
+               • Habitaciones: sin tabuladores, espacios dobles, "." delante ni " ." al final; las 25
+                 que quedaron repetidas en el mismo hotel se borraron (queda la que usan las ofertas)
+                 y 1 sin letras. Quedan 47.805.
+               • Destinos "MX" y "TH" borrados con sus 2 filas de home_contenido (memoria de
+                 posición de tarjetas que ya no existen).
+               • 85 países que usaban las estaciones y no estaban en Países (Kazajistán, Pakistán,
+                 Islas Caimán…) agregados con nombre en español; las de AG pasan a AB (Antigua y
+                 Barbuda ya existía con ese código). Quedan 225 países.
+               • Destinos en varios países: queda con su nombre el que más se usa; 22 de España que
+                 eran el mismo sitio que Baleares/Canarias se unieron (Cala Millor, Maspalomas…);
+                 32 sin uso se borraron (Toledo ES, Boston GB…); 2 en uso se renombraron
+                 «Newcastle (GB)» y «Vitoria (BR)». Las referencias (hoteles, estaciones, ofertas,
+                 Home…) se movieron igual.
+               • Estaciones: se crearon 2.593 destinos que usaban y no existían; 197 estaciones de
+                 ciudades que ya existían en otro país pasan a «Nombre (País)» (ej. «Alexandria (US)»).
+               • Resultado: 0 proveedores repetidos, 0 habitaciones repetidas o con espacios,
+                 0 destinos en varios países, 0 estaciones sin destino o país; 9.843 destinos.
+               • COPIAS DE SEGURIDAD: tablas Eurovip.*_respaldo_20261014b.
+
+   14/10/2026  MONEDA EUR -> DOP (a pedido de la usuaria: "todo lo cargado con EUR cambiarlo a DOP
+               en todas las tablas"). Solo se cambió el código; los importes NO se convirtieron.
+               310 filas: servicio 172, home_contenido 105, alojamiento_destino 18, inicio 6,
+               flyer_config 6, alojamiento_circuito 3. Quedan 0 en EUR. La moneda EUR sigue en el
+               catálogo "moneda". Copias: Eurovip.*_respaldo_20261014c. Script al final ("EUR -> DOP").
+               OJO: varias pantallas (cargas de ofertas y circuitos, Flyers, HomeWeb) proponen EUR
+               por defecto; si no se cambia, lo nuevo se seguirá cargando en EUR.
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
@@ -2969,4 +3002,247 @@ UNION ALL SELECT 'hoteles basura', COUNT(*) FROM Eurovip.alojamiento WHERE nombr
 
 SELECT a.id_alojamiento, a.nombre, a.id_destino, a.id_pais FROM Eurovip.alojamiento a WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = a.id_destino AND d.id_pais = a.id_pais);
 
+COMMIT;
+
+
+/* ##########################################################################################
+   LIMPIEZA 2 14/10/2026 — proveedores, habitaciones, destinos en varios países y estaciones
+   (explicación en la BITÁCORA). Script tal cual se aplicó (antes se ensayó con ROLLBACK).
+   ########################################################################################## */
+/* Limpieza 2 de datos Eurovip (servidor 93, TropitoursVDT, esquema Eurovip) — 14/10/2026
+   Resuelve lo que marcaba "Datos a revisar": proveedores repetidos, habitaciones con espacios/símbolos,
+   destinos "MX"/"TH", destinos en varios países y estaciones con destino o país inexistente.
+   ViajeVDT (10.10.10.29) NO se toca. Todo en una transacción; al final COMMIT o ROLLBACK (ensayo). */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRAN;
+
+/* ---------- 0) Copias de seguridad de las tablas que se tocan ---------- */
+DECLARE @t sysname, @sql nvarchar(max);
+DECLARE r CURSOR LOCAL FAST_FORWARD FOR SELECT v FROM (VALUES ('proveedor'),('servicio'),('circuito'),('alojamiento_habitacion'),('servicio_habitacion'),('destino'),('estacion'),('pais'),
+    ('home_contenido'),('alojamiento'),('circuito_destino'),('servicio_destino'),('servicio_origen'),('servicio_circuito'),('inicio'),('alojamiento_destino'),('alojamiento_circuito')) x(v);
+OPEN r; FETCH NEXT FROM r INTO @t;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF OBJECT_ID('Eurovip.' + @t + '_respaldo_20261014b') IS NULL
+    BEGIN SET @sql = N'SELECT * INTO Eurovip.' + QUOTENAME(@t + '_respaldo_20261014b') + N' FROM Eurovip.' + QUOTENAME(@t) + N';'; EXEC sp_executesql @sql; END
+    FETCH NEXT FROM r INTO @t;
+END
+CLOSE r; DEALLOCATE r;
+PRINT 'Copias de seguridad creadas (_respaldo_20261014b).';
+
+/* ---------- 1) Proveedores ---------- */
+-- 1a) Nombres sin espacios de más.
+WHILE EXISTS (SELECT 1 FROM Eurovip.proveedor WHERE nombre LIKE '%  %') UPDATE Eurovip.proveedor SET nombre = REPLACE(nombre, '  ', ' ') WHERE nombre LIKE '%  %';
+UPDATE Eurovip.proveedor SET nombre = LTRIM(RTRIM(nombre)) WHERE nombre LIKE ' %' OR nombre LIKE '% ';
+-- 1b) Repetidos (mismo nombre): queda el que se usa; si ninguno, la aerolínea (código IATA); lo que apunte a los otros pasa al que queda.
+IF OBJECT_ID('tempdb..#prov') IS NOT NULL DROP TABLE #prov;
+;WITH u AS (
+    SELECT p.id_proveedor, p.nombre, p.id_tipo_proveedor,
+           (SELECT COUNT(*) FROM Eurovip.servicio s WHERE s.id_Proveedor = p.id_proveedor) + (SELECT COUNT(*) FROM Eurovip.circuito c WHERE c.id_proveedor = p.id_proveedor)
+         + (SELECT COUNT(*) FROM Eurovip.servicio_itinerario i WHERE i.id_proveedor = p.id_proveedor) AS usos
+    FROM Eurovip.proveedor p),
+g AS (SELECT *, FIRST_VALUE(id_proveedor) OVER (PARTITION BY nombre ORDER BY usos DESC, CASE WHEN id_tipo_proveedor = 'AEROLINEA' THEN 0 ELSE 1 END, id_proveedor) queda,
+             COUNT(*) OVER (PARTITION BY nombre) n FROM u)
+SELECT id_proveedor AS sobra, queda INTO #prov FROM g WHERE n > 1 AND id_proveedor <> queda;
+UPDATE s SET id_Proveedor = x.queda FROM Eurovip.servicio s JOIN #prov x ON x.sobra = s.id_Proveedor;
+UPDATE c SET id_proveedor = x.queda FROM Eurovip.circuito c JOIN #prov x ON x.sobra = c.id_proveedor;
+UPDATE i SET id_proveedor = x.queda FROM Eurovip.servicio_itinerario i JOIN #prov x ON x.sobra = i.id_proveedor;
+DELETE p FROM Eurovip.proveedor p JOIN #prov x ON x.sobra = p.id_proveedor;
+PRINT CONCAT('1b) Proveedores repetidos borrados: ', @@ROWCOUNT);
+-- 1c) Fila de relleno "Elegir un Proveedor" (no es un proveedor), si nadie la usa.
+DELETE p FROM Eurovip.proveedor p WHERE p.nombre = 'Elegir un Proveedor'
+   AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio s WHERE s.id_Proveedor = p.id_proveedor)
+   AND NOT EXISTS (SELECT 1 FROM Eurovip.circuito c WHERE c.id_proveedor = p.id_proveedor)
+   AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_itinerario i WHERE i.id_proveedor = p.id_proveedor);
+PRINT CONCAT('1c) "Elegir un Proveedor" borrado: ', @@ROWCOUNT);
+
+/* ---------- 2) Habitaciones ---------- */
+-- 2a) Tabuladores/saltos -> espacio, sin espacios dobles ni al principio/final, sin "." o "-" delante ni " ." al final.
+UPDATE Eurovip.alojamiento_habitacion SET nombre = REPLACE(REPLACE(REPLACE(nombre, CHAR(9), ' '), CHAR(13), ' '), CHAR(10), ' ')
+WHERE nombre LIKE '%' + CHAR(9) + '%' OR nombre LIKE '%' + CHAR(13) + '%' OR nombre LIKE '%' + CHAR(10) + '%';
+WHILE EXISTS (SELECT 1 FROM Eurovip.alojamiento_habitacion WHERE nombre LIKE '%  %') UPDATE Eurovip.alojamiento_habitacion SET nombre = REPLACE(nombre, '  ', ' ') WHERE nombre LIKE '%  %';
+UPDATE Eurovip.alojamiento_habitacion SET nombre = LTRIM(RTRIM(nombre)) WHERE nombre LIKE ' %' OR nombre LIKE '% ';
+WHILE EXISTS (SELECT 1 FROM Eurovip.alojamiento_habitacion WHERE nombre LIKE '[.-]%') UPDATE Eurovip.alojamiento_habitacion SET nombre = LTRIM(STUFF(nombre, 1, 1, '')) WHERE nombre LIKE '[.-]%';
+UPDATE Eurovip.alojamiento_habitacion SET nombre = RTRIM(LEFT(nombre, LEN(nombre) - 1)) WHERE nombre LIKE '% .';
+PRINT '2a) Nombres de habitación limpiados.';
+-- 2b) Al limpiar pueden quedar repetidas en el mismo hotel: queda la que usan las ofertas; si no, la que tiene código Newblue; si no, la de número más bajo.
+IF OBJECT_ID('tempdb..#hab') IS NOT NULL DROP TABLE #hab;
+;WITH g AS (
+    SELECT h.id_alojamiento, h.id_idioma, h.id_habitacion,
+           FIRST_VALUE(h.id_habitacion) OVER (PARTITION BY h.id_alojamiento, h.id_idioma, h.nombre ORDER BY
+               CASE WHEN EXISTS (SELECT 1 FROM Eurovip.servicio_habitacion s WHERE s.id_alojamiento = h.id_alojamiento AND s.id_habitacion = h.id_habitacion AND s.id_idioma = h.id_idioma) THEN 0 ELSE 1 END,
+               CASE WHEN ISNULL(h.codigo_newblue, '') <> '' THEN 0 ELSE 1 END, h.id_habitacion) queda
+    FROM Eurovip.alojamiento_habitacion h)
+SELECT * INTO #hab FROM g WHERE id_habitacion <> queda;
+UPDATE s SET id_habitacion = x.queda FROM Eurovip.servicio_habitacion s
+JOIN #hab x ON x.id_alojamiento = s.id_alojamiento AND x.id_habitacion = s.id_habitacion AND x.id_idioma = s.id_idioma;
+DELETE h FROM Eurovip.alojamiento_habitacion h JOIN #hab x ON x.id_alojamiento = h.id_alojamiento AND x.id_habitacion = h.id_habitacion AND x.id_idioma = h.id_idioma;
+PRINT CONCAT('2b) Habitaciones repetidas tras limpiar, borradas: ', @@ROWCOUNT);
+-- 2c) Habitaciones sin ninguna letra (ej. "12") que ninguna oferta usa.
+DELETE h FROM Eurovip.alojamiento_habitacion h
+WHERE h.nombre NOT LIKE '%[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]%'
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_habitacion s WHERE s.id_alojamiento = h.id_alojamiento AND s.id_habitacion = h.id_habitacion AND s.id_idioma = h.id_idioma);
+PRINT CONCAT('2c) Habitaciones sin letras borradas: ', @@ROWCOUNT);
+
+/* ---------- 3) Destinos "MX" y "TH" (códigos de país, no destinos) ---------- */
+-- Solo los usaban 2 filas de home_contenido (memoria de posición de tarjetas que no existen: ninguna tarjeta de inicio los usa).
+DELETE FROM Eurovip.home_contenido WHERE id_destino IN ('MX', 'TH') AND NOT EXISTS (SELECT 1 FROM Eurovip.inicio i WHERE i.id_destino IN ('MX', 'TH'));
+DELETE d FROM Eurovip.destino d WHERE d.id_destino IN ('MX', 'TH')
+   AND NOT EXISTS (SELECT 1 FROM Eurovip.alojamiento a WHERE a.id_destino = d.id_destino)
+   AND NOT EXISTS (SELECT 1 FROM Eurovip.estacion e WHERE e.id_destino = d.id_destino)
+   AND NOT EXISTS (SELECT 1 FROM Eurovip.home_contenido h WHERE h.id_destino = d.id_destino);
+PRINT CONCAT('3) Destinos MX/TH borrados: ', @@ROWCOUNT);
+
+/* ---------- 4) Países que usaban las estaciones y no estaban en Países ---------- */
+DECLARE @nuevos TABLE (id_pais char(2), nombre nvarchar(30), continente nvarchar(15));
+INSERT @nuevos VALUES
+('HK', N'Hong Kong', N'Asia'), ('UM', N'Islas Ultramarinas de EE.UU.', N'Oceania'), ('KZ', N'Kazajistán', N'Asia'), ('UG', N'Uganda', N'Africa'),
+('FK', N'Islas Malvinas', N'America'), ('AS', N'Samoa Americana', N'Oceania'), ('RW', N'Ruanda', N'Africa'), ('AI', N'Anguila', N'America'),
+('KH', N'Camboya', N'Asia'), ('FM', N'Micronesia', N'Oceania'), ('KN', N'San Cristóbal y Nieves', N'America'), ('KY', N'Islas Caimán', N'America'),
+('BY', N'Bielorrusia', N'Europa'), ('SD', N'Sudán', N'Africa'), ('GY', N'Guyana', N'America'), ('WS', N'Samoa', N'Oceania'),
+('ML', N'Malí', N'Africa'), ('VG', N'Islas Vírgenes Británicas', N'America'), ('PS', N'Palestina', N'Asia'), ('KI', N'Kiribati', N'Oceania'),
+('TM', N'Turkmenistán', N'Asia'), ('BM', N'Bermudas', N'America'), ('TV', N'Tuvalu', N'Oceania'), ('ER', N'Eritrea', N'Africa'),
+('GE', N'Georgia', N'Asia'), ('NU', N'Niue', N'Oceania'), ('RS', N'Serbia', N'Europa'), ('ZM', N'Zambia', N'Africa'),
+('BF', N'Burkina Faso', N'Africa'), ('GA', N'Gabón', N'Africa'), ('LS', N'Lesoto', N'Africa'), ('MM', N'Myanmar', N'Asia'),
+('BN', N'Brunéi', N'Asia'), ('TJ', N'Tayikistán', N'Asia'), ('NF', N'Isla Norfolk', N'Oceania'), ('DZ', N'Argelia', N'Africa'),
+('MD', N'Moldavia', N'Europa'), ('GW', N'Guinea-Bisáu', N'Africa'), ('NA', N'Namibia', N'Africa'), ('PK', N'Pakistán', N'Asia'),
+('PW', N'Palaos', N'Oceania'), ('MN', N'Mongolia', N'Asia'), ('SX', N'Sint Maarten', N'America'), ('IQ', N'Irak', N'Asia'),
+('BW', N'Botsuana', N'Africa'), ('GI', N'Gibraltar', N'Europa'), ('TG', N'Togo', N'Africa'), ('ET', N'Etiopía', N'Africa'),
+('CF', N'República Centroafricana', N'Africa'), ('AO', N'Angola', N'Africa'), ('LC', N'Santa Lucía', N'America'), ('MW', N'Malaui', N'Africa'),
+('CK', N'Islas Cook', N'Oceania'), ('YT', N'Mayotte', N'Africa'), ('GL', N'Groenlandia', N'America'), ('GU', N'Guam', N'Oceania'),
+('NR', N'Nauru', N'Oceania'), ('TD', N'Chad', N'Africa'), ('YE', N'Yemen', N'Asia'), ('KM', N'Comoras', N'Africa'),
+('GD', N'Granada', N'America'), ('MP', N'Islas Marianas del Norte', N'Oceania'), ('TO', N'Tonga', N'Oceania'), ('LR', N'Liberia', N'Africa'),
+('VC', N'San Vicente y las Granadinas', N'America'), ('CD', N'Congo (Rep. Democrática)', N'Africa'), ('KG', N'Kirguistán', N'Asia'), ('AN', N'Antillas Neerlandesas', N'America'),
+('DJ', N'Yibuti', N'Africa'), ('MH', N'Islas Marshall', N'Oceania'), ('NE', N'Níger', N'Africa'), ('TC', N'Islas Turcas y Caicos', N'America'),
+('GQ', N'Guinea Ecuatorial', N'Africa'), ('RE', N'Reunión', N'Africa'), ('BJ', N'Benín', N'Africa'), ('BT', N'Bután', N'Asia'),
+('CI', N'Costa de Marfil', N'Africa'), ('TL', N'Timor Oriental', N'Asia'), ('AG', N'Antigua y Barbuda', N'America'), ('CG', N'República del Congo', N'Africa'),
+('KP', N'Corea del Norte', N'Asia'), ('DM', N'Dominica', N'America'), ('GN', N'Guinea', N'Africa'), ('LA', N'Laos', N'Asia'),
+('SR', N'Surinam', N'America'), ('PG', N'Papúa Nueva Guinea', N'Oceania'), ('VU', N'Vanuatu', N'Oceania'), ('HT', N'Haití', N'America'),
+('AZ', N'Azerbaiyán', N'Asia'), ('CX', N'Isla de Navidad', N'Oceania'), ('SZ', N'Esuatini', N'Africa')
+;
+-- Si el país ya existe con otro código (ej. Antigua y Barbuda = AB), las estaciones pasan a ese código.
+UPDATE e SET id_pais = p.id_pais
+FROM Eurovip.estacion e JOIN @nuevos n ON n.id_pais = e.id_pais
+JOIN Eurovip.pais p ON p.nombre = n.nombre AND p.id_idioma = 'ES' AND p.id_pais <> n.id_pais
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.estacion x WHERE x.id_estacion = e.id_estacion AND x.id_destino = e.id_destino AND x.id_idioma = e.id_idioma AND x.id_pais = p.id_pais);
+INSERT INTO Eurovip.pais (id_pais, id_idioma, nombre_continente, nombre)
+SELECT n.id_pais, 'ES', n.continente, n.nombre FROM @nuevos n
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.pais p WHERE p.id_pais = n.id_pais AND p.id_idioma = 'ES')
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.pais p WHERE p.nombre = n.nombre AND p.id_idioma = 'ES')
+  AND EXISTS (SELECT 1 FROM Eurovip.estacion e WHERE e.id_pais = n.id_pais);
+PRINT CONCAT('4) Países agregados: ', @@ROWCOUNT);
+
+/* ---------- Dónde se usa un destino (nombre + país) en otras tablas ---------- */
+DECLARE @refs TABLE (tabla sysname, colNombre sysname, colPais sysname);
+INSERT @refs VALUES ('alojamiento','id_destino','id_pais'), ('estacion','id_destino','id_pais'), ('circuito_destino','id_destino','id_pais'),
+    ('servicio_destino','destino','id_pais_destino'), ('servicio_origen','origen','id_pais_origen'), ('servicio_circuito','origen','id_pais_origen'),
+    ('inicio','id_destino','id_paisDestino'), ('inicio','origen','id_pais_origen'), ('alojamiento_destino','id_destino','id_pais_destino'),
+    ('alojamiento_destino','id_origen','id_pais_origen'), ('alojamiento_circuito','id_destino','id_pais_destino'), ('alojamiento_circuito','id_origen','id_pais_origen'),
+    ('home_contenido','origen','id_pais_origen'), ('servicio_itinerario','origen','id_pais_origen'), ('servicio_itinerario','destino','id_pais_destino');
+DECLARE @tab sysname, @cn sysname, @cp sysname;
+
+/* ---------- 5) Destinos con el mismo nombre en varios países ---------- */
+-- Queda con su nombre el que más se usa. Los demás: si es el mismo sitio (España frente a Baleares/Canarias) se unen;
+-- si nadie los usa se borran; si se usan, pasan a llamarse «Nombre (País)», ej. «Toledo (US)».
+IF OBJECT_ID('tempdb..#dup') IS NOT NULL DROP TABLE #dup;
+CREATE TABLE #dup (id_destino varchar(30), id_pais char(2), n int DEFAULT 0, queda_pais char(2) NULL, accion varchar(10) NULL, nuevo varchar(30) NULL);
+INSERT #dup (id_destino, id_pais) SELECT d.id_destino, d.id_pais FROM Eurovip.destino d
+WHERE d.id_idioma = 'ES' AND EXISTS (SELECT 1 FROM Eurovip.destino x WHERE x.id_destino = d.id_destino AND x.id_idioma = 'ES' AND x.id_pais <> d.id_pais);
+DECLARE c1 CURSOR LOCAL FAST_FORWARD FOR SELECT tabla, colNombre, colPais FROM @refs;
+OPEN c1; FETCH NEXT FROM c1 INTO @tab, @cn, @cp;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @sql = N'UPDATE u SET n = n + (SELECT COUNT(*) FROM Eurovip.' + QUOTENAME(@tab) + N' x WHERE x.' + QUOTENAME(@cn) + N' = u.id_destino AND x.' + QUOTENAME(@cp) + N' = u.id_pais) FROM #dup u;';
+    EXEC sp_executesql @sql;
+    FETCH NEXT FROM c1 INTO @tab, @cn, @cp;
+END
+CLOSE c1; DEALLOCATE c1;
+;WITH k AS (SELECT *, FIRST_VALUE(id_pais) OVER (PARTITION BY id_destino ORDER BY n DESC,
+               CASE WHEN id_pais IN ('BB','CC') THEN 0 WHEN id_pais = 'ES' THEN 1 ELSE 2 END, id_pais) qp FROM #dup)
+UPDATE k SET queda_pais = qp;
+UPDATE #dup SET accion = CASE
+        WHEN id_pais = queda_pais THEN 'queda'
+        WHEN (id_pais = 'ES' AND queda_pais IN ('BB','CC')) OR (queda_pais = 'ES' AND id_pais IN ('BB','CC')) THEN 'unir'
+        WHEN n = 0 THEN 'borrar'
+        ELSE 'renombrar' END;
+UPDATE #dup SET nuevo = LEFT(RTRIM(id_destino), 25) + ' (' + id_pais + ')' WHERE accion = 'renombrar';
+-- unir: las referencias pasan al país del que queda (en estaciones, si ya existe igual con ese país, sobra la vieja)
+DELETE e FROM Eurovip.estacion e JOIN #dup u ON u.accion = 'unir' AND e.id_destino = u.id_destino AND e.id_pais = u.id_pais
+WHERE EXISTS (SELECT 1 FROM Eurovip.estacion x WHERE x.id_estacion = e.id_estacion AND x.id_destino = e.id_destino AND x.id_idioma = e.id_idioma AND x.id_pais = u.queda_pais);
+DECLARE c2 CURSOR LOCAL FAST_FORWARD FOR SELECT tabla, colNombre, colPais FROM @refs;
+OPEN c2; FETCH NEXT FROM c2 INTO @tab, @cn, @cp;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @sql = N'UPDATE x SET ' + QUOTENAME(@cp) + N' = u.queda_pais FROM Eurovip.' + QUOTENAME(@tab) + N' x JOIN #dup u ON u.accion = ''unir'' AND x.' + QUOTENAME(@cn) + N' = u.id_destino AND x.' + QUOTENAME(@cp) + N' = u.id_pais;'
+             + N'UPDATE x SET ' + QUOTENAME(@cn) + N' = u.nuevo FROM Eurovip.' + QUOTENAME(@tab) + N' x JOIN #dup u ON u.accion = ''renombrar'' AND x.' + QUOTENAME(@cn) + N' = u.id_destino AND x.' + QUOTENAME(@cp) + N' = u.id_pais;';
+    EXEC sp_executesql @sql;
+    FETCH NEXT FROM c2 INTO @tab, @cn, @cp;
+END
+CLOSE c2; DEALLOCATE c2;
+UPDATE d SET id_destino = u.nuevo FROM Eurovip.destino d JOIN #dup u ON u.accion = 'renombrar' AND d.id_destino = u.id_destino AND d.id_pais = u.id_pais AND d.id_idioma = 'ES';
+DELETE d FROM Eurovip.destino d JOIN #dup u ON u.accion IN ('unir','borrar') AND d.id_destino = u.id_destino AND d.id_pais = u.id_pais AND d.id_idioma = 'ES';
+DECLARE @r1 int = (SELECT COUNT(*) FROM #dup WHERE accion = 'unir'), @r2 int = (SELECT COUNT(*) FROM #dup WHERE accion = 'borrar'), @r3 int = (SELECT COUNT(*) FROM #dup WHERE accion = 'renombrar');
+PRINT CONCAT('5) Destinos en varios países: unidos ', @r1, ', borrados (sin uso) ', @r2, ', renombrados ', @r3);
+
+/* ---------- 6) Estaciones cuyo destino no existe en su país ---------- */
+WHILE EXISTS (SELECT 1 FROM Eurovip.estacion WHERE id_destino LIKE '%  %') UPDATE Eurovip.estacion SET id_destino = REPLACE(id_destino, '  ', ' ') WHERE id_destino LIKE '%  %';
+UPDATE Eurovip.estacion SET id_destino = LTRIM(RTRIM(id_destino)) WHERE id_destino LIKE ' %' OR id_destino LIKE '% ';
+IF OBJECT_ID('tempdb..#est') IS NOT NULL DROP TABLE #est;
+SELECT e.id_destino, e.id_pais, COUNT(*) n, CAST(NULL AS varchar(30)) nuevo INTO #est FROM Eurovip.estacion e
+WHERE e.id_idioma = 'ES' AND NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = e.id_destino AND d.id_pais = e.id_pais AND d.id_idioma = 'ES')
+GROUP BY e.id_destino, e.id_pais;
+;WITH k AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY id_destino ORDER BY n DESC, id_pais) rn FROM #est)
+UPDATE k SET nuevo = CASE WHEN rn = 1 AND NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = k.id_destino AND d.id_idioma = 'ES')
+                          THEN id_destino ELSE LEFT(id_destino, 25) + ' (' + id_pais + ')' END;
+DECLARE @maxid int = ISNULL((SELECT MAX(id) FROM Eurovip.destino), 0);
+INSERT INTO Eurovip.destino (id_destino, id_idioma, id_pais, id)
+SELECT f.nuevo, 'ES', f.id_pais, @maxid + ROW_NUMBER() OVER (ORDER BY f.nuevo) FROM #est f
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = f.nuevo AND d.id_pais = f.id_pais AND d.id_idioma = 'ES');
+PRINT CONCAT('6) Destinos creados para estaciones: ', @@ROWCOUNT);
+UPDATE e SET id_destino = f.nuevo FROM Eurovip.estacion e JOIN #est f ON f.id_destino = e.id_destino AND f.id_pais = e.id_pais WHERE f.nuevo <> f.id_destino;
+PRINT CONCAT('6) Estaciones con el destino renombrado «Nombre (País)»: ', @@ROWCOUNT);
+
+/* ---------- Comprobación final ---------- */
+SELECT 'proveedores repetidos' que, COUNT(*) n FROM (SELECT nombre FROM Eurovip.proveedor GROUP BY nombre HAVING COUNT(*) > 1) x
+UNION ALL SELECT 'proveedores', COUNT(*) FROM Eurovip.proveedor
+UNION ALL SELECT 'habitaciones con espacios', COUNT(*) FROM Eurovip.alojamiento_habitacion WHERE nombre LIKE ' %' OR nombre LIKE '% ' OR nombre LIKE '%  %'
+UNION ALL SELECT 'habitaciones repetidas', COUNT(*) FROM (SELECT 1 x FROM Eurovip.alojamiento_habitacion GROUP BY id_alojamiento, id_idioma, nombre HAVING COUNT(*) > 1) y
+UNION ALL SELECT 'habitaciones', COUNT(*) FROM Eurovip.alojamiento_habitacion
+UNION ALL SELECT 'destinos en varios paises', COUNT(*) FROM Eurovip.destino d WHERE EXISTS (SELECT 1 FROM Eurovip.destino x WHERE x.id_destino = d.id_destino AND x.id_idioma = d.id_idioma AND x.id_pais <> d.id_pais)
+UNION ALL SELECT 'destinos', COUNT(*) FROM Eurovip.destino
+UNION ALL SELECT 'estaciones sin destino en su pais', COUNT(*) FROM Eurovip.estacion e WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = e.id_destino AND d.id_pais = e.id_pais AND d.id_idioma = 'ES')
+UNION ALL SELECT 'estaciones con pais inexistente', COUNT(*) FROM Eurovip.estacion e WHERE NOT EXISTS (SELECT 1 FROM Eurovip.pais p WHERE p.id_pais = e.id_pais)
+UNION ALL SELECT 'paises', COUNT(*) FROM Eurovip.pais
+UNION ALL SELECT 'hoteles sin destino valido', COUNT(*) FROM Eurovip.alojamiento a WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = a.id_destino AND d.id_pais = a.id_pais)
+UNION ALL SELECT 'ofertas con destino invalido', COUNT(*) FROM Eurovip.servicio_destino s WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = s.destino AND d.id_pais = s.id_pais_destino);
+SELECT accion, COUNT(*) n, STRING_AGG(CAST(id_destino + ' ' + id_pais + ISNULL(' -> ' + nuevo, '') AS nvarchar(max)), ' | ') ejemplos FROM (SELECT TOP 100 PERCENT * FROM #dup) d GROUP BY accion;
+
+COMMIT;
+
+
+/* ##########################################################################################
+   EUR -> DOP 14/10/2026 (explicación en la BITÁCORA). Script tal cual se aplicó.
+   ########################################################################################## */
+/* EUR -> DOP en todas las tablas de Eurovip (servidor 93) — 14/10/2026. Solo cambia el código de moneda;
+   los importes NO se convierten. La moneda EUR sigue existiendo en el catálogo "moneda". */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRAN;
+DECLARE @t sysname, @c sysname, @sql nvarchar(max);
+DECLARE r CURSOR LOCAL FAST_FORWARD FOR
+    SELECT c.TABLE_NAME, c.COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS c
+    JOIN INFORMATION_SCHEMA.TABLES t ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME AND t.TABLE_TYPE = 'BASE TABLE'
+    WHERE c.TABLE_SCHEMA = 'Eurovip' AND c.COLUMN_NAME LIKE '%moneda%' AND c.TABLE_NAME NOT IN ('moneda')
+      AND c.TABLE_NAME NOT LIKE '%respaldo%' AND c.TABLE_NAME NOT LIKE '%borradas%';
+OPEN r; FETCH NEXT FROM r INTO @t, @c;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF OBJECT_ID('Eurovip.' + @t + '_respaldo_20261014c') IS NULL
+    BEGIN SET @sql = N'SELECT * INTO Eurovip.' + QUOTENAME(@t + '_respaldo_20261014c') + N' FROM Eurovip.' + QUOTENAME(@t) + N';'; EXEC sp_executesql @sql; END
+    SET @sql = N'UPDATE Eurovip.' + QUOTENAME(@t) + N' SET ' + QUOTENAME(@c) + N' = ''DOP'' WHERE ' + QUOTENAME(@c) + N' = ''EUR''; PRINT CONCAT(''' + @t + N'.' + @c + N': '', @@ROWCOUNT);';
+    EXEC sp_executesql @sql;
+    FETCH NEXT FROM r INTO @t, @c;
+END
+CLOSE r; DEALLOCATE r;
 COMMIT;
