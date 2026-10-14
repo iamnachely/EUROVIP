@@ -1068,13 +1068,24 @@ const HX = (() => {
         pintarFoto();
     }
 
+    // Cambios sin guardar en el formulario: se pregunta antes de cerrar (X, Esc, clic fuera, Cancelar) o salir de la página.
+    let formSucio = false;
+    const formAbierto = () => $('#hxForm').classList.contains('open');
+
     function abrir(id) {
+        if (id === 'hxForm') formSucio = false;
         $('#hxBackdrop').classList.add('open');
         const d = $('#' + id); d.classList.add('open'); d.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
     }
 
-    function cerrar() {
+    /** cerrar(true) cierra sin preguntar (después de guardar). */
+    async function cerrar(forzar) {
+        if (!forzar && formSucio && formAbierto()) {
+            const ok = await preguntar('¿Cerrar sin guardar?', 'Hiciste cambios en este hotel que <b>todavía no se guardaron</b>. Si cierras, se pierden.', 'Cerrar sin guardar');
+            if (!ok) return;
+        }
+        formSucio = false;
         $$('.hx-drawer.open').forEach(d => { d.classList.remove('open'); d.setAttribute('aria-hidden', 'true'); });
         $('#hxBackdrop').classList.remove('open');
         document.body.style.overflow = '';
@@ -1164,7 +1175,7 @@ const HX = (() => {
             let msgFoto = '';
             try { msgFoto = await aplicarFoto(dto.Id_Destino); }
             catch (ef) { toast('El hotel se guardó, pero la foto no: ' + ef.message, 'err'); }
-            cerrar();
+            cerrar(true);
             toast(msgFoto ? r.mensaje + ' ' + msgFoto : r.mensaje, 'ok');
             if (!editandoId) { estado.pagina = 1; estado.orden = 'recientes'; $('#fOrden').value = 'recientes'; }
             await cargar();
@@ -1291,6 +1302,8 @@ const HX = (() => {
 
         // Formulario: vista previa en vivo + combos por idioma
         frm.addEventListener('input', e => { e.target.closest('.hx-f')?.classList.remove('err'); preview(); });
+        ['input', 'change'].forEach(t => frm.addEventListener(t, e => { if (e.isTrusted && formAbierto()) formSucio = true; }));
+        window.addEventListener('beforeunload', e => { if (formSucio && formAbierto()) { e.preventDefault(); e.returnValue = ''; } });
         frm.addEventListener('change', preview);
         $$('[data-reg]').forEach(b => b.addEventListener('click', () => {
             const r = campo('Regimen');

@@ -5,6 +5,10 @@
 //   EV.confirmar({...})      modal de confirmación (devuelve Promise<bool|string>)
 //   EV.picker(input, cfg)    buscador con autocompletado (remoto o local)
 //   EV.esc / fmt / fecha / debounce / tabs / confeti
+//   EV.drawer(el)            panel lateral: avisa si se cierra con cambios sin guardar
+//   EV.resaltar(el)          destaca un elemento recién guardado
+//   EV.protegerSalida(fn)    avisa al salir de la página si fn() dice que hay trabajo sin guardar
+//   EV.filtrosURL(st, def)   guarda/lee los filtros de una lista en la dirección (?q=…)
 // =====================================================================
 (function () {
     const $ = (s, el = document) => el.querySelector(s);
@@ -37,6 +41,8 @@
             const msg = data?.mensaje || (r.status === 400 ? 'Revisa los datos.' : r.status === 404 ? 'No encontrado.' : 'Algo salió mal. Intenta de nuevo.');
             throw Object.assign(new Error(msg), { data, status: r.status });
         }
+        // Un guardado que salió bien deja los paneles abiertos "sin cambios pendientes"
+        if (opts.method && opts.method.toUpperCase() !== 'GET') drawers.forEach(d => d.limpio());
         return data;
     };
     EV.post = (url, body) => EV.api(url, { method: 'POST', body: body instanceof FormData ? body : JSON.stringify(body ?? {}) });
@@ -44,7 +50,11 @@
     // ---------------- toasts ----------------
     EV.toast = (msg, tipo = 'ok', accion) => {
         let cont = $('.ui-toasts');
-        if (!cont) { cont = document.createElement('div'); cont.className = 'ui-toasts'; document.body.appendChild(cont); }
+        if (!cont) {
+            cont = document.createElement('div'); cont.className = 'ui-toasts';
+            cont.setAttribute('role', 'status'); cont.setAttribute('aria-live', 'polite');   // lectores de pantalla
+            document.body.appendChild(cont);
+        }
         const t = document.createElement('div');
         t.className = 'ui-toast' + (tipo === 'err' ? ' err' : '');
         t.innerHTML = `<i class="bi bi-${tipo === 'err' ? 'exclamation-octagon' : tipo === 'info' ? 'info-circle' : 'check-circle-fill'}"></i><span></span>`;
@@ -141,7 +151,8 @@
             if (e.key === 'ArrowDown') { e.preventDefault(); act = Math.min(act + 1, items.length - 1); pintar(); }
             else if (e.key === 'ArrowUp') { e.preventDefault(); act = Math.max(act - 1, 0); pintar(); }
             else if (e.key === 'Enter') { e.preventDefault(); if (act >= 0) elegir(act); }
-            else if (e.key === 'Escape') { lista.hidden = true; }
+            // Esc solo cierra la lista de sugerencias: no debe llegar a la pantalla (que cerraría el panel entero)
+            else if (e.key === 'Escape') { lista.hidden = true; e.stopPropagation(); }
         });
         lista.addEventListener('mousedown', e => { const b = e.target.closest('[data-i]'); if (b) { e.preventDefault(); elegir(+b.dataset.i); } });
         input.addEventListener('blur', () => setTimeout(() => lista.hidden = true, 150));
@@ -179,17 +190,95 @@
     };
 
     // ---------------- drawer ----------------
+    // Panel lateral. Si el usuario escribió o cambió algo dentro y lo intenta cerrar (X, Esc, clic fuera,
+    // Cancelar) sin guardar, pregunta antes de perder los cambios. Un guardado correcto (EV.post) lo deja limpio.
+    const drawers = [];
     EV.drawer = (el) => {
         let bd = $('.ui-backdrop[data-drawer]');
         if (!bd) { bd = document.createElement('div'); bd.className = 'ui-backdrop'; bd.dataset.drawer = '1'; document.body.appendChild(bd); }
+        let sucio = false, preguntando = false;
+        const marcar = e => { if (e.isTrusted && el.classList.contains('open')) sucio = true; };
+        el.addEventListener('input', marcar);
+        el.addEventListener('change', marcar);
+        const cerrarYa = () => { sucio = false; bd.classList.remove('open'); el.classList.remove('open'); document.body.style.overflow = ''; };
         const api = {
-            abrir() { bd.classList.add('open'); el.classList.add('open'); document.body.style.overflow = 'hidden'; },
-            cerrar() { bd.classList.remove('open'); el.classList.remove('open'); document.body.style.overflow = ''; },
-            abierto: () => el.classList.contains('open')
+            abrir() { sucio = false; bd.classList.add('open'); el.classList.add('open'); document.body.style.overflow = 'hidden'; },
+            /** cerrar(true) cierra sin preguntar (por ejemplo después de guardar). */
+            async cerrar(forzar) {
+                if (!el.classList.contains('open')) return;
+                // Si hay un cuadro de confirmación abierto, el Esc es para ese cuadro, no para el panel
+                if (!forzar && $('.ui-modal.open')) return;
+                if (sucio && !forzar) {
+                    if (preguntando) return;
+                    preguntando = true;
+                    const ok = await EV.confirmar({ titulo: '¿Cerrar sin guardar?', icono: 'exclamation-triangle', peligro: true,
+                        texto: 'Hiciste cambios en este panel que <b>todavía no se guardaron</b>. Si cierras, se pierden.', si: 'Cerrar sin guardar', no: 'Seguir editando' });
+                    preguntando = false;
+                    if (!ok) return;
+                }
+                cerrarYa();
+            },
+            abierto: () => el.classList.contains('open'),
+            sucio: () => sucio && el.classList.contains('open'),
+            limpio() { sucio = false; }
         };
-        bd.addEventListener('click', () => api.cerrar());
+        bd.addEventListener('click', () => { if (el.classList.contains('open')) api.cerrar(); });
+        drawers.push(api);
         return api;
     };
+    // Avisar también si se sale de la página (menú, recargar, cerrar pestaña) con un panel a medio editar.
+    window.addEventListener('beforeunload', e => { if (drawers.some(d => d.sucio())) { e.preventDefault(); e.returnValue = ''; } });
+
+    // ---------------- resaltar lo recién guardado ----------------
+    EV.resaltar = el => {
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        el.animate([{ boxShadow: '0 0 0 0 rgba(116,242,230,.95)' }, { boxShadow: '0 0 0 14px rgba(116,242,230,0)' }], { duration: 1100, iterations: 2 });
+    };
+
+    // ---------------- proteger una pantalla larga (asistentes de carga) ----------------
+    // fn() devuelve true si hay trabajo sin guardar. Al terminar bien, llamar al .liberar() devuelto.
+    EV.protegerSalida = fn => {
+        let activo = true;
+        const h = e => { if (activo && fn()) { e.preventDefault(); e.returnValue = ''; } };
+        window.addEventListener('beforeunload', h);
+        return { liberar() { activo = false; }, activar() { activo = true; } };
+    };
+
+    // ---------------- filtros en la dirección (para volver y encontrarlos igual) ----------------
+    // EV.filtrosURL.leer(def) → objeto con los valores de ?clave=… (solo las claves de def, con su tipo)
+    // EV.filtrosURL.guardar(st, def) → escribe en la dirección solo lo que no es el valor por defecto
+    EV.filtrosURL = {
+        leer(def) {
+            const p = new URLSearchParams(location.search), r = {};
+            for (const [k, v0] of Object.entries(def)) {
+                if (!p.has(k)) continue;
+                const v = p.get(k);
+                r[k] = typeof v0 === 'number' ? (Number(v) || v0) : typeof v0 === 'boolean' ? v === '1' : v;
+            }
+            return r;
+        },
+        guardar(st, def) {
+            const p = new URLSearchParams(location.search);
+            for (const [k, v0] of Object.entries(def)) {
+                const v = st[k];
+                if (v === v0 || v === '' || v == null || v === false) p.delete(k);
+                else p.set(k, typeof v === 'boolean' ? '1' : v);
+            }
+            const q = p.toString();
+            history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash);
+        }
+    };
+
+    // ---------------- "/" para buscar en cualquier pantalla ----------------
+    document.addEventListener('keydown', e => {
+        if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+        const a = document.activeElement;
+        if (a && (/^(input|textarea|select)$/i.test(a.tagName) || a.isContentEditable)) return;
+        if ($('.ui-drawer.open, .hx-drawer.open, .ui-modal.open')) return;
+        const s = $('main .ui-search input, main input[type=search], .ui-search input');
+        if (s) { e.preventDefault(); s.focus(); s.select?.(); }
+    });
 
     window.EV = EV;
 })();

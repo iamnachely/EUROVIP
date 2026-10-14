@@ -504,3 +504,6 @@ button.ev-nav-label i { font-size: 11px; transition: transform .3s var(--ev-ease
     button.ev-nav-label { padding-top: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .ev-grupo .ev-nav, button.ev-nav-label i { transition: none; } }
+
+/* Foco visible al moverse con el teclado (botones, enlaces, tarjetas) — accesibilidad */
+:where(a, button, [tabindex], summary, label.ev-btn):focus-visible { outline: 3px solid var(--ev-teal); outline-offset: 2px; border-radius: 10px; }
