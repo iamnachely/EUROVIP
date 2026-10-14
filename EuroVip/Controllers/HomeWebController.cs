@@ -2,6 +2,7 @@ using Dapper;
 using EuroVip.Helpers;
 using EuroVip.Models;
 using EuroVip.Repositories;
+using EuroVip.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
 
@@ -20,8 +21,11 @@ namespace EuroVip.Controllers
         private readonly IConfiguration _cfg;
         private readonly ILogger<HomeWebController> _logger;
 
-        public HomeWebController(IHomeWebRepository repo, ICircuitoRepository db, IConfiguration cfg, ILogger<HomeWebController> logger)
+        private readonly IImagenesLocales _img;
+
+        public HomeWebController(IHomeWebRepository repo, ICircuitoRepository db, IConfiguration cfg, IImagenesLocales img, ILogger<HomeWebController> logger)
         {
+            _img = img;
             _repo = repo;
             _db = db;
             _cfg = cfg;
@@ -37,7 +41,27 @@ namespace EuroVip.Controllers
         {
             var d = await _repo.DatosAsync();
             d.Imagenes = new HwImagenes { Web = Slider("Url"), Tablet = Slider("UrlMd"), Movil = Slider("UrlSm") };
+            foreach (var t in d.Contenedores.SelectMany(c => c.Tarjetas).Concat(d.SinContenedor)) PonerImagen(t);
             return Json(d);
+        }
+
+        /// <summary>
+        /// Imagen de la tarjeta desde las carpetas del proyecto (lo que se carga en Hoteles y Circuitos):
+        ///  • HOTEL: /imagenes/hoteles/{nombre del hotel}.webp
+        ///  • CIRCUITO: la portada del circuito (/imagenes/circuitos/{circuito.caratula})
+        ///  • si no hay archivo, la URL que tenga la tarjeta (si es una dirección web o una ruta del sitio).
+        /// </summary>
+        private void PonerImagen(HwTarjeta t)
+        {
+            if (string.Equals(t.Tipo_Servicio, "HOTEL", StringComparison.OrdinalIgnoreCase))
+                t.Imagen = _img.Buscar("hoteles", t.Id_Destino)?.Url;
+            else if (string.Equals(t.Tipo_Servicio, "CIRCUITO", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(t.Caratula_Circuito))
+                t.Imagen = t.Caratula_Circuito.StartsWith("/") || Uri.IsWellFormedUriString(t.Caratula_Circuito, UriKind.Absolute)
+                    ? t.Caratula_Circuito
+                    : _img.BuscarArchivo("circuitos", t.Caratula_Circuito.Trim())?.Url;
+            var c = t.CaratulaDestino?.Trim();
+            if (t.Imagen is null && !string.IsNullOrEmpty(c) && (c.StartsWith("/") || c.StartsWith("http://") || c.StartsWith("https://")))
+                t.Imagen = c;
         }
 
         // ================= SECCIONES =================
@@ -90,6 +114,7 @@ namespace EuroVip.Controllers
         public async Task<IActionResult> Tarjeta(int id)
         {
             var t = await _repo.TarjetaAsync(id);
+            if (t is not null) PonerImagen(t);
             return t is null ? NotFound(new { mensaje = "No encontramos esa tarjeta." }) : Json(t);
         }
 

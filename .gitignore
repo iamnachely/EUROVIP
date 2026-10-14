@@ -8,3 +8,8 @@ publish/
 appsettings.Local.json
 # Fotos de perfil subidas por los usuarios (datos, no código)
 EuroVip/wwwroot/uploads/
+
+# Imágenes subidas desde la pantalla (hoteles, circuitos…): viven en el servidor, no en el repo público
+EuroVip/wwwroot/imagenes/**/*
+!EuroVip/wwwroot/imagenes/**/
+!EuroVip/wwwroot/imagenes/**/.gitkeep

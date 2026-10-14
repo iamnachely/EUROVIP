@@ -243,7 +243,8 @@ const HW = (() => {
 
     const todas = () => [...D.contenedores.flatMap(c => c.tarjetas), ...D.sinContenedor];
     const img = (ruta, d = dev) => !ruta ? '' : `${{ web: D.imagenes.web, tablet: D.imagenes.tablet, movil: D.imagenes.movil }[d]}/${encodeURIComponent(ruta)}`;
-    const carat = t => t.caratulaDestino && (EV.esUrl(t.caratulaDestino) || t.caratulaDestino.startsWith('/')) ? t.caratulaDestino : null;
+    // t.imagen la calcula el servidor desde las carpetas del proyecto (fotos de Hoteles y portadas de Circuitos)
+    const carat = t => t.imagen || (t.caratulaDestino && (EV.esUrl(t.caratulaDestino) || t.caratulaDestino.startsWith('/')) ? t.caratulaDestino : null);
     const tipoChip = { OFERTA: 'Oferta', CIRCUITO: 'Circuito', HOTEL: 'Hotel', COMBINADO: 'Combinado' };
 
     async function cargar() {
@@ -542,7 +543,8 @@ const HW = (() => {
                     <div class="ui-f"><label>País destino</label><select id="tPD">${paises}</select></div>
                     <div class="ui-f"><label>Destino *</label><input id="tDes" maxlength="1500"><span class="msg"></span></div>
                 </div>
-                <div class="ui-f"><label>Imagen (URL)</label><input id="tImg" maxlength="300" placeholder="https://…"></div>
+                <input type="hidden" id="tImg">
+                <div class="ui-help" style="margin:-4px 0 10px"><i class="bi bi-image"></i> La imagen sale de las carpetas del proyecto: en hoteles, la foto cargada en <a href="/Hoteles/Index">Hoteles</a>; en circuitos, la portada cargada en <a href="/Circuitos/Index">Circuitos</a>.</div>
                 <div class="ui-f"><label>Descripción <em>en circuitos es el nombre que se ve</em></label><textarea id="tDesc" rows="2"></textarea></div>
             </div>
             <div class="ui-sec"><div class="ui-sec-t"><span>2</span> Precio y notas</div>
@@ -557,8 +559,9 @@ const HW = (() => {
         $('#tSecF').value = v.id_Contenedor ?? ''; $('#tPO').value = (v.id_Pais_Origen || 'ES').toUpperCase(); $('#tPD').value = (v.id_PaisDestino || 'DO').toUpperCase();
         $('#tOri').value = v.origen || ''; $('#tDes').value = v.id_Destino || ''; $('#tImg').value = v.caratulaDestino || ''; $('#tDesc').value = v.descripcion || '';
         $('#tPre').value = v.precioWeb != null ? Math.round(v.precioWeb) : ''; $('#tNoc').value = v.noches ?? ''; $('#tNot').value = v.notas || ''; $('#tEstF').checked = v.estado !== false;
-        const prev = () => { const u = $('#tImg').value.trim(); $('#tdPrev').innerHTML = u && (EV.esUrl(u) || u.startsWith('/')) ? `<img src="${esc(u)}" alt="" style="width:100%;max-height:200px;object-fit:cover;display:block" onerror="this.remove()">` : ''; };
-        $('#tImg').addEventListener('input', EV.debounce(prev, 300)); prev();
+        // caratulaDestino se conserva tal cual (en hoteles es el destino, no una imagen); la vista previa usa la imagen de las carpetas
+        const u = carat(v);
+        $('#tdPrev').innerHTML = u ? `<img src="${esc(u)}" alt="" style="width:100%;max-height:200px;object-fit:cover;display:block" onerror="this.remove()">` : '';
         EV.picker($('#tOri'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#tPO').value)}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo' }), onSelect: m => $('#tOri').value = m.valor });
         EV.picker($('#tDes'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#tPD').value)}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo-alt' }), onSelect: m => $('#tDes').value = m.valor });
         dT.abrir();

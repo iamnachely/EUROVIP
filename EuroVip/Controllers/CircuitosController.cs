@@ -1,5 +1,7 @@
+using EuroVip.Helpers;
 using EuroVip.Models;
 using EuroVip.Repositories;
+using EuroVip.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 
@@ -13,11 +15,13 @@ namespace EuroVip.Controllers
     public class CircuitosController : Controller
     {
         private readonly ICircuitoRepository _repo;
+        private readonly IImagenesLocales _img;
         private readonly ILogger<CircuitosController> _logger;
 
-        public CircuitosController(ICircuitoRepository repo, ILogger<CircuitosController> logger)
+        public CircuitosController(ICircuitoRepository repo, IImagenesLocales img, ILogger<CircuitosController> logger)
         {
             _repo = repo;
+            _img = img;
             _logger = logger;
         }
 
@@ -147,6 +151,54 @@ namespace EuroVip.Controllers
                                   .SelectMany(x => x.Value!.Errors.Select(e => e.ErrorMessage))
                                   .Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
             return BadRequest(new { mensaje = lista.FirstOrDefault() ?? "Revisa los datos.", lista });
+        }
+
+        // ------------------------------------------------------------ imágenes (carpetas del proyecto, como BackTiTan)
+        // Portada:  wwwroot/imagenes/circuitos/{NombreSinEspacios}.webp              → circuito.caratula = "{NombreSinEspacios}.webp"
+        // Día:      wwwroot/imagenes/circuitos/itinerario/es/{Nombre}-itinerario-dia-{n}.webp → circuito_itinerario.caratula = "/imagenes/circuitos/itinerario/es/…"
+        // La ruta se guarda en el circuito al pulsar "Guardar circuito".
+
+        [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(12_000_000)]
+        public async Task<IActionResult> SubirPortada([FromForm] string nombre, IFormFile? archivo)
+        {
+            var baseNombre = _img.NombreCircuito(nombre ?? "");
+            if (baseNombre == "") return BadRequest(new { mensaje = "Primero escribe el nombre del circuito: la imagen se guarda con ese nombre." });
+            var mal = await ValidarImagen(archivo);
+            if (mal is not null) return BadRequest(new { mensaje = mal });
+            try
+            {
+                await using var st = archivo!.OpenReadStream();
+                var img = await _img.GuardarComoAsync("circuitos", null, baseNombre + ".webp", st);
+                await Auditar("Circuito_ImagenPortada", new { nombre, img.Archivo, img.Bytes });
+                return Json(new { ok = true, caratula = img.Archivo, url = img.Url, imagen = img, mensaje = "Portada cargada. Se guarda en el circuito al pulsar Guardar." });
+            }
+            catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        }
+
+        [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(12_000_000)]
+        public async Task<IActionResult> SubirImagenDia([FromForm] string nombre, [FromForm] int dia, IFormFile? archivo)
+        {
+            var baseNombre = _img.NombreCircuito(nombre ?? "");
+            if (baseNombre == "") return BadRequest(new { mensaje = "Primero escribe el nombre del circuito: la imagen se guarda con ese nombre." });
+            if (dia is < 1 or > 99) return BadRequest(new { mensaje = "Día inválido." });
+            var mal = await ValidarImagen(archivo);
+            if (mal is not null) return BadRequest(new { mensaje = mal });
+            try
+            {
+                const string sub = "itinerario/es";
+                await using var st = archivo!.OpenReadStream();
+                var img = await _img.GuardarComoAsync("circuitos", sub, $"{baseNombre}-itinerario-dia-{dia}.webp", st);
+                await Auditar("Circuito_ImagenDia", new { nombre, dia, img.Archivo, img.Bytes });
+                return Json(new { ok = true, caratula = $"/imagenes/circuitos/{sub}/{img.Archivo}", url = img.Url, imagen = img, mensaje = $"Imagen del día {dia} cargada. Se guarda al pulsar Guardar." });
+            }
+            catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        }
+
+        private static async Task<string?> ValidarImagen(IFormFile? archivo)
+        {
+            if (archivo is null || archivo.Length == 0) return "Elige una imagen.";
+            if (archivo.Length > 10_000_000) return "La imagen pesa más de 10 MB.";
+            return await ImagenSegura.ExtensionAsync(archivo) is null ? "El archivo no es una imagen JPG, PNG o WebP." : null;
         }
 
         private Task Auditar(string tipo, object cambios, int? id = null) =>

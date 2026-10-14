@@ -49,6 +49,18 @@
     .cx-hot b { display: block; font-size: 13.5px; }
     .cx-hot small { color: var(--ev-muted); font-weight: 600; }
     .cx-portada { margin-top: 10px; border-radius: 18px; overflow: hidden; height: 170px; background: var(--ev-grad); position: relative; }
+    /* Subir imágenes a carpetas del proyecto (portada e itinerario) */
+    .cx-img-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+    .cx-img-acts label { cursor: pointer; }
+    .cx-img-acts small { color: var(--ev-muted); font-weight: 600; font-size: 12px; }
+    .cx-img-acts code { background: var(--ev-surface-2); border: 1px solid var(--ev-line); border-radius: 7px; padding: 1px 7px; font-weight: 700; }
+    .cx-portada.sobre, .cx-dimg.sobre { outline: 3px dashed var(--ev-teal); outline-offset: 3px; }
+    .cx-dimg { display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 14px; background: var(--ev-surface-2); border: 1px dashed var(--ev-line); }
+    .cx-dimg .th { width: 96px; height: 64px; border-radius: 10px; overflow: hidden; flex-shrink: 0; background: var(--ev-grad); display: grid; place-items: center; color: var(--ev-ink); font-size: 20px; }
+    .cx-dimg .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cx-dimg .tx { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--ev-muted); }
+    .cx-dimg .tx b { display: block; color: var(--ev-text); font-size: 13px; }
+    .cx-dimg .tx code { word-break: break-all; }
     .cx-portada img { width: 100%; height: 100%; object-fit: cover; }
     .cx-noches { display: flex; align-items: center; gap: 8px; }
     .cx-noches input { text-align: center; font-weight: 800 !important; font-size: 18px !important; }
@@ -117,8 +129,14 @@
                     </div><span class="msg"></span>
                 </div>
             </div>
-            <div class="ui-f"><label for="edCaratula">Imagen de portada <em>URL o nombre de archivo (opcional)</em></label><input id="edCaratula" maxlength="200" placeholder="https://photos.dominicanatours.com/imagenes/circuitos/CostaRicaEsencial.webp"><span class="msg"></span>
-                <div class="cx-portada" id="edPortada"></div>
+            <div class="ui-f"><label>Imagen de portada <em>opcional · se guarda en la carpeta imagenes/circuitos</em></label>
+                <input id="edCaratula" type="hidden">
+                <div class="cx-portada" id="edPortada" title="Arrastra aquí la imagen de portada"></div>
+                <div class="cx-img-acts">
+                    <label class="ev-btn ghost sm"><input type="file" id="edPortadaArchivo" accept="image/jpeg,image/png,image/webp" hidden><i class="bi bi-upload"></i> <span id="edPortadaTxt">Subir portada</span></label>
+                    <button type="button" class="ev-btn ghost sm" id="edPortadaQuitar" hidden><i class="bi bi-x-lg"></i> Quitar</button>
+                    <small id="edPortadaNombre"></small>
+                </div>
             </div>
             <div class="ui-f"><label for="edResumen">Resumen del recorrido <em>opcional</em></label><textarea id="edResumen" placeholder="Ej. 7 noches recorriendo San José, Arenal y Manuel Antonio…"></textarea></div>
         </section>
@@ -203,7 +221,17 @@ const CX = (() => {
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
     const esc = EV.esc;
     const ola = '<svg viewBox="0 0 200 60" preserveAspectRatio="none"><path d="M0 30 Q 25 18 50 30 T 100 30 T 150 30 T 200 30 V60 H0Z" fill="rgba(255,255,255,.55)"/><path d="M0 42 Q 25 32 50 42 T 100 42 T 150 42 T 200 42 V60 H0Z" fill="rgba(14,143,134,.35)"/></svg>';
-    const urlImagen = c => !c ? null : EV.esUrl(c) ? c : `https://photos.dominicanatours.com/imagenes/circuitos/${encodeURIComponent(c)}`;
+    // Imágenes en carpetas del proyecto (como BackTiTan): portada = "Nombre.webp" en /imagenes/circuitos; días = ruta "/imagenes/circuitos/itinerario/es/…"
+    const urlImagen = c => !c ? null : EV.esUrl(c) || c.startsWith('/') ? c : `/imagenes/circuitos/${encodeURIComponent(c)}`;
+    const nombreBase = n => (n || '').normalize('NFD').replace(/[^A-Za-z0-9]/g, '');
+    const tipoOk = f => /^image\/(jpeg|png|webp)$/.test(f.type) && f.size <= 10e6;
+    async function subirImagen(url, campos, archivo) {
+        if (!tipoOk(archivo)) throw new Error('Elige una imagen JPG, PNG o WebP de hasta 10 MB.');
+        const fd = new FormData();
+        Object.entries(campos).forEach(([k, v]) => fd.append(k, v));
+        fd.append('archivo', archivo);
+        return EV.post(url, fd);
+    }
     const imagen = (c, nombre) => urlImagen(c)
         ? `<img src="${esc(urlImagen(c))}" alt="" loading="lazy" data-ini="${esc(EV.iniciales(nombre))}" onerror="CX._sinImagen(this)">`
         : `<div class="cx-ph"><b>${esc(EV.iniciales(nombre))}</b>${ola}</div>`;
@@ -269,7 +297,7 @@ const CX = (() => {
         $('#edSub').textContent = c.codigoOriginal ? `Código ${c.codigoOriginal} · ${c.salidas.length} salidas cargadas` : 'Completa las pestañas; puedes guardar cuando quieras.';
         $('#edCodigo').value = c.codigo; $('#edNombre').value = c.nombre;
         $('#edProveedor').value = c.proveedor ? `${c.proveedor}` : ''; $('#edProveedor').dataset.valor = c.id_Proveedor || '';
-        $('#edNoches').value = c.noches; $('#edCaratula').value = c.caratula || ''; $('#edResumen').value = c.itinerario || '';
+        $('#edNoches').value = c.noches; $('#edCaratula').value = c.caratula || ''; delete $('#edPortada').dataset.vista; $('#edResumen').value = c.itinerario || '';
         $('#edEliminar').hidden = !c.codigoOriginal;
         $('#tabSalidas').hidden = !c.codigoOriginal;
         $$('.ui-f.err', ed).forEach(f => { f.classList.remove('err'); const m = $('.msg', f); if (m) m.textContent = ''; });
@@ -289,7 +317,12 @@ const CX = (() => {
     }
 
     function portada() {
-        const url = urlImagen($('#edCaratula').value.trim());
+        const actual = $('#edCaratula').value.trim();
+        const url = $('#edPortada').dataset.vista || urlImagen(actual);
+        const base = nombreBase($('#edNombre').value);
+        $('#edPortadaTxt').textContent = actual ? 'Cambiar portada' : 'Subir portada';
+        $('#edPortadaQuitar').hidden = !actual;
+        $('#edPortadaNombre').innerHTML = base ? `Se guarda como <code>${esc(base)}.webp</code>` : 'Escribe el nombre del circuito para poder subir la portada.';
         $('#edPortada').innerHTML = url ? `<img src="${esc(url)}" alt="" data-ini="${esc(EV.iniciales($('#edNombre').value))}" onerror="CX._sinImagen(this)">` : `<div class="cx-ph"><b>${esc(EV.iniciales($('#edNombre').value || 'Nuevo'))}</b>${ola}</div>`;
     }
 
@@ -318,7 +351,8 @@ const CX = (() => {
     function leerDias() {
         estado.dias = $$('.cx-day', $('#edDias')).map((d, i) => ({
             dia: i + 1, titulo: $('[data-k=titulo]', d).value, descripcion: $('[data-k=descripcion]', d).value, visitas: $('[data-k=visitas]', d).value,
-            regimen: $('[data-k=regimen]', d).value, transporte: $('[data-k=transporte]', d).value, tipo_Alojamiento: $('[data-k=aloj]', d).value, caratula: $('[data-k=caratula]', d).value
+            regimen: $('[data-k=regimen]', d).value, transporte: $('[data-k=transporte]', d).value, tipo_Alojamiento: $('[data-k=aloj]', d).value, caratula: $('[data-k=caratula]', d).value,
+            vista: estado.dias[i]?.caratula === $('[data-k=caratula]', d).value ? estado.dias[i].vista : undefined
         }));
     }
 
@@ -341,7 +375,13 @@ const CX = (() => {
                     <div class="ui-f"><label>Transporte</label><input data-k="transporte" list="dlTransporte" maxlength="200" value="${esc(d.transporte)}"></div>
                     <div class="ui-f"><label>Alojamiento</label><input data-k="aloj" list="dlAloj" maxlength="20" value="${esc(d.tipo_Alojamiento)}"></div>
                 </div>
-                <div class="ui-f" style="margin:0"><label>Imagen del día <em>URL opcional</em></label><input data-k="caratula" maxlength="200" value="${esc(d.caratula)}" placeholder="https://…"></div>
+                <input type="hidden" data-k="caratula" value="${esc(d.caratula)}">
+                <div class="cx-dimg" data-dia="${i}">
+                    <span class="th">${d.caratula ? `<img src="${esc(d.vista || urlImagen(d.caratula))}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('i'),{className:'bi bi-image'}))">` : '<i class="bi bi-image"></i>'}</span>
+                    <div class="tx"><b>Imagen del día ${i + 1}</b>${d.caratula ? `<code>${esc(d.caratula.split('/').pop())}</code>` : 'Opcional. Arrastra una imagen aquí o pulsa Subir.'}</div>
+                    <label class="ev-btn ghost sm" style="cursor:pointer"><input type="file" data-subir-dia="${i}" accept="image/jpeg,image/png,image/webp" hidden><i class="bi bi-upload"></i> ${d.caratula ? 'Cambiar' : 'Subir'}</label>
+                    ${d.caratula ? `<button type="button" class="ui-ibtn danger" data-quitar-dia="${i}" title="Quitar imagen del día"><i class="bi bi-x-lg"></i></button>` : ''}
+                </div>
             </div>`).join('');
     }
 
@@ -430,7 +470,45 @@ const CX = (() => {
 
         $('#fQ').addEventListener('input', EV.debounce(cargar, 300));
         $('#fPais').addEventListener('change', cargar);
-        $('#edCaratula').addEventListener('input', EV.debounce(portada, 300));
+        // ---- portada: subir a /imagenes/circuitos/{Nombre}.webp ----
+        const subirPortada = async archivo => {
+            if (!archivo) return;
+            if (!nombreBase($('#edNombre').value)) { EV.toast('Primero escribe el nombre del circuito: la imagen se guarda con ese nombre.', 'err'); $('#edNombre').focus(); return; }
+            try {
+                const r = await subirImagen('/Circuitos/SubirPortada', { nombre: $('#edNombre').value.trim() }, archivo);
+                $('#edCaratula').value = r.caratula; $('#edPortada').dataset.vista = r.url;
+                portada(); EV.toast(r.mensaje);
+            } catch (e) { EV.toast(e.message, 'err'); }
+            finally { $('#edPortadaArchivo').value = ''; }
+        };
+        $('#edPortadaArchivo').addEventListener('change', e => subirPortada(e.target.files[0]));
+        $('#edPortadaQuitar').addEventListener('click', () => { $('#edCaratula').value = ''; delete $('#edPortada').dataset.vista; portada(); EV.toast('Portada quitada. Pulsa Guardar para dejarlo así.', 'info'); });
+
+        // ---- imagen de cada día: /imagenes/circuitos/itinerario/es/{Nombre}-itinerario-dia-{n}.webp ----
+        const subirDia = async (i, archivo) => {
+            if (!archivo) return;
+            if (!nombreBase($('#edNombre').value)) { EV.toast('Primero escribe el nombre del circuito: la imagen se guarda con ese nombre.', 'err'); return; }
+            leerDias();
+            try {
+                const r = await subirImagen('/Circuitos/SubirImagenDia', { nombre: $('#edNombre').value.trim(), dia: i + 1 }, archivo);
+                estado.dias[i].caratula = r.caratula; estado.dias[i].vista = r.url;
+                pintarDias(); EV.toast(r.mensaje);
+            } catch (e) { EV.toast(e.message, 'err'); }
+        };
+        $('#edDias').addEventListener('change', e => { const f = e.target.closest('[data-subir-dia]'); if (f) subirDia(+f.dataset.subirDia, f.files[0]); });
+        $('#edDias').addEventListener('click', e => {
+            const q = e.target.closest('[data-quitar-dia]'); if (!q) return;
+            leerDias(); estado.dias[+q.dataset.quitarDia].caratula = ''; delete estado.dias[+q.dataset.quitarDia].vista; pintarDias();
+        });
+
+        // ---- arrastrar y soltar ----
+        const soltar = (zona, alSoltar) => {
+            ['dragenter', 'dragover'].forEach(t => zona.addEventListener(t, e => { if (e.dataTransfer?.types?.includes('Files')) { e.preventDefault(); (e.target.closest('.cx-dimg') || zona).classList.add('sobre'); } }));
+            ['dragleave', 'drop'].forEach(t => zona.addEventListener(t, e => { (e.target.closest('.cx-dimg') || zona).classList.remove('sobre'); }));
+            zona.addEventListener('drop', e => { if (!e.dataTransfer?.files?.length) return; e.preventDefault(); alSoltar(e); });
+        };
+        soltar($('#edPortada'), e => subirPortada(e.dataTransfer.files[0]));
+        soltar($('#edDias'), e => { const z = e.target.closest('.cx-dimg'); if (z) subirDia(+z.dataset.dia, e.dataTransfer.files[0]); });
         $('#edNombre').addEventListener('input', EV.debounce(portada, 250));
         $('#edNombre').addEventListener('input', () => { if (!estado.codigoOriginal && !$('#edCodigo').dataset.tocado) $('#edCodigo').value = $('#edNombre').value.replace(/[^\p{L}\p{N} ]/gu, '').normalize('NFD').replace(/[̀-ͯ]/g, ''); });
         $('#edCodigo').addEventListener('input', () => $('#edCodigo').dataset.tocado = '1');

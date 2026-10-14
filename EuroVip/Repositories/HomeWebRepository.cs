@@ -56,7 +56,10 @@ namespace EuroVip.Repositories
                                                  LEFT JOIN Eurovip.servicio_circuito sc ON sc.id_servicio = s.id_servicio
                                                WHERE s.id_servicio = i.id_servicio AND s.activo = 1
                                                  AND ISNULL(sd.desde, sc.desde) > GETDATE()) THEN 1 ELSE 0 END AS bit)
-                   END AS Vigente
+                   END AS Vigente,
+                   (SELECT TOP 1 ci.caratula FROM Eurovip.servicio_circuito sc3
+                        JOIN Eurovip.circuito ci ON ci.nombre_circuito = sc3.nombre_circuito
+                    WHERE sc3.id_servicio = i.id_servicio AND i.tipo_servicio = 'CIRCUITO') AS Caratula_Circuito
             FROM Eurovip.inicio i
                 LEFT JOIN Eurovip.campanya c ON c.id_campanya = i.id_campanya AND c.id_idioma = i.id_idioma";
 

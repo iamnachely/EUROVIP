@@ -282,7 +282,7 @@ const XP = (() => {
     async function cargarCircuitos() {
         const q = $('#xpBuscar').value.trim();
         S.circuitos = await EV.api('/Circuitos/Listar?q=' + encodeURIComponent(q));
-        const img = c => !c.caratula ? '' : `<img src="${esc(EV.esUrl(c.caratula) ? c.caratula : 'https://photos.dominicanatours.com/imagenes/circuitos/' + c.caratula)}" alt="" onerror="this.remove()">`;
+        const img = c => !c.caratula ? '' : `<img src="${esc(EV.esUrl(c.caratula) || c.caratula.startsWith('/') ? c.caratula : '/imagenes/circuitos/' + encodeURIComponent(c.caratula))}" alt="" onerror="this.remove()">`;
         $('#xpCircs').innerHTML = S.circuitos.length ? S.circuitos.map(c => `
             <button type="button" class="xp-circ ${S.circuito?.codigo === c.codigo ? 'on' : ''}" data-c="${esc(c.codigo)}">
                 <div class="im">${esc(EV.iniciales(c.nombre))}${img(c)}</div>

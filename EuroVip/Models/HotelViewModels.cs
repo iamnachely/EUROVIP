@@ -33,6 +33,8 @@ namespace EuroVip.Models
         public int? Posicion_Destino { get; set; }
         public int? Noches { get; set; }
         public bool Estado { get; set; }
+        /// <summary>URL de /imagenes/hoteles/{nombre}.webp si existe (la calcula el controlador).</summary>
+        public string? Imagen { get; set; }
     }
 
     public class PaginaResultado<T>

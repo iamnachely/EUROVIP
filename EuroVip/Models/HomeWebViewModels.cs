@@ -28,6 +28,10 @@ namespace EuroVip.Models
         public string? Notas { get; set; }
         /// <summary>null = tarjeta manual (hotel); true/false = la oferta/circuito sigue a la venta.</summary>
         public bool? Vigente { get; set; }
+        /// <summary>Portada del circuito (circuito.caratula) cuando la tarjeta es un circuito.</summary>
+        public string? Caratula_Circuito { get; set; }
+        /// <summary>URL de la imagen que se ve en la tarjeta (la calcula el controlador desde las carpetas del proyecto).</summary>
+        public string? Imagen { get; set; }
     }
 
     public class HwContenedor
