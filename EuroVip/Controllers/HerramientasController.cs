@@ -1,5 +1,7 @@
+using EuroVip.Helpers;
 using EuroVip.Models;
 using EuroVip.Repositories;
+using EuroVip.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
@@ -14,13 +16,42 @@ namespace EuroVip.Controllers
     {
         private readonly IHerramientasRepository _repo;
         private readonly ICircuitoRepository _aud;
+        private readonly IImagenesLocales _img;
         private readonly ILogger<HerramientasController> _logger;
 
-        public HerramientasController(IHerramientasRepository repo, ICircuitoRepository aud, ILogger<HerramientasController> logger)
+        public HerramientasController(IHerramientasRepository repo, ICircuitoRepository aud, IImagenesLocales img, ILogger<HerramientasController> logger)
         {
             _repo = repo;
             _aud = aud;
+            _img = img;
             _logger = logger;
+        }
+
+        /// <summary>
+        /// Subir la imagen de un campo tipo "imagen" de cualquier catálogo (Destinos, Alojamientos…). Se guarda en
+        /// wwwroot/imagenes/{carpeta del campo}/{nombre}.webp y devuelve la ruta para ese campo. El registro se actualiza
+        /// cuando el usuario pulsa Guardar (aquí solo se guarda el archivo).
+        /// </summary>
+        [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(12_000_000)]
+        public async Task<IActionResult> SubirImagen(string id, string campo, [FromForm] string? nombre, IFormFile? archivo)
+        {
+            var c = HrCatalogos.Buscar(id);
+            var f = c?.Campo(campo ?? "");
+            if (c is null || f is null || f.Tipo != "imagen" || string.IsNullOrEmpty(f.Carpeta)) return NotFound(new { mensaje = "Ese campo no admite imágenes." });
+            var archivoNombre = _img.NombreArchivo(nombre ?? "");
+            if (archivoNombre == "") return BadRequest(new { mensaje = $"Primero completa «{c.Campo(f.NombreDe ?? "")?.Etiqueta ?? "el nombre"}»: la imagen se guarda con ese nombre." });
+            if (archivo is null || archivo.Length == 0) return BadRequest(new { mensaje = "Elige una imagen." });
+            if (archivo.Length > 10_000_000) return BadRequest(new { mensaje = "La imagen pesa más de 10 MB." });
+            if (await ImagenSegura.ExtensionAsync(archivo) is null) return BadRequest(new { mensaje = "El archivo no es una imagen JPG, PNG o WebP." });
+            try
+            {
+                await using var st = archivo.OpenReadStream();
+                var img = await _img.GuardarComoAsync(f.Carpeta, null, archivoNombre, st);
+                await Auditar($"Herramienta_{c.Clave}_Imagen", new { campo = f.Col, nombre, img.Archivo, img.Bytes });
+                return Json(new { ok = true, ruta = $"/imagenes/{f.Carpeta}/{img.Archivo}", url = img.Url, archivo = img.Archivo,
+                                  mensaje = "Imagen subida. Pulsa Guardar para dejarla en el registro." });
+            }
+            catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
         }
 
         public IActionResult Index() => View();

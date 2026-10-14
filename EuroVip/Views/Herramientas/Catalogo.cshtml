@@ -37,6 +37,17 @@
     .hc-pages button:disabled { opacity: .4; cursor: default; }
     .hc-uso { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); font-weight: 700; font-size: 13px; margin-bottom: 16px; }
     .hc-prev { margin-top: 8px; border-radius: 14px; overflow: hidden; max-height: 180px; background: var(--ev-surface-2); }
+    /* Campo de imagen: subir a carpetas del proyecto en vez de escribir una URL */
+    .hc-img { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px; border-radius: 18px;
+              border: 2px dashed var(--ev-line); background: var(--ev-surface-2); transition: border-color .2s, background .2s; }
+    .hc-img.sobre { border-color: var(--ev-teal); background: var(--ev-mint); }
+    .hc-img.subiendo { opacity: .6; pointer-events: none; }
+    .hc-img-prev { aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: var(--ev-grad); display: grid; place-items: center; }
+    .hc-img-prev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .hc-img-prev .sin { color: var(--ev-ink); font-weight: 700; font-size: 12.5px; opacity: .7; display: flex; gap: 6px; align-items: center; padding: 8px; text-align: center; }
+    .hc-img-acc { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .hc-img-acc small { flex-basis: 100%; }
+    @@media (max-width: 640px) { .hc-img { grid-template-columns: 1fr; } }
     .hc-prev img { width: 100%; max-height: 180px; object-fit: cover; display: block; }
     .ui-f input.may { text-transform: uppercase; }
     .hb-form { padding: 14px; border-radius: 16px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); margin-bottom: 12px; }
@@ -144,7 +155,7 @@ const HC = (() => {
     const fmtCelda = (c, v) => {
         if (v == null || v === '') return '<span style="color:var(--ev-muted)">—</span>';
         if (c.tipo === 'bool') return v ? '<span class="ui-chip" style="padding:2px 9px">Sí</span>' : '<span class="ui-chip ghost" style="padding:2px 9px">No</span>';
-        if (c.tipo === 'url') return EV.esUrl(v) ? `<img class="hc-cell-img" src="${esc(v)}" alt="" loading="lazy" onerror="this.replaceWith('—')">` : esc(v);
+        if (c.tipo === 'url' || c.tipo === 'imagen') return esImg(v) ? `<img class="hc-cell-img" src="${esc(v)}" alt="" loading="lazy" onerror="this.replaceWith('—')">` : esc(v || '—');
         if (c.tipo === 'decimal') return EV.fmt(v, 2);
         return esc(String(v).length > 80 ? String(v).slice(0, 80) + '…' : v);
     };
@@ -215,6 +226,11 @@ const HC = (() => {
     }
 
     // ---------------- FORMULARIO ----------------
+    // Imágenes: rutas del sitio (/imagenes/…) o direcciones web
+    const esImg = v => !!v && (EV.esUrl(v) || String(v).startsWith('/'));
+    const previa = v => esImg(v) ? `<img src="${esc(v)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'sin',textContent:'No se encontró la imagen'}))">`
+                                 : '<span class="sin"><i class="bi bi-image"></i> Sin imagen</span>';
+
     async function campoHtml(c, v, esNuevo, pref = 'e') {
         const id = `${pref}_${c.col}`, bloqueado = (c.clave && !esNuevo) || (c.auto);
         const val = v ?? (esNuevo ? (c.defecto ?? '') : '');
@@ -226,6 +242,17 @@ const HC = (() => {
             const ops = await lista(c.lista);
             return `<div class="ui-f">${lab}<select id="${id}" data-c="${c.col}" ${bloqueado ? 'disabled' : ''}>${c.req ? '' : '<option value="">—</option>'}${ops.map(o => `<option value="${esc(o.valor)}" ${String(o.valor).toUpperCase() === String(val).toUpperCase() ? 'selected' : ''}>${esc(o.texto)}${o.valor !== o.texto && c.lista === 'paises' ? ' · ' + esc(o.valor) : ''}</option>`).join('')}</select><span class="msg"></span></div>`;
         }
+        if (c.tipo === 'imagen') return `<div class="ui-f" style="grid-column:1/-1">${lab}
+            <input type="hidden" id="${id}" data-c="${c.col}" value="${esc(val)}">
+            <div class="hc-img" data-zona="${c.col}">
+                <div class="hc-img-prev" data-prev="${c.col}">${previa(val)}</div>
+                <div class="hc-img-acc">
+                    <label class="ev-btn ghost sm" style="cursor:pointer"><input type="file" accept="image/jpeg,image/png,image/webp" data-subir="${c.col}" hidden><i class="bi bi-upload"></i> <span data-txt="${c.col}">${val ? 'Cambiar imagen' : 'Subir imagen'}</span></label>
+                    <button type="button" class="ev-btn ghost sm" data-quitar="${c.col}" ${val ? '' : 'hidden'}><i class="bi bi-x-lg"></i> Quitar</button>
+                    <small class="ui-help" style="margin:0">Arrastra una imagen aquí o pulsa Subir. JPG, PNG o WebP hasta 10 MB; se convierte a WebP.</small>
+                    ${c.ayuda ? `<small class="ui-help" style="margin:0">${esc(c.ayuda)}</small>` : ''}
+                </div>
+            </div><span class="msg"></span></div>`;
         if (c.tipo === 'url') return `<div class="ui-f" style="grid-column:1/-1">${lab}<input id="${id}" data-c="${c.col}" maxlength="${c.max || ''}" value="${esc(val)}" placeholder="https://…"><span class="msg"></span><div class="hc-prev" data-prev="${c.col}">${EV.esUrl(val) ? `<img src="${esc(val)}" alt="" onerror="this.remove()">` : ''}</div></div>`;
         const tipo = c.tipo === 'number' || c.tipo === 'decimal' ? `type="number" step="${c.tipo === 'decimal' ? '0.01' : '1'}"` : '';
         const disp = c.tipo === 'hotel' && val ? (v && actual?.hotel_nombre ? `${actual.hotel_nombre}` : `#${val}`) : val;
@@ -250,6 +277,43 @@ const HC = (() => {
             if (c.tipo === 'tipohab') {
                 EV.picker(el, { url: q => `/Herramientas/Lista?nombre=tiposHabitacion&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-tag' }), onSelect: m => { el.dataset.valor = m.valor; } });
                 el.addEventListener('input', () => el.dataset.valor = el.value);
+            }
+            if (c.tipo === 'imagen') {
+                // Subir a wwwroot/imagenes/{carpeta}; el campo guarda la ruta y el registro se actualiza al pulsar Guardar
+                const zona = $(`[data-zona="${c.col}"]`, cont), inp = $(`[data-subir="${c.col}"]`, cont);
+                const pintar = (ruta, vista) => {
+                    el.value = ruta || '';
+                    $(`[data-prev="${c.col}"]`, cont).innerHTML = previa(vista || ruta);
+                    $(`[data-txt="${c.col}"]`, cont).textContent = ruta ? 'Cambiar imagen' : 'Subir imagen';
+                    $(`[data-quitar="${c.col}"]`, cont).hidden = !ruta;
+                    el.dispatchEvent(new CustomEvent('ev-cambio', { bubbles: true }));   // el panel queda "con cambios sin guardar"
+                };
+                const subir = async archivo => {
+                    if (!archivo) return;
+                    if (!/^image\/(jpeg|png|webp)$/.test(archivo.type) || archivo.size > 10e6) { EV.toast('Elige una imagen JPG, PNG o WebP de hasta 10 MB.', 'err'); return; }
+                    const n = $(`[data-c="${c.nombreDe}"]`, cont), nombre = (n?.dataset.valor || n?.value || '').trim();
+                    if (!nombre) {
+                        const et = def.campos.find(x => x.col === c.nombreDe);
+                        EV.toast(et?.auto ? `Guarda primero ${DEF.el} ${DEF.singular} para poder subir la imagen (se nombra con su ${et.etiqueta.toLowerCase()}).`
+                                          : `Primero completa «${et?.etiqueta || 'el nombre'}»: la imagen se guarda con ese nombre.`, 'err');
+                        return;
+                    }
+                    const fd = new FormData(); fd.append('nombre', nombre); fd.append('archivo', archivo);
+                    zona.classList.add('subiendo');
+                    try {
+                        // fetch directo (no EV.post): subir el archivo no es guardar el registro, el aviso de "sin guardar" debe seguir
+                        const r = await fetch(`/Herramientas/SubirImagen?id=${encodeURIComponent(def.clave)}&campo=${encodeURIComponent(c.col)}`, { method: 'POST', body: fd, headers: { RequestVerificationToken: EV.token() } });
+                        const d = await r.json().catch(() => ({}));
+                        if (!r.ok) throw new Error(d.mensaje || 'No se pudo subir la imagen.');
+                        pintar(d.ruta, d.url); EV.toast(d.mensaje);
+                    } catch (e) { EV.toast(e.message, 'err'); }
+                    finally { zona.classList.remove('subiendo'); inp.value = ''; }
+                };
+                inp.addEventListener('change', () => subir(inp.files[0]));
+                $(`[data-quitar="${c.col}"]`, cont).addEventListener('click', () => pintar(''));
+                ['dragenter', 'dragover'].forEach(t => zona.addEventListener(t, e => { e.preventDefault(); zona.classList.add('sobre'); }));
+                ['dragleave', 'drop'].forEach(t => zona.addEventListener(t, e => { e.preventDefault(); zona.classList.remove('sobre'); }));
+                zona.addEventListener('drop', e => subir(e.dataTransfer?.files?.[0]));
             }
             if (c.tipo === 'url') el.addEventListener('change', () => { const p = $(`[data-prev="${c.col}"]`, cont); p.innerHTML = EV.esUrl(el.value) ? `<img src="${esc(el.value)}" alt="" onerror="this.remove()">` : ''; });
         });

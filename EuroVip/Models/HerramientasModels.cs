@@ -4,10 +4,13 @@ namespace EuroVip.Models
     // Cada catálogo se define UNA vez aquí y lo usan el mismo repositorio y la misma vista.
     // Los nombres de tabla/columna salen SOLO de estas definiciones (nunca del navegador).
 
-    /// <param name="Tipo">text · textarea · number · decimal · bool · select · destino (depende de id_pais) · hotel · tipohab · url</param>
+    /// <param name="Tipo">text · textarea · number · decimal · bool · select · destino (depende de id_pais) · hotel · tipohab · url · imagen</param>
+    /// <param name="Carpeta">Solo tipo "imagen": carpeta dentro de wwwroot/imagenes donde se guarda lo que se sube (destinos, alojamientos…).</param>
+    /// <param name="NombreDe">Solo tipo "imagen": columna cuyo valor da nombre al archivo (como BackTiTan: minúsculas, sin acentos ni espacios + .webp).</param>
     public record HrCampo(string Col, string Etiqueta, string Tipo = "text", int Max = 0, bool Req = false,
                           bool Clave = false, bool Auto = false, string? Lista = null, bool EnTabla = true,
-                          bool Mayus = false, string? Ayuda = null, string? Defecto = null);
+                          bool Mayus = false, string? Ayuda = null, string? Defecto = null,
+                          string? Carpeta = null, string? NombreDe = null);
 
     /// <summary>Dónde se usa un registro: si hay filas, no se deja borrar. Where usa @columna de la clave.</summary>
     public record HrUso(string Tabla, string Where, string Etiqueta);
@@ -49,7 +52,8 @@ namespace EuroVip.Models
                 new HrCampo[] {
                     new("id_pais", "País", "select", 2, Req: true, Clave: true, Lista: "paises", EnTabla: false),
                     new("id_destino", "Destino", Max: 30, Req: true, Clave: true, Ayuda: "Nombre del destino, ej. Punta Cana"),
-                    new("caratula", "Imagen (URL)", "url", 300, EnTabla: false),
+                    new("caratula", "Imagen", "imagen", 300, Carpeta: "destinos", NombreDe: "id_destino",
+                        Ayuda: "Se guarda en imagenes/destinos con el nombre del destino (ej. puntacana.webp)"),
                     new("latitud", "Latitud", Max: 50, EnTabla: false),
                     new("longitud", "Longitud", Max: 50, EnTabla: false),
                     new("informacion", "Información", "textarea", EnTabla: false),
@@ -147,7 +151,8 @@ namespace EuroVip.Models
                     new("id_destino", "Destino", "destino", 30, Req: true),
                     new("id_tipo_alojamiento", "Tipo", "select", 20, Req: true, Lista: "tiposAlojamiento", Defecto: "HOTEL"),
                     new("categoria", "Categoría (estrellas)", Max: 15, Req: true, Ayuda: "ej. 5*"),
-                    new("caratula", "Imagen (URL)", "url", 300, EnTabla: false),
+                    new("caratula", "Imagen", "imagen", 300, Carpeta: "alojamientos", NombreDe: "id_alojamiento",
+                        Ayuda: "Se guarda en imagenes/alojamientos con el número del hotel (ej. 6031.webp). En un hotel nuevo, guárdalo primero."),
                     new("descripcion", "Descripción", "textarea", EnTabla: false),
                     new("latitude", "Latitud", Max: 50, EnTabla: false),
                     new("longitude", "Longitud", Max: 50, EnTabla: false),

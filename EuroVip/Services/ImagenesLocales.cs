@@ -43,7 +43,7 @@ namespace EuroVip.Services
     /// </summary>
     public class ImagenesLocales : IImagenesLocales
     {
-        public static readonly string[] Tipos = { "hoteles", "circuitos" };
+        public static readonly string[] Tipos = { "hoteles", "circuitos", "destinos", "alojamientos" };
         /// <summary>Subcarpetas permitidas (como BackTiTan: circuitos/itinerario/es).</summary>
         public static readonly string[] Subcarpetas = { "itinerario/es" };
         private const int LadoMaximo = 1600;

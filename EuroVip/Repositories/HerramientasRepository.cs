@@ -136,7 +136,7 @@ namespace EuroVip.Repositories
                     continue;
                 }
                 if (f.Max > 0 && s.Length > f.Max) return (null, $"«{f.Etiqueta}» admite como máximo {f.Max} caracteres.");
-                if (f.Tipo == "url" && !s.StartsWith("http://") && !s.StartsWith("https://") && !s.StartsWith("/")) return (null, $"«{f.Etiqueta}» debe ser una URL (https://…) o una ruta que empiece por /");
+                if ((f.Tipo == "url" || f.Tipo == "imagen") && !s.StartsWith("http://") && !s.StartsWith("https://") && !s.StartsWith("/")) return (null, $"«{f.Etiqueta}» debe ser una URL (https://…) o una ruta que empiece por /");
                 try { v[f.Col] = Convertir(f, s); }
                 catch { return (null, $"«{f.Etiqueta}» no es un número válido."); }
             }

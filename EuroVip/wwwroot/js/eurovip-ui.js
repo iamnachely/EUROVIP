@@ -242,6 +242,8 @@
         const marcar = e => { if (e.isTrusted && el.classList.contains('open')) sucio = true; };
         el.addEventListener('input', marcar);
         el.addEventListener('change', marcar);
+        // Cambios hechos por código que el usuario sí pidió (p. ej. subir o quitar una imagen): disparar 'ev-cambio'
+        el.addEventListener('ev-cambio', () => { if (el.classList.contains('open')) sucio = true; });
         const cerrarYa = () => { sucio = false; bd.classList.remove('open'); el.classList.remove('open'); document.body.style.overflow = ''; };
         const api = {
             abrir() { sucio = false; bd.classList.add('open'); el.classList.add('open'); document.body.style.overflow = 'hidden'; },
