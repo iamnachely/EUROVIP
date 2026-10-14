@@ -89,6 +89,7 @@
         <input class="ui-select" type="date" id="fDesde" title="Entrada desde" style="background-image:none;padding-right:12px">
         <input class="ui-select" type="date" id="fHasta" title="Entrada hasta" style="background-image:none;padding-right:12px">
         <label class="ui-switch"><input type="checkbox" id="fPasadas"><span class="tr"></span> Incluir pasadas</label>
+        <button type="button" class="ev-btn ghost sm" id="ofLimpiar" hidden><i class="bi bi-x-circle"></i> Limpiar filtros</button>
         <span style="flex:1"></span>
         <a class="ev-btn ghost sm" href="#" id="ofExportar"><i class="bi bi-filetype-csv"></i> Exportar</a>
     </div>
@@ -162,6 +163,15 @@ const OF = (() => {
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
     const esc = EV.esc;
     const st = { q: '', destino: '', campanya: '', estado: '', vuelo: '', desde: '', hasta: '', pasadas: false, orden: 'fecha', pagina: 1 };
+    const DEF = { ...st };   // valores por defecto: lo que no es igual a esto se guarda en la dirección (?destino=…)
+
+    /** Pone en pantalla los filtros de st (al volver a la página o al limpiar). */
+    function filtrosAPantalla() {
+        $('#fQ').value = st.q; $('#fDestino').value = st.destino; $('#fCampanya').value = st.campanya; $('#fOrden').value = st.orden;
+        $('#fDesde').value = st.desde; $('#fHasta').value = st.hasta; $('#fPasadas').checked = st.pasadas;
+        [['#fEstado', 'estado'], ['#fVuelo', 'vuelo']].forEach(([id, k]) => $$(id + ' .ui-pick').forEach(x => x.classList.toggle('on', (x.dataset.v ?? '') === String(st[k]))));
+    }
+    function limpiarFiltros() { Object.assign(st, DEF); filtrosAPantalla(); cargar(); }
     const sel = new Set();
     let items = [], cat, actual = null, sups = null;
     const drawer = EV.drawer($('#ofEditor'));
@@ -179,6 +189,9 @@ const OF = (() => {
     }
 
     async function cargar() {
+        EV.filtrosURL.guardar(st, DEF);   // al volver (o compartir el enlace) se ven los mismos filtros
+        const filtrando = st.q || st.destino || st.campanya || st.estado || st.vuelo || st.desde || st.hasta || st.pasadas;
+        $('#ofLimpiar').hidden = !filtrando;
         $('#ofLista').innerHTML = '<div class="ui-skel" style="height:320px"></div>';
         try {
             const d = await EV.api('/Ofertas/Listar?' + params());
@@ -186,7 +199,7 @@ const OF = (() => {
             $('#kFut').textContent = EV.fmt(d.stats.futuras); $('#kHot').textContent = EV.fmt(d.stats.hoteles);
             $('#kVue').textContent = EV.fmt(d.stats.conVuelo); $('#kDesde').textContent = d.stats.precioDesde != null ? EV.dinero(d.stats.precioDesde) : '—';
             pintar(d);
-        } catch (e) { $('#ofLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar las ofertas</h3><p>${esc(e.message)}</p></div>`; }
+        } catch (e) { $('#ofLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar las ofertas</h3><p>${esc(e.message)}</p><button type="button" class="ev-btn" onclick="OF.recargar()"><i class="bi bi-arrow-clockwise"></i> Reintentar</button></div>`; }
     }
 
     function pintar(d) {
@@ -194,6 +207,7 @@ const OF = (() => {
             const filtrando = st.q || st.destino || st.campanya || st.estado || st.vuelo || st.desde || st.hasta;
             $('#ofLista').innerHTML = `<div class="ui-empty"><i class="bi bi-building big"></i><h3>${filtrando ? 'No hay ofertas con esos filtros' : 'Todavía no hay ofertas cargadas'}</h3>
                 <p>${filtrando ? 'Prueba con otros filtros o activa "Incluir pasadas".' : 'Carga las primeras con la versión Express o la Clásica.'}</p>
+                ${filtrando ? '<p><button type="button" class="ev-btn ghost" onclick="OF.limpiarFiltros()"><i class="bi bi-funnel"></i> Limpiar filtros</button></p>' : ''}
                 <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><a class="ev-btn" href="/CargaManual/Express"><i class="bi bi-lightning-charge"></i> Carga Express</a><a class="ev-btn ghost" href="/CargaManual/Clasica"><i class="bi bi-ui-checks"></i> Carga Clásica</a></div></div>`;
             $('#ofPager').hidden = true; return;
         }
@@ -284,7 +298,11 @@ const OF = (() => {
         };
         if (dto.PrecioTotal - sups.total() < cat.minimo && !await EV.confirmar({ titulo: 'Precio base bajo', texto: `El precio base queda por debajo del mínimo (${EV.fmt(cat.minimo)}). ¿Guardar igual?`, si: 'Guardar igual' })) return;
         const b = $('#eGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
-        try { const r = await EV.post('/Ofertas/Editar', dto); EV.toast(r.mensaje); drawer.cerrar(); cargar(); }
+        try {
+            const r = await EV.post('/Ofertas/Editar', dto); EV.toast(r.mensaje); drawer.cerrar(true);
+            await cargar();
+            EV.resaltar(document.querySelector(`#ofLista tr[data-id="${dto.Id_Servicio}"]`));   // se ve la fila que cambió
+        }
         catch (e) { EV.toast(e.message, 'err'); }
         finally { b.disabled = false; b.innerHTML = html; }
     }
@@ -304,6 +322,8 @@ const OF = (() => {
         const destinos = await EV.api('/Ofertas/Destinos');
         $('#fDestino').innerHTML += destinos.map(d => `<option value="${esc(d.valor)}">${esc(d.texto)} (${esc(d.extra)})</option>`).join('');
         $('#fCampanya').innerHTML += cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)} (#${esc(c.valor)})</option>`).join('');
+        Object.assign(st, EV.filtrosURL.leer(DEF)); filtrosAPantalla();   // filtros guardados en la dirección
+        $('#ofLimpiar').addEventListener('click', limpiarFiltros);
 
         $('#fQ').addEventListener('input', EV.debounce(e => { st.q = e.target.value.trim(); st.pagina = 1; cargar(); }, 300));
         [['#fDestino', 'destino'], ['#fCampanya', 'campanya'], ['#fOrden', 'orden'], ['#fDesde', 'desde'], ['#fHasta', 'hasta']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; st.pagina = 1; cargar(); }));
@@ -350,6 +370,8 @@ const OF = (() => {
 
     return {
         cerrar: () => drawer.cerrar(),
+        recargar: () => cargar(),
+        limpiarFiltros: () => limpiarFiltros(),
         limpiarSel: () => { sel.clear(); $$('[data-sel]').forEach(c => { c.checked = false; c.closest('tr').classList.remove('sel'); }); if ($('#selTodo')) $('#selTodo').checked = false; barraLote(); },
         lote: async activo => {
             if (!await EV.confirmar({ titulo: `¿${activo ? 'Activar' : 'Desactivar'} ${sel.size} oferta${sel.size === 1 ? '' : 's'}?`, icono: activo ? 'toggle-on' : 'toggle-off', si: activo ? 'Sí, activar' : 'Sí, desactivar',

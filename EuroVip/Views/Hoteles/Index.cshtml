@@ -964,6 +964,7 @@ const HX = (() => {
                     </label>
                     <button class="hx-ibtn" title="Ver" onclick="HX.ver(${h.id_Servicio})"><i class="bi bi-eye"></i></button>
                     <button class="hx-ibtn" title="Editar" onclick="HX.editar(${h.id_Servicio})"><i class="bi bi-pencil"></i></button>
+                    <button class="hx-ibtn" title="Duplicar: otro igual (otra campaña u origen)" aria-label="Duplicar" onclick="HX.duplicar(${h.id_Servicio})"><i class="bi bi-copy"></i></button>
                     <button class="hx-ibtn danger" title="Eliminar" onclick="HX.eliminar(${h.id_Servicio})"><i class="bi bi-trash3"></i></button>
                 </div>
             </article>`).join('')}</div>`;
@@ -984,6 +985,7 @@ const HX = (() => {
                     <td><div class="hx-acts">
                         <button class="hx-ibtn" title="Ver" onclick="HX.ver(${h.id_Servicio})"><i class="bi bi-eye"></i></button>
                         <button class="hx-ibtn" title="Editar" onclick="HX.editar(${h.id_Servicio})"><i class="bi bi-pencil"></i></button>
+                    <button class="hx-ibtn" title="Duplicar: otro igual (otra campaña u origen)" aria-label="Duplicar" onclick="HX.duplicar(${h.id_Servicio})"><i class="bi bi-copy"></i></button>
                         <button class="hx-ibtn danger" title="Eliminar" onclick="HX.eliminar(${h.id_Servicio})"><i class="bi bi-trash3"></i></button>
                     </div></td>
                 </tr>`).join('')}</tbody></table></div>`;
@@ -1134,6 +1136,20 @@ const HX = (() => {
             await cargarCombos(h.id_Campanya, h.id_Contenedor ?? '');
             await cargarFotoActual((h.id_Destino || '').trim());
         } catch (e) { toast(e.message, 'err'); }
+    }
+
+    /** Duplicar: abre un hotel NUEVO con los datos de otro (mismo nombre, así usa la misma foto). Para otra campaña, origen o sección. */
+    async function duplicar(id) {
+        await editar(id);
+        if (!formAbierto()) return;
+        editandoId = null;
+        campo('Id_Servicio').value = '';
+        $('#frmTitulo').textContent = 'Duplicar hotel';
+        $('#frmSub').textContent = 'Copia lista: cambia la campaña, el origen, el precio o la sección y guarda. Es un hotel nuevo en la web.';
+        $('#frmIcon').className = 'bi bi-copy';
+        $('#btnGuardar').innerHTML = '<i class="bi bi-check2-circle"></i> Guardar copia';
+        formSucio = true;   // es un registro nuevo sin guardar: avisar si se cierra
+        toast('Copia lista: revisa los datos y pulsa "Guardar copia".', 'info');
     }
 
     async function guardar() {
@@ -1342,7 +1358,7 @@ const HX = (() => {
     document.addEventListener('DOMContentLoaded', iniciar);
 
     return {
-        nuevo, editar, ver, guardar, cerrar, eliminar, fotos,
+        nuevo, editar, duplicar, ver, guardar, cerrar, eliminar, fotos,
         estado: (id, input) => cambiarEstado(id, input),
         pagina: n => { estado.pagina = n; cargar(); window.scrollTo({ top: 0, behavior: 'smooth' }); },
         recargar: cargar,

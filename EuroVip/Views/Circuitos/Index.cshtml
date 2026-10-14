@@ -254,7 +254,7 @@ const CX = (() => {
         try {
             lista = await EV.api(`/Circuitos/Listar?q=${encodeURIComponent(q)}&pais=${encodeURIComponent(pais)}`);
             pintar(q || pais);
-        } catch (e) { $('#cxLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar los circuitos</h3><p>${esc(e.message)}</p></div>`; }
+        } catch (e) { $('#cxLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar los circuitos</h3><p>${esc(e.message)}</p><button type="button" class="ev-btn" onclick="CX.recargar()"><i class="bi bi-arrow-clockwise"></i> Reintentar</button></div>`; }
     }
 
     function pintar(filtrando) {
@@ -267,7 +267,7 @@ const CX = (() => {
             return;
         }
         $('#cxLista').innerHTML = `<div class="cx-grid">${lista.map((c, n) => `
-            <article class="cx-card" style="--n:${n}">
+            <article class="cx-card" style="--n:${n}" data-cod="${esc(c.codigo)}">
                 <div class="cx-img" onclick="CX.editar('${esc(c.codigo)}')">
                     ${imagen(c.caratula, c.nombre)}
                     <div class="cx-top"><span class="cx-tag dark"><i class="bi bi-moon-stars"></i> ${c.noches} noches</span>
@@ -288,7 +288,8 @@ const CX = (() => {
                 </div>
                 <div class="cx-foot">
                     <a class="ev-btn sm aqua" href="/CargaCircuitos/Express?circuito=${encodeURIComponent(c.codigo)}"><i class="bi bi-lightning-charge"></i> Cargar salidas</a>
-                    <button class="ui-ibtn" title="Editar" onclick="CX.editar('${esc(c.codigo)}')"><i class="bi bi-pencil"></i></button>
+                    <button class="ui-ibtn" title="Editar" aria-label="Editar" onclick="CX.editar('${esc(c.codigo)}')"><i class="bi bi-pencil"></i></button>
+                    <button class="ui-ibtn" title="Duplicar: crear uno parecido" aria-label="Duplicar" onclick="CX.duplicar('${esc(c.codigo)}')"><i class="bi bi-copy"></i></button>
                     <button class="ui-ibtn danger" title="Eliminar" onclick="CX.eliminar('${esc(c.codigo)}')"><i class="bi bi-trash3"></i></button>
                 </div>
             </article>`).join('')}</div>`;
@@ -330,6 +331,17 @@ const CX = (() => {
         try {
             const c = await EV.api('/Circuitos/Obtener?codigo=' + encodeURIComponent(codigo));
             abrirEditor({ ...c, codigoOriginal: c.codigo });
+        } catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    /** Duplicar: abre un circuito NUEVO con los destinos, hoteles e itinerario de otro (sin sus salidas ni su portada). */
+    async function duplicar(codigo) {
+        try {
+            const c = await EV.api('/Circuitos/Obtener?codigo=' + encodeURIComponent(codigo));
+            await abrirEditor({ ...c, codigoOriginal: null, codigo: '', nombre: `${c.nombre} (copia)`, caratula: '', salidas: [] });
+            $('#edTitulo').textContent = 'Duplicar circuito';
+            $('#edSub').textContent = `Copia de "${c.nombre}": cambia el código y el nombre, revisa y guarda. Las salidas no se copian.`;
+            EV.toast('Copia lista: escribe el código y el nombre nuevos.', 'info');
         } catch (e) { EV.toast(e.message, 'err'); }
     }
 
@@ -446,8 +458,9 @@ const CX = (() => {
         try {
             const r = await EV.post('/Circuitos/Guardar', dto);
             EV.toast(r.mensaje);
-            drawer.cerrar();
+            drawer.cerrar(true);
             await cargar();
+            EV.resaltar([...document.querySelectorAll('.cx-card[data-cod]')].find(x => x.dataset.cod === dto.Codigo));   // dónde quedó
         } catch (e) {
             EV.toast(e.message, 'err');
         } finally { btn.disabled = false; btn.innerHTML = html; }
@@ -586,7 +599,8 @@ const CX = (() => {
     document.addEventListener('DOMContentLoaded', iniciar);
 
     return {
-        nuevo, editar, guardar, eliminar, cerrar: () => { drawer.cerrar(); drawerCat.cerrar(); },
+        nuevo, editar, duplicar, guardar, eliminar, cerrar: () => { drawer.cerrar(); drawerCat.cerrar(); },
+        recargar: () => cargar(),
         noches: d => { const i = $('#edNoches'); i.value = Math.min(60, Math.max(1, (parseInt(i.value, 10) || 7) + d)); },
         quitarDestino: i => { estado.destinos.splice(i, 1); pintarDestinos(); },
         quitarHotel: i => { estado.hoteles.splice(i, 1); pintarHoteles(); },
