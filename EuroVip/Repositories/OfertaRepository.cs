@@ -47,11 +47,12 @@ namespace EuroVip.Repositories
             LEFT JOIN Eurovip.proveedor p    ON p.id_proveedor = s.id_Proveedor
             LEFT JOIN Eurovip.servicio_itinerario v ON v.id_servicio = s.id_servicio AND v.segmento = 1
             LEFT JOIN Eurovip.servicio_origen so    ON so.id_servicio = s.id_servicio
+            LEFT JOIN Eurovip.servicio_destino sdx  ON sdx.id_servicio = s.id_servicio   -- destino de la oferta (FASE 11)
             WHERE s.id_tipo_servicio = 'OFERTA' AND s.id_idioma = 'ES'";
 
         private const string Columnas = @"
             s.id_servicio AS Id_Servicio, s.nombre AS Nombre, a.id_alojamiento AS Id_Alojamiento, a.nombre AS Hotel, a.caratula AS Caratula,
-            a.id_destino AS Destino, a.id_pais AS Id_Pais, sd.id_regimen AS Id_Regimen, r.descripcion AS Regimen,
+            COALESCE(sdx.destino, a.id_destino) AS Destino, COALESCE(sdx.id_pais_destino, a.id_pais) AS Id_Pais, sd.id_regimen AS Id_Regimen, r.descripcion AS Regimen,
             sd.desde AS Desde, sd.hasta AS Hasta, ISNULL(sd.noches, s.noches) AS Noches, s.id_campanya AS Id_Campanya, ca.nombre AS Campanya,
             s.id_moneda AS Id_Moneda, s.precio_base AS Precio_Base, s.descuento AS Descuento, Eurovip.fnTotalTasa(s.id_servicio) AS Tasas,
             Eurovip.fnPrecioWeb(s.id_servicio) AS PrecioWeb, COALESCE(v.origen, so.origen) AS Origen,
@@ -67,10 +68,10 @@ namespace EuroVip.Repositories
             var where = new List<string>();
             if (!string.IsNullOrWhiteSpace(f.Q))
             {
-                where.Add("(a.nombre LIKE @q OR a.id_destino LIKE @q OR s.codigo LIKE @q OR s.nombre LIKE @q OR ca.nombre LIKE @q OR CAST(s.id_servicio AS varchar(12)) = @qx OR CAST(a.id_alojamiento AS varchar(12)) = @qx)");
+                where.Add("(a.nombre LIKE @q OR COALESCE(sdx.destino, a.id_destino) LIKE @q OR s.codigo LIKE @q OR s.nombre LIKE @q OR ca.nombre LIKE @q OR CAST(s.id_servicio AS varchar(12)) = @qx OR CAST(a.id_alojamiento AS varchar(12)) = @qx)");
                 p.Add("q", $"%{f.Q.Trim()}%"); p.Add("qx", f.Q.Trim());
             }
-            if (!string.IsNullOrWhiteSpace(f.Destino)) { where.Add("a.id_destino = @destino"); p.Add("destino", f.Destino); }
+            if (!string.IsNullOrWhiteSpace(f.Destino)) { where.Add("COALESCE(sdx.destino, a.id_destino) = @destino"); p.Add("destino", f.Destino); }
             if (f.Campanya is > 0) { where.Add("s.id_campanya = @campanya"); p.Add("campanya", f.Campanya); }
             if (f.Estado is 0 or 1) { where.Add("s.activo = @estado"); p.Add("estado", f.Estado == 1); }
             if (f.Vuelo == 1) where.Add("v.id_servicio IS NOT NULL");
@@ -218,8 +219,8 @@ namespace EuroVip.Repositories
         {
             using var cn = _db.Conexion();
             return await cn.QueryAsync<Opcion>($@"
-                SELECT a.id_destino AS Valor, a.id_destino AS Texto, CAST(COUNT(*) AS varchar(10)) AS Extra {Base}
-                GROUP BY a.id_destino ORDER BY a.id_destino");
+                SELECT COALESCE(sdx.destino, a.id_destino) AS Valor, COALESCE(sdx.destino, a.id_destino) AS Texto, CAST(COUNT(*) AS varchar(10)) AS Extra {Base}
+                GROUP BY COALESCE(sdx.destino, a.id_destino) ORDER BY COALESCE(sdx.destino, a.id_destino)");
         }
 
         public async Task<List<VitrinaClave>> ClavesVitrinaAsync(SqlConnection cn, SqlTransaction? tx, IEnumerable<int> ids) =>

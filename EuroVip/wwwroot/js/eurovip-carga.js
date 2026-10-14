@@ -199,7 +199,8 @@
     };
 
     // ------------------------------------------------------------------ BLOQUE DE HOTEL (ofertas)
-    // Hotel + régimen + habitaciones (con suplemento opcional). cfg: { regimenes, onChange, onQuitar, hotel: {id, nombre, destino}, regimen, habitaciones }
+    // Hotel + régimen + habitaciones (con suplemento opcional). cfg: { regimenes, onChange, onQuitar, hotel: {id, nombre, destino}, regimen, habitaciones,
+    //   destino: () => 'Punta Cana' | null }  ← destino que ya fijaron los OTROS hoteles de la carga: la búsqueda solo ofrece ese destino.
     EVC.hotelOferta = (cont, cfg) => {
         const caja = document.createElement('div');
         caja.className = 'ui-seg';
@@ -257,11 +258,22 @@
             cfg.onChange?.();
         };
 
+        // Todos los hoteles de una carga son del mismo destino (el destino de la oferta).
+        const fijo = () => (cfg.destino?.() || '').trim();
         EV.picker($('[data-k=hotel]'), {
-            url: q => `/Circuitos/Hoteles?q=${q}`, limpiar: false,
+            url: q => `/Circuitos/Hoteles?q=${q}` + (fijo() ? `&destino=${encodeURIComponent(fijo())}` : ''), limpiar: false,
             map: x => ({ valor: x.id_Alojamiento, texto: x.nombre, sub: `${x.destino} · #${x.id_Alojamiento}`, img: EV.esUrl(x.caratula) ? x.caratula : null, icono: 'bi-building' }),
-            onSelect: (m, raw) => elegir(raw.id_Alojamiento, raw.nombre, raw.destino)
+            onSelect: (m, raw) => {
+                const d = fijo();
+                if (d && (raw.destino || '').trim().toLowerCase() !== d.toLowerCase()) {
+                    EV.toast(`${raw.nombre} es de ${raw.destino || 'otro destino'}. Esta carga es de ${d}: todos los hoteles tienen que ser del mismo destino.`, 'err');
+                    $('[data-k=hotel]').value = ''; return;
+                }
+                elegir(raw.id_Alojamiento, raw.nombre, raw.destino);
+            }
         });
+        const pista = () => { const d = fijo(); $('[data-k=hotel]').placeholder = d ? `Busca hoteles de ${d}…` : 'Busca por nombre o número…'; };
+        $('[data-k=hotel]').addEventListener('focus', pista); pista();
         $('[data-k=hotel]').addEventListener('input', () => { hotel = null; $('[data-nombre]').textContent = 'Elige el hotel'; pintarHabs(); cfg.onChange?.(); });
         caja.addEventListener('change', () => cfg.onChange?.());
         $('[data-del]').onclick = () => { caja.remove(); cfg.onQuitar?.(); cfg.onChange?.(); };
@@ -282,6 +294,11 @@
             }
         };
     };
+
+    /** Destino que fijan los hoteles ya elegidos (sin contar `excepto`). Si están mezclados, devuelve el primero. */
+    EVC.destinoDe = (bloques, excepto) => (bloques.filter(b => b !== excepto).map(b => b.hotel()?.destino).find(d => d && d.trim()) || '').trim() || null;
+    /** Destinos distintos entre los hoteles elegidos (para avisar si se mezclaron). */
+    EVC.destinosDe = bloques => [...new Map(bloques.map(b => b.hotel()?.destino?.trim()).filter(Boolean).map(d => [d.toLowerCase(), d])).values()];
 
     // ------------------------------------------------------------------ MATRIZ DE PRECIOS hotel × fecha (ofertas)
     // Filas = fechas de entrada, columnas = hoteles. Celda vacía = ese hotel no se vende esa fecha.

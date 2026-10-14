@@ -1809,6 +1809,8 @@ BEGIN
     DELETE FROM Eurovip.servicio_detalle     WHERE id_servicio = @idServicio;
     DELETE FROM Eurovip.servicio_circuito    WHERE id_servicio = @idServicio;
     DELETE FROM Eurovip.servicio_origen      WHERE id_servicio = @idServicio;
+    IF OBJECT_ID('Eurovip.servicio_destino', 'U') IS NOT NULL   -- CAMBIO 44 (FASE 11)
+        DELETE FROM Eurovip.servicio_destino WHERE id_servicio = @idServicio;
     DELETE FROM Eurovip.alojamiento_circuito WHERE id_servicio = @idServicio;
     DELETE FROM Eurovip.alojamiento_destino  WHERE id_servicio = @idServicio;
     DELETE FROM Eurovip.servicio             WHERE id_servicio = @idServicio;
@@ -2386,6 +2388,11 @@ BEGIN
     INSERT INTO Eurovip.servicio_origen (id_servicio, id_pais_origen, origen)
     SELECT @nuevoId, ISNULL(@idPaisOrigen, id_pais_origen), ISNULL(@origen, origen) FROM Eurovip.servicio_origen WHERE id_servicio = @numeroServicio;
 
+    -- CAMBIO 44 (FASE 11): la copia lleva el mismo destino (el de sus hoteles)
+    IF OBJECT_ID('Eurovip.servicio_destino', 'U') IS NOT NULL
+        INSERT INTO Eurovip.servicio_destino (id_servicio, id_pais_destino, destino)
+        SELECT @nuevoId, id_pais_destino, destino FROM Eurovip.servicio_destino WHERE id_servicio = @numeroServicio;
+
     INSERT INTO Eurovip.servicio_circuito (id_servicio, nombre_circuito, id_idoma, desde, hasta, id_pais_origen, origen)
     SELECT @nuevoId, nombre_circuito, id_idoma, DATEADD(DAY, @d, desde), DATEADD(DAY, @d, hasta), ISNULL(@idPaisOrigen, id_pais_origen), ISNULL(@origen, origen)
     FROM Eurovip.servicio_circuito WHERE id_servicio = @numeroServicio;
@@ -2560,6 +2567,50 @@ WHERE NOT EXISTS (SELECT 1 FROM Eurovip.rol x WHERE x.codigoRol = v.r);
 GO
 
 /* ##########################################################################################
+   FASE 11 — DESTINO DE LA OFERTA  (14/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: la base guardaba el ORIGEN de venta de cada oferta (servicio_origen) pero no su
+   DESTINO. Pedido de la usuaria (14/10/2026): "así como colocaste el origen coloca el destino".
+
+   Explicado fácil:
+   • El destino de una oferta es el destino de sus hoteles (alojamiento.id_destino).
+   • En una carga, TODOS los hoteles tienen que ser del mismo destino: si todos son de
+     Punta Cana, la oferta es destino = Punta Cana. La pantalla y el servidor no dejan
+     mezclar hoteles de destinos distintos.
+   • servicio_destino es igual que servicio_origen: una fila por oferta.
+
+   CAMBIO 44  Tabla servicio_destino + se llena para las ofertas que ya existen (todas tenían
+              un solo destino por sus hoteles: 122 de 122).
+              Además se actualizaron en su sitio (más arriba en este archivo):
+              • spEliminaServicio: borra también servicio_destino.
+              • spDuplicaServicio: la copia lleva el mismo destino.
+   ########################################################################################## */
+/* ---------- CAMBIO 44: servicio_destino ---------- */
+IF OBJECT_ID('Eurovip.servicio_destino', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_destino (
+    id_servicio     INT         NOT NULL,
+    id_pais_destino CHAR(2)     NOT NULL,      -- país del destino (alojamiento.id_pais)
+    destino         VARCHAR(30) NOT NULL,      -- destino de los hoteles (alojamiento.id_destino / destino.id_destino)
+    CONSTRAINT PK_Eurovip_servicio_destino PRIMARY KEY CLUSTERED (id_servicio),
+    CONSTRAINT FK_Eurovip_servicio_destino_servicio FOREIGN KEY (id_servicio) REFERENCES Eurovip.servicio (id_servicio)
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_servicio_destino_destino')
+    CREATE INDEX IX_Eurovip_servicio_destino_destino ON Eurovip.servicio_destino (destino, id_pais_destino);
+GO
+-- Llenar las ofertas que ya existen con el destino de su hotel (solo las que tienen UN destino)
+INSERT INTO Eurovip.servicio_destino (id_servicio, id_pais_destino, destino)
+SELECT s.id_servicio, MIN(a.id_pais), MIN(a.id_destino)
+FROM Eurovip.servicio s
+    JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.id_idioma = s.id_idioma
+    JOIN Eurovip.alojamiento a       ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
+WHERE s.id_tipo_servicio = 'OFERTA'
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_destino x WHERE x.id_servicio = s.id_servicio)
+GROUP BY s.id_servicio
+HAVING COUNT(DISTINCT a.id_destino) = 1;
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -2712,6 +2763,13 @@ GO
                destino (antes la pantalla pedía una URL de imagen) y descripcion = "Régimen -Código".
                Los 2 hoteles ya cargados en Eurovip (inicio 1 y 12) no se tocaron: no tienen código
                y en el nombre tienen el destino; hay que corregirlos desde la pantalla.
+
+   14/10/2026  FASE 11 aplicada (CAMBIO 44): servicio_destino creada y llenada con las 122 ofertas
+               existentes (todas Punta Cana / DO, una sola por sus hoteles). spEliminaServicio y
+               spDuplicaServicio actualizados. Prueba dentro de una transacción deshecha (ROLLBACK):
+               se duplicó una oferta (#192, salió con destino Punta Cana/DO) y se eliminó con
+               spEliminaServicio sin error; no quedó nada guardado (servicio_destino sigue con 122).
+               Solo se "gastó" el número automático 192.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

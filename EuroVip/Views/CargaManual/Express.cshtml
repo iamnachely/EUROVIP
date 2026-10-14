@@ -60,7 +60,8 @@
         <!-- PASO 1 -->
         <section class="xp-panel ui-pane on" data-paso="1">
             <h2>¿Qué hoteles vas a cargar?</h2>
-            <p class="sub">Agrega uno o varios. De cada hotel elige el régimen y marca las habitaciones que se venden (la primera es la base; las demás pueden llevar suplemento).</p>
+            <p class="sub">Agrega uno o varios <b>del mismo destino</b>. De cada hotel elige el régimen y marca las habitaciones que se venden (la primera es la base; las demás pueden llevar suplemento).</p>
+            <div id="xpDestino"></div>
             <div class="xp-hoteles" id="xpHoteles"></div>
             <button type="button" class="xp-add" id="xpAddHotel" style="margin-top:14px"><i class="bi bi-plus-circle"></i> Agregar otro hotel</button>
             <div class="xp-nav"><span class="sp"></span><button type="button" class="ev-btn" data-sig>Siguiente: fechas y precios <i class="bi bi-arrow-right"></i></button></div>
@@ -209,6 +210,8 @@ const XP = (() => {
             S.bloques.forEach(b => err.push(...b.comp.validar()));
             const ids = hoteles().map(h => S.bloques.find(b => b.uid === h.uid).comp.datos()).map(d => d.Id_Alojamiento + '|' + d.Id_Regimen);
             if (new Set(ids).size !== ids.length) err.push('Hay un hotel repetido con el mismo régimen.');
+            const ds = EVC.destinosDe(S.bloques.map(b => b.comp));
+            if (ds.length > 1) err.push(`Todos los hoteles tienen que ser del mismo destino (hay ${ds.join(', ')}).`);
         }
         if (p === 2) {
             const n = noches(); if (n < 1 || n > 60) marca('#gNoches', 'Entre 1 y 60');
@@ -236,12 +239,23 @@ const XP = (() => {
         const uid = 'h' + (++S.uid);
         const comp = EVC.hotelOferta($('#xpHoteles'), {
             regimenes: cat.regimenes,
-            onChange: () => { if (S.paso === 2) mx.pintar(); resumen(); },
-            onQuitar: () => { S.bloques = S.bloques.filter(b => b.uid !== uid); mx.quitarHotel(uid); }
+            // el destino lo fijan los demás hoteles de la carga
+            destino: () => EVC.destinoDe(S.bloques.filter(b => b.uid !== uid).map(b => b.comp)),
+            onChange: () => { if (S.paso === 2) mx.pintar(); pintarDestino(); resumen(); },
+            onQuitar: () => { S.bloques = S.bloques.filter(b => b.uid !== uid); mx.quitarHotel(uid); pintarDestino(); }
         });
         S.bloques.push({ uid, comp });
         setTimeout(() => $('[data-k=hotel]', comp.el).focus(), 50);
         resumen();
+    }
+
+    /** Destino de la oferta = destino de sus hoteles (todos iguales). */
+    function pintarDestino() {
+        const ds = EVC.destinosDe(S.bloques.map(b => b.comp));
+        $('#xpDestino').innerHTML = !ds.length ? ''
+            : ds.length === 1
+                ? `<div class="ui-note info" style="margin:0 0 14px"><i class="bi bi-geo-alt-fill"></i><div>Destino de la oferta: <b>${esc(ds[0])}</b>. Solo puedes agregar hoteles de ${esc(ds[0])}; para otro destino haz otra carga.</div></div>`
+                : `<div class="ui-note err" style="margin:0 0 14px"><i class="bi bi-exclamation-triangle"></i><div>Hay hoteles de destinos distintos (<b>${ds.map(esc).join(', ')}</b>). Todos los hoteles de una carga tienen que ser del mismo destino: quita los que sobran.</div></div>`;
     }
 
     // ===================== PASO 3: COMERCIAL =====================
@@ -274,6 +288,7 @@ const XP = (() => {
             <div class="big">${total}</div>
             <div class="mini">oferta${total === 1 ? '' : 's'} (${hs.length} hotel${hs.length === 1 ? '' : 'es'} × fechas con precio × ${Math.max(1, camps.length)} campaña${camps.length === 1 ? '' : 's'})</div>
             <dl>
+                <div><dt>Destino</dt><dd>${esc(EVC.destinosDe(S.bloques.map(b => b.comp)).join(' · ') || '—')}</dd></div>
                 <div><dt>Hoteles</dt><dd>${hs.length ? hs.map(h => esc(h.nombre)).join('<br>') : '—'}</dd></div>
                 <div><dt>Noches</dt><dd>${n || '—'}</dd></div>
                 <div><dt>Primera entrada</dt><dd>${fechas.length ? EV.fecha(fechas[0]) : '—'}</dd></div>

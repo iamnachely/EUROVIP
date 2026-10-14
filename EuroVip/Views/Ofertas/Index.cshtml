@@ -5,6 +5,8 @@
 @section Styles {
 <link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
 <style>
+    .of-dest { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 10px; background: var(--ev-mint); color: var(--ev-ink); font-weight: 800; font-size: 12.5px; white-space: nowrap; }
+    .of-dest i { color: var(--ev-deep); }
     .of-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
     .of-kpi { display: flex; align-items: center; gap: 12px; padding: 16px 18px; }
     .of-kpi i { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-size: 18px; background: var(--ev-mint); flex-shrink: 0; }
@@ -185,16 +187,17 @@ const OF = (() => {
             $('#ofPager').hidden = true; return;
         }
         $('#ofLista').innerHTML = `<div class="ui-table-wrap"><table class="ui-table"><thead><tr>
-            <th style="width:40px"><input type="checkbox" class="of-check" id="selTodo" title="Seleccionar todo"></th><th>Hotel</th><th>Régimen</th><th>Fechas</th><th>Campaña</th><th class="num">Precio web</th><th>Vuelo</th><th>Origen</th><th>Activa</th><th></th></tr></thead><tbody>
+            <th style="width:40px"><input type="checkbox" class="of-check" id="selTodo" title="Seleccionar todo"></th><th>Hotel</th><th>Régimen</th><th>Fechas</th><th>Campaña</th><th class="num">Precio web</th><th>Vuelo</th><th>Origen</th><th>Destino</th><th>Activa</th><th></th></tr></thead><tbody>
             ${d.items.map(o => `<tr class="${o.activo ? '' : 'off'} ${sel.has(o.id_Servicio) ? 'sel' : ''}" data-id="${o.id_Servicio}">
                 <td><input type="checkbox" class="of-check" data-sel="${o.id_Servicio}" ${sel.has(o.id_Servicio) ? 'checked' : ''}></td>
-                <td><div class="of-hotel"><span class="of-th">${thumb(o)}</span><div><b>${esc(o.hotel)}</b><span class="of-sub">#${o.id_Servicio} · ${esc(o.destino || '')}</span></div></div></td>
+                <td><div class="of-hotel"><span class="of-th">${thumb(o)}</span><div><b>${esc(o.hotel)}</b><span class="of-sub">#${o.id_Servicio}</span></div></div></td>
                 <td><span class="of-reg" title="${esc(o.regimen || '')}">${esc(o.id_Regimen)}</span></td>
                 <td class="of-fecha"><b>${EV.fechaCorta(o.desde.slice(0, 10))}</b><span class="of-sub">${o.noches} noches · hasta ${EV.fecha(o.hasta.slice(0, 10))}</span></td>
                 <td>${esc(o.campanya || '#' + o.id_Campanya)}${o.descuento ? ` <span class="ui-chip" style="padding:2px 8px;font-size:11px">-${EV.fmt(o.descuento, 1)}%</span>` : ''}</td>
                 <td class="num" title="Base ${EV.fmt(o.precio_Base)} + tasas ${EV.fmt(o.tasas)}">${EV.dinero(o.precioWeb, o.id_Moneda)}</td>
                 <td>${o.vuelos ? `<span class="ui-chip dark" style="padding:3px 9px">${o.vuelos} vuelos</span>` : '<span class="ui-chip ghost" style="padding:3px 9px">Sin vuelo</span>'}</td>
                 <td>${esc(o.origen || '—')}</td>
+                <td>${o.destino ? `<span class="of-dest"><i class="bi bi-geo-alt-fill"></i>${esc(o.destino)}</span>` : '—'}</td>
                 <td><label class="ui-switch"><input type="checkbox" ${o.activo ? 'checked' : ''} data-act="${o.id_Servicio}"><span class="tr"></span></label></td>
                 <td style="white-space:nowrap"><button class="ui-ibtn" title="Editar" data-edit="${o.id_Servicio}"><i class="bi bi-pencil"></i></button>
                     <button class="ui-ibtn danger" title="Eliminar" data-del="${o.id_Servicio}"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}

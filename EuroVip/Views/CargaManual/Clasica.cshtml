@@ -180,6 +180,7 @@
                     <span><i class="dot off" style="display:inline-block;width:9px;height:9px;border-radius:50%"></i> no se carga</span>
                 </span>
             </div>
+            <div id="xDestino"></div>
             <div class="cx-chips" id="xChips"></div>
             <div class="cx-hotel" id="xHotel"></div>
 
@@ -264,7 +265,20 @@ const CL = (() => {
         h.idHab = h.habs[0]?.id_Habitacion ?? null;      // como BackTiTan: la primera habitación del hotel
     }
 
+    // ---- Destino de la oferta = destino de sus hoteles: todos los hoteles de la carga tienen que ser del mismo ----
+    const igual = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+    /** Destino que fijan los hoteles elegidos (sin contar `excepto` ni los marcados "no cargar"). */
+    const destinoCarga = excepto => H.filter(x => x !== excepto && !x.omitir && x.elegido?.destino?.trim()).map(x => x.elegido.destino.trim())[0] || null;
+    const destinosCarga = () => [...new Map(H.filter(x => !x.omitir && x.elegido?.destino?.trim()).map(x => [x.elegido.destino.trim().toLowerCase(), x.elegido.destino.trim()])).values()];
+    /** El destino "bueno" es el del primer hotel elegido; los demás tienen que coincidir. */
+    const fueraDeDestino = h => { const d = destinoCarga(); return !!(d && h.elegido && !h.omitir && !igual(h.elegido.destino, d)); };
+
     async function elegirHotel(h, sel) {
+        const d = destinoCarga(h);
+        if (sel && d && !igual(sel.destino, d)) {
+            EV.toast(`${sel.nombre} es de ${sel.destino || 'otro destino'}. Esta carga es de ${d}: todos los hoteles tienen que ser del mismo destino.`, 'err');
+            pintar(); return;
+        }
         h.elegido = sel; h.habs = []; h.idHab = null;
         if (sel) await cargarHabs(h);
         pintar();
@@ -276,7 +290,12 @@ const CL = (() => {
         if (!H.length) { barra(); return; }
         actual = Math.max(0, Math.min(actual, H.length - 1));
         $('#xActual').textContent = actual + 1; $('#xTotal').textContent = H.length;
-        $('#xChips').innerHTML = H.map((h, i) => `<button type="button" class="cx-chip ${i === actual ? 'on' : ''}" data-i="${i}" title="${esc(h.texto)}"><i class="dot ${estadoHotel(h)}"></i><span class="n">${i + 1}. ${esc(h.elegido?.nombre || h.texto)}</span></button>`).join('');
+        const ds = destinosCarga();
+        $('#xDestino').innerHTML = !ds.length ? ''
+            : ds.length === 1
+                ? `<div class="ui-note info" style="margin:0 0 10px"><i class="bi bi-geo-alt-fill"></i><div>Destino de la oferta: <b>${esc(ds[0])}</b>. Todos los hoteles de esta carga tienen que ser de ${esc(ds[0])}.</div></div>`
+                : `<div class="ui-note err" style="margin:0 0 10px"><i class="bi bi-exclamation-triangle"></i><div>El Excel trae hoteles de destinos distintos (<b>${ds.map(esc).join(', ')}</b>). La carga es de <b>${esc(destinoCarga())}</b>: cambia o marca "No cargar" los que están en rojo.</div></div>`;
+        $('#xChips').innerHTML = H.map((h, i) => `<button type="button" class="cx-chip ${i === actual ? 'on' : ''}" data-i="${i}" title="${esc(h.texto)}"><i class="dot ${fueraDeDestino(h) ? 'bad' : estadoHotel(h)}"></i><span class="n">${i + 1}. ${esc(h.elegido?.nombre || h.texto)}</span></button>`).join('');
         $('#xChips .on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
         pintarHotel();
         barra();
@@ -289,13 +308,15 @@ const CL = (() => {
             : h.estado === 'multiple' ? ['multiple', 'bi-exclamation-triangle-fill', 'Hay varias coincidencias: elige el hotel correcto.']
             : ['not_found', 'bi-search', 'No se encontró en Eurovip: búscalo y elígelo a mano.'];
         const malTasa = h.filas.some(f => f.total > 0 && Math.abs(num(f.tasas) - ts) > 0.009);
+        const otroDestino = fueraDeDestino(h);
         $('#xHotel').innerHTML = `
             <div class="cx-hh"><span class="ev-module-icon" style="width:44px;height:44px"><i class="bi bi-building"></i></span>
                 <div style="min-width:0;flex:1"><h3>${esc(h.elegido?.nombre || h.texto)}</h3><small style="color:var(--ev-muted);font-weight:600">En el Excel: «${esc(h.texto)}»${h.elegido?.destino ? ' · ' + esc(h.elegido.destino) : ''}</small></div>
                 <label class="ui-switch"><input type="checkbox" data-k="omitir" ${h.omitir ? 'checked' : ''}><span class="tr"></span> No cargar este hotel</label></div>
             <div class="cx-banner ${banner[0]}"><i class="bi ${banner[1]}"></i> ${banner[2]}</div>
-            ${!h.elegido && h.estado === 'multiple' ? `<div class="ui-f"><label>Elige el hotel</label><select data-k="candidato"><option value="">— Selecciona un hotel —</option>${h.candidatos.map(c => `<option value="${esc(c.valor)}" data-n="${esc(c.texto)}" data-d="${esc(c.extra || '')}">${esc(c.texto)} · ${esc(c.extra || '')} · #${esc(c.valor)}</option>`).join('')}</select></div>` : ''}
-            ${!h.elegido || h.estado === 'not_found' ? `<div class="ui-f"><label>${h.elegido ? 'Cambiar hotel' : 'Busca y elige el hotel'}</label><input data-k="buscar" placeholder="Escribe el nombre del hotel…"></div>` : ''}
+            ${otroDestino ? `<div class="ui-note err" style="margin:0 0 12px"><i class="bi bi-geo-alt"></i><div>Este hotel es de <b>${esc(h.elegido.destino)}</b> y la carga es de <b>${esc(destinoCarga())}</b>. Cámbialo por uno de ${esc(destinoCarga())} o márcalo "No cargar este hotel".</div></div>` : ''}
+            ${!h.elegido && h.estado === 'multiple' ? `<div class="ui-f"><label>Elige el hotel</label><select data-k="candidato"><option value="">— Selecciona un hotel —</option>${h.candidatos.map(c => `<option value="${esc(c.valor)}" data-n="${esc(c.texto)}" data-d="${esc(c.extra || '')}" ${destinoCarga(h) && !igual(c.extra, destinoCarga(h)) ? 'disabled' : ''}>${esc(c.texto)} · ${esc(c.extra || '')} · #${esc(c.valor)}</option>`).join('')}</select></div>` : ''}
+            ${!h.elegido || h.estado === 'not_found' || otroDestino ? `<div class="ui-f"><label>${h.elegido ? 'Cambiar hotel' : 'Busca y elige el hotel'}</label><input data-k="buscar" placeholder="Escribe el nombre del hotel…"></div>` : ''}
             <div class="ui-row r4">
                 <div class="ui-f"><label>ID alojamiento</label><input value="${h.elegido ? '#' + h.elegido.id : '—'}" readonly tabindex="-1"></div>
                 <div class="ui-f" style="grid-column:span 2"><label>Habitación <em>por defecto la primera del hotel</em></label>
@@ -321,7 +342,7 @@ const CL = (() => {
 
         const buscar = $('[data-k=buscar]', $('#xHotel'));
         if (buscar) EV.picker(buscar, {
-            url: q => `/Circuitos/Hoteles?q=${q}`, limpiar: false,
+            url: q => `/Circuitos/Hoteles?q=${q}` + (destinoCarga(h) ? `&destino=${encodeURIComponent(destinoCarga(h))}` : ''), limpiar: false,
             map: x => ({ valor: x.id_Alojamiento, texto: x.nombre, sub: `${x.destino} · #${x.id_Alojamiento}`, img: EV.esUrl(x.caratula) ? x.caratula : null, icono: 'bi-building' }),
             onSelect: (m, raw) => elegirHotel(h, { id: raw.id_Alojamiento, nombre: raw.nombre, destino: raw.destino })
         });
@@ -360,6 +381,7 @@ const CL = (() => {
         H.forEach((h, i) => {
             if (h.omitir) return;
             const et = `Hotel ${i + 1} (${h.elegido?.nombre || h.texto})`;
+            if (fueraDeDestino(h)) e.push({ tab: 'pExcel', hotel: i, msg: `${et}: es de ${h.elegido.destino} y la carga es de ${destinoCarga()}. Cámbialo o márcalo "No cargar".` });
             if (!h.elegido) e.push({ tab: 'pExcel', hotel: i, msg: `${et}: elige el hotel o márcalo "No cargar este hotel".` });
             else if (!h.idHab) e.push({ tab: 'pExcel', hotel: i, msg: `${et}: no tiene habitación.` });
             if (h.elegido && !filasOk(h).length) e.push({ tab: 'pExcel', hotel: i, msg: `${et}: no tiene precios.` });

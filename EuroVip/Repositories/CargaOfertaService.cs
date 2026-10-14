@@ -59,6 +59,19 @@ namespace EuroVip.Repositories
             if (dto.Hoteles.Count == 0) e.Add("Agrega al menos un hotel.");
             if (dto.Hoteles.GroupBy(h => (h.Id_Alojamiento, h.Id_Regimen)).Any(g => g.Count() > 1)) e.Add("Hay un hotel repetido con el mismo régimen.");
 
+            // El destino de la oferta es el de sus hoteles: en una carga todos tienen que ser del mismo destino.
+            if (dto.Hoteles.Count > 0)
+            {
+                var dh = await DestinosHotelesAsync(cn, null, dto.Hoteles.Select(h => h.Id_Alojamiento));
+                foreach (var h in dh.Where(x => string.IsNullOrWhiteSpace(x.Destino)))
+                    e.Add($"{h.Nombre}: el hotel no tiene destino. Ponle el destino en Herramientas › Alojamientos.");
+                var grupos = dh.Where(x => !string.IsNullOrWhiteSpace(x.Destino)).GroupBy(x => (x.Destino.Trim().ToUpperInvariant(), x.Pais)).ToList();
+                if (grupos.Count > 1)
+                    e.Add("Todos los hoteles de una carga tienen que ser del mismo destino. Hay: " +
+                          string.Join(" · ", grupos.Select(g => $"{g.First().Destino.Trim()} ({string.Join(", ", g.Select(x => x.Nombre))})")) +
+                          ". Haz una carga por destino.");
+            }
+
             var minimo = await _db.PrecioBaseMinimoAsync();
             var tasas = dto.Suplementos.Sum(x => x.Valor);
             foreach (var h in dto.Hoteles)
@@ -117,6 +130,14 @@ namespace EuroVip.Repositories
             return e;
         }
 
+        public record DestinoHotel(int Id_Alojamiento, string Nombre, string Destino, string Pais);
+
+        /// <summary>Destino (alojamiento.id_destino) y país de cada hotel de la carga.</summary>
+        public static async Task<List<DestinoHotel>> DestinosHotelesAsync(IDbConnection cn, IDbTransaction? tx, IEnumerable<int> ids) =>
+            (await cn.QueryAsync<DestinoHotel>(@"SELECT id_alojamiento AS Id_Alojamiento, nombre AS Nombre, ISNULL(id_destino, '') AS Destino, ISNULL(id_pais, '') AS Pais
+                                                FROM Eurovip.alojamiento WHERE id_idioma = 'ES' AND id_alojamiento IN @ids",
+                new { ids = ids.Distinct().ToList() }, tx)).ToList();
+
         public async Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaOfertaDto dto, string usuario, string? ip, string? navegador)
         {
             var errores = await ValidarAsync(dto);
@@ -129,6 +150,8 @@ namespace EuroVip.Repositories
 
             using var cn = _db.Conexion();
             await cn.OpenAsync();
+            // La validación ya aseguró que todos los hoteles comparten destino: ese es el destino de la oferta.
+            var destino = (await DestinosHotelesAsync(cn, null, dto.Hoteles.Select(h => h.Id_Alojamiento))).First(x => !string.IsNullOrWhiteSpace(x.Destino));
             var nombresHotel = (await cn.QueryAsync<string>("SELECT nombre FROM Eurovip.alojamiento WHERE id_idioma = 'ES' AND id_alojamiento IN @ids",
                 new { ids = dto.Hoteles.Select(h => h.Id_Alojamiento).ToList() })).ToList();
 
@@ -142,7 +165,7 @@ namespace EuroVip.Repositories
                     tipo = dto.Modo == "express" ? "Carga Express Ofertas" : dto.Modo == "excel" ? "Carga Excel Ofertas" : "Carga Clásica Ofertas",
                     usuario, ip, navegador = CargaCircuitoService.Corta(navegador, 1000),
                     origen = $"{dto.Origen} ({dto.Id_Pais_Origen})",
-                    destino = CargaCircuitoService.Corta(string.Join(" · ", nombresHotel), 1000),
+                    destino = CargaCircuitoService.Corta($"{destino.Destino.Trim()} — {string.Join(" · ", nombresHotel)}", 1000),
                     campanyas = string.Join(",", dto.Campanyas.Select(c => c.Id_Campanya)),
                     regimenes = string.Join(",", dto.Hoteles.Select(h => h.Id_Regimen).Distinct()),
                     noches = (int)dto.Noches,
@@ -192,6 +215,8 @@ namespace EuroVip.Repositories
 
                         await cn.ExecuteAsync("INSERT INTO Eurovip.servicio_origen (id_servicio, id_pais_origen, origen) VALUES (@id, @p, @o)",
                             new { id, p = dto.Id_Pais_Origen, o = dto.Origen }, tx);
+                        await cn.ExecuteAsync("INSERT INTO Eurovip.servicio_destino (id_servicio, id_pais_destino, destino) VALUES (@id, @p, @d)",
+                            new { id, p = destino.Pais, d = destino.Destino.Trim() }, tx);
 
                         if (dto.ConVuelo)
                         {
