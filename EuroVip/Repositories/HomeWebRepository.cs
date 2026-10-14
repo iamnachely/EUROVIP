@@ -237,7 +237,7 @@ namespace EuroVip.Repositories
                 SELECT 'CIRCUITO' AS Tipo, c.nombre_circuito AS Nombre, c.id AS Codigo,
                        ISNULL(SUM(CASE WHEN s.activo = 1 THEN 1 ELSE 0 END), 0) AS Total,
                        MIN(CASE WHEN s.activo = 1 AND sc.desde > CAST(GETDATE() AS date) THEN sc.desde END) AS Proxima,
-                       MAX(CASE WHEN s.activo = 1 THEN sc.desde END) AS Ultima
+                       MAX(CASE WHEN s.activo = 1 THEN sc.desde END) AS Ultima, CAST(NULL AS nvarchar(300)) AS Motivo
                 FROM Eurovip.circuito c
                     LEFT JOIN Eurovip.servicio_circuito sc ON sc.nombre_circuito = c.nombre_circuito AND sc.id_idoma = c.id_idioma
                     LEFT JOIN Eurovip.servicio s ON s.id_servicio = sc.id_servicio
@@ -249,17 +249,29 @@ namespace EuroVip.Repositories
                 SELECT 'OFERTA', d.destino, NULL,
                        SUM(CASE WHEN s.activo = 1 THEN 1 ELSE 0 END),
                        MIN(CASE WHEN s.activo = 1 AND sd.desde > CAST(GETDATE() AS date) THEN sd.desde END),
-                       MAX(CASE WHEN s.activo = 1 THEN sd.desde END)
+                       MAX(CASE WHEN s.activo = 1 THEN sd.desde END), NULL
                 FROM Eurovip.servicio_destino d
                     JOIN Eurovip.servicio s ON s.id_servicio = d.id_servicio
                     JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
                 WHERE s.id_tipo_servicio = 'OFERTA' AND s.id_idioma = @Idioma
                   AND NOT EXISTS (SELECT 1 FROM Eurovip.inicio i WHERE i.tipo_servicio = 'OFERTA' AND ISNULL(i.estado, 1) = 1 AND i.id_destino = d.destino)
-                GROUP BY d.destino", new { Idioma })).ToList();
+                GROUP BY d.destino
+                UNION ALL
+                -- Hoteles (tarjetas manuales de /Hoteles): no salen si están ocultos o no tienen sección de la web
+                SELECT 'HOTEL', LTRIM(RTRIM(i.id_destino)), CAST(i.id_servicio AS varchar(20)), 0, NULL, NULL,
+                       CASE WHEN ISNULL(i.estado, 1) = 0 THEN 'Está oculto: tiene apagado «Visible en la web».'
+                            ELSE 'No tiene sección de la web: elige en qué sección va (Hotel, Islas…).' END
+                FROM Eurovip.inicio i
+                WHERE i.tipo_servicio = 'HOTEL' AND i.id_idioma = @Idioma AND (ISNULL(i.estado, 1) = 0 OR i.id_contenedor IS NULL)", new { Idioma })).ToList();
 
             var manana = DateTime.Today.AddDays(1).ToString("dd/MM/yyyy");
             foreach (var f in filas)
             {
+                if (f.Tipo == "HOTEL")
+                {
+                    (f.Accion, f.Url) = ("Editar hotel", "/Hoteles/Index?editar=" + f.Codigo);
+                    continue;
+                }
                 var que = f.Tipo == "CIRCUITO" ? "salidas" : "fechas";
                 if (f.Total == 0)
                     f.Motivo = f.Tipo == "CIRCUITO" ? "No tiene salidas activas cargadas." : "No tiene ofertas activas.";
@@ -273,7 +285,7 @@ namespace EuroVip.Repositories
                         ? ("Cargar salidas", "/CargaCircuitos/Express?circuito=" + Uri.EscapeDataString(f.Codigo ?? f.Nombre))
                         : ("Cargar ofertas", "/CargaManual/Express");
             }
-            return filas.OrderBy(f => f.Proxima is null ? 0 : 1).ThenBy(f => f.Tipo).ThenBy(f => f.Nombre).ToList();
+            return filas.OrderBy(f => f.Proxima is null && f.Tipo != "HOTEL" ? 0 : f.Tipo == "HOTEL" ? 1 : 2).ThenBy(f => f.Tipo).ThenBy(f => f.Nombre).ToList();
         }
 
         /// <summary>Claves (tipo, campaña, destino, origen…) de todo lo que está a la venta: lo que puede ir a la Home.</summary>

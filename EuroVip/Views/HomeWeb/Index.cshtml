@@ -274,7 +274,7 @@ const HW = (() => {
     /** Aviso: circuitos y destinos de ofertas que no salen en la Home y por qué (para no tener que adivinarlo). */
     function pintarFuera() {
         const f = D.fuera || [];
-        const sinVenta = f.filter(x => !x.proxima);
+        const sinVenta = f.filter(x => !x.proxima);   // incluye hoteles ocultos o sin sección
         if (!f.length) { $('#hwFuera').innerHTML = ''; return; }
         $('#hwFuera').innerHTML = `
             <details class="hw-fuera ${sinVenta.length ? 'mal' : ''}" ${sinVenta.length ? 'open' : ''}>
@@ -283,9 +283,9 @@ const HW = (() => {
                     <span>${sinVenta.length ? `${sinVenta.length} sin fechas a la venta · ` : ''}toca para ver por qué</span><i class="bi bi-chevron-down fl"></i></summary>
                 <div class="hw-fuera-l">${f.map(x => `
                     <div class="it">
-                        <span class="ic ${x.proxima ? '' : 'mal'}"><i class="bi ${x.tipo === 'CIRCUITO' ? 'bi-signpost-split' : 'bi-building'}"></i></span>
-                        <div class="tx"><b>${esc(x.nombre)} <small>${x.tipo === 'CIRCUITO' ? 'Circuito' : 'Ofertas de hotel'}</small></b><span>${esc(x.motivo)}</span></div>
-                        ${x.url ? `<a class="ev-btn sm" href="${esc(x.url)}"><i class="bi bi-plus-lg"></i> ${esc(x.accion)}</a>` : ''}
+                        <span class="ic ${x.proxima ? '' : 'mal'}"><i class="bi ${x.tipo === 'CIRCUITO' ? 'bi-signpost-split' : x.tipo === 'HOTEL' ? 'bi-house-heart' : 'bi-building'}"></i></span>
+                        <div class="tx"><b>${esc(x.nombre)} <small>${x.tipo === 'CIRCUITO' ? 'Circuito' : x.tipo === 'HOTEL' ? 'Hotel' : 'Ofertas de hotel'}</small></b><span>${esc(x.motivo)}</span></div>
+                        ${x.url ? `<a class="ev-btn sm" href="${esc(x.url)}"><i class="bi ${x.tipo === 'HOTEL' ? 'bi-pencil' : 'bi-plus-lg'}"></i> ${esc(x.accion)}</a>` : ''}
                     </div>`).join('')}
                 </div>
             </details>`;

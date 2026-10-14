@@ -7,6 +7,7 @@
 <style>
     .of-dest { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 10px; background: var(--ev-mint); color: var(--ev-ink); font-weight: 800; font-size: 12.5px; white-space: nowrap; }
     .of-dest i { color: var(--ev-deep); }
+    .of-nov { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 2px 8px; border-radius: 8px; background: #FEF3F2; color: #B42318; font-size: 11px; font-weight: 800; }
     .of-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
     .of-kpi { display: flex; align-items: center; gap: 12px; padding: 16px 18px; }
     .of-kpi i { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-size: 18px; background: var(--ev-mint); flex-shrink: 0; }
@@ -93,6 +94,7 @@
     </div>
 </div>
 
+<div id="ofAviso"></div>
 <div id="ofLista"></div>
 <div class="of-pager" id="ofPager" hidden><small id="ofRango"></small><div class="of-pages" id="ofPages"></div></div>
 
@@ -167,6 +169,15 @@ const OF = (() => {
     const params = () => new URLSearchParams({ q: st.q, destino: st.destino, campanya: st.campanya, estado: st.estado, vuelo: st.vuelo, desde: st.desde, hasta: st.hasta, pasadas: st.pasadas, orden: st.orden, pagina: st.pagina, tam: 25 });
     const thumb = o => EV.esUrl(o.caratula) ? `<img src="${esc(o.caratula)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${esc(EV.iniciales(o.hotel)).replace(/'/g, '')}'">` : esc(EV.iniciales(o.hotel));
 
+    /** Destinos con ofertas que NO salen en la Home de la web, y por qué. */
+    async function pintarAviso() {
+        let f = [];
+        try { f = await EV.api('/HomeWeb/Fuera?tipo=OFERTA'); } catch { }
+        $('#ofAviso').innerHTML = !f.length ? '' : `<div class="ui-note ${f.some(x => !x.proxima) ? 'warn' : 'info'}" style="margin:0 0 14px"><i class="bi bi-house-exclamation"></i><div>
+            <b>${f.length === 1 ? 'Un destino no sale' : f.length + ' destinos no salen'} en la Home de la web:</b>
+            <ul style="margin:6px 0 0;padding-left:18px">${f.map(x => `<li><b>${esc(x.nombre)}</b>: ${esc(x.motivo)}${x.url ? ` <a href="${esc(x.url)}">${esc(x.accion)}</a>` : ''}</li>`).join('')}</ul></div></div>`;
+    }
+
     async function cargar() {
         $('#ofLista').innerHTML = '<div class="ui-skel" style="height:320px"></div>';
         try {
@@ -192,7 +203,7 @@ const OF = (() => {
                 <td><input type="checkbox" class="of-check" data-sel="${o.id_Servicio}" ${sel.has(o.id_Servicio) ? 'checked' : ''}></td>
                 <td><div class="of-hotel"><span class="of-th">${thumb(o)}</span><div><b>${esc(o.hotel)}</b><span class="of-sub">#${o.id_Servicio}</span></div></div></td>
                 <td><span class="of-reg" title="${esc(o.regimen || '')}">${esc(o.id_Regimen)}</span></td>
-                <td class="of-fecha"><b>${EV.fechaCorta(o.desde.slice(0, 10))}</b><span class="of-sub">${o.noches} noches · hasta ${EV.fecha(o.hasta.slice(0, 10))}</span></td>
+                <td class="of-fecha"><b>${EV.fechaCorta(o.desde.slice(0, 10))}</b><span class="of-sub">${o.noches} noches · hasta ${EV.fecha(o.hasta.slice(0, 10))}</span>${o.desde.slice(0, 10) <= EV.hoy() ? '<span class="of-nov" title="Las fechas de hoy o pasadas no se venden ni salen en la web"><i class="bi bi-calendar-x"></i> No se vende: es de hoy o pasada</span>' : ''}</td>
                 <td>${esc(o.campanya || '#' + o.id_Campanya)}${o.descuento ? ` <span class="ui-chip" style="padding:2px 8px;font-size:11px">-${EV.fmt(o.descuento, 1)}%</span>` : ''}</td>
                 <td class="num" title="Base ${EV.fmt(o.precio_Base)} + tasas ${EV.fmt(o.tasas)}">${EV.dinero(o.precioWeb, o.id_Moneda)}</td>
                 <td>${o.vuelos ? `<span class="ui-chip dark" style="padding:3px 9px">${o.vuelos} vuelos</span>` : '<span class="ui-chip ghost" style="padding:3px 9px">Sin vuelo</span>'}</td>
@@ -333,6 +344,7 @@ const OF = (() => {
             if (drawer.abierto() && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); guardar(); }
         });
         cargar();
+        pintarAviso();
     }
     document.addEventListener('DOMContentLoaded', iniciar);
 

@@ -46,6 +46,11 @@ namespace EuroVip.Controllers
             return Json(d);
         }
 
+        /// <summary>Qué está cargado y no sale en la Home, con el motivo (lo usan Home de la web, Ofertas y Hoteles).</summary>
+        [HttpGet]
+        public async Task<IActionResult> Fuera(string? tipo) =>
+            Json((await _repo.FueraDeHomeAsync()).Where(f => string.IsNullOrEmpty(tipo) || string.Equals(f.Tipo, tipo, StringComparison.OrdinalIgnoreCase)));
+
         /// <summary>
         /// Imagen de la tarjeta desde las carpetas del proyecto (lo que se carga en Hoteles y Circuitos):
         ///  • HOTEL: /imagenes/hoteles/{nombre del hotel}.webp
