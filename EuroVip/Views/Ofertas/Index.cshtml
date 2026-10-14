@@ -351,9 +351,14 @@ const OF = (() => {
     return {
         cerrar: () => drawer.cerrar(),
         limpiarSel: () => { sel.clear(); $$('[data-sel]').forEach(c => { c.checked = false; c.closest('tr').classList.remove('sel'); }); if ($('#selTodo')) $('#selTodo').checked = false; barraLote(); },
-        lote: async activo => { try { const r = await EV.post('/Ofertas/Lote', { Ids: [...sel], Activo: activo }); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); } },
+        lote: async activo => {
+            if (!await EV.confirmar({ titulo: `¿${activo ? 'Activar' : 'Desactivar'} ${sel.size} oferta${sel.size === 1 ? '' : 's'}?`, icono: activo ? 'toggle-on' : 'toggle-off', si: activo ? 'Sí, activar' : 'Sí, desactivar',
+                texto: activo ? 'Vuelven a estar a la venta y pueden salir en la web.' : 'Dejan de venderse y no salen en la web. Puedes volver a activarlas cuando quieras.' })) return;
+            try { const r = await EV.post('/Ofertas/Lote', { Ids: [...sel], Activo: activo }); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
+        },
         ajustar: async () => {
-            const v = prompt(`¿Cuánto sumar (o restar con -) al precio de las ${sel.size} ofertas elegidas? Ej: 50 o -30`);
+            const v = await EV.pedir({ titulo: `Ajustar el precio de ${sel.size} oferta${sel.size === 1 ? '' : 's'}`, etiqueta: 'Cuánto sumar (o restar con -)', tipo: 'number', icono: 'currency-euro',
+                ayuda: 'Ej: 50 suma 50 € · -30 resta 30 €. Antes de aplicar te pedimos confirmación.', si: 'Continuar' });
             if (v == null) return;
             const n = parseFloat(String(v).replace(',', '.'));
             if (isNaN(n) || !n) { EV.toast('Escribe un número distinto de 0.', 'err'); return; }

@@ -95,6 +95,48 @@
         bd.onclick = () => cerrar(false);
     });
 
+    // ---------------- pedir un dato (reemplaza al prompt() del navegador) ----------------
+    // EV.pedir({ titulo, texto, valor, etiqueta, si, tipo: 'text'|'number', min, max, maxlength, ayuda })
+    // → Promise<string|null> (null = cancelado). Enter acepta, Esc cancela; no deja aceptar vacío.
+    EV.pedir = ({ titulo, texto = '', valor = '', etiqueta = '', si = 'Guardar', no = 'Cancelar', tipo = 'text', min, max, maxlength = 200, ayuda = '', icono = 'pencil' }) => new Promise(resolve => {
+        const m = document.createElement('div');
+        m.className = 'ui-modal';
+        m.innerHTML = `<div class="box" role="dialog" aria-modal="true">
+            <div class="ico aqua"><i class="bi bi-${EV.esc(icono)}"></i></div>
+            <h3></h3>${texto ? '<p></p>' : ''}
+            <div class="ui-f" style="text-align:left">${etiqueta ? `<label>${EV.esc(etiqueta)}</label>` : ''}
+                <input class="ui-input" type="${tipo === 'number' ? 'number' : 'text'}" autocomplete="off" maxlength="${maxlength}" ${min != null ? `min="${min}"` : ''} ${max != null ? `max="${max}"` : ''}>
+                <span class="msg"></span>${ayuda ? `<span class="ui-help">${EV.esc(ayuda)}</span>` : ''}</div>
+            <div class="acts"><button class="ev-btn" data-si>${EV.esc(si)}</button><button class="ev-btn ghost" data-no>${EV.esc(no)}</button></div></div>`;
+        m.querySelector('h3').textContent = titulo;
+        if (texto) m.querySelector('p').innerHTML = texto;
+        const inp = m.querySelector('input'), msg = m.querySelector('.msg'), f = m.querySelector('.ui-f');
+        inp.value = valor ?? '';
+        const bd = document.createElement('div'); bd.className = 'ui-backdrop'; bd.style.zIndex = 115;
+        document.body.append(bd, m);
+        requestAnimationFrame(() => { bd.classList.add('open'); m.classList.add('open'); });
+        setTimeout(() => { inp.focus(); inp.select(); }, 80);
+        const cerrar = v => { m.classList.remove('open'); bd.classList.remove('open'); setTimeout(() => { m.remove(); bd.remove(); }, 300); resolve(v); document.removeEventListener('keydown', tecla); };
+        const aceptar = () => {
+            const v = inp.value.trim();
+            let err = !v ? 'Escribe un valor.' : '';
+            if (!err && tipo === 'number') {
+                const n = Number(v);
+                if (isNaN(n)) err = 'Escribe un número.';
+                else if (min != null && n < min) err = `Mínimo ${min}.`;
+                else if (max != null && n > max) err = `Máximo ${max}.`;
+            }
+            if (err) { f.classList.add('err'); msg.textContent = err; inp.focus(); return; }
+            cerrar(v);
+        };
+        const tecla = e => { if (e.key === 'Escape') cerrar(null); else if (e.key === 'Enter' && document.activeElement === inp) { e.preventDefault(); aceptar(); } };
+        document.addEventListener('keydown', tecla);
+        inp.addEventListener('input', () => { f.classList.remove('err'); msg.textContent = ''; });
+        m.querySelector('[data-si]').onclick = aceptar;
+        m.querySelector('[data-no]').onclick = () => cerrar(null);
+        bd.onclick = () => cerrar(null);
+    });
+
     // ---------------- buscador con autocompletado ----------------
     // cfg: { url: q => '/x?q=' + q | null, datos: [] (local), map: item => ({valor, texto, sub, img, icono}),
     //        onSelect: (item, raw) => {}, min: 1, limpiar: true, placeholder }

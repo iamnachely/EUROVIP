@@ -56,8 +56,11 @@
     .hw-slider .puntos i.on { width: 22px; background: #fff; }
     .hw-slider .precio { position: absolute; right: 14px; top: 14px; z-index: 2; padding: 8px 12px; border-radius: 14px; background: rgba(11,18,21,.82); color: #fff; font-weight: 800; font-size: 13px; backdrop-filter: blur(6px); }
     .hw-slider .precio b { color: var(--ev-aqua); font-size: 17px; }
-    .hw-slider .editar { position: absolute; left: 14px; top: 14px; z-index: 2; padding: 7px 12px; border-radius: 12px; background: rgba(255,255,255,.92); color: #0B1215; font: 800 12px var(--ev-font); opacity: 0; transition: opacity .25s; }
-    .hw-slider:hover .editar { opacity: 1; }
+    /* Botón "Editar carrusel": siempre visible (antes solo al pasar el ratón; en táctil no se veía) */
+    .hw-slider .editar { position: absolute; left: 14px; top: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: 12px; border: 0; cursor: pointer;
+                         background: rgba(11,18,21,.82); color: #fff; font: 800 12.5px var(--ev-font); box-shadow: 0 6px 18px -8px rgba(0,0,0,.5); transition: background .2s, transform .2s; }
+    .hw-slider .editar i { color: var(--ev-aqua); }
+    .hw-slider:hover .editar, .hw-slider .editar:focus-visible { background: #0B1215; transform: translateY(-1px); }
 
     .hw-sec { margin-top: 18px; border-radius: 22px; border: 1.5px solid transparent; padding: 12px; transition: border-color .2s, background .2s, opacity .2s; }
     .hw-sec:hover { border-color: var(--ev-line); }
@@ -70,7 +73,7 @@
     .hw-sec-h h3 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.3px; text-transform: uppercase; }
     .hw-sec-h .n { font: 800 11px var(--ev-font); padding: 3px 9px; border-radius: 99px; background: var(--ev-surface-2); color: var(--ev-muted); }
     .hw-sec-h .sp { flex: 1; }
-    .hw-sec-h .ui-ibtn { opacity: .45; transition: opacity .2s; }
+    .hw-sec-h .ui-ibtn { opacity: 1; transition: opacity .2s, background .2s; }
     .hw-sec:hover .hw-sec-h .ui-ibtn, .hw-sec-h .ui-ibtn:focus { opacity: 1; }
     .hw-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; min-height: 70px; border-radius: 16px; transition: background .2s; }
     .hw-marco[data-dev="movil"] .hw-cards { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -85,8 +88,11 @@
     .hw-card .chips span { font: 800 10px var(--ev-font); padding: 3px 7px; border-radius: 8px; background: rgba(11,18,21,.78); color: #fff; }
     .hw-card .chips span.mal { background: #D92D20; }
     .hw-card .chips span.oc { background: #475467; }
-    .hw-card .ojo { position: absolute; right: 8px; top: 8px; z-index: 1; width: 32px; height: 32px; border-radius: 10px; border: 0; background: rgba(255,255,255,.92); display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity .2s; }
-    .hw-card:hover .ojo, .hw-card .ojo:focus { opacity: 1; }
+    /* Botones de la tarjeta (editar y ocultar): siempre visibles, también en táctil */
+    .hw-card .acc { position: absolute; right: 8px; top: 8px; z-index: 1; display: flex; gap: 6px; }
+    .hw-card .ojo, .hw-card .edt { width: 32px; height: 32px; border-radius: 10px; border: 0; background: rgba(255,255,255,.94); color: #0B1215; display: grid; place-items: center; cursor: pointer;
+                                   box-shadow: 0 4px 12px -6px rgba(0,0,0,.45); transition: background .2s, transform .2s; }
+    .hw-card .ojo:hover, .hw-card .edt:hover { background: var(--ev-aqua); transform: translateY(-1px); }
     .hw-card .tx { padding: 10px 12px 12px; }
     .hw-card .tx b { display: block; font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hw-card .tx small { display: block; color: var(--ev-muted); font-weight: 600; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -312,7 +318,7 @@ const HW = (() => {
         const s = $('#hwSlider');
         if (!act.length) { s.innerHTML = '<div class="vacio"><div><i class="bi bi-images" style="font-size:30px;display:block"></i>No hay slides activos. Clic para ir al carrusel.</div></div>'; return; }
         s.innerHTML = act.map((x, i) => `<img src="${esc(img(x.ruta))}" data-i="${i}" class="${i === 0 ? 'on' : ''}" alt="" onerror="this.style.display='none'">`).join('') +
-            `<span class="editar"><i class="bi bi-pencil"></i> Editar carrusel</span><span class="precio" id="hwPrecio" hidden></span><div class="puntos">${act.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</div>`;
+            `<button type="button" class="editar" aria-label="Editar carrusel"><i class="bi bi-pencil"></i> Editar carrusel</button><span class="precio" id="hwPrecio" hidden></span><div class="puntos">${act.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</div>`;
         let i = 0;
         const mostrar = k => {
             $$('#hwSlider img').forEach((im, j) => im.classList.toggle('on', j === k)); $$('#hwSlider .puntos i').forEach((p, j) => p.classList.toggle('on', j === k));
@@ -329,7 +335,8 @@ const HW = (() => {
         return `<div class="hw-card ${t.estado ? '' : 'oculta'}" draggable="true" data-t="${t.id}" title="Clic para editar · arrastra para mover">
             <div class="img">${c ? `<img src="${esc(c)}" alt="" loading="lazy" onerror="this.remove()">` : esc(EV.iniciales(t.id_Destino))}
                 <div class="chips"><span>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</span>${t.vigente === false ? '<span class="mal">Ya no se vende</span>' : ''}${t.estado ? '' : '<span class="oc">Oculta</span>'}</div>
-                <button type="button" class="ojo" data-ojo="${t.id}" title="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div>
+                <div class="acc"><button type="button" class="edt" title="Editar tarjeta" aria-label="Editar tarjeta"><i class="bi bi-pencil"></i></button>
+                    <button type="button" class="ojo" data-ojo="${t.id}" title="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}" aria-label="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div></div>
             <div class="tx"><b>${esc(t.descripcion && t.tipo_Servicio === 'CIRCUITO' ? t.descripcion : t.id_Destino)}</b><small>${esc(t.origen)} · ${esc(t.campanya || '#' + t.id_Campanya)}${t.noches ? ` · ${t.noches} noches` : ''}</small>
                 <div class="pr">${t.precioWeb ? `desde <b>${EV.fmt(t.precioWeb)} €</b>` : 'sin precio'}</div></div></div>`;
     };
@@ -619,7 +626,11 @@ const HW = (() => {
         if (!dto.Origen) return falta('#tOri', 'Escribe el origen');
         if (!dto.Id_Destino) return falta('#tDes', 'Escribe el destino');
         const b = $('#tdGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
-        try { const r = await EV.post('/HomeWeb/GuardarTarjeta', dto); EV.toast(r.mensaje); dT.cerrar(); cargar(); }
+        try {
+            const r = await EV.post('/HomeWeb/GuardarTarjeta', dto); EV.toast(r.mensaje); dT.cerrar(true);
+            await cargar();
+            EV.resaltar(document.querySelector(`.hw-card[data-t="${r.id}"]`));   // se ve dónde quedó la tarjeta
+        }
         catch (e) { EV.toast(e.message, 'err'); }
         finally { b.disabled = false; b.innerHTML = html; }
     }
@@ -656,7 +667,8 @@ const HW = (() => {
         $('#hwDev').addEventListener('click', e => { const b = e.target.closest('[data-dev]'); if (!b) return; dev = b.dataset.dev; $$('#hwDev button').forEach(x => x.classList.toggle('on', x === b)); $('#hwMarco').dataset.dev = dev; pintarSlider(); });
         $('#hwSlider').onclick = () => tabs.ir('pCarrusel');
         $('#hwNuevaSec').onclick = async () => {
-            const nombre = prompt('Nombre de la nueva sección (ej. CARIBE, OFERTAS DE VERANO):');
+            const nombre = await EV.pedir({ titulo: 'Nueva sección de la Home', etiqueta: 'Nombre de la sección', si: 'Crear sección', icono: 'plus-lg', maxlength: 100,
+                ayuda: 'Ej. CARIBE, OFERTAS DE VERANO. Luego arrastra tarjetas a la sección.' });
             if (!nombre?.trim()) return;
             try { const r = await EV.post('/HomeWeb/Seccion', { Nombre: nombre.trim(), Estado: true }); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
         };
@@ -669,7 +681,7 @@ const HW = (() => {
             const so = e.target.closest('[data-secojo]');
             if (so) { const c = D.contenedores.find(x => x.id_Contenedor === +so.dataset.secojo); try { const r = await EV.post('/HomeWeb/Seccion', { Id_Contenedor: c.id_Contenedor, Nombre: c.nombre, Estado: !c.estado }); EV.toast(c.estado ? 'Sección oculta en la web.' : 'Sección visible en la web.'); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
             const sr = e.target.closest('[data-secren]');
-            if (sr) { const c = D.contenedores.find(x => x.id_Contenedor === +sr.dataset.secren); const n = prompt('Nuevo nombre de la sección:', c.nombre); if (!n?.trim() || n.trim() === c.nombre) return;
+            if (sr) { const c = D.contenedores.find(x => x.id_Contenedor === +sr.dataset.secren); const n = await EV.pedir({ titulo: 'Cambiar nombre de la sección', etiqueta: 'Nombre', valor: c.nombre, maxlength: 100 }); if (!n?.trim() || n.trim() === c.nombre) return;
                 try { const r = await EV.post('/HomeWeb/Seccion', { Id_Contenedor: c.id_Contenedor, Nombre: n.trim(), Estado: c.estado }); EV.toast(r.mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
             const sd = e.target.closest('[data-secdel]');
             if (sd) { const c = D.contenedores.find(x => x.id_Contenedor === +sd.dataset.secdel);
@@ -711,13 +723,16 @@ const HW = (() => {
             finally { b.disabled = false; b.innerHTML = html; }
         };
         $('#hwRecalc').onclick = async () => {
+            if (!await EV.confirmar({ titulo: '¿Recalcular los precios del carrusel?', icono: 'arrow-repeat', si: 'Sí, recalcular',
+                texto: 'Cada destino de los slides toma el precio <b>"desde"</b> de la oferta más barata que está a la venta hoy. Los precios que se escribieron a mano en los slides se reemplazan.' })) return;
             const b = $('#hwRecalc'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Calculando…';
             try { const r = await EV.post('/HomeWeb/RecalcularPrecios', {}); EV.toast(r.mensaje, 'info'); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
             finally { b.disabled = false; b.innerHTML = html; }
         };
         $('#hwAjustes').onclick = async () => {
             const a = await EV.api('/HomeWeb/Ajustes');
-            const v = prompt('Precio base mínimo (ninguna oferta se puede cargar con un precio base menor):', a.precioBaseMinimo);
+            const v = await EV.pedir({ titulo: 'Precio base mínimo', etiqueta: 'Precio base mínimo (€)', valor: a.precioBaseMinimo, tipo: 'number', min: 0, icono: 'sliders',
+                ayuda: 'Ninguna oferta ni circuito se puede cargar con un precio base menor a este valor.' });
             if (v == null) return;
             const n = parseFloat(String(v).replace(',', '.'));
             if (isNaN(n) || n < 0) { EV.toast('Escribe un número válido.', 'err'); return; }
