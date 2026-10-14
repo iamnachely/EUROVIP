@@ -151,6 +151,7 @@
 
 <div class="co-bulk" id="coBulk" hidden>
     <span class="cnt"><b id="bN">0</b> seleccionadas</span>
+    <span class="cnt" id="bFuera" hidden style="background:#FEF3C7;color:#92400E;border-radius:10px;padding:3px 9px;font-size:12px" title="Las elegiste en otra búsqueda o página: también se cambian"></span>
     <button type="button" class="todo" id="bTodo" hidden></button>
     <span class="sp"></span>
     <button type="button" class="ev-btn aqua sm" data-acc="editar"><i class="bi bi-pencil-square"></i> Editar</button>
@@ -287,9 +288,15 @@ const CO = (() => {
         barra();
     }
 
+    /** Seleccionadas que NO están en la búsqueda que se ve ahora (se eligieron en otra búsqueda o página). */
+    const fueraDeVista = () => [...sel].filter(i => !filas.some(x => x.id_Servicio === i)).length;
+
     function barra() {
         $('#coBulk').hidden = sel.size === 0;
         $('#bN').textContent = EV.fmt(sel.size);
+        const fuera = fueraDeVista();
+        $('#bFuera').hidden = !fuera;
+        $('#bFuera').innerHTML = fuera ? `<i class="bi bi-eye-slash"></i> ${EV.fmt(fuera)} no se ven en esta búsqueda` : '';
         const faltan = total > sel.size && filas.length && filas.every(x => sel.has(x.id_Servicio));
         $('#bTodo').hidden = !faltan;
         if (faltan) $('#bTodo').textContent = `Seleccionar los ${EV.fmt(Math.min(total, 2000))} resultados`;
@@ -306,6 +313,17 @@ const CO = (() => {
     const ids = () => [...sel];
     const pieAccion = (texto, icono) => `<button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button><span style="flex:1"></span><button class="ev-btn" type="button" id="dOk"><i class="bi ${icono}"></i> ${texto}</button>`;
     async function ejecutar(url, dto, boton) {
+        // Confirmar antes de cambiar en masa: siempre en tasas y duplicar, y en cualquier acción si hay seleccionadas que no se ven
+        const n = (dto.Ids || []).length, fuera = fueraDeVista(), copias = url.endsWith('/Duplicar') ? n * Math.max(1, dto.Veces || 1) : 0;
+        if (url.endsWith('/Tasa') || copias || fuera) {
+            const ok = await EV.confirmar({
+                titulo: copias ? `¿Crear ${EV.fmt(copias)} copia${copias === 1 ? '' : 's'}?` : `¿Aplicar a ${EV.fmt(n)} oferta${n === 1 ? '' : 's'}?`,
+                icono: copias ? 'copy' : 'check2-circle', si: copias ? 'Sí, duplicar' : 'Sí, aplicar',
+                texto: (fuera ? `<b>${EV.fmt(fuera)}</b> de las seleccionadas <b>no se ven en esta búsqueda</b> (las elegiste antes) y también se cambian.<br>` : '') +
+                       (copias ? `Se crean ${EV.fmt(copias)} ofertas nuevas a partir de ${EV.fmt(n)}.` : 'Revisa que sean las que quieres cambiar.')
+            });
+            if (!ok) return null;
+        }
         const b = $(boton), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Aplicando…';
         try { const r = await EV.post(url, dto); EV.toast(r.mensaje); drawer.cerrar(); await buscar(pagina); return r; }
         catch (e) { EV.toast(e.message, 'err'); return null; }

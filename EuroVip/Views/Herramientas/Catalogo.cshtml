@@ -154,6 +154,13 @@ const HC = (() => {
         $('#hcLista').innerHTML = '<div class="ui-skel" style="height:300px"></div>';
         const p = new URLSearchParams({ id: DEF.clave, q: st.q, pagina: st.pagina, tam: st.tam });
         Object.entries(st.filtros).forEach(([k, v]) => v !== '' && p.append('f_' + k, v));
+        // Guardar búsqueda y filtros en la dirección: al recargar o volver atrás se ven igual (antes solo se leían)
+        const enUrl = new URLSearchParams(location.search);
+        [...enUrl.keys()].filter(k => k === 'q' || k.startsWith('f_')).forEach(k => enUrl.delete(k));
+        if (st.q) enUrl.set('q', st.q);
+        Object.entries(st.filtros).forEach(([k, v]) => v !== '' && v != null && enUrl.set('f_' + k, v));
+        const qs = enUrl.toString();
+        history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
         try {
             const d = await EV.api('/Herramientas/Listar?' + p);
             $('#hcTotal').textContent = EV.fmt(d.total);

@@ -340,7 +340,7 @@
                     const k = Object.keys(D.matriz).find(x => x.toLowerCase() === user.toLowerCase()) || user;
                     D.matriz[k] = dar ? [...(D.matriz[k] || []), +id] : (D.matriz[k] || []).filter(x => x !== +id);
                     const m = D.modulos.find(x => x.id_Modulo === +id); m.usuarios += dar ? 1 : -1;
-                    EV.toast(`${dar ? 'Acceso dado' : 'Acceso quitado'}: ${user} · ${m.nombre_Modulo}`);
+                    EV.toast(`${dar ? 'Acceso dado' : 'Acceso quitado'}: ${user} · ${m.nombre_Modulo}`, 'ok', { texto: 'Deshacer', accion: () => mx.click() });
                     pintarPersonas();
                 } catch (er) { EV.toast(er.message, 'err'); } finally { mx.disabled = false; }
                 return;
