@@ -1802,6 +1802,7 @@ CREATE OR ALTER PROCEDURE Eurovip.spEliminaServicio @idServicio INT
 AS
 BEGIN
     SET NOCOUNT ON;
+    DECLARE @codigo VARCHAR(50) = (SELECT codigo FROM Eurovip.servicio WHERE id_servicio = @idServicio);   -- CAMBIO 45 (FASE 12)
     DELETE FROM Eurovip.servicio_tasa        WHERE id_Servicio = @idServicio;
     DELETE FROM Eurovip.servicio_itinerario  WHERE id_servicio = @idServicio;
     DELETE FROM Eurovip.servicio_habitacion  WHERE id_servicio = @idServicio;
@@ -1814,6 +1815,11 @@ BEGIN
     DELETE FROM Eurovip.alojamiento_circuito WHERE id_servicio = @idServicio;
     DELETE FROM Eurovip.alojamiento_destino  WHERE id_servicio = @idServicio;
     DELETE FROM Eurovip.servicio             WHERE id_servicio = @idServicio;
+    -- CAMBIO 45 (FASE 12): la descripción (incluye/no incluye/notas) es de la carga (codigo):
+    -- se borra cuando ya no queda ninguna oferta/salida con ese código.
+    IF OBJECT_ID('Eurovip.servicio_descripcion', 'U') IS NOT NULL AND @codigo IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio WHERE codigo = @codigo)
+        DELETE FROM Eurovip.servicio_descripcion WHERE codigo = @codigo;
 END
 GO
 
@@ -2611,6 +2617,62 @@ HAVING COUNT(DISTINCT a.id_destino) = 1;
 GO
 
 /* ##########################################################################################
+   FASE 12 — INCLUYE / NO INCLUYE / NOTAS EN servicio_descripcion  (15/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: "quiero que sea servicio_descripcion, cópiala de ViajeVDT
+   (10.10.10.29) al esquema Eurovip y ahí guardarás las notas, incluye, no incluye; haz el
+   cambio para oferta manual y carga de circuitos".
+
+   Explicado fácil:
+   • Es la misma tabla que usa BackTiTan (ViajeVDT.dbo.servicio_descripcion), copiada SOLO la
+     estructura: sus 16 filas son de ofertas de ViajeVDT que no existen en Eurovip.
+   • UNA fila por carga y por idioma, unida a la oferta por servicio.codigo (todas las
+     salidas/fechas de una misma carga comparten el mismo código y, por tanto, los textos).
+   • Columnas: incluye · no_incluye · nota (condiciones, importante, documentación…) ·
+     oferta_especial · itinerario · imagen. Las de texto se crean como VARCHAR(MAX) (en ViajeVDT
+     son TEXT, un tipo antiguo; guardan lo mismo).
+   • Antes Eurovip guardaba estos textos en servicio_nota (una fila por texto y por salida).
+     Esa tabla se deja como está (estaba vacía) pero las cargas ya no la usan.
+
+   CAMBIO 45  Tabla servicio_descripcion + procedimiento spInsertaServicioDescripcion (copia del
+              de ViajeVDT, en el esquema Eurovip).
+              Además se actualizó en su sitio (más arriba en este archivo):
+              • spEliminaServicio: si ya no queda ninguna oferta con ese código, borra también
+                su descripción. (spDuplicaServicio no cambia: la copia lleva el mismo código y
+                comparte la descripción.)
+   ########################################################################################## */
+/* ---------- CAMBIO 45: servicio_descripcion ---------- */
+IF OBJECT_ID('Eurovip.servicio_descripcion', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_descripcion (
+    codigo          VARCHAR(50)  NOT NULL,     -- servicio.codigo (el código de la carga)
+    id_idioma       CHAR(2)      NOT NULL,
+    nota            VARCHAR(MAX) NULL,         -- condiciones, importante, documentación…
+    incluye         VARCHAR(MAX) NULL,
+    no_incluye      VARCHAR(MAX) NULL,
+    itinerario      VARCHAR(MAX) NULL,
+    imagen          VARCHAR(MAX) NULL,
+    oferta_especial VARCHAR(MAX) NULL,
+    CONSTRAINT PK_Eurovip_servicio_descripcion PRIMARY KEY CLUSTERED (codigo, id_idioma)
+);
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spInsertaServicioDescripcion
+    @codigo VARCHAR(50),
+    @id_idioma CHAR(2),
+    @nota VARCHAR(MAX),
+    @incluye VARCHAR(MAX),
+    @no_incluye VARCHAR(MAX),
+    @itinerario VARCHAR(MAX),
+    @imagen VARCHAR(MAX),
+    @oferta_especial VARCHAR(MAX)
+AS
+BEGIN
+    -- Copia de ViajeVDT.dbo.spInsertaServicioDescripcion (Mariana, agosto 2025), en el esquema Eurovip.
+    SET NOCOUNT ON;
+    INSERT INTO Eurovip.servicio_descripcion (codigo, id_idioma, nota, incluye, no_incluye, itinerario, imagen, oferta_especial)
+    VALUES (@codigo, @id_idioma, @nota, @incluye, @no_incluye, @itinerario, @imagen, @oferta_especial);
+END
+GO
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -2872,6 +2934,14 @@ GO
                • En el código: los nombres de prueba («Prueba3», «test», «xxx»…) ya no se dejan
                  guardar, y "Datos a revisar" tiene el control "Dato de prueba" en Tasas, Campañas,
                  Proveedores y Regímenes.
+
+   15/10/2026  FASE 12 aplicada (CAMBIO 45): Eurovip.servicio_descripcion creada (copia de la
+               estructura de ViajeVDT.dbo.servicio_descripcion, sin sus 16 filas que son de ofertas
+               de ViajeVDT) + Eurovip.spInsertaServicioDescripcion; spEliminaServicio actualizado.
+               Las cargas de oferta manual y de circuitos guardan ahí Incluye / No incluye /
+               Notas / Oferta (una fila por código de carga) y ya no usan servicio_nota (vacía).
+               Prueba dentro de una transacción deshecha (ROLLBACK): se insertó una descripción para
+               la última oferta y Ofertas/Consultar la leen bien; no quedó nada guardado.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

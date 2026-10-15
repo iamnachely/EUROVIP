@@ -264,10 +264,6 @@ namespace EuroVip.Repositories
                                 await cn.ExecuteAsync("Eurovip.spInsertaServicioSuplemento",
                                     new { numeroServicio = id, nombreSuplemento = s.Id_Tasa, codigoIdioma = Idioma, valor = s.Valor }, tx, commandType: CommandType.StoredProcedure);
 
-                            foreach (var n in dto.Notas.Where(x => !string.IsNullOrWhiteSpace(x.Texto)))
-                                await cn.ExecuteAsync("Eurovip.spInsertaServicioNota",
-                                    new { numero = id, idIdioma = Idioma, nota1 = n.Texto.Trim(), nota2 = "", tipo = Corta(n.Tipo.Trim(), 50) }, tx, commandType: CommandType.StoredProcedure);
-
                             foreach (var pd in paisesDestino) publicar.Add((camp.Id_Campanya, paisOrigen, origen, pd));
                         }
                     }
@@ -278,6 +274,9 @@ namespace EuroVip.Repositories
                             new { nombre_circuito = circuito.Nombre, id_idioma = Idioma, id_alojamiento = h.Id_Alojamiento,
                                   categoria = string.IsNullOrWhiteSpace(h.Categoria) ? dto.Categoria : h.Categoria, caratula = (string?)null },
                             tx, commandType: CommandType.StoredProcedure);
+
+                    // 4) Incluye / No incluye / notas: una vez por carga (código), no por salida
+                    await GuardarDescripcionAsync(cn, tx, codigoServicio, dto.Notas);
 
                     tx.Commit();
                 }
@@ -398,6 +397,40 @@ namespace EuroVip.Repositories
             SqlException { Number: 2627 or 2601 } => "hay datos repetidos.",
             _ => ex.Message
         };
+
+        /// <summary>
+        /// Incluye / No incluye / notas de una carga: UNA fila en Eurovip.servicio_descripcion por código de carga
+        /// (como BackTiTan: todas las salidas/fechas de la carga comparten el código y los textos).
+        /// Incluye → incluye · No incluye → no_incluye · Oferta → oferta_especial · el resto (Condiciones, Importante,
+        /// Documentación…) → nota, con su título delante. Si la carga ya tenía descripción, se actualiza.
+        /// </summary>
+        internal static async Task GuardarDescripcionAsync(SqlConnection cn, SqlTransaction tx, string codigo, IEnumerable<CargaNotaDto> notas)
+        {
+            var l = notas.Where(n => !string.IsNullOrWhiteSpace(n.Texto)).Select(n => (Tipo: (n.Tipo ?? "").Trim(), Texto: n.Texto.Trim())).ToList();
+            if (l.Count == 0) return;
+            static bool Es(string tipo, string valor) => tipo.Equals(valor, StringComparison.OrdinalIgnoreCase);
+            string? Juntar(Func<string, bool> cual, bool conTitulo = false)
+            {
+                var x = l.Where(n => cual(n.Tipo)).Select(n => conTitulo && !Es(n.Tipo, "Condiciones") && n.Tipo != "" ? $"{n.Tipo}: {n.Texto}" : n.Texto).ToList();
+                return x.Count == 0 ? null : string.Join("\n\n", x);
+            }
+            var d = new
+            {
+                codigo, id_idioma = Idioma,
+                incluye = Juntar(t => Es(t, "Incluye")),
+                no_incluye = Juntar(t => Es(t, "No incluye")),
+                oferta_especial = Juntar(t => Es(t, "Oferta")),
+                nota = Juntar(t => !Es(t, "Incluye") && !Es(t, "No incluye") && !Es(t, "Oferta"), conTitulo: true)
+            };
+            var existe = await cn.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM Eurovip.servicio_descripcion WHERE codigo = @codigo AND id_idioma = @id_idioma", d, tx);
+            if (existe > 0)
+                await cn.ExecuteAsync(@"UPDATE Eurovip.servicio_descripcion SET nota = @nota, incluye = @incluye, no_incluye = @no_incluye, oferta_especial = @oferta_especial
+                                        WHERE codigo = @codigo AND id_idioma = @id_idioma", d, tx);
+            else
+                await cn.ExecuteAsync("Eurovip.spInsertaServicioDescripcion",
+                    new { d.codigo, d.id_idioma, nota = d.nota ?? "", incluye = d.incluye ?? "", no_incluye = d.no_incluye ?? "", itinerario = "", imagen = "", oferta_especial = d.oferta_especial ?? "" },
+                    tx, commandType: CommandType.StoredProcedure);
+        }
 
         internal static string? Corta(string? s, int max) => s is null ? null : (s.Length > max ? s[..max] : s);
     }

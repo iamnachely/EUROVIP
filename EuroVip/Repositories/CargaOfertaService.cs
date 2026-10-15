@@ -226,9 +226,9 @@ namespace EuroVip.Repositories
                         }
                         foreach (var s in dto.Suplementos.Where(x => !string.IsNullOrWhiteSpace(x.Id_Tasa)))
                             await cn.ExecuteAsync("Eurovip.spInsertaServicioSuplemento", new { numeroServicio = id, nombreSuplemento = s.Id_Tasa, codigoIdioma = Idioma, valor = s.Valor }, tx, commandType: CommandType.StoredProcedure);
-                        foreach (var n in dto.Notas.Where(x => !string.IsNullOrWhiteSpace(x.Texto)))
-                            await cn.ExecuteAsync("Eurovip.spInsertaServicioNota", new { numero = id, idIdioma = Idioma, nota1 = n.Texto.Trim(), nota2 = "", tipo = CargaCircuitoService.Corta(n.Tipo.Trim(), 50) }, tx, commandType: CommandType.StoredProcedure);
                     }
+                    // Incluye / No incluye / notas: una vez por carga (código), no por oferta/fecha
+                    await CargaCircuitoService.GuardarDescripcionAsync(cn, tx, codigo, dto.Notas);
                     tx.Commit();
                 }
                 catch (Exception ex)

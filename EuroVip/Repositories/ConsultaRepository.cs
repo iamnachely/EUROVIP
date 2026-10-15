@@ -117,7 +117,11 @@ namespace EuroVip.Repositories
                 JOIN Eurovip.alojamiento_habitacion ah ON ah.id_alojamiento = sh.id_alojamiento AND ah.id_habitacion = sh.id_habitacion AND ah.id_idioma = sh.id_idioma
                 WHERE sh.id_servicio = @id ORDER BY sh.precio, ah.nombre;
                 SELECT id_tasa AS Id_Tasa, valor AS Valor FROM Eurovip.servicio_tasa WHERE id_Servicio = @id ORDER BY id_tasa;
-                SELECT secuencia AS Secuencia, tipo AS Tipo, nota1 AS Nota1 FROM Eurovip.servicio_nota WHERE id_servicio = @id ORDER BY secuencia;
+                SELECT x.Secuencia, x.Tipo, x.Nota1 FROM Eurovip.servicio s
+                JOIN Eurovip.servicio_descripcion sd ON sd.codigo = s.codigo AND sd.id_idioma = s.id_idioma
+                CROSS APPLY (VALUES (CAST(1 AS smallint), CAST('Incluye' AS varchar(20)), sd.incluye), (CAST(2 AS smallint), 'No incluye', sd.no_incluye),
+                                    (CAST(3 AS smallint), 'Condiciones', sd.nota), (CAST(4 AS smallint), 'Oferta', sd.oferta_especial)) x (Secuencia, Tipo, Nota1)
+                WHERE s.id_servicio = @id AND ISNULL(x.Nota1, '') <> '' ORDER BY x.Secuencia;
                 SELECT segmento, id_proveedor, id_estacion_origen, id_estacion_destino, vuelo, fecha_salida, hora_salida, fecha_regreso, hora_regreso
                 FROM Eurovip.servicio_itinerario WHERE id_servicio = @id ORDER BY segmento;", new { id });
             return new ConsultaDetalle

@@ -254,12 +254,16 @@ namespace EuroVip.Repositories
             var salidas = await cn.ExecuteScalarAsync<int>(@"
                 DECLARE @ids TABLE (id int PRIMARY KEY);
                 INSERT INTO @ids SELECT id_servicio FROM Eurovip.servicio_circuito WHERE nombre_circuito = @nombre AND id_idoma = @Idioma;
+                DECLARE @codigos TABLE (codigo varchar(50));
+                INSERT INTO @codigos SELECT DISTINCT codigo FROM Eurovip.servicio WHERE id_servicio IN (SELECT id FROM @ids) AND codigo IS NOT NULL;
                 DELETE FROM Eurovip.servicio_itinerario WHERE id_servicio IN (SELECT id FROM @ids);
                 DELETE FROM Eurovip.servicio_tasa       WHERE id_Servicio IN (SELECT id FROM @ids);
                 DELETE FROM Eurovip.servicio_nota       WHERE id_servicio IN (SELECT id FROM @ids);
                 DELETE FROM Eurovip.alojamiento_circuito WHERE id_servicio IN (SELECT id FROM @ids);
                 DELETE FROM Eurovip.servicio_circuito   WHERE id_servicio IN (SELECT id FROM @ids);
                 DELETE FROM Eurovip.servicio            WHERE id_servicio IN (SELECT id FROM @ids);
+                DELETE sd FROM Eurovip.servicio_descripcion sd JOIN @codigos c ON c.codigo = sd.codigo
+                WHERE NOT EXISTS (SELECT 1 FROM Eurovip.servicio s WHERE s.codigo = sd.codigo);
                 DELETE FROM Eurovip.circuito_itinerario WHERE nombre_circuito = @nombre AND id_idioma = @Idioma;
                 DELETE FROM Eurovip.servicio_circuito_alojamiento WHERE nombre_circuito = @nombre AND id_idioma = @Idioma;
                 DELETE FROM Eurovip.circuito_destino    WHERE nombre_circuito = @nombre AND id_idioma = @Idioma;
@@ -282,12 +286,15 @@ namespace EuroVip.Repositories
             await cn.OpenAsync();
             using var tx = cn.BeginTransaction();
             var n = await cn.ExecuteAsync(@"
+                DECLARE @codigo varchar(50) = (SELECT codigo FROM Eurovip.servicio WHERE id_servicio = @idServicio);
                 DELETE FROM Eurovip.servicio_itinerario  WHERE id_servicio = @idServicio;
                 DELETE FROM Eurovip.servicio_tasa        WHERE id_Servicio = @idServicio;
                 DELETE FROM Eurovip.servicio_nota        WHERE id_servicio = @idServicio;
                 DELETE FROM Eurovip.alojamiento_circuito WHERE id_servicio = @idServicio;
                 DELETE FROM Eurovip.servicio_circuito    WHERE id_servicio = @idServicio;
-                DELETE FROM Eurovip.servicio WHERE id_servicio = @idServicio AND id_tipo_servicio = 'CIRCUITO';", new { idServicio }, tx);
+                DELETE FROM Eurovip.servicio WHERE id_servicio = @idServicio AND id_tipo_servicio = 'CIRCUITO';
+                IF @codigo IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio WHERE codigo = @codigo)
+                    DELETE FROM Eurovip.servicio_descripcion WHERE codigo = @codigo;", new { idServicio }, tx);
             tx.Commit();
             return n;
         }
