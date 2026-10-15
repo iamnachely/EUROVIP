@@ -2844,6 +2844,22 @@ GO
                OJO: varias pantallas (cargas de ofertas y circuitos, Flyers, HomeWeb) proponen EUR
                por defecto; si no se cambia, lo nuevo se seguirá cargando en EUR.
 
+   15/10/2026  ESTACIONES MAL GUARDADAS (a pedido de la usuaria: "AA Sin Especificar / Desconocido no
+               es un aeropuerto, borra todo lo que esté mal guardado"). Solo servidor 93, esquema
+               Eurovip; ninguna se usaba (servicio_itinerario vacío). Ensayado con ROLLBACK y aplicado.
+               Script al final ("ESTACIONES 15/10/2026").
+               • Borradas 12: códigos que no son IATA (AA "Sin Especificar", AA1 copia de Cancún que
+                 ya existe como CUN, W4 "Nuevo"); sin nombre, solo el código (DTZ, ETR, RZG); y
+                 estaciones de tren guardadas como aeropuerto (Atocha, Sevilla-Santa Justa, Massy TGV,
+                 Marsella, Xianyang, Maastricht ZYT).
+               • Borrados 3 destinos que quedaron sin uso ("Desconocido", "ZYT" y el creado solo para
+                 una de esas estaciones). Quedan 3.703 estaciones, todas con IATA de 3 letras y destino
+                 válido en su país.
+               • Copias: Eurovip.estacion_respaldo_20261015 y destino_respaldo_20261015.
+               • En el código: Estaciones solo acepta IATA de 3 letras y un nombre real de aeropuerto
+                 (no "Sin Especificar"/"Nuevo", ni el código, ni estaciones de tren/autobús); y
+                 "Datos a revisar" de Estaciones tiene el control "No es un aeropuerto".
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
@@ -3245,4 +3261,54 @@ BEGIN
     FETCH NEXT FROM r INTO @t, @c;
 END
 CLOSE r; DEALLOCATE r;
+COMMIT;
+
+
+/* ##########################################################################################
+   ESTACIONES 15/10/2026 (explicación en la BITÁCORA). Script tal cual se aplicó.
+   ########################################################################################## */
+/* Estaciones mal guardadas — 15/10/2026 (servidor 93, esquema Eurovip). Ninguna se usa (servicio_itinerario vacío). */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRAN;
+IF OBJECT_ID('Eurovip.estacion_respaldo_20261015') IS NULL SELECT * INTO Eurovip.estacion_respaldo_20261015 FROM Eurovip.estacion;
+IF OBJECT_ID('Eurovip.destino_respaldo_20261015') IS NULL SELECT * INTO Eurovip.destino_respaldo_20261015 FROM Eurovip.destino;
+
+IF OBJECT_ID('tempdb..#mal') IS NOT NULL DROP TABLE #mal;
+SELECT e.id_estacion, e.id_destino, e.id_pais, e.id_idioma, e.nombre,
+       CASE WHEN e.id_estacion NOT LIKE '[A-Z][A-Z][A-Z]' THEN 'código que no es IATA'
+            WHEN e.nombre IN ('Sin Especificar', 'Desconocido', 'Nuevo', 'Prueba', 'Test') OR e.id_destino IN ('Desconocido') THEN 'no es un aeropuerto'
+            WHEN e.nombre = e.id_estacion OR e.id_destino = e.id_estacion THEN 'sin nombre (solo el código)'
+            ELSE 'estación de tren, no aeropuerto' END AS motivo
+INTO #mal
+FROM Eurovip.estacion e
+WHERE e.id_estacion NOT LIKE '[A-Z][A-Z][A-Z]'
+   OR e.nombre IN ('Sin Especificar', 'Desconocido', 'Nuevo', 'Prueba', 'Test') OR e.id_destino IN ('Desconocido')
+   OR e.nombre = e.id_estacion OR e.id_destino = e.id_estacion
+   OR e.nombre LIKE '%estaci_n de tren%' OR e.nombre LIKE '%estaci_n de ferrocarril%' OR e.nombre LIKE '% rail %' OR e.nombre LIKE '%rail stn%'
+   OR e.nombre IN ('ESTACIÓN DE ATOCHA', 'ESTACIÓN DE SEVILLA-SANTA JUSTA', 'ESTACIÓN DE MARSELLA-SAN CARLOS');
+IF EXISTS (SELECT 1 FROM Eurovip.servicio_itinerario i JOIN #mal m ON m.id_estacion IN (i.id_estacion_origen, i.id_estacion_destino))
+    THROW 50001, 'Alguna estación a borrar se usa en vuelos cargados.', 1;
+SELECT id_estacion, nombre, id_destino, id_pais, motivo FROM #mal ORDER BY motivo, id_estacion;
+
+DELETE e FROM Eurovip.estacion e JOIN #mal m ON m.id_estacion = e.id_estacion AND m.id_destino = e.id_destino AND m.id_pais = e.id_pais AND m.id_idioma = e.id_idioma;
+PRINT CONCAT('Estaciones borradas: ', @@ROWCOUNT);
+
+-- Destinos que quedaron sin uso y no son destinos reales ("Desconocido", "ZYT"…) o que solo existían por esas estaciones.
+DELETE d FROM Eurovip.destino d
+WHERE EXISTS (SELECT 1 FROM #mal m WHERE m.id_destino = d.id_destino AND m.id_pais = d.id_pais)
+  AND (d.id_destino IN ('Desconocido') OR d.id_destino LIKE '[A-Z][A-Z][A-Z]' COLLATE Latin1_General_CS_AS
+       OR NOT EXISTS (SELECT 1 FROM Eurovip.destino_respaldo_20261014b b WHERE b.id_destino = d.id_destino AND b.id_pais = d.id_pais))
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.estacion x WHERE x.id_destino = d.id_destino AND x.id_pais = d.id_pais)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.alojamiento x WHERE x.id_destino = d.id_destino)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.circuito_destino x WHERE x.id_destino = d.id_destino)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_destino x WHERE x.destino = d.id_destino)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_origen x WHERE x.origen = d.id_destino)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.inicio x WHERE x.id_destino = d.id_destino OR x.origen = d.id_destino)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.home_contenido x WHERE x.id_destino = d.id_destino OR x.origen = d.id_destino);
+PRINT CONCAT('Destinos sin uso borrados: ', @@ROWCOUNT);
+
+SELECT COUNT(*) estaciones, (SELECT COUNT(*) FROM Eurovip.estacion WHERE id_estacion NOT LIKE '[A-Z][A-Z][A-Z]') codigos_raros,
+       (SELECT COUNT(*) FROM Eurovip.estacion e WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = e.id_destino AND d.id_pais = e.id_pais)) sin_destino
+FROM Eurovip.estacion;
 COMMIT;

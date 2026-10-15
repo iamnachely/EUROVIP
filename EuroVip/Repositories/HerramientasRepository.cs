@@ -275,7 +275,8 @@ namespace EuroVip.Repositories
                     break;
                 }
                 case "estaciones":
-                    return (nuevo ? ReglasDatos.Codigo("código IATA", S("id_estacion") ?? "", 3, 4) : null) ?? ReglasDatos.Nombre("nombre de estación", S("nombre") ?? "", 3);
+                    // Solo aeropuertos: IATA de 3 letras y nombre real (no "Sin Especificar", ni el código, ni estaciones de tren).
+                    return ReglasDatos.Estacion(S("id_estacion") ?? "", S("nombre") ?? "");
                 case "alojamientos":
                 {
                     var e = ReglasDatos.Nombre("nombre de hotel", S("nombre") ?? "", 3);

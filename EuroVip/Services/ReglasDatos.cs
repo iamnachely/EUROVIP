@@ -16,8 +16,26 @@ namespace EuroVip.Services
         /// <summary>Palabras que se cargaron como "destino" y no lo son.</summary>
         private static readonly HashSet<string> NoSonLugares = new(StringComparer.OrdinalIgnoreCase)
         {
-            "falta", "por cuenta del cliente", "sin destino", "ninguno", "ninguna", "n/a", "na", "nd", "prueba", "test", "xxx", "otro", "otros", "varios"
+            "falta", "por cuenta del cliente", "sin destino", "ninguno", "ninguna", "n/a", "na", "nd", "prueba", "test", "xxx", "otro", "otros", "varios",
+            "desconocido", "desconocida", "sin especificar", "nuevo", "nueva"
         };
+
+        /// <summary>
+        /// Estación (aeropuerto): código IATA de 3 letras y un nombre real de aeropuerto, distinto del código.
+        /// No se aceptan "Sin Especificar"/"Nuevo" ni estaciones de tren o autobús (solo se cargan aeropuertos).
+        /// </summary>
+        public static string? Estacion(string codigo, string nombre)
+        {
+            var e = Codigo("código IATA", codigo, 3, 3);
+            if (e is not null) return e;
+            nombre = Limpiar(nombre);
+            if (NoSonLugares.Contains(nombre) || nombre.Equals(codigo, StringComparison.OrdinalIgnoreCase))
+                return $"«{nombre}» no sirve como nombre de aeropuerto: escribe el nombre real (ej. «Aeropuerto Internacional de Punta Cana»).";
+            var n = nombre.ToLowerInvariant();
+            if (new[] { "estación de tren", "estacion de tren", "ferrocarril", "rail stn", "railway", "train station", "estación de autobuses", "bus station" }.Any(n.Contains))
+                return $"«{nombre}» no es un aeropuerto: en Estaciones solo se cargan aeropuertos.";
+            return Nombre("nombre de aeropuerto", nombre, 3);
+        }
 
         /// <summary>Quita espacios al principio y al final y deja uno solo entre palabras.</summary>
         public static string Limpiar(string? s) => VariosEspacios.Replace(s ?? "", " ").Trim();

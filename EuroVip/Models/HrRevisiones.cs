@@ -67,8 +67,12 @@ namespace EuroVip.Models
                 new HrRevision("Destino que no existe en ese país", "La estación apunta a un destino que no está en Destinos con ese país.",
                     "NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = t.id_destino AND d.id_pais = t.id_pais AND d.id_idioma = 'ES')",
                     "t.id_estacion + ' · ' + t.nombre", "t.id_destino + ' (' + t.id_pais + ')'"),
-                new HrRevision("Código IATA raro", "El código tiene que ser de 3 o 4 letras (ej. PUJ).",
-                    "(t.id_estacion NOT LIKE '[A-Z][A-Z][A-Z]' AND t.id_estacion NOT LIKE '[A-Z][A-Z][A-Z][A-Z]')", "t.id_estacion", "t.nombre"),
+                new HrRevision("Código IATA raro", "El código del aeropuerto tiene que ser de 3 letras (ej. PUJ).",
+                    "t.id_estacion NOT LIKE '[A-Z][A-Z][A-Z]'", "t.id_estacion", "t.nombre"),
+                new HrRevision("No es un aeropuerto", "Sin nombre real («Sin Especificar», «Nuevo», el propio código) o es una estación de tren/autobús.",
+                    "(t.nombre IN ('Sin Especificar','Desconocido','Nuevo','Prueba','Test') OR t.nombre = t.id_estacion OR t.id_destino = t.id_estacion " +
+                    "OR t.nombre LIKE '%estaci_n de tren%' OR t.nombre LIKE '%ferrocarril%' OR t.nombre LIKE '%rail stn%' OR t.nombre LIKE '%railway%' OR t.nombre LIKE '%autobuses%')",
+                    "t.id_estacion + ' · ' + t.nombre", "t.id_destino"),
                 SinLetras("nombre", "Nombre de la estación"),
                 Espacios("id_destino", "Destinos de la estación")
             },
