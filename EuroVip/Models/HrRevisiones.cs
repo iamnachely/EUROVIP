@@ -33,6 +33,11 @@ namespace EuroVip.Models
             new("Nombre sin letras o con símbolos", $"{etiqueta} solo con números/símbolos o que empieza por un símbolo (ej. «222», «-pego»).",
                 $"(t.[{col}] NOT LIKE '%{Letra}%' OR (LTRIM(t.[{col}]) NOT LIKE '{Letra}%' AND LTRIM(t.[{col}]) NOT LIKE '[0-9(]%'))", $"t.[{col}]");
 
+        private static HrRevision DePrueba(string col) =>
+            new("Dato de prueba", "Nombres de prueba o de una sola letra (ej. «f», «Prueba3», «test»): bórralos o ponles el nombre real.",
+                $"(LEN(LTRIM(t.[{col}])) < 2 OR LTRIM(t.[{col}]) LIKE 'prueba%' OR LTRIM(t.[{col}]) LIKE 'test%' OR LTRIM(t.[{col}]) LIKE 'demo' OR LTRIM(t.[{col}]) LIKE 'xxx%' OR LTRIM(t.[{col}]) LIKE 'asdf%')",
+                $"t.[{col}]");
+
         private static HrRevision Repetido(string tabla, string col, string etiqueta, string grupoExtra = "", bool idioma = true) =>
             new($"{etiqueta} repetido", $"Hay más de un registro con el mismo {etiqueta.ToLower()}: deja uno solo.",
                 $"EXISTS (SELECT 1 FROM Eurovip.[{tabla}] x WHERE x.[{col}] = t.[{col}]{(idioma ? " AND x.id_idioma = t.id_idioma" : "")}{grupoExtra} " +
@@ -105,14 +110,14 @@ namespace EuroVip.Models
                 SinLetras("nombre", "Nombre de la habitación"),
                 Espacios("nombre", "Nombres de habitación")
             },
-            ["campanyas"] = new[] { Repetido("campanya", "nombre", "Nombre de campaña"), SinLetras("nombre", "Nombre de la campaña"), Espacios("nombre", "Nombres de campaña") },
+            ["campanyas"] = new[] { DePrueba("nombre"), Repetido("campanya", "nombre", "Nombre de campaña"), SinLetras("nombre", "Nombre de la campaña"), Espacios("nombre", "Nombres de campaña") },
             ["monedas"] = new[] { Repetido("moneda", "nombre", "Nombre de moneda", idioma: false), SinLetras("nombre", "Nombre de la moneda"),
                 new HrRevision("Código que no son 3 letras", "El código de moneda tiene que ser de 3 letras (ej. EUR).", "t.id_moneda NOT LIKE '[A-Z][A-Z][A-Z]'", "t.id_moneda", "t.nombre") },
-            ["tasas"] = new[] { SinLetras("id_tasa", "Nombre de la tasa"), Espacios("id_tasa", "Nombres de tasa") },
-            ["regimenes"] = new[] { Repetido("regimen", "descripcion", "Descripción de régimen"), SinLetras("descripcion", "Descripción del régimen"),
+            ["tasas"] = new[] { DePrueba("id_tasa"), SinLetras("id_tasa", "Nombre de la tasa"), Espacios("id_tasa", "Nombres de tasa") },
+            ["regimenes"] = new[] { DePrueba("descripcion"), Repetido("regimen", "descripcion", "Descripción de régimen"), SinLetras("descripcion", "Descripción del régimen"),
                 new HrRevision("Código que no son 2 letras", "El código de régimen tiene que ser de 2 letras (ej. TI).", "t.id_regimen NOT LIKE '[A-Z][A-Z]'", "t.id_regimen", "t.descripcion") },
             ["idiomas"] = new[] { SinLetras("nombre", "Nombre del idioma") },
-            ["proveedores"] = new[] { Repetido("proveedor", "nombre", "Nombre de proveedor", idioma: false), SinLetras("nombre", "Nombre del proveedor"), Espacios("nombre", "Nombres de proveedor") }
+            ["proveedores"] = new[] { DePrueba("nombre"), Repetido("proveedor", "nombre", "Nombre de proveedor", idioma: false), SinLetras("nombre", "Nombre del proveedor"), Espacios("nombre", "Nombres de proveedor") }
         };
 
         public static HrRevision[] De(HrCatalogo c) => Por.TryGetValue(c.Clave, out var r) ? r : Array.Empty<HrRevision>();

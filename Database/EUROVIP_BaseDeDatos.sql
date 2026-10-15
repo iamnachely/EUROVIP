@@ -2860,6 +2860,19 @@ GO
                  (no "Sin Especificar"/"Nuevo", ni el código, ni estaciones de tren/autobús); y
                  "Datos a revisar" de Estaciones tiene el control "No es un aeropuerto".
 
+   15/10/2026  DATOS DE PRUEBA Y TABLAS DE RESPALDO (a pedido de la usuaria).
+               • Tasas y suplementos: borradas "f", "Prueba" y "Prueba3" (ninguna oferta las usaba).
+               • Hoteles de prueba sin ofertas ni circuitos borrados (5): "prueba 1",
+                 "Prueba 15-05-2025", "Prueba 22-05-2025", "Prueba hoy 04-07-2025", "Prueba True 1".
+                 Proveedor "prueba4" borrado.
+               • TABLAS DE RESPALDO BORRADAS: todas las Eurovip.*_respaldo_* y
+                 alojamiento_habitacion_borradas_20261013 (copias de seguridad de las limpiezas). Lo
+                 que dicen las entradas anteriores sobre "COPIAS DE SEGURIDAD" ya no existe: esas
+                 limpiezas ya no se pueden deshacer desde la base.
+               • En el código: los nombres de prueba («Prueba3», «test», «xxx»…) ya no se dejan
+                 guardar, y "Datos a revisar" tiene el control "Dato de prueba" en Tasas, Campañas,
+                 Proveedores y Regímenes.
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
@@ -3312,3 +3325,56 @@ SELECT COUNT(*) estaciones, (SELECT COUNT(*) FROM Eurovip.estacion WHERE id_esta
        (SELECT COUNT(*) FROM Eurovip.estacion e WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = e.id_destino AND d.id_pais = e.id_pais)) sin_destino
 FROM Eurovip.estacion;
 COMMIT;
+
+
+/* ##########################################################################################
+   DATOS DE PRUEBA Y RESPALDOS 15/10/2026 (explicación en la BITÁCORA). Scripts tal cual se aplicaron.
+   ########################################################################################## */
+/* 15/10/2026 — Tasas de prueba y tablas de respaldo (servidor 93, esquema Eurovip). */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRAN;
+-- Tasas de prueba que ninguna oferta usa.
+DELETE t FROM Eurovip.tasa t
+WHERE t.id_tasa IN ('f', 'Prueba', 'Prueba3')
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_tasa s WHERE s.id_tasa = t.id_tasa);
+PRINT CONCAT('Tasas de prueba borradas: ', @@ROWCOUNT);
+-- Tablas de respaldo de las limpiezas (a pedido de la usuaria).
+DECLARE @sql nvarchar(max) = N'';
+SELECT @sql += N'DROP TABLE Eurovip.' + QUOTENAME(name) + N';' + CHAR(10)
+FROM sys.tables WHERE SCHEMA_NAME(schema_id) = 'Eurovip' AND (name LIKE '%[_]respaldo[_]%' OR name LIKE '%[_]borradas[_]%');
+EXEC sp_executesql @sql;
+PRINT CONCAT('Tablas de respaldo borradas: ', (LEN(@sql) - LEN(REPLACE(@sql, 'DROP TABLE', ''))) / 10);
+COMMIT;
+SELECT COUNT(*) quedan_respaldos FROM sys.tables WHERE SCHEMA_NAME(schema_id) = 'Eurovip' AND (name LIKE '%respaldo%' OR name LIKE '%borradas%');
+SELECT COUNT(*) quedan_tasas_prueba FROM Eurovip.tasa WHERE id_tasa IN ('f', 'Prueba', 'Prueba3');
+
+/* 15/10/2026 — Datos de prueba que nadie usa (servidor 93, esquema Eurovip). */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRAN;
+SELECT a.id_alojamiento, a.nombre, a.id_destino,
+       (SELECT COUNT(*) FROM Eurovip.servicio_detalle s WHERE s.id_alojamiento = a.id_alojamiento) ofertas,
+       (SELECT COUNT(*) FROM Eurovip.servicio_circuito_alojamiento s WHERE s.id_alojamiento = a.id_alojamiento) circuitos,
+       (SELECT COUNT(*) FROM Eurovip.alojamiento_habitacion h WHERE h.id_alojamiento = a.id_alojamiento) habitaciones
+FROM Eurovip.alojamiento a WHERE a.nombre LIKE 'prueba%' OR a.nombre LIKE 'test%';
+-- Hoteles de prueba sin ofertas ni circuitos (con sus habitaciones).
+IF OBJECT_ID('tempdb..#h') IS NOT NULL DROP TABLE #h;
+SELECT a.id_alojamiento INTO #h FROM Eurovip.alojamiento a
+WHERE (a.nombre LIKE 'prueba%' OR a.nombre LIKE 'test%')
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_detalle s WHERE s.id_alojamiento = a.id_alojamiento)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_habitacion s WHERE s.id_alojamiento = a.id_alojamiento)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_circuito_alojamiento s WHERE s.id_alojamiento = a.id_alojamiento)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.alojamiento_destino s WHERE s.id_alojamiento = a.id_alojamiento);
+DELETE h FROM Eurovip.alojamiento_habitacion h JOIN #h x ON x.id_alojamiento = h.id_alojamiento;
+PRINT CONCAT('Habitaciones de hoteles de prueba borradas: ', @@ROWCOUNT);
+DELETE a FROM Eurovip.alojamiento a JOIN #h x ON x.id_alojamiento = a.id_alojamiento;
+PRINT CONCAT('Hoteles de prueba borrados: ', @@ROWCOUNT);
+-- Proveedor de prueba sin uso.
+DELETE p FROM Eurovip.proveedor p WHERE (p.nombre LIKE 'prueba%' OR p.nombre LIKE 'test%')
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio s WHERE s.id_Proveedor = p.id_proveedor)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.circuito c WHERE c.id_proveedor = p.id_proveedor)
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_itinerario i WHERE i.id_proveedor = p.id_proveedor);
+PRINT CONCAT('Proveedores de prueba borrados: ', @@ROWCOUNT);
+COMMIT;
+SELECT 'hotel' t, nombre FROM Eurovip.alojamiento WHERE nombre LIKE 'prueba%' OR nombre LIKE 'test%' UNION ALL SELECT 'proveedor', nombre FROM Eurovip.proveedor WHERE nombre LIKE 'prueba%' OR nombre LIKE 'test%';

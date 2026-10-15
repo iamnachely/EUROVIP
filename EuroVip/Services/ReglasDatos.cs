@@ -42,6 +42,10 @@ namespace EuroVip.Services
 
         private static int Letras(string s) => s.Count(char.IsLetter);
 
+        /// <summary>"Prueba", "Prueba3", "test", "xxx"…: datos de prueba que no deben quedar guardados.</summary>
+        private static readonly Regex DePrueba = new(@"^(prueba|test|testing|demo|xxx+|asdf|aaa+|zzz+)\s*\d*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        public static bool EsDePrueba(string? s) => DePrueba.IsMatch(Limpiar(s));
+
         /// <summary>Nombre de un lugar (país o destino): al menos 3 letras, empieza por letra, sin números ni símbolos raros.</summary>
         public static string? Lugar(string que, string valor)
         {
@@ -59,6 +63,7 @@ namespace EuroVip.Services
         public static string? Nombre(string que, string valor, int minLetras = 2)
         {
             valor = Limpiar(valor);
+            if (EsDePrueba(valor)) return $"«{valor}» parece un dato de prueba: escribe el nombre real.";
             if (Letras(valor) < minLetras) return $"«{valor}» no sirve como {que}: tiene que llevar letras, no solo números o símbolos.";
             if (!char.IsLetterOrDigit(valor[0]) && valor[0] is not '(' and not '"' and not '¡' and not '¿')
                 return $"«{valor}» no sirve como {que}: tiene que empezar por una letra o un número.";
