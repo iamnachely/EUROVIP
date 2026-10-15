@@ -14,6 +14,14 @@
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
   </ItemGroup>
 
+  <!-- Al publicar NO se lleva la configuración real ni lo subido desde la pantalla: viven en el servidor
+       (Deploy.ps1 conserva appsettings*.json, wwwroot\imagenes, wwwroot\uploads y Logs del slot activo). -->
+  <ItemGroup>
+    <Content Update="appsettings.Local.json" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+    <Content Update="wwwroot\uploads\**" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>

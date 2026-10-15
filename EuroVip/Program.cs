@@ -66,6 +66,8 @@ builder.Services.AddSingleton<EuroVip.Services.FlyerEnvioJob>();
 builder.Services.AddSingleton<EuroVip.Services.IProgresoCargas, EuroVip.Services.ProgresoCargas>();   // barra de progreso de las cargas
 builder.Services.AddHttpClient("whatsapp");
 builder.Services.AddMemoryCache();
+// /health para el despliegue (Deploy.ps1): la app arrancó y llega a la base
+builder.Services.AddHealthChecks().AddCheck<EuroVip.Services.BaseDatosHealthCheck>("base_de_datos");
 builder.Services.AddSingleton<EuroVip.Repositories.IAccesoService, EuroVip.Repositories.AccesoService>();
 builder.Services.AddScoped<EuroVip.Repositories.IUsuariosRepository, EuroVip.Repositories.UsuariosRepository>();
 
@@ -95,7 +97,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 
 app.UseSerilogRequestLogging();
-app.UseHttpsRedirection();
+// /health sin redirección a https: el despliegue lo consulta por http en el propio servidor
+app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/health"), b => b.UseHttpsRedirection());
 app.UseStaticFiles();
 app.UseRouting();
 app.UseSession();
@@ -120,6 +123,8 @@ app.Use(async (ctx, next) =>
     }
     await next();
 });
+
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.MapControllerRoute(
     name: "default",

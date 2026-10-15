@@ -1,0 +1,78 @@
+# ============================================================
+# azure-pipelines-rollback.yml - Volver a la versión anterior de EUROVIP
+# Copiado de BackTiTan y adaptado (un solo servidor).
+#
+# Invierte el physicalPath del sitio "eurovip" en IIS (Blue <-> Green):
+# la versión anterior sigue intacta en el otro slot.
+#
+# Cómo ejecutar: Azure DevOps → Pipelines → (este archivo) → Run pipeline
+#                y escribir ROLLBACK en el parámetro de confirmación.
+# ============================================================
+
+trigger: none
+
+parameters:
+  - name: confirm
+    displayName: 'Escribir ROLLBACK para confirmar'
+    type: string
+    default: ''
+
+variables:
+  projectName: 'eurovip'
+  basePath:    'C:\inetpub\wwwroot\eurovip'
+
+stages:
+  - stage: Rollback
+    displayName: 'Volver a la versión anterior'
+    jobs:
+      - deployment: RollbackJob
+        displayName: 'Rollback Eurovip'
+        environment: 'Eurovip-Produccion'
+        pool:
+          name: 'Eurovip-Agents'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: PowerShell@2
+                  displayName: 'Ejecutar rollback Blue-Green'
+                  inputs:
+                    errorActionPreference: 'stop'
+                    targetType: 'inline'
+                    script: |
+                      if ("${{ parameters.confirm }}" -ne "ROLLBACK") {
+                          Write-Error "Confirmación requerida. Escribe ROLLBACK en el parámetro 'confirm'."
+                          exit 1
+                      }
+                      Import-Module WebAdministration -ErrorAction Stop
+
+                      $siteName    = "$(projectName)"
+                      $site        = Get-Website -Name $siteName -ErrorAction Stop
+                      $appPool     = $site.applicationPool
+                      $currentPath = $site.physicalPath.TrimEnd('\')
+                      $isBlue      = $currentPath -like "*\Blue"
+                      $destino     = if ($isBlue) { "Green" } else { "Blue" }
+                      $rutaDestino = "$(basePath)\$destino"
+
+                      if (-not (Test-Path $rutaDestino) -or -not (Get-ChildItem $rutaDestino -Recurse -File -ErrorAction SilentlyContinue)) {
+                          Write-Error "El slot $destino está vacío: no hay versión anterior a la cual volver."
+                          exit 1
+                      }
+
+                      Write-Host "Volviendo a: $destino ($rutaDestino)" -ForegroundColor Yellow
+                      $appcmd = Join-Path $env:SystemRoot "System32\inetsrv\appcmd.exe"
+                      & $appcmd stop apppool /apppool.name:"$appPool" 2>&1 | Out-Null
+                      Start-Sleep -Seconds 3
+                      Set-ItemProperty "IIS:\Sites\$siteName" -Name physicalPath -Value $rutaDestino -ErrorAction Stop
+                      & $appcmd start apppool /apppool.name:"$appPool" 2>&1 | Out-Null
+                      Start-Sleep -Seconds 10
+
+                      $b = Get-WebBinding -Name $siteName | Where-Object { $_.protocol -eq "http" } | Select-Object -First 1
+                      $p = if ($b) { $b.bindingInformation.Split(':')[1] } else { "80" }
+                      $url = "http://localhost$(if ($p -ne '80') { ":$p" })/health"
+                      try {
+                          $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20
+                          Write-Host "Health check: HTTP $($r.StatusCode)" -ForegroundColor Green
+                      } catch {
+                          Write-Warning "El health check no respondió bien: $($_.Exception.Message). Revisar el sitio a mano."
+                      }

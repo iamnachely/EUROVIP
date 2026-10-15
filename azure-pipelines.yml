@@ -1,0 +1,123 @@
+# ============================================================
+# Pipeline CI/CD - EUROVIP (BackOffice)
+# Copiado de BackTiTan (azure-pipelines.yml) y adaptado a Eurovip.
+# Estrategia: Blue-Green Deployment en IIS on-premise (DeploymentScripts/Deploy.ps1).
+#
+# Flujo: Build → Deploy al servidor de Eurovip (aprobación manual en el Environment).
+#
+# IMPORTANTE: el despliegue es MANUAL (trigger: none). En Eurovip se sube a main
+# después de cada tarea; publicar en el servidor es otra decisión:
+#   Azure DevOps → Pipelines → EurovipBack → Run pipeline.
+#
+# Requisitos en Azure DevOps (proyecto EurovipBack):
+#   - Pool de agentes "Eurovip-Agents" con el agente instalado EN el servidor de Eurovip
+#     (el que tiene el IIS donde vive el sitio "eurovip").
+#   - Environment "Eurovip-Produccion" → configurar aprobación manual en:
+#     Pipelines → Environments → Eurovip-Produccion → Approvals and checks
+#
+# Requisitos en el servidor: ver DeploymentScripts/README-DESPLIEGUE.md
+# ============================================================
+
+trigger: none
+
+variables:
+  buildConfiguration: 'Release'
+  dotnetVersion:      '8.0.x'
+  projectPath:        'EuroVip/EuroVip.csproj'
+  projectName:        'eurovip'          # nombre del sitio IIS y de C:\inetpub\wwwroot\eurovip
+
+stages:
+
+  # ============================================================
+  # STAGE 1: BUILD
+  # Genera el artifact una sola vez, en un agente de Microsoft
+  # (no consume recursos del servidor).
+  # ============================================================
+  - stage: Build
+    displayName: 'Build'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build & Publish'
+        pool:
+          vmImage: 'windows-latest'
+
+        steps:
+          - checkout: self
+            displayName: 'Checkout'
+
+          - task: UseDotNet@2
+            displayName: 'Use .NET $(dotnetVersion)'
+            inputs:
+              version: $(dotnetVersion)
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Restore'
+            inputs:
+              command: 'restore'
+              projects: '$(projectPath)'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Build'
+            inputs:
+              command: 'build'
+              projects: '$(projectPath)'
+              arguments: '--configuration $(buildConfiguration) --no-restore'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Publish'
+            inputs:
+              command: 'publish'
+              publishWebProjects: false
+              projects: '$(projectPath)'
+              arguments: '--configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/app'
+              zipAfterPublish: false
+              modifyOutputPath: false
+
+          # Los scripts de deploy van en el artifact para que el agente del servidor los ejecute sin acceso al repo.
+          - task: CopyFiles@2
+            displayName: 'Copy Deployment Scripts'
+            inputs:
+              SourceFolder: '$(Build.SourcesDirectory)/DeploymentScripts'
+              Contents: '*.ps1'
+              TargetFolder: '$(Build.ArtifactStagingDirectory)/scripts'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Artifact: drop'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+
+  # ============================================================
+  # STAGE 2: DEPLOY AL SERVIDOR DE EUROVIP
+  # La aprobación manual la gestiona el Environment "Eurovip-Produccion".
+  # Blue-Green: publica en el slot inactivo, cambia IIS, revisa /health
+  # (que también comprueba la base) y vuelve atrás solo si falla.
+  # ============================================================
+  - stage: Deploy
+    displayName: 'Deploy → Servidor Eurovip'
+    dependsOn: Build
+    condition: succeeded()
+
+    jobs:
+      - deployment: DeployJob
+        displayName: 'Deploy Eurovip'
+        environment: 'Eurovip-Produccion'
+        pool:
+          name: 'Eurovip-Agents'
+
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: drop
+
+                - task: PowerShell@2
+                  displayName: 'Blue-Green Deploy'
+                  inputs:
+                    filePath: '$(Pipeline.Workspace)/drop/scripts/Deploy.ps1'
+                    arguments: >-
+                      -ProjectName "$(projectName)"
+                      -ArtifactsPath "$(Pipeline.Workspace)/drop/app"
+                      -HealthCheckPath "/health"
+                    errorActionPreference: 'stop'
