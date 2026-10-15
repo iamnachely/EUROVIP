@@ -25,6 +25,13 @@ variables:
   dotnetVersion:      '8.0.x'
   projectPath:        'EuroVip/EuroVip.csproj'
   projectName:        'eurovip'          # nombre del sitio IIS y de C:\inetpub\wwwroot\eurovip
+  # Solo se usan si el sitio IIS no existe (primer deploy: Deploy.ps1 lo crea)
+  eurovipPuerto:      '8090'
+  eurovipHost:        ''
+  # Pool del agente instalado en el servidor de Eurovip
+  agentPool:          'Eurovip-Agents'
+  # Variable SECRETA que se define en el pipeline (NO en este archivo):
+  #   EurovipAppSettingsLocal = appsettings.Local.json en base64 (cadena de conexión, WhatsApp…)
 
 stages:
 
@@ -103,7 +110,7 @@ stages:
         displayName: 'Deploy Eurovip'
         environment: 'Eurovip-Produccion'
         pool:
-          name: 'Eurovip-Agents'
+          name: ${{ variables.agentPool }}
 
         strategy:
           runOnce:
@@ -120,4 +127,9 @@ stages:
                       -ProjectName "$(projectName)"
                       -ArtifactsPath "$(Pipeline.Workspace)/drop/app"
                       -HealthCheckPath "/health"
+                      -Puerto $(eurovipPuerto)
+                      -NombreHost "$(eurovipHost)"
                     errorActionPreference: 'stop'
+                  # Las variables secretas no llegan solas a los scripts: se pasan de forma explícita.
+                  env:
+                    EUROVIP_APPSETTINGS_LOCAL: $(EurovipAppSettingsLocal)

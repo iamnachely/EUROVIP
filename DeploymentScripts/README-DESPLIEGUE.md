@@ -61,6 +61,14 @@ icacls C:\inetpub\wwwroot\eurovip /grant "IIS AppPool\eurovip:(OI)(CI)M"
 
 ---
 
+## Configuración real sin copiar archivos (variable secreta)
+En el pipeline → **Edit → Variables → New variable** → nombre `EurovipAppSettingsLocal`, valor = el
+contenido de `appsettings.Local.json` en **base64**, y marcar **Keep this value secret**.
+En PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("appsettings.Local.json"))`.
+Con esa variable, `Deploy.ps1` escribe el archivo en cada despliegue y **crea solo el sitio IIS
+`eurovip`** (carpetas, grupo de aplicaciones, permisos y firewall) la primera vez, con el puerto de
+la variable `eurovipPuerto` (8090) — los pasos 2, 3 y 4 de arriba pasan a ser opcionales.
+
 ## Publicar una versión
 **Pipelines → (pipeline de Eurovip) → Run pipeline** → aprobar → al terminar debe decir `DEPLOY EXITOSO`.
 

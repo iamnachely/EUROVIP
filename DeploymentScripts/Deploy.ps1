@@ -37,8 +37,20 @@ param(
     [int]$HealthCheckRetries = 12,
 
     [Parameter(Mandatory = $false)]
-    [int]$HealthCheckWaitSeconds = 10
+    [int]$HealthCheckWaitSeconds = 10,
+
+    # Eurovip: solo para el PRIMER deploy (si el sitio IIS no existe, se crea con este puerto/host)
+    [Parameter(Mandatory = $false)]
+    [int]$Puerto = 8090,
+
+    [Parameter(Mandatory = $false)]
+    [string]$NombreHost = ""
 )
+
+# Eurovip: la configuración real (appsettings.Local.json) llega del pipeline como variable SECRETA
+# (EurovipAppSettingsLocal, el JSON en base64) en la variable de entorno EUROVIP_APPSETTINGS_LOCAL.
+# Si viene, se escribe en el slot; si no, se conserva la que ya tenga el servidor.
+$appSettingsLocalB64 = $env:EUROVIP_APPSETTINGS_LOCAL
 
 $ErrorActionPreference = "Stop"
 
@@ -129,10 +141,29 @@ Import-Module WebAdministration -ErrorAction Stop
 
 $site = Get-Website -Name $siteName -ErrorAction SilentlyContinue
 if (-not $site) {
-    Write-Fail "Sitio IIS '$siteName' no encontrado. Crear el sitio primero."
-    exit 1
+    # Eurovip: primer deploy → se crea todo (carpetas, grupo de aplicaciones, sitio, permisos, firewall).
+    Write-Warn "Sitio IIS '$siteName' no existe: se crea (primer deploy)."
+    foreach ($path in @($bluePath, $greenPath)) { New-Item $path -ItemType Directory -Force | Out-Null }
+    if (-not (Test-Path "IIS:\AppPools\$siteName")) { New-WebAppPool -Name $siteName | Out-Null }
+    Set-ItemProperty "IIS:\AppPools\$siteName" -Name managedRuntimeVersion -Value ''        # .NET Core: sin código administrado
+    Set-ItemProperty "IIS:\AppPools\$siteName" -Name startMode -Value 'AlwaysRunning'
+    Set-ItemProperty "IIS:\AppPools\$siteName" -Name processModel.idleTimeout -Value ([TimeSpan]::Zero)
+    $ocupado = Get-WebBinding | Where-Object { $p = $_.bindingInformation.Split(':'); $p[1] -eq "$Puerto" -and $p[2] -eq $NombreHost }
+    if ($ocupado) { Write-Fail "El puerto $Puerto (host '$NombreHost') ya lo usa otro sitio. Cambiar la variable eurovipPuerto del pipeline."; exit 1 }
+    New-Website -Name $siteName -PhysicalPath $bluePath -ApplicationPool $siteName -Port $Puerto -HostHeader $NombreHost | Out-Null
+    icacls $projectRoot /grant "IIS AppPool\${siteName}:(OI)(CI)M" /T /Q | Out-Null
+    if ($Puerto -notin 80, 443 -and -not (Get-NetFirewallRule -DisplayName "Eurovip $Puerto" -ErrorAction SilentlyContinue)) {
+        New-NetFirewallRule -DisplayName "Eurovip $Puerto" -Direction Inbound -Protocol TCP -LocalPort $Puerto -Action Allow | Out-Null
+    }
+    $site = Get-Website -Name $siteName
+    Write-OK "Sitio '$siteName' creado en el puerto $Puerto $(if ($NombreHost) { "(host $NombreHost)" }) apuntando a Blue"
 }
 Write-OK "Sitio IIS encontrado: $siteName"
+# .NET 8 Hosting Bundle (ASP.NET Core Module V2) instalado
+if (-not ((& dotnet --list-runtimes 2>$null) -match 'Microsoft\.AspNetCore\.App 8\.')) {
+    Write-Fail "Falta ASP.NET Core 8 (Hosting Bundle) en el servidor."
+    exit 1
+}
 
 if (-not (Test-Path $ArtifactsPath)) {
     Write-Fail "Artifacts no encontrados en: $ArtifactsPath"
@@ -168,14 +199,14 @@ Write-OK "Slot destino: $targetSlot  →  $targetPath"
 # ============================================================
 # 3. PRESERVAR CONFIGURACIÓN DEL SERVIDOR (en memoria, sin backup en disco)
 #
-# appsettings.json contiene connection strings y secretos reales.
-# Se guarda en memoria antes de limpiar el slot, se restaura después.
-# El artifact contiene appsettings con valores template/vacíos.
+# Eurovip: los secretos viven SOLO en appsettings.Local.json; appsettings.json viene del repo (sin
+# secretos) y debe actualizarse con cada versión, así que solo se conserva el .Local.
+# Se guarda en memoria antes de limpiar el slot y se restaura después.
 # ============================================================
 Write-Step "Preservando configuración del servidor..."
 
 $configInMemory = @{}
-Get-ChildItem $targetPath -Filter "appsettings*.json" -ErrorAction SilentlyContinue | ForEach-Object {
+Get-ChildItem $targetPath -Filter "appsettings.Local.json" -ErrorAction SilentlyContinue | ForEach-Object {
     $configInMemory[$_.Name] = Get-Content $_.FullName -Raw -Encoding UTF8
     Write-OK "Preservado en memoria: $($_.Name)"
 }
@@ -208,10 +239,14 @@ if ($configInMemory.Count -gt 0) {
         $configInMemory[$fileName] | Set-Content "$targetPath\$fileName" -Encoding UTF8 -NoNewline
         Write-OK "Restaurado: $fileName"
     }
-} else {
-    # Primer deploy: el appsettings.json del artifact queda con valores template.
-    # El administrador debe editarlo antes de que el sitio funcione correctamente.
-    Write-Warn "ACCION REQUERIDA: copiar appsettings.Local.json (cadena de conexión real) en $targetPath."
+}
+# Eurovip: la configuración real del pipeline (variable secreta) manda sobre la guardada.
+if ($appSettingsLocalB64) {
+    [IO.File]::WriteAllBytes("$targetPath\appsettings.Local.json", [Convert]::FromBase64String($appSettingsLocalB64))
+    Write-OK "appsettings.Local.json escrito desde la variable secreta del pipeline"
+} elseif (-not (Test-Path "$targetPath\appsettings.Local.json")) {
+    Write-Warn "ACCION REQUERIDA: falta appsettings.Local.json (cadena de conexión real) en $targetPath."
+    Write-Warn "Cargar la variable secreta EurovipAppSettingsLocal en el pipeline o copiar el archivo a mano."
     Write-Warn "Sin ese archivo el /health falla (no llega a la base) y el deploy vuelve atrás."
 }
 
