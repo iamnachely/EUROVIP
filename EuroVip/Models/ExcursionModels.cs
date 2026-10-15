@@ -18,6 +18,16 @@ namespace EuroVip.Models
         public string? Imagen { get; set; }
     }
 
+    /// <summary>Un destino con excursiones: la cabecera de su sección en la pantalla.</summary>
+    public class ExcursionDestino
+    {
+        public string Destino { get; set; } = "";
+        public string? Pais { get; set; }
+        public string? Caratula { get; set; }
+        /// <summary>Foto de portada de la sección (foto del destino o fondo de flyer); null = degradado o foto de una excursión.</summary>
+        public string? Imagen { get; set; }
+    }
+
     /// <summary>Lo que manda la pantalla al crear o editar.</summary>
     public class ExcursionGuardarDto
     {

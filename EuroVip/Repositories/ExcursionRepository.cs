@@ -17,6 +17,8 @@ namespace EuroVip.Repositories
         Task<(string? Error, string? Destino)> ValidarDestinoAsync(string destino);
         /// <summary>Destinos para el buscador del campo "Destino" (los que ya tienen excursiones primero).</summary>
         Task<IEnumerable<Opcion>> DestinosAsync(string? q);
+        /// <summary>Destinos que tienen excursiones, con su país y su carátula (cabeceras de las secciones de la pantalla).</summary>
+        Task<List<ExcursionDestino>> DestinosConExcursionesAsync();
     }
 
     /// <summary>Mantenimiento de excursiones sobre Eurovip.servicio_excursion (nunca dbo, nunca ViajeVDT).</summary>
@@ -77,6 +79,21 @@ namespace EuroVip.Repositories
             var bien = await cn.ExecuteScalarAsync<string>("SELECT TOP 1 id_destino FROM Eurovip.destino WHERE id_destino = @destino AND id_idioma = 'ES'",
                 new { destino = ReglasDatos.Limpiar(destino) });
             return (null, bien);
+        }
+
+        public async Task<List<ExcursionDestino>> DestinosConExcursionesAsync()
+        {
+            using var cn = _db.Conexion();
+            return (await cn.QueryAsync<ExcursionDestino>(@"
+                SELECT e.id_destino AS Destino,
+                       (SELECT TOP 1 ISNULL(p.nombre, d.id_pais) FROM Eurovip.destino d
+                        LEFT JOIN Eurovip.pais p ON p.id_pais = d.id_pais AND p.id_idioma = 'ES'
+                        WHERE d.id_destino = e.id_destino AND d.id_idioma = 'ES') AS Pais,
+                       (SELECT TOP 1 d.caratula FROM Eurovip.destino d WHERE d.id_destino = e.id_destino AND d.id_idioma = 'ES') AS Caratula
+                FROM Eurovip.servicio_excursion e
+                WHERE ISNULL(e.id_destino, '') <> ''
+                GROUP BY e.id_destino
+                ORDER BY e.id_destino")).ToList();
         }
 
         public async Task<IEnumerable<Opcion>> DestinosAsync(string? q)

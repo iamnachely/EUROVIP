@@ -18,13 +18,15 @@ namespace EuroVip.Controllers
         private readonly ICircuitoRepository _aud;
         private readonly IImagenesLocales _img;
         private readonly ILogger<ExcursionesController> _logger;
+        private readonly IWebHostEnvironment _env;
 
-        public ExcursionesController(IExcursionRepository repo, ICircuitoRepository aud, IImagenesLocales img, ILogger<ExcursionesController> logger)
+        public ExcursionesController(IExcursionRepository repo, ICircuitoRepository aud, IImagenesLocales img, ILogger<ExcursionesController> logger, IWebHostEnvironment env)
         {
             _repo = repo;
             _aud = aud;
             _img = img;
             _logger = logger;
+            _env = env;
         }
 
         public IActionResult Index() => View();
@@ -43,8 +45,37 @@ namespace EuroVip.Controllers
             return e;
         }
 
+        /// <summary>
+        /// Portada de la sección de un destino: 1) su foto en imagenes/destinos (o la de destino.caratula si el archivo está);
+        /// 2) el fondo de flyer de ese destino (uploads/flyers/fondos). Si no hay, la pantalla usa la foto de una excursión o un degradado.
+        /// </summary>
+        private string? ImagenDestino(ExcursionDestino d)
+        {
+            var local = _img.Buscar("destinos", d.Destino)?.Url;
+            if (local is not null) return local;
+            if (!string.IsNullOrWhiteSpace(d.Caratula))
+            {
+                if (d.Caratula.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return d.Caratula;
+                var rel = d.Caratula.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                if (!rel.Contains("..") && System.IO.File.Exists(Path.Combine(_env.WebRootPath, rel))) return "/" + d.Caratula.TrimStart('/');
+            }
+            foreach (var ext in new[] { ".jpg", ".jpeg", ".png", ".webp" })
+            {
+                var f = Path.Combine(_env.WebRootPath, "uploads", "flyers", "fondos", d.Destino + ext);
+                if (System.IO.File.Exists(f)) return $"/uploads/flyers/fondos/{Uri.EscapeDataString(d.Destino + ext)}?v={System.IO.File.GetLastWriteTimeUtc(f).Ticks:x}";
+            }
+            return null;
+        }
+
+        /// <summary>Todas las excursiones (con su foto) y los destinos que tienen excursiones (con su portada) para las secciones.</summary>
         [HttpGet]
-        public async Task<IActionResult> Listar() => Json((await _repo.ListarAsync()).Select(ConImagen));
+        public async Task<IActionResult> Listar()
+        {
+            var excursiones = (await _repo.ListarAsync()).Select(ConImagen).ToList();
+            var destinos = await _repo.DestinosConExcursionesAsync();
+            foreach (var d in destinos) d.Imagen = ImagenDestino(d);
+            return Json(new { excursiones, destinos });
+        }
 
         [HttpGet]
         public async Task<IActionResult> Destinos(string? q) => Json(await _repo.DestinosAsync(q));

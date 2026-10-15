@@ -43,6 +43,40 @@
     .ex-pie { display: flex; gap: 6px; margin-top: auto; padding-top: 6px; align-items: center; }
     .ex-pie .sp { flex: 1; }
     .ex-pie .n { color: var(--ev-muted); font: 700 11.5px var(--ev-font); }
+    /* Barra de destinos */
+    .ex-dests { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 12px; margin: 4px 0 6px; scroll-snap-type: x proximity; }
+    .ex-dest { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 7px 14px 7px 7px; border-radius: 16px; border: 1px solid var(--ev-line);
+               background: var(--ev-surface); cursor: pointer; font: inherit; color: inherit; text-align: left; scroll-snap-align: start; transition: border-color .2s, box-shadow .2s, transform .2s; }
+    .ex-dest:hover { transform: translateY(-2px); box-shadow: var(--ev-shadow); }
+    .ex-dest.on { border-color: var(--ev-teal); box-shadow: 0 0 0 4px rgba(116,242,230,.3); }
+    .ex-dest .ico { width: 42px; height: 42px; border-radius: 12px; overflow: hidden; background: var(--ev-grad); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
+    .ex-dest .ico img { width: 100%; height: 100%; object-fit: cover; }
+    .ex-dest b { display: block; font-size: 14px; }
+    .ex-dest small { color: var(--ev-muted); font-weight: 600; font-size: 12px; }
+
+    /* Sección de un destino */
+    .ex-sec { margin-bottom: 28px; scroll-margin-top: 90px; }
+    .ex-sec-h { position: relative; min-height: 170px; border-radius: 26px; overflow: hidden; display: flex; align-items: flex-end; gap: 16px; padding: 22px 24px;
+                background: linear-gradient(135deg, #0E8F86, #2BD4C4 55%, #74F2E6); color: #fff; margin-bottom: 16px; isolation: isolate; }
+    .ex-sec-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; transform: scale(1.02); transition: transform 1.2s var(--ev-ease); }
+    .ex-sec-h:hover .ex-sec-img { transform: scale(1.07); }
+    .ex-sec-h::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(11,18,21,.78) 0%, rgba(11,18,21,.45) 55%, rgba(11,18,21,.12) 100%); }
+    .ex-sec-h.sinfoto::before { background: linear-gradient(90deg, rgba(11,18,21,.35), transparent); }
+    .ex-sec-txt { flex: 1; min-width: 0; }
+    .ex-sec-pais { display: inline-flex; gap: 6px; align-items: center; font: 800 11.5px var(--ev-font); letter-spacing: .08em; text-transform: uppercase; background: rgba(255,255,255,.18);
+                   border: 1px solid rgba(255,255,255,.35); padding: 4px 10px; border-radius: 99px; backdrop-filter: blur(6px); }
+    .ex-sec-h h2 { margin: 8px 0 2px; font-size: clamp(26px, 3.2vw, 38px); font-weight: 800; letter-spacing: -1px; line-height: 1.05; text-shadow: 0 2px 14px rgba(0,0,0,.35); }
+    .ex-sec-h p { margin: 0; font-weight: 600; opacity: .95; }
+    .ex-sec-avisos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .ex-sec-avisos span { font: 700 12px var(--ev-font); padding: 4px 10px; border-radius: 99px; background: rgba(255,250,235,.95); color: #93370D; display: inline-flex; gap: 5px; align-items: center; }
+    .ex-sec-avisos span.ok { background: rgba(236,253,243,.95); color: #067647; }
+    .ex-sec-acc { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .ex-sec-pleg { width: 42px; height: 42px; border-radius: 14px; border: 1px solid rgba(255,255,255,.45); background: rgba(255,255,255,.15); color: #fff; cursor: pointer;
+                   font-size: 18px; backdrop-filter: blur(6px); transition: transform .3s; }
+    .ex-sec.plegada .ex-sec-pleg { transform: rotate(-90deg); }
+    .ex-sec.plegada .ex-sec-cuerpo { display: none; }
+    .ex-sec.plegada .ex-sec-h { margin-bottom: 0; }
+    @@media (max-width: 700px) { .ex-sec-h { flex-direction: column; align-items: flex-start; } }
     .ex-tabla td.img { width: 70px; }
     .ex-tabla td.img img, .ex-tabla td.img span { width: 60px; height: 40px; border-radius: 8px; object-fit: cover; display: block; background: var(--ev-grad); }
     .ex-tabla tbody tr { cursor: pointer; }
@@ -110,6 +144,7 @@
         <button type="button" data-vista="lista" title="Lista"><i class="bi bi-list-ul"></i></button>
     </div>
 </div>
+<nav class="ex-dests" id="exDests" aria-label="Ir a un destino" hidden></nav>
 <div class="ex-cuenta" id="exCuenta" aria-live="polite"></div>
 <div id="exLista"><div class="ui-skel" style="height:320px"></div></div>
 
@@ -184,7 +219,11 @@ const EX = (() => {
     const esc = EV.esc;
     const editor = EV.drawer($('#exEditor'));
     const visor = EV.drawer($('#exVer'));
-    let todas = [], actual = null, fotoNueva = null, quitarFoto = false, verId = null;
+    let todas = [], infoDest = {}, actual = null, fotoNueva = null, quitarFoto = false, verId = null;
+    // Destinos plegados (se recuerda en este navegador)
+    let plegadas = new Set();
+    try { plegadas = new Set(JSON.parse(localStorage.getItem('ev-excursiones-plegadas') || '[]')); } catch { }
+    const guardarPlegadas = () => { try { localStorage.setItem('ev-excursiones-plegadas', JSON.stringify([...plegadas])); } catch { } };
     const st = { q: '', destino: '', filtro: '', orden: 'nombre', vista: 'tarjetas' };
     try { st.vista = localStorage.getItem('ev-excursiones-vista') || 'tarjetas'; } catch { }
 
@@ -216,7 +255,7 @@ const EX = (() => {
 
     // ---------------- datos ----------------
     async function cargar() {
-        try { todas = await EV.api('/Excursiones/Listar'); }
+        try { const r = await EV.api('/Excursiones/Listar'); todas = r.excursiones; infoDest = Object.fromEntries(r.destinos.map(d => [d.destino, d])); }
         catch (e) { $('#exLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar las excursiones</h3><p>${esc(e.message)}</p></div>`; return; }
         const destinos = [...new Set(todas.map(x => x.id_Destino).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
         const sel = $('#exDestino'), antes = sel.value;
@@ -255,6 +294,7 @@ const EX = (() => {
 
     function pintar() {
         pintarKpis();
+        pintarDestinos();
         $$('.ex-vista button').forEach(b => b.classList.toggle('on', b.dataset.vista === st.vista));
         const l = filtradas();
         $('#exCuenta').textContent = l.length === todas.length ? `${EV.fmt(l.length)} excursiones` : `Mostrando ${EV.fmt(l.length)} de ${EV.fmt(todas.length)}`;
@@ -266,29 +306,75 @@ const EX = (() => {
             $('#exLista').innerHTML = `<div class="ui-empty"><i class="bi bi-search" style="font-size:36px"></i><h3>No hay excursiones con ese filtro</h3><p>Prueba con otra palabra o <a href="#" id="exLimpiar">quita los filtros</a>.</p></div>`;
             return;
         }
-        if (st.vista === 'lista') {
-            $('#exLista').innerHTML = `<div class="ui-table-wrap"><table class="ui-table ex-tabla"><thead><tr><th></th><th>Excursión</th><th>Destino</th><th class="num">Precio</th><th>Cancelable</th><th style="width:120px"></th></tr></thead><tbody>
-                ${l.map(x => `<tr data-id="${x.id_Excursion}" data-accion="ver">
+        // Una sección por destino (las excursiones son por destino)
+        const grupos = new Map();
+        l.forEach(x => { const d = x.id_Destino || 'Sin destino'; if (!grupos.has(d)) grupos.set(d, []); grupos.get(d).push(x); });
+        const orden = [...grupos.keys()].sort((a, b) => a === 'Sin destino' ? 1 : b === 'Sin destino' ? -1 : a.localeCompare(b, 'es'));
+        let n = 0;
+        $('#exLista').innerHTML = orden.map(d => seccion(d, grupos.get(d), () => n++)).join('');
+    }
+
+    /** Cabecera bonita del destino + sus excursiones (tarjetas o lista). */
+    function seccion(destino, lista, sig) {
+        const todasDest = todas.filter(x => (x.id_Destino || 'Sin destino') === destino);
+        const info = infoDest[destino] || {};
+        const portada = info.imagen || todasDest.find(x => x.imagen)?.imagen;
+        const min = Math.min(...todasDest.map(x => x.precio ?? Infinity));
+        const sinFoto = todasDest.filter(x => !x.imagen).length, sinDesc = todasDest.filter(x => sinTexto(x.descripcion)).length;
+        const plegada = plegadas.has(destino) && !st.q && !st.filtro;
+        const cuerpo = st.vista === 'lista'
+            ? `<div class="ui-table-wrap"><table class="ui-table ex-tabla"><thead><tr><th></th><th>Excursión</th><th class="num">Precio</th><th>Cancelable</th><th style="width:150px"></th></tr></thead><tbody>
+                ${lista.map(x => `<tr data-id="${x.id_Excursion}" data-accion="ver">
                     <td class="img">${x.imagen ? `<img src="${esc(x.imagen)}" alt="" loading="lazy">` : '<span></span>'}</td>
                     <td><b>${esc(x.nombre)}</b>${!x.imagen ? ' <span class="ex-chip av">Sin foto</span>' : ''}${sinTexto(x.descripcion) ? ' <span class="ex-chip av">Sin descripción</span>' : ''}</td>
-                    <td>${esc(x.id_Destino || '—')}</td><td class="num"><b>${precio(x.precio)}</b></td>
+                    <td class="num"><b>${precio(x.precio)}</b></td>
                     <td>${x.cancelable ? '<span class="ex-chip ok">Sí</span>' : '<span class="ex-chip no">No</span>'}</td>
                     <td style="text-align:right;white-space:nowrap">${acciones(x)}</td></tr>`).join('')}
-                </tbody></table></div>`;
-            return;
-        }
-        $('#exLista').innerHTML = `<div class="ex-grid">${l.map((x, i) => `<article class="ex-card" style="--n:${Math.min(i, 20)}" data-id="${x.id_Excursion}">
-            <div class="ex-foto" data-accion="ver" data-soltar="${x.id_Excursion}" title="Ver · arrastra una foto aquí para cambiarla">
-                ${x.imagen ? `<img src="${esc(x.imagen)}" alt="Foto de ${esc(x.nombre)}" loading="lazy">` : '<span class="sin"><span><i class="bi bi-image"></i>Sin foto<br><small>Arrastra una aquí</small></span></span>'}
-                <span class="ex-precio">${precio(x.precio)}</span></div>
-            <div class="ex-cuerpo">
-                <h3>${esc(x.nombre)}</h3>
-                <div class="ex-chips"><span class="ex-chip"><i class="bi bi-geo-alt"></i> ${esc(x.id_Destino || '—')}</span>
-                    ${x.cancelable ? '<span class="ex-chip ok"><i class="bi bi-check2"></i> Cancelable</span>' : '<span class="ex-chip no"><i class="bi bi-x"></i> No cancelable</span>'}
-                    ${sinTexto(x.descripcion) ? '<span class="ex-chip av">Sin descripción</span>' : ''}</div>
-                ${sinTexto(x.descripcion) ? '' : `<div class="ex-desc">${esc(String(x.descripcion).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim())}</div>`}
-                <div class="ex-pie"><span class="n">n.º ${x.id_Excursion}</span><span class="sp"></span>${acciones(x)}</div>
-            </div></article>`).join('')}</div>`;
+                </tbody></table></div>`
+            : `<div class="ex-grid">${lista.map(x => `<article class="ex-card" style="--n:${Math.min(sig(), 20)}" data-id="${x.id_Excursion}">
+                <div class="ex-foto" data-accion="ver" data-soltar="${x.id_Excursion}" title="Ver · arrastra una foto aquí para cambiarla">
+                    ${x.imagen ? `<img src="${esc(x.imagen)}" alt="Foto de ${esc(x.nombre)}" loading="lazy">` : '<span class="sin"><span><i class="bi bi-image"></i>Sin foto<br><small>Arrastra una aquí</small></span></span>'}
+                    <span class="ex-precio">${precio(x.precio)}</span></div>
+                <div class="ex-cuerpo">
+                    <h3>${esc(x.nombre)}</h3>
+                    <div class="ex-chips">
+                        ${x.cancelable ? '<span class="ex-chip ok"><i class="bi bi-check2"></i> Cancelable</span>' : '<span class="ex-chip no"><i class="bi bi-x"></i> No cancelable</span>'}
+                        ${sinTexto(x.descripcion) ? '<span class="ex-chip av">Sin descripción</span>' : ''}</div>
+                    ${sinTexto(x.descripcion) ? '' : `<div class="ex-desc">${esc(String(x.descripcion).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim())}</div>`}
+                    <div class="ex-pie"><span class="n">n.º ${x.id_Excursion}</span><span class="sp"></span>${acciones(x)}</div>
+                </div></article>`).join('')}</div>`;
+        return `<section class="ex-sec ${plegada ? 'plegada' : ''}" id="${idSeccion(destino)}" data-destino="${esc(destino)}">
+            <header class="ex-sec-h ${portada ? '' : 'sinfoto'}">
+                ${portada ? `<img class="ex-sec-img" src="${esc(portada)}" alt="" loading="lazy">` : ''}
+                <div class="ex-sec-txt">
+                    <span class="ex-sec-pais"><i class="bi bi-geo-alt-fill"></i> ${esc(info.pais || 'Destino')}</span>
+                    <h2>${esc(destino)}</h2>
+                    <p><b>${EV.fmt(todasDest.length)}</b> excursion${todasDest.length === 1 ? '' : 'es'}${isFinite(min) ? ` · desde <b>${precio(min)}</b>` : ''}
+                       ${lista.length !== todasDest.length ? ` · mostrando ${EV.fmt(lista.length)}` : ''}</p>
+                    <div class="ex-sec-avisos">${sinFoto ? `<span><i class="bi bi-image"></i> ${sinFoto} sin foto</span>` : ''}${sinDesc ? `<span><i class="bi bi-text-paragraph"></i> ${sinDesc} sin descripción</span>` : ''}${!sinFoto && !sinDesc ? '<span class="ok"><i class="bi bi-stars"></i> Todo completo</span>' : ''}</div>
+                </div>
+                <div class="ex-sec-acc">
+                    ${destino !== 'Sin destino' ? `<button type="button" class="ev-btn sm" data-nueva-en="${esc(destino)}"><i class="bi bi-plus-lg"></i> Excursión en ${esc(destino)}</button>` : ''}
+                    <button type="button" class="ex-sec-pleg" data-plegar="${esc(destino)}" aria-expanded="${!plegada}" title="${plegada ? 'Mostrar' : 'Ocultar'} las excursiones"><i class="bi bi-chevron-down"></i></button>
+                </div>
+            </header>
+            <div class="ex-sec-cuerpo">${cuerpo}</div>
+        </section>`;
+    }
+
+    const idSeccion = d => 'dest-' + d.normalize('NFD').replace(/[^\w]+/g, '-').toLowerCase();
+
+    /** Barra de destinos: un botón por destino con su foto y cuántas tiene; lleva a su sección. */
+    function pintarDestinos() {
+        const destinos = [...new Set(todas.map(x => x.id_Destino || 'Sin destino'))].sort((a, b) => a === 'Sin destino' ? 1 : b === 'Sin destino' ? -1 : a.localeCompare(b, 'es'));
+        $('#exDests').hidden = destinos.length < 1;
+        $('#exDests').innerHTML = `<button type="button" class="ex-dest ${!st.destino ? 'on' : ''}" data-ir=""><span class="ico"><i class="bi bi-globe-americas"></i></span><span><b>Todos</b><small>${EV.fmt(todas.length)} excursiones</small></span></button>` +
+            destinos.map(d => {
+                const f = infoDest[d]?.imagen || todas.find(x => (x.id_Destino || 'Sin destino') === d && x.imagen)?.imagen;
+                const c = todas.filter(x => (x.id_Destino || 'Sin destino') === d).length;
+                return `<button type="button" class="ex-dest ${st.destino === d ? 'on' : ''}" data-ir="${esc(d)}">
+                    <span class="ico">${f ? `<img src="${esc(f)}" alt="">` : '<i class="bi bi-geo-alt"></i>'}</span><span><b>${esc(d)}</b><small>${EV.fmt(c)} excursion${c === 1 ? '' : 'es'}</small></span></button>`;
+            }).join('');
     }
 
     const acciones = x => `<button type="button" class="ui-ibtn" data-accion="ver" title="Ver"><i class="bi bi-eye"></i></button>
@@ -317,12 +403,12 @@ const EX = (() => {
         $('#edSubirTxt').textContent = url ? 'Cambiar foto' : 'Subir foto';
     }
 
-    function abrir(x) {
+    function abrir(x, destinoInicial) {
         actual = x || null; fotoNueva = null; quitarFoto = false;
         $('#edTitulo').textContent = x ? 'Editar excursión' : 'Nueva excursión';
         $('#edSub').textContent = x ? `n.º ${x.id_Excursion} · los cambios se guardan al pulsar Guardar` : 'Los campos con * son obligatorios.';
         $('#edNombre').value = x?.nombre || '';
-        $('#edDestino').value = x?.id_Destino || st.destino || (todas[0]?.id_Destino ?? '');
+        $('#edDestino').value = x?.id_Destino || destinoInicial || st.destino || (todas[0]?.id_Destino ?? '');
         $('#edPrecio').value = x?.precio ?? '';
         $('#edCancelable').checked = !!x?.cancelable;
         $('#edDesc').value = x?.descripcion || '';
@@ -441,8 +527,28 @@ const EX = (() => {
         $('#exOrden').onchange = e => { st.orden = e.target.value; pintar(); };
         $$('.ex-vista button').forEach(b => b.onclick = () => { st.vista = b.dataset.vista; try { localStorage.setItem('ev-excursiones-vista', st.vista); } catch { } pintar(); });
         $('#exKpis').addEventListener('click', e => { const k = e.target.closest('[data-filtro]'); if (!k) return; st.filtro = st.filtro === k.dataset.filtro ? '' : k.dataset.filtro; pintar(); });
+        // Barra de destinos: muestra solo ese destino (o todos) y sube a su sección
+        $('#exDests').addEventListener('click', e => {
+            const b = e.target.closest('[data-ir]'); if (!b) return;
+            st.destino = b.dataset.ir === 'Sin destino' ? '' : b.dataset.ir;
+            $('#exDestino').value = st.destino;
+            pintar();
+            const sec = st.destino ? document.getElementById(idSeccion(st.destino)) : null;
+            (sec || $('#exLista')).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
         $('#exLista').addEventListener('click', e => {
             if (e.target.id === 'exLimpiar') { e.preventDefault(); st.q = ''; st.destino = ''; st.filtro = ''; $('#exQ').value = ''; $('#exDestino').value = ''; pintar(); return; }
+            const nuevaEn = e.target.closest('[data-nueva-en]');
+            if (nuevaEn) { abrir(null, nuevaEn.dataset.nuevaEn); return; }
+            const pleg = e.target.closest('[data-plegar]');
+            if (pleg) {
+                const d = pleg.dataset.plegar, sec = pleg.closest('.ex-sec');
+                if (plegadas.has(d)) plegadas.delete(d); else plegadas.add(d);
+                guardarPlegadas();
+                sec.classList.toggle('plegada', plegadas.has(d));
+                pleg.setAttribute('aria-expanded', String(!plegadas.has(d)));
+                return;
+            }
             const fila = e.target.closest('[data-id]'); if (!fila) return;
             const id = +fila.dataset.id, acc = e.target.closest('[data-accion]')?.dataset.accion;
             if (acc === 'editar') abrir(todas.find(x => x.id_Excursion === id));
