@@ -1,3 +1,4 @@
+using EuroVip.Services;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -41,6 +42,11 @@ namespace EuroVip.Controllers
             return Json(new { ok = errores.Count == 0, errores, servicios = dto.Hoteles.Sum(h => h.Salidas.Count) * Math.Max(1, dto.Campanyas.Count) });
         }
 
+        /// <summary>Cómo va la carga en curso (la pantalla lo consulta cada medio segundo para la barra de progreso).</summary>
+        [HttpGet]
+        public IActionResult Progreso(string id, [FromServices] IProgresoCargas progreso) =>
+            Json(progreso.Leer(id) is { } p ? new { porcentaje = p.Porcentaje, paso = p.Paso } : new { porcentaje = 0, paso = "" });
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Guardar([FromBody] CargaOfertaDto dto)
@@ -49,7 +55,7 @@ namespace EuroVip.Controllers
             if (errores.Count > 0) return BadRequest(new { mensaje = errores[0], errores });
             try
             {
-                var (r, errs) = await _carga.CargarAsync(dto, User.Identity?.Name ?? "eurovip", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
+                var (r, errs) = await _carga.CargarAsync(dto, User.Identity?.Name ?? "eurovip", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), Request.Headers[ProgresoCargas.Cabecera].ToString());
                 if (r is null) return BadRequest(new { mensaje = errs.FirstOrDefault(), errores = errs });
                 await _aud.AuditarAsync("Oferta_Carga", r.Ids, new { dto.Modo, r.Codigo, r.LogId }, User.Identity?.Name ?? "desconocido",
                     HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());

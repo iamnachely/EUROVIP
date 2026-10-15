@@ -29,9 +29,9 @@ namespace EuroVip.Controllers
         // Pantallas y accesos directos que encuentra el buscador de arriba (texto, palabras clave, dirección, módulo, icono)
         private static readonly (string Titulo, string Claves, string Url, string? Modulo, string Icono)[] Pantallas =
         {
-            ("Nueva oferta (Express)", "cargar oferta hotel express nueva carga manual", "/CargaManual/Express", "carga_manual", "bi-lightning-charge"),
-            ("Nueva oferta con Excel (Clásica)", "cargar oferta excel clasica", "/CargaManual/Clasica", "carga_manual", "bi-file-earmark-excel"),
-            ("Ofertas cargadas", "lista ofertas editar desactivar", "/Ofertas/Index", "carga_manual", "bi-pencil-square"),
+            ("Nuevo paquete (Express)", "cargar paquete oferta hotel express nueva carga manual", "/CargaManual/Express", "carga_manual", "bi-lightning-charge"),
+            ("Nuevo paquete con Excel (Clásica)", "cargar paquete oferta excel clasica", "/CargaManual/Clasica", "carga_manual", "bi-file-earmark-excel"),
+            ("Paquetes cargados", "lista paquetes ofertas editar desactivar", "/Ofertas/Index", "carga_manual", "bi-pencil-square"),
             ("Nuevo hotel", "crear hotel vitrina", "/Hoteles/Index?nuevo=1", "hoteles", "bi-building-add"),
             ("Hoteles", "hotel fotos vitrina", "/Hoteles/Index", "hoteles", "bi-building"),
             ("Nuevo circuito", "crear circuito itinerario", "/Circuitos/Index?nuevo=1", "circuitos", "bi-signpost-split"),
@@ -224,7 +224,7 @@ namespace EuroVip.Controllers
         private static List<ModuloHome> ModulosCarga() => new()
         {
             new() { Titulo = "Carga de Hoteles", Descripcion = "Publica hoteles en la vitrina: precio, régimen e imagen.", Icono = "bi-building", Etiqueta = "Disponible", Url = "/Hoteles/Index", Disponible = true, Modulo = "hoteles" },
-            new() { Titulo = "Carga Manual",     Descripcion = "Ofertas de hotel: Express o Clásica (con Excel). Vuelo opcional.", Icono = "bi-pencil-square", Etiqueta = "Disponible", Url = "/Ofertas/Index", Disponible = true, Modulo = "carga_manual" },
+            new() { Titulo = "Paquetes",         Descripcion = "Ofertas de hotel: Express o Clásica (con Excel). Vuelo opcional.", Icono = "bi-box-seam", Etiqueta = "Disponible", Url = "/Ofertas/Index", Disponible = true, Modulo = "carga_manual" },
             new() { Titulo = "Carga Excursión",  Descripcion = "Excursiones por destino, precio y cancelación.",    Icono = "bi-compass",        Etiqueta = "Fase 2" },
             new() { Titulo = "Carga Traslado",   Descripcion = "Traslados aeropuerto ↔ hotel y entre ciudades.",   Icono = "bi-car-front",      Etiqueta = "Nuevo" },
             new() { Titulo = "Carga Circuito",   Descripcion = "Catálogo, itinerario, hoteles y salidas. Vuelo opcional.", Icono = "bi-signpost-split", Etiqueta = "Disponible", Url = "/Circuitos/Index", Disponible = true, Modulo = "circuitos" },

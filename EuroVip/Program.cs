@@ -62,6 +62,7 @@ builder.Services.AddScoped<EuroVip.Services.IFlyerImagenService, EuroVip.Service
 builder.Services.AddSingleton<EuroVip.Services.IImagenesLocales, EuroVip.Services.ImagenesLocales>();
 builder.Services.AddScoped<EuroVip.Services.WhatsAppService>();
 builder.Services.AddSingleton<EuroVip.Services.FlyerEnvioJob>();
+builder.Services.AddSingleton<EuroVip.Services.IProgresoCargas, EuroVip.Services.ProgresoCargas>();   // barra de progreso de las cargas
 builder.Services.AddHttpClient("whatsapp");
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<EuroVip.Repositories.IAccesoService, EuroVip.Repositories.AccesoService>();

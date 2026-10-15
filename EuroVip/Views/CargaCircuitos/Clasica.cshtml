@@ -270,7 +270,7 @@ const CL = (() => {
         const fd = new FormData(); fd.append('archivo', archivo);
         $('#xAvisos').innerHTML = '<div class="ui-note info"><span class="ui-spin"></span><div>Leyendo el Excel…</div></div>';
         try {
-            const r = await EV.post('/CargaCircuitos/LeerExcel', fd);
+            const r = await EVProgreso.subirConVentana('/CargaCircuitos/LeerExcel', fd, 'Leyendo el Excel del circuito');
             excelLeido = true;
             hotelesExcel = r.hoteles.map(h => ({ ...h, elegido: h.id_Alojamiento ? { id: h.id_Alojamiento, nombre: h.nombre } : null }));
             // datos generales (editables)
@@ -407,7 +407,7 @@ const CL = (() => {
         const btn = $('#bGuardar'), html = btn.innerHTML;
         btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Guardando…';
         try {
-            const r = await EV.post('/CargaCircuitos/Guardar', dto);
+            const r = await EVProgreso.conServidor('/CargaCircuitos/Guardar', dto, { titulo: 'Cargando salidas del circuito' });
             guardia?.liberar();
             EV.confeti();
             $('#clRevision').innerHTML = `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div><b>${esc(r.mensaje)}</b><br>Código ${esc(r.codigo)} · salidas #${r.ids[0]}–#${r.ids[r.ids.length - 1]} · registro #${r.logId}.

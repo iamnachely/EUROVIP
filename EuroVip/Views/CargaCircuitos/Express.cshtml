@@ -426,7 +426,7 @@ const XP = (() => {
         const btn = $('#xpCargar'), html = btn.innerHTML;
         btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Cargando…';
         try {
-            const r = await EV.post('/CargaCircuitos/Guardar', dto);
+            const r = await EVProgreso.conServidor('/CargaCircuitos/Guardar', dto, { titulo: 'Cargando salidas del circuito' });
             $('#xpOk').innerHTML = `<div class="ring"><i class="bi bi-check-lg"></i></div><h2>${esc(r.mensaje)}</h2>
                 <p style="color:var(--ev-muted);margin:0 0 22px">Código de carga <b>${esc(r.codigo)}</b> · salidas #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro de carga #${r.logId}</p>
                 <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">

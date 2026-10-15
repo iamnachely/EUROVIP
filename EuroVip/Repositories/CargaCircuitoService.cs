@@ -1,3 +1,4 @@
+using EuroVip.Services;
 ﻿using Dapper;
 using EuroVip.Models;
 using System.Data;
@@ -9,7 +10,7 @@ namespace EuroVip.Repositories
 {
     public interface ICargaCircuitoService
     {
-        Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaCircuitoDto dto, string usuario, string? ip, string? navegador);
+        Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaCircuitoDto dto, string usuario, string? ip, string? navegador, string? progresoId = null);
         Task<List<string>> ValidarAsync(CargaCircuitoDto dto);
     }
 
@@ -27,9 +28,11 @@ namespace EuroVip.Repositories
         private const string Tipo = "CIRCUITO";
         private readonly ICircuitoRepository _circuitos;
         private readonly ILogger<CargaCircuitoService> _logger;
+        private readonly IProgresoCargas _progreso;
 
-        public CargaCircuitoService(ICircuitoRepository circuitos, ILogger<CargaCircuitoService> logger)
+        public CargaCircuitoService(ICircuitoRepository circuitos, ILogger<CargaCircuitoService> logger, IProgresoCargas progreso)
         {
+            _progreso = progreso;
             _circuitos = circuitos;
             _logger = logger;
         }
@@ -139,8 +142,10 @@ namespace EuroVip.Repositories
             return errores;
         }
 
-        public async Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaCircuitoDto dto, string usuario, string? ip, string? navegador)
+        public async Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaCircuitoDto dto, string usuario, string? ip, string? navegador, string? progresoId = null)
         {
+            void Avance(double pct, string paso) => _progreso.Reportar(progresoId, pct, paso);   // barra de progreso de la pantalla
+            Avance(3, "Revisando los datos…");
             Normalizar(dto);
             var errores = await ValidarAsync(dto);
             if (errores.Count > 0) return (null, errores);
@@ -174,6 +179,8 @@ namespace EuroVip.Repositories
                 });
 
             var resultado = new CargaResultado { LogId = logId, Codigo = codigoServicio };
+            var totalSalidas = dto.Salidas.Count * Math.Max(1, dto.Campanyas.DistinctBy(c => c.Id_Campanya).Count());
+            Avance(8, $"Datos correctos. Creando {totalSalidas} salida{(totalSalidas == 1 ? "" : "s")}…");
             short nochesUsadas = 0;
             var publicar = new HashSet<(short Camp, string PaisOrigen, string Origen, string PaisDestino)>();
 
@@ -238,6 +245,7 @@ namespace EuroVip.Repositories
                             var id = p.Get<int>("@ret");
                             if (id <= 0) throw new InvalidOperationException($"No se pudo crear la salida del {desde:dd/MM/yyyy}.");
                             resultado.Ids.Add(id);
+                            Avance(8 + 80.0 * resultado.Ids.Count / Math.Max(1, totalSalidas), $"Creando salida {resultado.Ids.Count} de {totalSalidas} · {desde:dd/MM/yyyy}");
 
                             // Origen de venta de esta salida (del vuelo si lleva, si no el elegido)
                             var paisOrigen = dto.Id_Pais_Origen;
@@ -276,8 +284,10 @@ namespace EuroVip.Repositories
                             tx, commandType: CommandType.StoredProcedure);
 
                     // 4) Incluye / No incluye / notas: una vez por carga (código), no por salida
+                    Avance(89, "Guardando incluye / no incluye y notas…");
                     await GuardarDescripcionAsync(cn, tx, codigoServicio, dto.Notas);
 
+                    Avance(91, "Confirmando la carga…");
                     tx.Commit();
                 }
                 catch (Exception ex)
@@ -294,8 +304,10 @@ namespace EuroVip.Repositories
             // 4) Vitrina web de circuitos (fuera de la transacción: si falla, la carga igual quedó bien)
             if (dto.PublicarEnWeb)
             {
+                var nPub = 0;
                 foreach (var x in publicar)
                 {
+                    Avance(92 + 7.0 * nPub++ / Math.Max(1, publicar.Count), $"Publicando en la web… {nPub} de {publicar.Count}");
                     try
                     {
                         await cn.ExecuteAsync("Eurovip.spActualizaAlojamientoCircuito",

@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Carga Clásica de ofertas";
+    ViewData["Title"] = "Paquetes · Carga Clásica";
 }
 
 @section Styles {
@@ -58,12 +58,12 @@
     <i class="bi bi-ui-checks ui-hero-ico" aria-hidden="true"></i>
     <div>
         <span class="ev-chip dark"><i class="bi bi-ui-checks"></i> Versión 2 · Igual que CargarExcel</span>
-        <h1>Carga Clásica de ofertas</h1>
+        <h1>Paquetes · Carga Clásica</h1>
         <p>Como en BackTiTan: en INICIO pones los datos de la oferta, en VUELOS el vuelo (opcional) y en CARGAR EXCEL subes el Excel con los hoteles y sus precios. Revisas hotel por hotel y guardas todos de una vez.</p>
     </div>
     <div class="ui-hero-acts">
         <a class="ev-btn light" asp-controller="CargaManual" asp-action="Express"><i class="bi bi-lightning-charge"></i> Ir a la Express</a>
-        <a class="ev-btn light" asp-controller="Ofertas" asp-action="Index"><i class="bi bi-list-ul"></i> Ver ofertas</a>
+        <a class="ev-btn light" asp-controller="Ofertas" asp-action="Index"><i class="bi bi-list-ul"></i> Ver paquetes</a>
     </div>
     <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
         <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
@@ -240,7 +240,7 @@ const CL = (() => {
         const fd = new FormData(); fd.append('archivo', archivo);
         $('#xEstado').innerHTML = '<span class="ui-spin"></span> Leyendo el Excel…';
         try {
-            const r = await EV.post('/CargaManual/LeerExcel', fd);
+            const r = await EVProgreso.subirConVentana('/CargaManual/LeerExcel', fd, 'Leyendo el Excel de paquetes');
             const hoy = EV.hoy(), tasa = $('#gTasa').value === '' ? tasasSup() : num($('#gTasa').value);
             let pasadas = 0;
             H = r.hoteles.map(h => ({
@@ -423,7 +423,7 @@ const CL = (() => {
         if (!await EV.confirmar({ titulo: `¿Guardar ${total} ofertas?`, texto: `Se crearán <b>${total}</b> ofertas de <b>${dto.Hoteles.length}</b> hotel${dto.Hoteles.length === 1 ? '' : 'es'}. Si algo falla, no se guarda nada.`, si: 'Sí, guardar todos', icono: 'cloud-arrow-up' })) return;
         const b = $('#bGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
         try {
-            const r = await EV.post('/CargaManual/Guardar', dto);
+            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { titulo: 'Cargando paquetes' });
             $('#clRevision').innerHTML = `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div><b>${esc(r.mensaje)}</b><br>Código de carga <b>${esc(r.codigo)}</b> · ofertas #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro #${r.logId}
                 <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><a class="ev-btn sm" href="/Ofertas/Index"><i class="bi bi-eye"></i> Ver las ofertas</a><a class="ev-btn ghost sm" href="/CargaManual/Clasica"><i class="bi bi-arrow-repeat"></i> Nueva carga</a></div></div></div>`;
             $('#clRevision').scrollIntoView({ behavior: 'smooth', block: 'center' });

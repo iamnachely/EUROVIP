@@ -350,7 +350,7 @@ const CO = (() => {
                     ${d.notas.length ? `<div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-journal-text"></i></span> Notas</div>${d.notas.map(n => `<div class="ui-note info" style="margin-bottom:8px"><i class="bi bi-journal-text"></i><div><b>${esc(n.tipo)}</b><br>${esc(n.nota1)}</div></div>`).join('')}</div>` : ''}
                 </div>`,
                 pie: `<button class="ev-btn ghost" type="button" data-cerrar>Cerrar</button><span style="flex:1"></span>
-                    ${x.id_Tipo_Servicio === 'OFERTA' ? `<a class="ev-btn ghost" href="/Ofertas/Index"><i class="bi bi-box-arrow-up-right"></i> Abrir en Carga manual</a>` : `<a class="ev-btn ghost" href="/Circuitos/Index"><i class="bi bi-box-arrow-up-right"></i> Abrir en Circuitos</a>`}
+                    ${x.id_Tipo_Servicio === 'OFERTA' ? `<a class="ev-btn ghost" href="/Ofertas/Index"><i class="bi bi-box-arrow-up-right"></i> Abrir en Paquetes</a>` : `<a class="ev-btn ghost" href="/Circuitos/Index"><i class="bi bi-box-arrow-up-right"></i> Abrir en Circuitos</a>`}
                     <button class="ev-btn ghost" type="button" id="dDup"><i class="bi bi-copy"></i> Duplicar</button><button class="ev-btn" type="button" id="dEdit"><i class="bi bi-pencil-square"></i> Editar</button>`
             });
             $('#dDup').onclick = () => { sel.clear(); sel.add(id); barra(); duplicar(); };

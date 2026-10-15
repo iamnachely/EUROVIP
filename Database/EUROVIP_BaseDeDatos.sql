@@ -2550,7 +2550,7 @@ GO
 MERGE Eurovip.UsuarioAcceso AS d
 USING (VALUES
     ('hoteles',           N'Hoteles',                    N'Cargas',         'Hoteles',                  'bi-building',               N'Ver y editar los hoteles y sus contenedores.', 10),
-    ('carga_manual',      N'Carga manual de ofertas',    N'Cargas',         'Ofertas,CargaManual',      'bi-pencil-square',          N'Cargar ofertas (Express y Clásica) y editar la lista de ofertas.', 20),
+    ('carga_manual',      N'Paquetes',                   N'Cargas',         'Ofertas,CargaManual',      'bi-box-seam',               N'Cargar paquetes (Express y Clásica) y editar la lista de paquetes.', 20),
     ('circuitos',         N'Circuitos',                  N'Cargas',         'Circuitos,CargaCircuitos', 'bi-signpost-split',         N'Cargar y editar circuitos.', 30),
     ('historial_cargas',  N'Historial de cargas',        N'Cargas',         'Cargas',                   'bi-clock-history',          N'Ver quién cargó qué y cuándo.', 40),
     ('home_web',          N'Home de la web y carrusel',  N'Web',            'HomeWeb',                  'bi-window-sidebar',         N'Ordenar la portada de la web y el slider.', 50),
@@ -2942,6 +2942,13 @@ GO
                Notas / Oferta (una fila por código de carga) y ya no usan servicio_nota (vacía).
                Prueba dentro de una transacción deshecha (ROLLBACK): se insertó una descripción para
                la última oferta y Ofertas/Consultar la leen bien; no quedó nada guardado.
+
+   15/10/2026  "Carga manual" pasa a llamarse "Paquetes" (a pedido de la usuaria). En la base solo
+               cambia el nombre que se ve del módulo (la clave 'carga_manual' y los permisos no):
+                   UPDATE Eurovip.UsuarioAcceso SET nombre_modulo = N'Paquetes', icono = 'bi-box-seam',
+                          descripcion = N'Cargar paquetes (Express y Clásica) y editar la lista de paquetes.'
+                   WHERE clave = 'carga_manual';
+               El MERGE de CAMBIO 43 (más arriba) ya tiene el nombre nuevo.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

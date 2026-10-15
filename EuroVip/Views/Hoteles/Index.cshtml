@@ -737,7 +737,9 @@ const HX = (() => {
         return data;
     }
 
-    async function subir(url, fd) {
+    /** Sube un archivo; alAvanzar(pct) recibe el % real de lo enviado (barra de progreso). */
+    async function subir(url, fd, alAvanzar) {
+        if (window.EVProgreso) return EVProgreso.subir(url, fd, alAvanzar);
         const r = await fetch(url, { method: 'POST', body: fd, headers: { 'RequestVerificationToken': token } });
         let data = null; try { data = await r.json(); } catch { }
         if (!r.ok) throw new Error(data?.mensaje || 'No se pudo subir la imagen.');
@@ -799,10 +801,10 @@ const HX = (() => {
         preview();
     }
     /** Después de guardar el hotel: sube o quita la foto con el nombre ya guardado. Devuelve un texto para el aviso. */
-    async function aplicarFoto(nombre) {
+    async function aplicarFoto(nombre, alAvanzar) {
         if (foto.nueva) {
             const fd = new FormData(); fd.append('nombre', nombre); fd.append('archivo', foto.nueva);
-            return (await subir('/Hoteles/SubirImagen', fd)).mensaje;
+            return (await subir('/Hoteles/SubirImagen', fd, alAvanzar)).mensaje;
         }
         if (foto.quitar && foto.actual) {
             const r = await api('/Hoteles/EliminarImagen?archivo=' + encodeURIComponent(archivoFoto(nombre) || foto.actual.archivo), { method: 'POST' });
@@ -1187,21 +1189,29 @@ const HX = (() => {
 
         const btn = $('#btnGuardar'); const html = btn.innerHTML;
         btn.disabled = true; btn.innerHTML = '<span class="hx-spin"></span> Guardando…';
+        // Barra de progreso: datos del hotel → foto (con % real de la subida) → lista
+        const barra = window.EVProgreso ? EVProgreso.abrir(editandoId ? 'Guardando el hotel' : 'Cargando el hotel') : null;
+        const avance = (p, paso) => barra?.poner(p, paso);
         try {
+            avance(15, 'Guardando los datos del hotel…');
             const r = await api('/Hoteles/Guardar', { method: 'POST', body: JSON.stringify(dto) });
+            avance(foto.nueva ? 40 : 85, foto.nueva ? 'Subiendo la foto…' : 'Datos guardados');
             let msgFoto = '';
-            try { msgFoto = await aplicarFoto(dto.Id_Destino); }
+            try { msgFoto = await aplicarFoto(dto.Id_Destino, p => avance(40 + p * 0.5, `Subiendo la foto… ${Math.round(p)}%`)); }
             catch (ef) { toast('El hotel se guardó, pero la foto no: ' + ef.message, 'err'); }
+            avance(95, 'Actualizando la lista…');
             cerrar(true);
             toast(msgFoto ? r.mensaje + ' ' + msgFoto : r.mensaje, 'ok');
             if (!editandoId) { estado.pagina = 1; estado.orden = 'recientes'; $('#fOrden').value = 'recientes'; }
             await cargar();
+            avance(100, '¡Listo!');
             const card = document.querySelector(`[data-id="${r.id}"]`);
             card?.animate([{ boxShadow: '0 0 0 0 rgba(116,242,230,.9)' }, { boxShadow: '0 0 0 14px rgba(116,242,230,0)' }], { duration: 1200, iterations: 2 });
         } catch (e) {
             if (e.data?.errores) Object.entries(e.data.errores).forEach(([k, m]) => marcarError(k.replace(/^\$\./, ''), m));
             toast(e.message, 'err');
         } finally {
+            barra?.cerrar();
             btn.disabled = false; btn.innerHTML = html;
         }
     }

@@ -1,3 +1,4 @@
+using EuroVip.Services;
 using EuroVip.Models;
 using EuroVip.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -52,6 +53,11 @@ namespace EuroVip.Controllers
             return Json(new { ok = errores.Count == 0, errores, servicios });
         }
 
+        /// <summary>Cómo va la carga en curso (la pantalla lo consulta cada medio segundo para la barra de progreso).</summary>
+        [HttpGet]
+        public IActionResult Progreso(string id, [FromServices] IProgresoCargas progreso) =>
+            Json(progreso.Leer(id) is { } p ? new { porcentaje = p.Porcentaje, paso = p.Paso } : new { porcentaje = 0, paso = "" });
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Guardar([FromBody] CargaCircuitoDto dto)
@@ -62,7 +68,7 @@ namespace EuroVip.Controllers
             try
             {
                 var (resultado, errs) = await _carga.CargarAsync(dto, User.Identity?.Name ?? "eurovip",
-                    HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
+                    HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), Request.Headers[ProgresoCargas.Cabecera].ToString());
                 if (resultado is null) return BadRequest(new { mensaje = errs.FirstOrDefault(), errores = errs });
 
                 await _repo.AuditarAsync("Circuito_Carga", resultado.Ids, new { dto.Modo, resultado.Circuito, resultado.Codigo, resultado.LogId },

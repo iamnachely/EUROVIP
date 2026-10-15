@@ -46,7 +46,7 @@
                     <button type="button" class="ev-nav-label" aria-expanded="true"><span>Cargas</span><i class="bi bi-chevron-down"></i></button>
                     <ul class="ev-nav">
                         @if (Ve("hoteles")) { <li><a asp-controller="Hoteles" asp-action="Index" class="@Activo("Hoteles")"><i class="bi bi-building"></i> Hoteles</a></li> }
-                        @if (Ve("carga_manual")) { <li><a asp-controller="Ofertas" asp-action="Index" class="@(Activo("Ofertas") != "" || Activo("CargaManual") != "" ? "active" : "")"><i class="bi bi-pencil-square"></i> Carga manual</a></li> }
+                        @if (Ve("carga_manual")) { <li><a asp-controller="Ofertas" asp-action="Index" class="@(Activo("Ofertas") != "" || Activo("CargaManual") != "" ? "active" : "")"><i class="bi bi-box-seam"></i> Paquetes</a></li> }
                         @if (Ve("circuitos")) { <li><a asp-controller="Circuitos" asp-action="Index" class="@(Activo("Circuitos") != "" || Activo("CargaCircuitos") != "" ? "active" : "")"><i class="bi bi-signpost-split"></i> Circuitos</a></li> }
                         <li><a href="#" class="pronto"><i class="bi bi-compass"></i> Excursiones <span class="ev-pill">PRONTO</span></a></li>
                         <li><a href="#" class="pronto"><i class="bi bi-car-front"></i> Traslados <span class="ev-pill">PRONTO</span></a></li>
@@ -140,6 +140,7 @@
 
     <script src="~/js/eurovip.js" asp-append-version="true"></script>
     <script src="~/js/eurovip-top.js" asp-append-version="true"></script>
+    <script src="~/js/eurovip-progreso.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

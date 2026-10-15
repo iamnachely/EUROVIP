@@ -1,3 +1,4 @@
+using EuroVip.Services;
 using Dapper;
 using EuroVip.Models;
 using System.Data;
@@ -9,7 +10,7 @@ namespace EuroVip.Repositories
     public interface ICargaOfertaService
     {
         Task<List<string>> ValidarAsync(CargaOfertaDto dto);
-        Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaOfertaDto dto, string usuario, string? ip, string? navegador);
+        Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaOfertaDto dto, string usuario, string? ip, string? navegador, string? progresoId = null);
     }
 
     /// <summary>
@@ -27,9 +28,11 @@ namespace EuroVip.Repositories
         private readonly ICircuitoRepository _db;
         private readonly IOfertaRepository _ofertas;
         private readonly ILogger<CargaOfertaService> _logger;
+        private readonly IProgresoCargas _progreso;
 
-        public CargaOfertaService(ICircuitoRepository db, IOfertaRepository ofertas, ILogger<CargaOfertaService> logger)
+        public CargaOfertaService(ICircuitoRepository db, IOfertaRepository ofertas, ILogger<CargaOfertaService> logger, IProgresoCargas progreso)
         {
+            _progreso = progreso;
             _db = db;
             _ofertas = ofertas;
             _logger = logger;
@@ -139,8 +142,10 @@ namespace EuroVip.Repositories
                                                 FROM Eurovip.alojamiento WHERE id_idioma = 'ES' AND id_alojamiento IN @ids",
                 new { ids = ids.Distinct().ToList() }, tx)).ToList();
 
-        public async Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaOfertaDto dto, string usuario, string? ip, string? navegador)
+        public async Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaOfertaDto dto, string usuario, string? ip, string? navegador, string? progresoId = null)
         {
+            void Avance(double pct, string paso) => _progreso.Reportar(progresoId, pct, paso);   // barra de progreso de la pantalla
+            Avance(3, "Revisando los datos…");
             var errores = await ValidarAsync(dto);
             if (errores.Count > 0) return (null, errores);
 
@@ -176,6 +181,7 @@ namespace EuroVip.Repositories
 
             var r = new CargaResultado { LogId = logId, Codigo = codigo, Circuito = nombresHotel.Count == 1 ? nombresHotel[0] : $"{nombresHotel.Count} hoteles" };
             var tasasSuplementos = dto.Suplementos.Sum(x => x.Valor);
+            Avance(8, $"Datos correctos. Creando {total} oferta{(total == 1 ? "" : "s")}…");
 
             using (var tx = cn.BeginTransaction())
             {
@@ -202,6 +208,7 @@ namespace EuroVip.Repositories
                         var id = p.Get<int>("@ret");
                         if (id <= 0) throw new InvalidOperationException($"No se pudo crear la oferta del {desde:dd/MM/yyyy}.");
                         r.Ids.Add(id);
+                        Avance(8 + 80.0 * r.Ids.Count / Math.Max(1, total), $"Creando oferta {r.Ids.Count} de {total} · {desde:dd/MM/yyyy}");
 
                         await cn.ExecuteAsync("Eurovip.spInsertaServicioDetalle", new
                         {
@@ -228,7 +235,9 @@ namespace EuroVip.Repositories
                             await cn.ExecuteAsync("Eurovip.spInsertaServicioSuplemento", new { numeroServicio = id, nombreSuplemento = s.Id_Tasa, codigoIdioma = Idioma, valor = s.Valor }, tx, commandType: CommandType.StoredProcedure);
                     }
                     // Incluye / No incluye / notas: una vez por carga (código), no por oferta/fecha
+                    Avance(89, "Guardando incluye / no incluye y notas…");
                     await CargaCircuitoService.GuardarDescripcionAsync(cn, tx, codigo, dto.Notas);
+                    Avance(91, "Confirmando la carga…");
                     tx.Commit();
                 }
                 catch (Exception ex)
@@ -242,7 +251,11 @@ namespace EuroVip.Repositories
             }
 
             if (dto.PublicarEnWeb)
+            {
+                Avance(94, "Publicando en la web…");
                 await _ofertas.RefrescarVitrinaAsync(await _ofertas.ClavesVitrinaAsync(cn, null, r.Ids));
+            }
+            Avance(99, "Terminando…");
 
             r.Ok = true;
             r.Servicios = r.Ids.Count;
