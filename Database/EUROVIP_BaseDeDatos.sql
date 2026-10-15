@@ -2673,6 +2673,62 @@ BEGIN
 END
 GO
 /* ##########################################################################################
+   FASE 13 — EXCURSIONES  (15/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: "haz el mantenimiento de excursión; la tabla es servicio_excursion,
+   cópiala de ViajeVDT (10.10.10.29) al esquema Eurovip con los datos cuando id_destino = 'Punta Cana'".
+
+   Explicado fácil:
+   • Misma tabla que ViajeVDT.dbo.servicio_excursion (id_Excursion autonumérico, id_destino,
+     id_tipo_servicio, nombre, descripcion, cancelable, precio).
+   • Se copiaron las 24 excursiones de Punta Cana con su MISMO número (id_Excursion). Al copiar:
+     el destino se escribe como en Destinos ('Punta Cana'; en ViajeVDT estaba 'Punta cana') y los
+     nombres sin espacios de más.
+   • La foto NO va en la base: como BackTiTan, se relaciona por el nombre de la excursión sin
+     espacios ni acentos → wwwroot/imagenes/excursiones/{Nombre}.webp (se convierte a WebP).
+   • Módulo nuevo 'excursiones' en Usuarios y accesos (Superadministrador lo ve siempre; a los
+     demás hay que dárselo desde Usuarios y accesos).
+
+   CAMBIO 46  Tabla servicio_excursion + datos de Punta Cana.
+   CAMBIO 47  Módulo 'excursiones'.
+   ########################################################################################## */
+/* ---------- CAMBIO 46: servicio_excursion ---------- */
+IF OBJECT_ID('Eurovip.servicio_excursion', 'U') IS NULL
+CREATE TABLE Eurovip.servicio_excursion (
+    id_Excursion     INT IDENTITY(1,1) NOT NULL,
+    id_destino       VARCHAR(50)  NULL,      -- destino.id_destino (ej. Punta Cana)
+    id_tipo_servicio VARCHAR(20)  NULL,      -- 'Excursion'
+    nombre           VARCHAR(500) NULL,
+    descripcion      VARCHAR(MAX) NULL,      -- puede traer HTML sencillo (<p>…), como en ViajeVDT
+    cancelable       BIT          NULL,
+    precio           MONEY        NULL,
+    CONSTRAINT PK_Eurovip_servicio_excursion PRIMARY KEY CLUSTERED (id_Excursion)
+);
+GO
+-- Datos de Punta Cana copiados de ViajeVDT.dbo.servicio_excursion (leídos el 15/10/2026).
+DECLARE @json NVARCHAR(MAX) = N'[{"id_Excursion":1,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Catamarán (Party Boat)","descripcion":"<p>Una jornada diferente a bordo de un verdadero catamarán en el mar Caribe, bordeando la costa de Punta Cana, con animación, posibilidad de practicar esnórquel entre hermosos peces de colores y disfrutando de un buen ambiente hasta llegar a la piscina natural. A bordo de nuestro barco contamos con un fantástico equipo de animación, barra libre de bebidas nacionales, snack, refrescos, agua, y, para ganar fuerza, nuestra famosa bebida \"energizante\", la mamajuana. Nuestra primera parada será en el banco de peces, allí dispondremos de 30 minutos para hacer esnórquel, si así lo desea o simplemente disfrutar de nuestra música caribeña, bachata y merengue, a bordo. Continuaremos bailando y tomando tragos en esta fascinante embarcación hasta llegar a nuestro segundo destino: una piscina natural, formada por acumulación de arena en medio del mar. Súmate al equipo de animación y disfruta de un reparador baño en las calurosas aguas del Caribe. Regreso al club de playa Marina Caribe con animación y barra libre. Al terminar la aventura, nuestro transporte le llevará de regreso a su hotel. Incluye: Traslados, navegación en catamarán, snack y bebidas descritas.<\/p>","cancelable":false,"precio":54.5000},{"id_Excursion":2,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Aventura en Buggies\/Quads Dobles","descripcion":"","cancelable":false,"precio":59.0000},{"id_Excursion":3,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Isla Saona (desde Playa Bávaro)","descripcion":"<p>Desde la playa de Bayahibe nos embarcaremos en un bellísimo catamarán con todas las medidas de seguridad y acompañados por guías expertos . Durante la trayectoria hacia Isla Saona en el catamarán podrán disfrutar de snacksny bebidas nacionales alcohólicas y agua, refrescos así como probar las exquisitas frutas tropicales. Haremos una parada en la Piscina Natural, considerada la más grande de Rep. Dominicana, es un banco de arenas blancas con una profundidad de no más de un metro, y en la que abundan las Estrellas de mar; donde podrásdarte un refrescante baño. Una vez en la isla, contamos con un área de restaurante, cubierto con hermosas palapas y palmeras, donde almorzaremos un delicioso bufé con bebidas locales incluidas. Después de 3 horas en la playa, nuevamente tomamos el catamarán para continuar disfrutando de la música, el baile, el hermoso paisaje y la diversión de regreso a la playa de Bayahibe para retornar a sus hoteles. Incluye: - Guía profesional - Navegación en Catamarán. - Baño en piscina natural - Almuerzo y bebidas<\/p>","cancelable":false,"precio":77.5000},{"id_Excursion":4,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Supreme VIP Safari","descripcion":"","cancelable":false,"precio":82.0000},{"id_Excursion":5,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Saona Laguna Azul","descripcion":null,"cancelable":false,"precio":102.0000},{"id_Excursion":6,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Dolphin Experience","descripcion":"","cancelable":false,"precio":109.5000},{"id_Excursion":7,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Seaquarium","descripcion":"","cancelable":false,"precio":114.0000},{"id_Excursion":8,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Scape Park Full Day","descripcion":"","cancelable":false,"precio":113.0000},{"id_Excursion":9,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Bavaro Adventure Park","descripcion":"","cancelable":false,"precio":126.5000},{"id_Excursion":10,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Dolphin Action","descripcion":"","cancelable":false,"precio":141.0000},{"id_Excursion":11,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Dolphin Royal","descripcion":null,"cancelable":false,"precio":177.5000},{"id_Excursion":12,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Santo Domingo City Tour (desde Playa Bávaro)","descripcion":null,"cancelable":false,"precio":83.0000},{"id_Excursion":13,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Coco Bongo","descripcion":"","cancelable":false,"precio":92.0000},{"id_Excursion":14,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Fun Park","descripcion":null,"cancelable":false,"precio":90.0000},{"id_Excursion":15,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Isla Catalina","descripcion":"","cancelable":false,"precio":108.5000},{"id_Excursion":16,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Samaná, Cascada y Cayo","descripcion":"","cancelable":false,"precio":154.0000},{"id_Excursion":17,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Coco Bongo Gold Member","descripcion":"","cancelable":false,"precio":155.0000},{"id_Excursion":208,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión MC Catamarán","descripcion":null,"cancelable":false,"precio":60.0000},{"id_Excursion":209,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Saona Paradise Clásica  ","descripcion":null,"cancelable":false,"precio":78.0000},{"id_Excursion":210,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Supreme Safari","descripcion":null,"cancelable":false,"precio":83.0000},{"id_Excursion":211,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Parque Domitai Full Day","descripcion":null,"cancelable":false,"precio":113.0000},{"id_Excursion":212,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión El Dorado Water Park","descripcion":"","cancelable":false,"precio":120.0000},{"id_Excursion":213,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Samaná, Cascada El Limón e Isla Barcardi","descripcion":null,"cancelable":false,"precio":163.5000},{"id_Excursion":214,"id_destino":"Punta cana","id_tipo_servicio":"Excursion","nombre":"Excursión Samaná, Cascada El Limón e Isla Bacardi","descripcion":"","cancelable":false,"precio":157.0000}]';
+IF NOT EXISTS (SELECT 1 FROM Eurovip.servicio_excursion)
+BEGIN
+    SET IDENTITY_INSERT Eurovip.servicio_excursion ON;
+    INSERT INTO Eurovip.servicio_excursion (id_Excursion, id_destino, id_tipo_servicio, nombre, descripcion, cancelable, precio)
+    SELECT j.id_Excursion,
+           ISNULL((SELECT TOP 1 d.id_destino FROM Eurovip.destino d WHERE d.id_destino = j.id_destino AND d.id_idioma = 'ES'), j.id_destino),
+           j.id_tipo_servicio,
+           LTRIM(RTRIM(REPLACE(REPLACE(j.nombre, '   ', ' '), '  ', ' '))),
+           NULLIF(LTRIM(RTRIM(j.descripcion)), ''),
+           j.cancelable, j.precio
+    FROM OPENJSON(@json) WITH (id_Excursion INT, id_destino VARCHAR(50), id_tipo_servicio VARCHAR(20), nombre VARCHAR(500),
+                               descripcion VARCHAR(MAX), cancelable BIT, precio DECIMAL(19,4)) j;
+    SET IDENTITY_INSERT Eurovip.servicio_excursion OFF;
+END
+GO
+/* ---------- CAMBIO 47: módulo excursiones ---------- */
+IF NOT EXISTS (SELECT 1 FROM Eurovip.UsuarioAcceso WHERE clave = 'excursiones')
+    INSERT INTO Eurovip.UsuarioAcceso (nombre_modulo, Categoria, clave, controladores, icono, descripcion, orden)
+    VALUES (N'Excursiones', N'Cargas', 'excursiones', 'Excursiones', 'bi-compass', N'Buscar, cargar, editar y eliminar excursiones con su foto.', 35);
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -2949,6 +3005,12 @@ GO
                           descripcion = N'Cargar paquetes (Express y Clásica) y editar la lista de paquetes.'
                    WHERE clave = 'carga_manual';
                El MERGE de CAMBIO 43 (más arriba) ya tiene el nombre nuevo.
+
+   15/10/2026  FASE 13 aplicada (CAMBIO 46 y 47): Eurovip.servicio_excursion creada (copia de
+               ViajeVDT.dbo.servicio_excursion) con las 24 excursiones de Punta Cana (mismo número;
+               destino escrito 'Punta Cana'; 22 sin descripción) y módulo 'excursiones' (id 12).
+               ViajeVDT solo se leyó. Nota técnica: sqlcmd devuelve el texto de ViajeVDT en la página
+               de códigos 850; se convirtió a UTF-8 antes de copiarlo (los acentos quedaron bien).
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

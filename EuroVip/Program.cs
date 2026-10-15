@@ -46,6 +46,7 @@ builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
 
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<EuroVip.Repositories.IHotelRepository, EuroVip.Repositories.HotelRepository>();
+builder.Services.AddScoped<EuroVip.Repositories.IExcursionRepository, EuroVip.Repositories.ExcursionRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.ICircuitoRepository, EuroVip.Repositories.CircuitoRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.ICargaCircuitoService, EuroVip.Repositories.CargaCircuitoService>();
 builder.Services.AddScoped<EuroVip.Repositories.IExcelCircuitoParser, EuroVip.Repositories.ExcelCircuitoParser>();

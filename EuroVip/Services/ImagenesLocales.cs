@@ -33,6 +33,8 @@ namespace EuroVip.Services
         /// <summary>Si el nombre cambió (p. ej. se renombró el hotel), pasa la imagen al nombre nuevo. Con copiar = true deja también la vieja
         /// (otro registro la sigue usando). Devuelve true si hizo algo.</summary>
         bool Renombrar(string tipo, string nombreViejo, string nombreNuevo, bool copiar = false);
+        /// <summary>Igual que Renombrar pero con los nombres de archivo exactos (p. ej. excursiones: "CatamaranPartyBoat.webp").</summary>
+        bool RenombrarArchivo(string tipo, string archivoViejo, string archivoNuevo);
     }
 
     /// <summary>
@@ -43,7 +45,7 @@ namespace EuroVip.Services
     /// </summary>
     public class ImagenesLocales : IImagenesLocales
     {
-        public static readonly string[] Tipos = { "hoteles", "circuitos", "destinos", "alojamientos" };
+        public static readonly string[] Tipos = { "hoteles", "circuitos", "destinos", "alojamientos", "excursiones" };
         /// <summary>Subcarpetas permitidas (como BackTiTan: circuitos/itinerario/es).</summary>
         public static readonly string[] Subcarpetas = { "itinerario/es" };
         private const int LadoMaximo = 1600;
@@ -159,10 +161,14 @@ namespace EuroVip.Services
             return true;
         }
 
-        public bool Renombrar(string tipo, string nombreViejo, string nombreNuevo, bool copiar = false)
+        public bool Renombrar(string tipo, string nombreViejo, string nombreNuevo, bool copiar = false) =>
+            RenombrarRutas(Ruta(tipo, NombreArchivo(nombreViejo)), Ruta(tipo, NombreArchivo(nombreNuevo)), copiar);
+
+        public bool RenombrarArchivo(string tipo, string archivoViejo, string archivoNuevo) =>
+            RenombrarRutas(Ruta(tipo, archivoViejo), Ruta(tipo, archivoNuevo), false);
+
+        private static bool RenombrarRutas(string? viejo, string? nuevo, bool copiar)
         {
-            var viejo = Ruta(tipo, NombreArchivo(nombreViejo));
-            var nuevo = Ruta(tipo, NombreArchivo(nombreNuevo));
             if (viejo is null || nuevo is null || viejo == nuevo || !File.Exists(viejo) || File.Exists(nuevo)) return false;
             if (copiar) File.Copy(viejo, nuevo); else File.Move(viejo, nuevo);
             return true;
