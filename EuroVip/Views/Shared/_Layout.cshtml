@@ -49,8 +49,6 @@
                         @if (Ve("carga_manual")) { <li><a asp-controller="Ofertas" asp-action="Index" class="@(Activo("Ofertas") != "" || Activo("CargaManual") != "" ? "active" : "")"><i class="bi bi-box-seam"></i> Paquetes</a></li> }
                         @if (Ve("circuitos")) { <li><a asp-controller="Circuitos" asp-action="Index" class="@(Activo("Circuitos") != "" || Activo("CargaCircuitos") != "" ? "active" : "")"><i class="bi bi-signpost-split"></i> Circuitos</a></li> }
                         @if (Ve("excursiones")) { <li><a asp-controller="Excursiones" asp-action="Index" class="@Activo("Excursiones")"><i class="bi bi-compass"></i> Excursiones</a></li> }
-                        <li><a href="#" class="pronto"><i class="bi bi-compass"></i> Excursiones <span class="ev-pill">PRONTO</span></a></li>
-                        <li><a href="#" class="pronto"><i class="bi bi-car-front"></i> Traslados <span class="ev-pill">PRONTO</span></a></li>
                     </ul>
                 </div>
 
