@@ -3012,6 +3012,20 @@ GO
                ViajeVDT solo se leyó. Nota técnica: sqlcmd devuelve el texto de ViajeVDT en la página
                de códigos 850; se convirtió a UTF-8 antes de copiarlo (los acentos quedaron bien).
 
+   16/10/2026  TARJETAS DE HOTEL COPIADAS DE VIAJEVDT (a pedido de la usuaria: "copia de la tabla inicio
+               de ViajeVDT todo lo que sea tipo_servicio = 'Hotel' en Eurovip.inicio"). ViajeVDT solo se
+               leyó. Script al final ("INICIO HOTEL 16/10/2026"); se ensayó con ROLLBACK y se aplicó.
+               • 5 tarjetas copiadas (id 26-30): Hotel Kristal, Costa Brava Blanes, Hotel Adsubia,
+                 Hotel El Convento y 4R Salou Park Resort I (campaña 99, contenedor 47 HOTEL, visibles).
+                 Con el mismo id_servicio que en ViajeVDT; tipo 'HOTEL' y moneda DOP como el resto de
+                 Eurovip; sin espacios de más; descripción con el formato "Régimen -Código".
+               • Destinos creados porque las tarjetas los usan y no existían (España): Costa del Sol,
+                 Costa Brava, Costa Blanca, Costa de la Luz y Costa Dorada.
+               • Ya estaban en Eurovip (no se tocaron): id 1, 4 y 5. La id 4 ("Costa villa sol") no
+                 tiene destino: hay que completarlo desde la pantalla de Hoteles.
+               • Nota: en ViajeVDT "Hotel El Convento" tiene origen Costa Dorada y destino Costa de la
+                 Luz, y "4R Salou Park Resort I" al revés; se copió tal cual.
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
@@ -3517,3 +3531,64 @@ DELETE p FROM Eurovip.proveedor p WHERE (p.nombre LIKE 'prueba%' OR p.nombre LIK
 PRINT CONCAT('Proveedores de prueba borrados: ', @@ROWCOUNT);
 COMMIT;
 SELECT 'hotel' t, nombre FROM Eurovip.alojamiento WHERE nombre LIKE 'prueba%' OR nombre LIKE 'test%' UNION ALL SELECT 'proveedor', nombre FROM Eurovip.proveedor WHERE nombre LIKE 'prueba%' OR nombre LIKE 'test%';
+
+
+/* ##########################################################################################
+   INICIO HOTEL 16/10/2026 (explicación en la BITÁCORA). Script tal cual se aplicó.
+   ########################################################################################## */
+/* Copia de ViajeVDT.dbo.inicio (tipo_servicio = 'Hotel') a TropitoursVDT.Eurovip.inicio — 16/10/2026.
+   ViajeVDT (10.10.10.29) solo se leyó. Al copiar:
+   • tipo_servicio 'HOTEL' (como los que ya tiene Eurovip) y moneda DOP (todo Eurovip pasó de EUR a DOP el 14/10).
+   • Espacios de más fuera; descripción con el formato de la pantalla de Hoteles: "Régimen -Código".
+   • El destino de cada tarjeta (caratulaDestino) tiene que existir en Destinos: se crean los que faltaban
+     (Costa del Sol, Costa Brava, Costa Blanca, Costa de la Luz, Costa Dorada — España) y se escriben igual.
+   • No se repite: si ya hay una tarjeta HOTEL con el mismo id_servicio, se salta. */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRAN;
+
+DECLARE @json NVARCHAR(MAX) = N'[{"id_servicio":25033693,"id_idioma":"ES","tipo_servicio":"HOTEL","id_campanya":99,"id_moneda":"EUR","id_pais_origen":"ES","origen":"Málaga","id_paisDestino":"ES","id_destino":"Hotel Kristal","caratulaDestino":"Costa del sol ","descripcion":"Solo Habitación-603258","latitud":"184861","longitud":"-699312","precioWeb":62.0000,"id_contenedor":47,"contenedor":"HOTEL","posicion_contenedor":4,"posicion_destino":1,"estado":true,"notas":null,"noches":null},{"id_servicio":25050144,"id_idioma":"ES","tipo_servicio":"Hotel","id_campanya":99,"id_moneda":"EUR","id_pais_origen":"ES","origen":"Costa Brava","id_paisDestino":"ES","id_destino":"Costa Brava Blanes","caratulaDestino":"Costa Brava ","descripcion":"Alojamiento y Desayuno -6023506","latitud":null,"longitud":null,"precioWeb":77.0000,"id_contenedor":47,"contenedor":"HOTEL","posicion_contenedor":4,"posicion_destino":2,"estado":true,"notas":null,"noches":null},{"id_servicio":25050145,"id_idioma":"ES","tipo_servicio":"Hotel","id_campanya":99,"id_moneda":"EUR","id_pais_origen":"ES","origen":"Costa Blanca","id_paisDestino":"ES","id_destino":"Hotel Adsubia","caratulaDestino":"Costa Blanca ","descripcion":"Solo Habitación -6221339","latitud":null,"longitud":null,"precioWeb":56.0000,"id_contenedor":47,"contenedor":"HOTEL","posicion_contenedor":4,"posicion_destino":3,"estado":true,"notas":null,"noches":null},{"id_servicio":25050146,"id_idioma":"ES","tipo_servicio":"Hotel","id_campanya":99,"id_moneda":"EUR","id_pais_origen":"ES","origen":"Costa Dorada","id_paisDestino":"ES","id_destino":"Hotel El Convento","caratulaDestino":"Costa de la Luz","descripcion":"Solo Habitación -6046406","latitud":null,"longitud":null,"precioWeb":55.0000,"id_contenedor":47,"contenedor":"HOTEL","posicion_contenedor":4,"posicion_destino":4,"estado":true,"notas":null,"noches":null},{"id_servicio":25050147,"id_idioma":"ES","tipo_servicio":"Hotel","id_campanya":99,"id_moneda":"EUR","id_pais_origen":"ES","origen":"Costa de la Luz","id_paisDestino":"ES","id_destino":"4R Salou Park Resort I   ","caratulaDestino":"Costa Dorada","descripcion":"Room Only -6025856","latitud":null,"longitud":null,"precioWeb":89.0000,"id_contenedor":47,"contenedor":"HOTEL","posicion_contenedor":4,"posicion_destino":5,"estado":true,"notas":null,"noches":null}]';
+
+-- 1) Destinos que faltan
+DECLARE @nuevos TABLE (id_destino varchar(30));
+INSERT @nuevos VALUES ('Costa del Sol'), ('Costa Brava'), ('Costa Blanca'), ('Costa de la Luz'), ('Costa Dorada');
+DECLARE @maxid int = ISNULL((SELECT MAX(id) FROM Eurovip.destino), 0);
+INSERT INTO Eurovip.destino (id_destino, id_idioma, id_pais, id)
+SELECT n.id_destino, 'ES', 'ES', @maxid + ROW_NUMBER() OVER (ORDER BY n.id_destino)
+FROM @nuevos n WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = n.id_destino AND d.id_idioma = 'ES');
+PRINT CONCAT('Destinos creados: ', @@ROWCOUNT);
+
+-- 2) Tarjetas de hotel
+;WITH j AS (
+    SELECT * FROM OPENJSON(@json) WITH (
+        id_servicio int, id_idioma char(2), tipo_servicio varchar(20), id_campanya smallint, id_moneda char(3),
+        id_pais_origen char(2), origen varchar(30), id_paisDestino char(2), id_destino varchar(1500), caratulaDestino varchar(300),
+        descripcion varchar(max), latitud varchar(50), longitud varchar(50), precioWeb decimal(19,4), id_contenedor int,
+        contenedor varchar(30), posicion_contenedor int, posicion_destino int, estado bit, notas nvarchar(1000), noches int)
+), limpio AS (
+    SELECT j.*,
+           LTRIM(RTRIM(REPLACE(REPLACE(j.id_destino, '   ', ' '), '  ', ' '))) AS nombre,
+           LTRIM(RTRIM(j.caratulaDestino)) AS dest,
+           -- "Solo Habitación-603258" / "Solo Habitación -603258" -> "Solo Habitación -603258"
+           CASE WHEN CHARINDEX('-', REVERSE(j.descripcion)) > 0
+                THEN LTRIM(RTRIM(LEFT(j.descripcion, LEN(j.descripcion) - CHARINDEX('-', REVERSE(j.descripcion))))) + ' -'
+                     + LTRIM(RTRIM(RIGHT(j.descripcion, CHARINDEX('-', REVERSE(j.descripcion)) - 1)))
+                ELSE LTRIM(RTRIM(j.descripcion)) END AS descr
+    FROM j
+)
+INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino,
+                            id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor,
+                            posicion_contenedor, posicion_destino, estado, notas, noches)
+SELECT l.id_servicio, l.id_idioma, 'HOTEL', l.id_campanya, 'DOP', l.id_pais_origen, LTRIM(RTRIM(l.origen)), l.id_paisDestino,
+       l.nombre,
+       ISNULL((SELECT TOP 1 d.id_destino FROM Eurovip.destino d WHERE d.id_destino = l.dest AND d.id_idioma = 'ES'), l.dest),
+       l.descr, l.latitud, l.longitud, l.precioWeb, l.id_contenedor, l.contenedor, l.posicion_contenedor, l.posicion_destino,
+       l.estado, l.notas, l.noches
+FROM limpio l
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.inicio i WHERE i.id_servicio = l.id_servicio AND i.id_idioma = l.id_idioma AND i.tipo_servicio = 'HOTEL');
+PRINT CONCAT('Tarjetas de hotel copiadas: ', @@ROWCOUNT);
+
+SELECT id, id_servicio, id_moneda, origen, id_destino, caratulaDestino, descripcion, CAST(precioWeb AS decimal(10,2)) precio, id_contenedor, estado,
+       CASE WHEN EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = i.caratulaDestino AND d.id_idioma = 'ES') THEN 'ok' ELSE 'DESTINO NO EXISTE' END destino_ok
+FROM Eurovip.inicio i WHERE tipo_servicio = 'HOTEL' ORDER BY id;
+COMMIT;
