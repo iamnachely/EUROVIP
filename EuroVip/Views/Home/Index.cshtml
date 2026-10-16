@@ -211,9 +211,22 @@
         .h-pend { margin-top: 18px; }
         .h-pend:empty { display: none; }
         .h-pend-box { border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line); padding: 16px 18px; }
-        .h-pend-h { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .h-pend-h { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; user-select: none; }
+        .h-pend-h::-webkit-details-marker, .h-pend-g > summary::-webkit-details-marker { display: none; }
+        .h-pend-h .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+        .h-pend-h .chips em { font-style: normal; font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: var(--ev-surface-2); color: var(--ev-muted); }
+        .h-pend-h .chips em.error { background: #FEE4E2; color: #B42318; }
+        .h-pend-h .chips em.aviso { background: #FEF3C7; color: #B54708; }
+        .h-pend-h .flecha, .h-pend-g > summary .flecha { transition: transform .2s; color: var(--ev-muted); }
+        .h-pend-box[open] > .h-pend-h .flecha, .h-pend-g[open] > summary .flecha { transform: rotate(180deg); }
+        .h-pend-box[open] > .h-pend-h { margin-bottom: 12px; }
+        .h-pend-g { border-radius: 16px; border: 1px solid var(--ev-line); }
+        .h-pend-g > summary { display: flex; align-items: center; gap: 8px; padding: 10px 12px; cursor: pointer; list-style: none; font-weight: 800; font-size: 14px; }
+        .h-pend-g > summary .n { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--ev-surface-2); color: var(--ev-muted); }
+        .h-pend-g > summary .flecha { margin-left: auto; }
+        .h-pend-g > .h-pend-l { padding: 0 10px 10px; }
         .h-pend-h h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.3px; }
-        .h-pend-h span { font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: var(--ev-ink); color: var(--ev-aqua); }
+        .h-pend-h > span:not(.chips) { font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: var(--ev-ink); color: var(--ev-aqua); }
         .h-pend-l { display: grid; gap: 8px; }
         .h-pend-it { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 16px; border: 1px solid var(--ev-line); background: var(--ev-surface-2); }
         .h-pend-it .ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; font-size: 17px; background: var(--ev-mint); color: var(--ev-deep); }
@@ -508,12 +521,19 @@
                 const r = await fetch('/Home/Pendientes', { headers: { Accept: 'application/json' } });
                 if (!r.ok) return;
                 const l = await r.json();
-                caja.innerHTML = !l.length
-                    ? '<div class="h-pend-ok"><i class="bi bi-check-circle-fill"></i> Todo al día: no hay nada pendiente por revisar.</div>'
-                    : `<div class="h-pend-box"><div class="h-pend-h"><i class="bi bi-list-check" style="font-size:20px;color:var(--ev-deep)"></i><h2>Tus pendientes</h2><span>${l.length}</span></div>
-                        <div class="h-pend-l">${l.map(x => `<div class="h-pend-it ${esc(x.nivel)}"><span class="ic"><i class="bi ${esc(x.icono)}"></i></span>
+                if (!l.length) { caja.innerHTML = '<div class="h-pend-ok"><i class="bi bi-check-circle-fill"></i> Todo al día: no hay nada pendiente por revisar.</div>'; return; }
+                // Desplegable: cerrado de entrada (solo el resumen); dentro, un grupo desplegable por tipo
+                const grupos = [['error', 'Para revisar', 'bi-exclamation-octagon'], ['aviso', 'Avisos', 'bi-exclamation-triangle'], ['info', 'Información', 'bi-info-circle']]
+                    .map(([n, t, i]) => ({ n, t, i, l: l.filter(x => (['error', 'aviso'].includes(x.nivel) ? x.nivel : 'info') === n) })).filter(g => g.l.length);
+                const it = x => `<div class="h-pend-it ${esc(x.nivel)}"><span class="ic"><i class="bi ${esc(x.icono)}"></i></span>
                             <div class="tx"><b>${esc(x.titulo)}</b><small>${esc(x.detalle)}</small></div>
-                            ${x.url ? `<a class="ev-btn" style="padding:9px 14px;font-size:13px;border-radius:12px;white-space:nowrap" href="${esc(x.url)}">${esc(x.accion || 'Ver')} <i class="bi bi-arrow-right"></i></a>` : ''}</div>`).join('')}</div></div>`;
+                            ${x.url ? `<a class="ev-btn" style="padding:9px 14px;font-size:13px;border-radius:12px;white-space:nowrap" href="${esc(x.url)}">${esc(x.accion || 'Ver')} <i class="bi bi-arrow-right"></i></a>` : ''}</div>`;
+                let abierto = false; try { abierto = localStorage.getItem('ev.home.pendientes') === '1'; } catch { }
+                caja.innerHTML = `<details class="h-pend-box"${abierto ? ' open' : ''}><summary class="h-pend-h"><i class="bi bi-list-check" style="font-size:20px;color:var(--ev-deep)"></i><h2>Tus pendientes</h2><span>${l.length}</span>
+                        <span class="chips">${grupos.map(g => `<em class="${g.n}">${g.l.length} ${g.t.toLowerCase()}</em>`).join('')}</span><i class="bi bi-chevron-down flecha"></i></summary>
+                        <div class="h-pend-l">${grupos.map(g => `<details class="h-pend-g"${grupos.length === 1 ? ' open' : ''}><summary><i class="bi ${g.i}"></i> ${g.t} <span class="n">${g.l.length}</span><i class="bi bi-chevron-down flecha"></i></summary>
+                            <div class="h-pend-l">${g.l.map(it).join('')}</div></details>`).join('')}</div></details>`;
+                caja.querySelector('.h-pend-box').addEventListener('toggle', e => { try { localStorage.setItem('ev.home.pendientes', e.target.open ? '1' : '0'); } catch { } });
             } catch { /* sin pendientes visibles si falla */ }
         })();
 
