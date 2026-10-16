@@ -15,28 +15,49 @@
     .us-kpi b { font-size: 20px; font-weight: 800; display: block; line-height: 1.1; }
     .us-kpi small { color: rgba(232,255,251,.6); font-weight: 600; font-size: 12px; }
 
-    .us-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-    .us-card { border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line); padding: 18px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform .25s var(--ev-ease), box-shadow .25s; }
-    .us-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
-    .us-card.off { opacity: .62; }
-    .us-card .top { display: flex; gap: 12px; align-items: center; }
-    .us-av { width: 52px; height: 52px; border-radius: 17px; flex-shrink: 0; display: grid; place-items: center; background: var(--ev-grad); color: var(--ev-ink); font-weight: 800; font-size: 18px; overflow: hidden; }
-    .us-av img { width: 100%; height: 100%; object-fit: cover; }
-    .us-card h3 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .us-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 18px; }
+    .us-card { position: relative; border-radius: 26px; background: var(--ev-surface); border: 1px solid var(--ev-line); overflow: hidden; display: flex; flex-direction: column; cursor: pointer; transition: transform .25s var(--ev-ease), box-shadow .25s, border-color .25s; }
+    .us-card:hover, .us-card:focus-visible { transform: translateY(-4px); box-shadow: var(--ev-shadow); border-color: var(--ev-teal); outline: none; }
+    .us-card.off { opacity: .66; }
+    .us-card.off .banda { filter: grayscale(1); }
+    .us-card .banda { height: 74px; background: var(--ev-grad); position: relative; }
+    .us-card .banda::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 85% 10%, rgba(255,255,255,.35), transparent 55%); }
+    .us-card .banda .tags { position: absolute; top: 12px; right: 12px; z-index: 1; }
+    .us-card .cuerpo { padding: 0 20px 18px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+    .us-card .top { display: flex; gap: 14px; align-items: flex-end; margin-top: -38px; position: relative; z-index: 1; }
+    .us-av { position: relative; width: 78px; height: 78px; border-radius: 24px; flex-shrink: 0; display: grid; place-items: center; background: var(--ev-ink); color: var(--ev-aqua); font-weight: 800; font-size: 26px; border: 4px solid var(--ev-surface); box-shadow: 0 6px 18px rgba(4,30,40,.18); }
+    .us-av img { width: 100%; height: 100%; object-fit: cover; border-radius: 20px; }
+    .us-av .pt { position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; border-radius: 50%; background: #12B76A; border: 3px solid var(--ev-surface); }
+    .us-card.off .us-av .pt { background: #F79009; }
+    .us-card .nom { min-width: 0; padding-bottom: 4px; }
+    .us-card h3 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .us-card .usr { color: var(--ev-muted); font-size: 13px; font-weight: 700; }
     .us-card .sub { color: var(--ev-muted); font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .us-card .tags { display: flex; gap: 6px; flex-wrap: wrap; }
-    .us-tag { font: 800 11.5px var(--ev-font); padding: 4px 10px; border-radius: 9px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); display: inline-flex; gap: 5px; align-items: center; }
+    .us-card .datos { display: grid; gap: 6px; }
+    .us-card .datos div { display: flex; gap: 9px; align-items: center; font-size: 13.5px; font-weight: 600; min-width: 0; }
+    .us-card .datos i { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: var(--ev-surface-2); color: var(--ev-deep); flex-shrink: 0; font-size: 13px; }
+    .us-card .datos span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .us-card .datos .vacio { color: var(--ev-muted); font-weight: 500; font-style: italic; }
+    .us-card .tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .us-tag { font: 800 11.5px var(--ev-font); padding: 4px 10px; border-radius: 9px; background: var(--ev-surface); border: 1px solid var(--ev-line); display: inline-flex; gap: 5px; align-items: center; }
     .us-tag.super { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
     .us-tag.admin { background: #E0F2FE; color: #075985; border-color: #BAE6FD; }
     .us-tag.off { background: #FEF3C7; color: #92400E; border-color: #FDE68A; }
-    .us-tag.yo { background: var(--ev-grad-soft); border-color: var(--ev-teal); }
-    .us-card .pie { display: flex; justify-content: space-between; align-items: center; color: var(--ev-muted); font-size: 12px; font-weight: 600; border-top: 1px solid var(--ev-line); padding-top: 10px; }
-    .us-mods { display: flex; gap: 3px; }
-    .us-mods i { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 11.5px; background: var(--ev-surface-2); color: var(--ev-line); }
-    .us-mods i.si { background: var(--ev-grad-soft); color: var(--ev-deep); }
-    .us-nuevo { border: 2px dashed var(--ev-line); border-radius: 24px; background: transparent; min-height: 170px; display: grid; place-items: center; color: var(--ev-muted); font: 800 14px var(--ev-font); cursor: pointer; }
+    .us-tag.yo { background: var(--ev-surface); border-color: var(--ev-teal); color: var(--ev-deep); }
+    .us-acc { border-radius: 16px; background: var(--ev-surface-2); padding: 12px 14px; display: grid; gap: 9px; }
+    .us-acc .t { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; font-weight: 700; color: var(--ev-muted); }
+    .us-acc .t b { font-size: 15px; color: var(--ev-text); }
+    .us-bar { height: 7px; border-radius: 99px; background: var(--ev-line); overflow: hidden; }
+    .us-bar i { display: block; height: 100%; border-radius: 99px; background: var(--ev-grad); }
+    .us-mods { display: flex; gap: 5px; flex-wrap: wrap; }
+    .us-mods i { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-size: 14px; background: var(--ev-surface); color: var(--ev-line); border: 1px solid var(--ev-line); }
+    .us-mods i.si { background: var(--ev-grad-soft); color: var(--ev-deep); border-color: transparent; }
+    .us-card .pie { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--ev-muted); font-size: 12.5px; font-weight: 600; border-top: 1px solid var(--ev-line); padding-top: 12px; }
+    .us-card .pie .ed { display: inline-flex; gap: 6px; align-items: center; font: 800 13px var(--ev-font); color: var(--ev-deep); padding: 7px 12px; border-radius: 11px; background: var(--ev-grad-soft); }
+    .us-card:hover .pie .ed { background: var(--ev-ink); color: var(--ev-aqua); }
+    .us-nuevo { border: 2px dashed var(--ev-line); border-radius: 26px; background: transparent; min-height: 300px; display: grid; place-items: center; color: var(--ev-muted); font: 800 14px var(--ev-font); cursor: pointer; }
     .us-nuevo:hover { border-color: var(--ev-teal); color: var(--ev-deep); background: var(--ev-grad-soft); }
-    .us-nuevo i { font-size: 30px; display: block; margin-bottom: 6px; }
+    .us-nuevo i { font-size: 40px; display: block; margin-bottom: 8px; }
 
     .us-mx { overflow: auto; border-radius: 22px; border: 1px solid var(--ev-line); background: var(--ev-surface); max-height: 70vh; }
     .us-mx table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
@@ -162,12 +183,19 @@
         const conClave = D.modulos.filter(m => m.clave);
         $('#uGrid').innerHTML = `<button type="button" class="us-nuevo" data-nuevo><span><i class="bi bi-person-plus"></i>Nuevo usuario</span></button>` + l.map(u => {
             const mis = accesos(u), yo = u.userName.toLowerCase() === D.yo.toLowerCase();
+            const total = esSuper(u) ? D.modulos.length : mis.length, pct = D.modulos.length ? Math.round(total * 100 / D.modulos.length) : 0;
+            const dato = (ic, v, vacio) => `<div><i class="bi ${ic}"></i>${v ? `<span>${esc(v)}</span>` : `<span class="vacio">${vacio}</span>`}</div>`;
             return `<article class="us-card ${u.activo ? '' : 'off'}" data-u="${u.codigoUsuario}" tabindex="0">
-                <div class="top"><div class="us-av">${avatar(u)}</div><div style="min-width:0"><h3>${esc(u.nombre)} ${esc(u.apellido)}</h3><div class="sub">@@${esc(u.userName)} · ${esc(u.email)}</div></div></div>
-                <div class="tags">${tagRol(u.rol)}${u.activo ? '' : '<span class="us-tag off"><i class="bi bi-pause-circle"></i>Desactivado</span>'}${yo ? '<span class="us-tag yo">Tú</span>' : ''}</div>
-                <div class="pie"><span>${esSuper(u) ? 'Ve todo' : `${mis.length} de ${D.modulos.length} módulos`}</span>
-                    <span class="us-mods">${conClave.map(m => `<i class="bi ${esc(m.icono || 'bi-square')} ${esSuper(u) || mis.includes(m.id_Modulo) ? 'si' : ''}" title="${esc(m.nombre_Modulo)}"></i>`).join('')}</span></div>
-                <div class="sub" style="margin-top:-6px">${hace(u.ultimaActividad)}</div>
+                <div class="banda"><div class="tags">${tagRol(u.rol)}${u.activo ? '' : '<span class="us-tag off"><i class="bi bi-pause-circle"></i>Desactivado</span>'}${yo ? '<span class="us-tag yo">Tú</span>' : ''}</div></div>
+                <div class="cuerpo">
+                    <div class="top"><div class="us-av">${avatar(u)}<span class="pt" title="${u.activo ? 'Activo' : 'Desactivado'}"></span></div>
+                        <div class="nom"><h3>${esc(u.nombre)} ${esc(u.apellido)}</h3><div class="usr">@@${esc(u.userName)}</div></div></div>
+                    <div class="datos">${dato('bi-envelope', u.email, 'Sin correo')}${dato('bi-telephone', u.telefono, 'Sin teléfono')}</div>
+                    <div class="us-acc"><div class="t"><span>Acceso a módulos</span><b>${esSuper(u) ? 'Ve todo' : `${mis.length} de ${D.modulos.length}`}</b></div>
+                        <div class="us-bar"><i style="width:${pct}%"></i></div>
+                        <span class="us-mods">${conClave.map(m => `<i class="bi ${esc(m.icono || 'bi-square')} ${esSuper(u) || mis.includes(m.id_Modulo) ? 'si' : ''}" title="${esc(m.nombre_Modulo)}"></i>`).join('')}</span></div>
+                    <div class="pie"><span><i class="bi bi-clock-history"></i> ${hace(u.ultimaActividad)}</span><span class="ed"><i class="bi bi-pencil"></i> Editar</span></div>
+                </div>
             </article>`;
         }).join('') + (l.length ? '' : '<div class="ui-empty" style="grid-column:1/-1"><p>Nadie coincide con esa búsqueda.</p></div>');
     }
