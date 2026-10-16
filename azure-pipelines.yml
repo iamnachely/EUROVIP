@@ -10,10 +10,10 @@
 #   Azure DevOps → Pipelines → EurovipBack → Run pipeline.
 #
 # Requisitos en Azure DevOps (proyecto EurovipBack):
-#   - Pool de agentes "Eurovip-Agents" con el agente instalado EN el servidor de Eurovip
+#   - Pool de agentes "Dev-Agents" (el mismo de BackTropi/BackTiTan en DESARROLLO, agente dev-agent-srvweb1)
+#     autorizado para el proyecto EurovipBack (Project settings → Agent pools → Add pool → Existing)
 #     (el que tiene el IIS donde vive el sitio "eurovip").
-#   - Environment "Eurovip-Produccion" → configurar aprobación manual en:
-#     Pipelines → Environments → Eurovip-Produccion → Approvals and checks
+#   - Environment "Desarrollo" (sin aprobación) en el proyecto EurovipBack
 #
 # Requisitos en el servidor: ver DeploymentScripts/README-DESPLIEGUE.md
 # ============================================================
@@ -29,7 +29,8 @@ variables:
   eurovipPuerto:      '8090'
   eurovipHost:        ''
   # Pool del agente instalado en el servidor de Eurovip
-  agentPool:          'Eurovip-Agents'
+  agentPool:          'Dev-Agents'
+  agentName:          'dev-agent-srvweb1'
   # Variable SECRETA que se define en el pipeline (NO en este archivo):
   #   EurovipAppSettingsLocal = appsettings.Local.json en base64 (cadena de conexión, WhatsApp…)
 
@@ -96,7 +97,7 @@ stages:
 
   # ============================================================
   # STAGE 2: DEPLOY AL SERVIDOR DE EUROVIP
-  # La aprobación manual la gestiona el Environment "Eurovip-Produccion".
+  # Servidor de DESARROLLO (agente dev-agent-srvweb1 del pool Dev-Agents, como BackTropi).
   # Blue-Green: publica en el slot inactivo, cambia IIS, revisa /health
   # (que también comprueba la base) y vuelve atrás solo si falla.
   # ============================================================
@@ -108,9 +109,11 @@ stages:
     jobs:
       - deployment: DeployJob
         displayName: 'Deploy Eurovip'
-        environment: 'Eurovip-Produccion'
+        environment: 'Desarrollo'
         pool:
           name: ${{ variables.agentPool }}
+          demands:
+            - Agent.Name -equals ${{ variables.agentName }}
 
         strategy:
           runOnce:

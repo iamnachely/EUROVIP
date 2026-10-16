@@ -27,9 +27,11 @@ stages:
     jobs:
       - deployment: RollbackJob
         displayName: 'Rollback Eurovip'
-        environment: 'Eurovip-Produccion'
+        environment: 'Desarrollo'
         pool:
-          name: 'Eurovip-Agents'
+          name: 'Dev-Agents'
+          demands:
+            - Agent.Name -equals dev-agent-srvweb1
         strategy:
           runOnce:
             deploy:
