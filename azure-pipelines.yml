@@ -24,7 +24,7 @@ variables:
   buildConfiguration: 'Release'
   dotnetVersion:      '8.0.x'
   projectPath:        'EuroVip/EuroVip.csproj'
-  projectName:        'eurovip'          # nombre del sitio IIS y de C:\inetpub\wwwroot\eurovip
+  projectName:        'eurovipBack'      # nombre del sitio IIS y de C:\inetpub\wwwroot\eurovipBack (Blue/Green)
   # Solo se usan si el sitio IIS no existe (primer deploy: Deploy.ps1 lo crea)
   eurovipPuerto:      '8090'
   eurovipHost:        ''

@@ -18,8 +18,8 @@ parameters:
     default: ''
 
 variables:
-  projectName: 'eurovip'
-  basePath:    'C:\inetpub\wwwroot\eurovip'
+  projectName: 'eurovipBack'
+  basePath:    'C:\inetpub\wwwroot\eurovipBack'
 
 stages:
   - stage: Rollback

@@ -148,8 +148,11 @@ if (-not $site) {
     Set-ItemProperty "IIS:\AppPools\$siteName" -Name managedRuntimeVersion -Value ''        # .NET Core: sin código administrado
     Set-ItemProperty "IIS:\AppPools\$siteName" -Name startMode -Value 'AlwaysRunning'
     Set-ItemProperty "IIS:\AppPools\$siteName" -Name processModel.idleTimeout -Value ([TimeSpan]::Zero)
-    $ocupado = Get-WebBinding | Where-Object { $p = $_.bindingInformation.Split(':'); $p[1] -eq "$Puerto" -and $p[2] -eq $NombreHost }
-    if ($ocupado) { Write-Fail "El puerto $Puerto (host '$NombreHost') ya lo usa otro sitio. Cambiar la variable eurovipPuerto del pipeline."; exit 1 }
+    # Si el puerto pedido ya lo usa otro sitio (sin nombre de host), se toma el siguiente libre.
+    $usados = @(Get-WebBinding | ForEach-Object { $b = $_.bindingInformation.Split(':'); if ($b[2] -eq $NombreHost) { $b[1] } })
+    $pedido = $Puerto
+    while ($usados -contains "$Puerto") { $Puerto++ }
+    if ($Puerto -ne $pedido) { Write-Warn "El puerto $pedido ya lo usa otro sitio: Eurovip queda en el puerto $Puerto." }
     New-Website -Name $siteName -PhysicalPath $bluePath -ApplicationPool $siteName -Port $Puerto -HostHeader $NombreHost | Out-Null
     icacls $projectRoot /grant "IIS AppPool\${siteName}:(OI)(CI)M" /T /Q | Out-Null
     if ($Puerto -notin 80, 443 -and -not (Get-NetFirewallRule -DisplayName "Eurovip $Puerto" -ErrorAction SilentlyContinue)) {
