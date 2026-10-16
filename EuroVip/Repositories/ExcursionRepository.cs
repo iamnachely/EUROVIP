@@ -1,3 +1,4 @@
+using System.Data;
 using Dapper;
 using EuroVip.Models;
 using EuroVip.Services;
@@ -48,20 +49,37 @@ namespace EuroVip.Repositories
             var p = new { id = d.Id_Excursion, destino = d.Id_Destino, tipo = Tipo, nombre = d.Nombre, descripcion = string.IsNullOrWhiteSpace(d.Descripcion) ? null : d.Descripcion.Trim(), d.Cancelable, d.Precio };
             if (d.Id_Excursion is int id)
             {
+                var antes = await cn.ExecuteScalarAsync<string?>("SELECT id_destino FROM Eurovip.servicio_excursion WHERE id_Excursion = @id", new { id });
                 var n = await cn.ExecuteAsync(@"UPDATE Eurovip.servicio_excursion SET id_destino = @destino, id_tipo_servicio = @tipo, nombre = @nombre,
                                                 descripcion = @descripcion, cancelable = @Cancelable, precio = @Precio WHERE id_Excursion = @id", p);
                 if (n == 0) throw new InvalidOperationException("Esa excursión ya no existe. Recarga la página.");
+                await ActualizarInicioAsync(cn, antes, d.Id_Destino);
                 return id;
             }
-            return await cn.ExecuteScalarAsync<int>(@"INSERT INTO Eurovip.servicio_excursion (id_destino, id_tipo_servicio, nombre, descripcion, cancelable, precio)
+            var nuevo = await cn.ExecuteScalarAsync<int>(@"INSERT INTO Eurovip.servicio_excursion (id_destino, id_tipo_servicio, nombre, descripcion, cancelable, precio)
                                                       VALUES (@destino, @tipo, @nombre, @descripcion, @Cancelable, @Precio);
                                                       SELECT CAST(SCOPE_IDENTITY() AS int);", p);
+            await ActualizarInicioAsync(cn, d.Id_Destino);
+            return nuevo;
         }
 
         public async Task<bool> EliminarAsync(int id)
         {
             using var cn = _db.Conexion();
-            return await cn.ExecuteAsync("DELETE FROM Eurovip.servicio_excursion WHERE id_Excursion = @id", new { id }) > 0;
+            var destino = await cn.ExecuteScalarAsync<string?>("DELETE FROM Eurovip.servicio_excursion OUTPUT deleted.id_destino WHERE id_Excursion = @id", new { id });
+            if (destino is null) return false;
+            await ActualizarInicioAsync(cn, destino);
+            return true;
+        }
+
+        /// <summary>
+        /// Tarjeta de la Home (Eurovip.inicio, tipo 'EXCURSION'): una por destino con el precio "desde" de la más barata.
+        /// spActualizaInicioExcursion la crea, la actualiza o la borra si el destino se quedó sin excursiones.
+        /// </summary>
+        private static async Task ActualizarInicioAsync(IDbConnection cn, params string?[] destinos)
+        {
+            foreach (var d in destinos.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
+                await cn.ExecuteAsync("Eurovip.spActualizaInicioExcursion", new { destino = d }, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<int?> RepetidaAsync(string nombre, string destino, int? excepto)

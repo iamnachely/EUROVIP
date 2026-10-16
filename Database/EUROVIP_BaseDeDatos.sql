@@ -2729,6 +2729,143 @@ IF NOT EXISTS (SELECT 1 FROM Eurovip.UsuarioAcceso WHERE clave = 'excursiones')
 GO
 
 /* ##########################################################################################
+   FASE 14 — EXCURSIONES EN LA HOME  (16/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: "que al cargar una excursión se cargue en la HOME; en inicio
+   guardamos una excursión por destino y al dar clic salen todas las excursiones de ese destino
+   (Punta Cana…), tomándolas de Eurovip.servicio_excursion (sin tabla nueva)".
+   Cómo queda (explicado fácil):
+     • Eurovip.inicio tiene UNA tarjeta por destino con tipo_servicio = 'EXCURSION'
+       ("Excursiones en Punta Cana", precio "desde" = la excursión más barata, foto del destino),
+       en la sección nueva de la Home «EXCURSIONES».
+     • La pantalla de Excursiones llama a spActualizaInicioExcursion al guardar, duplicar o
+       eliminar: crea, actualiza o borra la tarjeta del destino sola. Lo que el usuario ordene en
+       "Home de la web" (sección, posición, visible) se respeta.
+     • La web: spPortalListarInicio ya trae la tarjeta; al pulsarla llama a
+       spPortalListarExcursiones @Destino (todas las de ese destino) y spPortalObtenerExcursion.
+   Cómo se aplicó: CAMBIO 48 a 51 y luego la carga inicial (al final de esta fase).
+   ########################################################################################## */
+/* ---------- CAMBIO 48: sección «EXCURSIONES» de la Home ----------
+   Las tarjetas de excursión (una por destino) van en su propia sección de la web. */
+IF NOT EXISTS (SELECT 1 FROM Eurovip.contenedores WHERE nombre = 'EXCURSIONES' AND UPPER(id_idioma) = 'ES')
+    INSERT INTO Eurovip.contenedores (nombre, posicion, estado, id_idioma) VALUES ('EXCURSIONES', 4, 1, 'es');
+GO
+
+/* ---------- CAMBIO 49: nombre del archivo de imagen (igual que ImagenesLocales.NombreCircuito en C#) ----------
+   "Excursión Isla Saona (desde Playa Bávaro)" -> "ExcursionIslaSaonadesdePlayaBavaro": sin acentos, solo letras y números. */
+CREATE OR ALTER FUNCTION Eurovip.fnNombreImagen (@s nvarchar(500))
+RETURNS varchar(500)
+AS
+BEGIN
+    DECLARE @t nvarchar(500) = TRANSLATE(ISNULL(@s, N''), N'áéíóúàèìòùäëïöüâêîôûñçÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÑÇ',
+                                                      N'aeiouaeiouaeiouaeiouncAEIOUAEIOUAEIOUAEIOUNC');
+    DECLARE @r varchar(500) = '', @i int = 1, @c nchar(1);
+    WHILE @i <= LEN(@t)
+    BEGIN
+        SET @c = SUBSTRING(@t, @i, 1);
+        IF @c COLLATE Latin1_General_BIN LIKE N'[A-Za-z0-9]' SET @r += CAST(@c AS varchar(1));
+        SET @i += 1;
+    END
+    RETURN @r;
+END
+GO
+
+/* ---------- CAMBIO 50: spActualizaInicioExcursion — pone en la Home la tarjeta de excursiones de un destino ----------
+   Como spActualizaInicio hace con OFERTA / CIRCUITO, pero para servicio_excursion:
+     • Una sola tarjeta por destino en Eurovip.inicio (tipo_servicio = 'EXCURSION', id_destino = el destino).
+     • id_servicio = la excursión más barata del destino (id_Excursion) y precioWeb = su precio ("desde ...").
+     • Si el destino ya tenía tarjeta se ACTUALIZA (se conserva lo que el usuario ordenó: sección, posición, visible).
+     • Si el destino ya no tiene excursiones, la tarjeta se borra.
+   La pantalla de Excursiones lo llama cada vez que se guarda, duplica o elimina una excursión. */
+CREATE OR ALTER PROCEDURE Eurovip.spActualizaInicioExcursion
+    @destino varchar(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    SET @destino = LTRIM(RTRIM(@destino));
+    IF ISNULL(@destino, '') = '' RETURN;
+
+    BEGIN TRAN;
+    DECLARE @id int, @precio money, @pais char(2), @imagen varchar(300), @cont int;
+
+    SELECT TOP 1 @id = id_Excursion, @precio = NULLIF(precio, 0)
+    FROM Eurovip.servicio_excursion
+    WHERE LTRIM(RTRIM(id_destino)) = @destino
+    ORDER BY CASE WHEN ISNULL(precio, 0) > 0 THEN 0 ELSE 1 END, precio, id_Excursion;
+
+    IF @id IS NULL
+    BEGIN
+        DELETE FROM Eurovip.inicio WHERE tipo_servicio = 'EXCURSION' AND id_destino = @destino AND id_idioma = 'ES';
+        COMMIT;
+        RETURN;
+    END
+
+    SELECT TOP 1 @pais = id_pais, @imagen = caratula FROM Eurovip.destino WHERE id_destino = @destino AND id_idioma = 'ES';
+    SELECT TOP 1 @cont = id_contenedor FROM Eurovip.contenedores WHERE nombre = 'EXCURSIONES' AND UPPER(id_idioma) = 'ES';
+
+    IF EXISTS (SELECT 1 FROM Eurovip.inicio WHERE tipo_servicio = 'EXCURSION' AND id_destino = @destino AND id_idioma = 'ES')
+        UPDATE Eurovip.inicio
+           SET id_servicio = @id, precioWeb = @precio, id_moneda = 'DOP', id_paisDestino = ISNULL(@pais, id_paisDestino),
+               caratulaDestino = ISNULL(@imagen, caratulaDestino), descripcion = 'Excursiones en ' + @destino
+         WHERE tipo_servicio = 'EXCURSION' AND id_destino = @destino AND id_idioma = 'ES';
+    ELSE
+        INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino,
+                                    id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor,
+                                    posicion_contenedor, posicion_destino, estado, notas, noches)
+        SELECT @id, 'ES', 'EXCURSION', 99, 'DOP', 'ES', 'Madrid', ISNULL(@pais, 'DO'),
+               @destino, @imagen, 'Excursiones en ' + @destino, NULL, NULL, @precio, @cont, CASE WHEN @cont IS NULL THEN NULL ELSE 'EXCURSIONES' END,
+               (SELECT posicion FROM Eurovip.contenedores WHERE id_contenedor = @cont),
+               (SELECT ISNULL(MAX(posicion_destino), 0) + 1 FROM Eurovip.inicio WHERE id_contenedor = @cont), 1, NULL, NULL;
+    COMMIT;
+END
+GO
+
+/* ---------- CAMBIO 51: consultas para la WEB ----------
+   La Home lee las tarjetas con spPortalListarInicio (sale la de EXCURSION de cada destino, igual que OFERTA / CIRCUITO / HOTEL).
+   Al pulsar la tarjeta de excursiones (tipo_servicio = 'EXCURSION') la web llama a:
+     • spPortalListarExcursiones @Destino = la columna "destino" de la tarjeta  -> todas las excursiones de ese destino
+     • spPortalObtenerExcursion @IdExcursion                                    -> el detalle de una
+   imagen = /imagenes/excursiones/{nombre sin espacios ni acentos}.webp (lo que sube la pantalla de Excursiones). */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarExcursiones
+    @Destino varchar(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT e.id_Excursion AS id_excursion, LTRIM(RTRIM(e.id_destino)) AS destino, d.id_pais, e.nombre, e.descripcion,
+           e.cancelable, CAST(e.precio AS decimal(19,4)) AS precio, 'DOP' AS id_moneda,
+           '/imagenes/excursiones/' + Eurovip.fnNombreImagen(e.nombre) + '.webp' AS imagen
+      FROM Eurovip.servicio_excursion e
+      OUTER APPLY (SELECT TOP 1 id_pais FROM Eurovip.destino x WHERE x.id_destino = LTRIM(RTRIM(e.id_destino)) AND x.id_idioma = 'ES') d
+     WHERE @Destino IS NULL OR LTRIM(RTRIM(e.id_destino)) = LTRIM(RTRIM(@Destino))
+     ORDER BY destino, CASE WHEN ISNULL(e.precio, 0) > 0 THEN 0 ELSE 1 END, e.precio, e.nombre;
+END
+GO
+
+CREATE OR ALTER PROCEDURE Eurovip.spPortalObtenerExcursion
+    @IdExcursion int
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT e.id_Excursion AS id_excursion, LTRIM(RTRIM(e.id_destino)) AS destino, e.nombre, e.descripcion, e.cancelable,
+           CAST(e.precio AS decimal(19,4)) AS precio, 'DOP' AS id_moneda,
+           '/imagenes/excursiones/' + Eurovip.fnNombreImagen(e.nombre) + '.webp' AS imagen
+      FROM Eurovip.servicio_excursion e
+     WHERE e.id_Excursion = @IdExcursion;
+END
+GO
+
+/* Carga inicial (16/10/2026): una tarjeta EXCURSION por cada destino que ya tiene excursiones.
+   Resultado: tarjeta id 43 "Excursiones en Punta Cana", desde 54,50, sección EXCURSIONES (id 54). */
+DECLARE @d varchar(50);
+DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT DISTINCT LTRIM(RTRIM(id_destino)) FROM Eurovip.servicio_excursion WHERE ISNULL(id_destino, '') <> '';
+OPEN c; FETCH NEXT FROM c INTO @d;
+WHILE @@FETCH_STATUS = 0 BEGIN EXEC Eurovip.spActualizaInicioExcursion @d; FETCH NEXT FROM c INTO @d; END
+CLOSE c; DEALLOCATE c;
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -3025,6 +3162,28 @@ GO
                  tiene destino: hay que completarlo desde la pantalla de Hoteles.
                • Nota: en ViajeVDT "Hotel El Convento" tiene origen Costa Dorada y destino Costa de la
                  Luz, y "4R Salou Park Resort I" al revés; se copió tal cual.
+
+   16/10/2026  CIRCUITOS COPIADOS DE VIAJEVDT (a pedido de la usuaria: "copia los datos de circuitos de
+               ViajeVDT de inicio, circuito, circuito_destino, circuito_itinerario, servicio, servicio_detalle,
+               servicio_habitacion, servicio_tasa, todo lo relacionado a Circuito"). ViajeVDT solo se leyó.
+               Script al final ("CIRCUITOS 16/10/2026"); se ensayó con ROLLBACK y se aplicó.
+               • No hubo que crear tablas: todas existían en Eurovip con la misma estructura.
+               • Solo idioma ES. Sin los circuitos de prueba «Hola 1» y «Prueba 2».
+               • Copiado: 31 circuitos, 109 destinos de circuito, 274 días de itinerario, 125 hoteles de
+                 circuito, 1.153 salidas (servicio) con su fecha (servicio_circuito), 2.096 vuelos
+                 (servicio_itinerario), 884 tasas, 18 filas de alojamiento_circuito y 6 tarjetas CIRCUITO
+                 en inicio (id 31-36). De las 1.153 salidas, las que salen después de hoy siguen a la venta.
+               • servicio_detalle, servicio_habitacion y servicio_descripcion: ViajeVDT no tiene filas de
+                 circuitos en esas tablas (nada que copiar).
+               • Las salidas tienen número nuevo de Eurovip (no el de ViajeVDT); moneda DOP (mismo importe);
+                 servicio_circuito con hasta = desde + noches y origen ES/Madrid, como las cargas de Eurovip.
+               • Hoteles: 331 → 322 (Yodia Heritage) y 10219 → 10218 (Cartagena Plaza), porque las copias
+                 repetidas se borraron en la limpieza; se creó el 10387 Hotel Arslan Boutique (Khiva).
+               • Las tarjetas CIRCUITO usan la carátula «NombreSinEspacios.webp»: falta subir esas fotos
+                 desde Circuitos. «Costa Rica Esencial» (ViajeVDT) y «Costa Rica Essencial» (ya en Eurovip)
+                 quedaron como circuitos distintos.
+
+   16/10/2026  FASE 14 aplicada (CAMBIO 48 a 51): excursiones en la Home (ver FASE 14).
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
@@ -3591,4 +3750,176 @@ PRINT CONCAT('Tarjetas de hotel copiadas: ', @@ROWCOUNT);
 SELECT id, id_servicio, id_moneda, origen, id_destino, caratulaDestino, descripcion, CAST(precioWeb AS decimal(10,2)) precio, id_contenedor, estado,
        CASE WHEN EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = i.caratulaDestino AND d.id_idioma = 'ES') THEN 'ok' ELSE 'DESTINO NO EXISTE' END destino_ok
 FROM Eurovip.inicio i WHERE tipo_servicio = 'HOTEL' ORDER BY id;
+COMMIT;
+
+
+/* ##########################################################################################
+   CIRCUITOS 16/10/2026 (explicación en la BITÁCORA). Script tal cual se aplicó; los datos (JSON) se
+   leyeron de ViajeVDT con las consultas indicadas en cada variable y no se repiten aquí por tamaño (1,7 MB).
+   ########################################################################################## */
+/* Copia de los CIRCUITOS de ViajeVDT (10.10.10.29, idioma ES) a TropitoursVDT.Eurovip — 16/10/2026.
+   ViajeVDT solo se leyó. Tablas: circuito, circuito_destino, circuito_itinerario, servicio_circuito_alojamiento,
+   servicio (tipo CIRCUITO), servicio_circuito, servicio_itinerario (vuelos), servicio_tasa, alojamiento_circuito, inicio.
+   servicio_detalle / servicio_habitacion / servicio_descripcion: en ViajeVDT no tienen filas de circuitos (nada que copiar).
+   Todas las tablas ya existían en Eurovip con la misma estructura: no hubo que crear ninguna.
+   Al copiar:
+   • Solo idioma ES (Eurovip trabaja en ES). Fuera los circuitos de prueba «Hola 1» y «Prueba 2».
+   • Moneda DOP (como todo Eurovip desde el 14/10); los importes no cambian.
+   • id_servicio nuevo (el contador de Eurovip); la relación vieja→nueva se guarda en @map para las tablas hijas.
+   • servicio_circuito: hasta = desde + noches y origen ES/Madrid, como las cargas de Eurovip.
+   • Hoteles: 331 (Yodia Heritage) → 322 y 10219 (Cartagena Plaza) → 10218 (las copias repetidas se borraron en la
+     limpieza); 10387 Hotel Arslan Boutique (Khiva) no existía y se crea.
+   • inicio: 6 tarjetas CIRCUITO; si su id_servicio no está entre los copiados se usa la salida más barata de ese circuito.
+     caratulaDestino = nombre del circuito sin espacios + .webp (regla de carátulas de circuito).
+   • No se repite: lo que ya existe (mismo nombre / mismo código de carga) se salta. */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRAN;
+
+DECLARE @jCirc NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.circuito (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @jDest NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.circuito_destino (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @jItin NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.circuito_itinerario (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @jSca  NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.servicio_circuito_alojamiento (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @jServ NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.servicio (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @jSc   NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.servicio_circuito (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @jSi   NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.servicio_itinerario (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @jTasa NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.servicio_tasa (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @jAc   NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.alojamiento_circuito (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @jIni  NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.inicio (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @jHot  NVARCHAR(MAX) = N'/* datos de ViajeVDT: SELECT ... FROM dbo.alojamiento (id 10387) (ES) FOR JSON PATH, INCLUDE_NULL_VALUES */';
+DECLARE @n int;
+
+-- 0) Hotel que falta (Hotel Arslan Boutique, Khiva)
+INSERT INTO Eurovip.alojamiento (id_alojamiento, id_idioma, id_tipo_alojamiento, id_destino, id_pais, nombre, caratula, descripcion,
+                                 grupo, categoria, latitude, longitude, categoria_circuito, circuito, activo)
+SELECT h.id_alojamiento, h.id_idioma, h.id_tipo_alojamiento, LTRIM(RTRIM(h.id_destino)), h.id_pais, LTRIM(RTRIM(h.nombre)), h.caratula,
+       h.descripcion, h.grupo, h.categoria, h.latitude, h.longitude, h.categoria_circuito, h.circuito, 1
+FROM OPENJSON(@jHot) WITH (id_alojamiento int, id_idioma char(2), id_tipo_alojamiento varchar(30), id_destino varchar(100), id_pais char(2),
+     nombre varchar(200), caratula varchar(500), descripcion varchar(max), grupo varchar(50), categoria varchar(20), latitude varchar(50),
+     longitude varchar(50), categoria_circuito varchar(50), circuito bit) h
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.alojamiento a WHERE a.id_alojamiento = h.id_alojamiento);
+PRINT CONCAT('Hoteles creados: ', @@ROWCOUNT);
+
+-- 1) circuito
+INSERT INTO Eurovip.circuito (nombre_circuito, id_idioma, id_proveedor, noches, caratula, itinerario, id)
+SELECT LTRIM(RTRIM(c.nombre_circuito)), c.id_idioma, c.id_proveedor, c.noches, c.caratula, c.itinerario, LTRIM(RTRIM(c.id))
+FROM OPENJSON(@jCirc) WITH (nombre_circuito varchar(100), id_idioma char(2), id_proveedor varchar(10), noches smallint,
+     caratula varchar(500), itinerario varchar(max), id varchar(100)) c
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.circuito e WHERE e.nombre_circuito = LTRIM(RTRIM(c.nombre_circuito)) AND e.id_idioma = c.id_idioma);
+PRINT CONCAT('Circuitos copiados: ', @@ROWCOUNT);
+
+-- 2) circuito_destino (destino escrito como en Eurovip.destino)
+INSERT INTO Eurovip.circuito_destino (nombre_circuito, id_destino, id_idioma, id_pais, id)
+SELECT LTRIM(RTRIM(x.nombre_circuito)), ISNULL(d.id_destino, LTRIM(RTRIM(x.id_destino))), x.id_idioma, x.id_pais, x.id
+FROM OPENJSON(@jDest) WITH (nombre_circuito varchar(100), id_destino varchar(100), id_idioma char(2), id_pais char(2), id varchar(100)) x
+OUTER APPLY (SELECT TOP 1 id_destino FROM Eurovip.destino d WHERE d.id_destino = LTRIM(RTRIM(x.id_destino)) AND d.id_idioma = 'ES') d
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.circuito_destino e WHERE e.nombre_circuito = LTRIM(RTRIM(x.nombre_circuito))
+                  AND e.id_destino = LTRIM(RTRIM(x.id_destino)) AND e.id_idioma = x.id_idioma);
+PRINT CONCAT('Destinos de circuito: ', @@ROWCOUNT);
+
+-- 3) circuito_itinerario (día a día)
+INSERT INTO Eurovip.circuito_itinerario (dia, titulo, nombre_circuito, id_idioma, descripcion, visitas, regimen, transporte, tipo_alojamiento, caratula)
+SELECT x.dia, LTRIM(RTRIM(x.titulo)), LTRIM(RTRIM(x.nombre_circuito)), x.id_idioma, x.descripcion, x.visitas, x.regimen, x.transporte, x.tipo_alojamiento, x.caratula
+FROM OPENJSON(@jItin) WITH (dia int, titulo varchar(500), nombre_circuito varchar(100), id_idioma char(2), descripcion varchar(max),
+     visitas varchar(max), regimen varchar(200), transporte varchar(200), tipo_alojamiento varchar(200), caratula varchar(500)) x
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.circuito_itinerario e WHERE e.nombre_circuito = LTRIM(RTRIM(x.nombre_circuito)) AND e.dia = x.dia AND e.id_idioma = x.id_idioma);
+PRINT CONCAT('Días de itinerario: ', @@ROWCOUNT);
+
+-- 4) servicio_circuito_alojamiento (hoteles del circuito)
+;WITH x AS (
+    SELECT LTRIM(RTRIM(nombre_circuito)) nombre_circuito, id_idioma,
+           CASE id_alojamiento WHEN 331 THEN 322 WHEN 10219 THEN 10218 ELSE id_alojamiento END id_alojamiento, categoria, caratula
+    FROM OPENJSON(@jSca) WITH (nombre_circuito varchar(100), id_idioma char(2), id_alojamiento int, categoria varchar(50), caratula varchar(500))
+)
+INSERT INTO Eurovip.servicio_circuito_alojamiento (nombre_circuito, id_idioma, id_alojamiento, categoria, caratula)
+SELECT DISTINCT x.nombre_circuito, x.id_idioma, x.id_alojamiento, x.categoria, x.caratula FROM x
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.servicio_circuito_alojamiento e WHERE e.nombre_circuito = x.nombre_circuito AND e.id_idioma = x.id_idioma
+                  AND e.id_alojamiento = x.id_alojamiento AND e.categoria = x.categoria);
+PRINT CONCAT('Hoteles de circuito: ', @@ROWCOUNT);
+
+-- 5) servicio (salidas) con id nuevo; @map = viejo -> nuevo
+DECLARE @map TABLE (viejo int PRIMARY KEY, nuevo int);
+MERGE Eurovip.servicio AS t
+USING (
+    SELECT s.* FROM OPENJSON(@jServ) WITH (id_servicio int, id_tipo_servicio varchar(20), id_idioma char(2), id_campanya smallint,
+           id_Proveedor varchar(10), apertura date, usuario varchar(50), precio_base money, descuento numeric(18,2), precio_mas_menos money,
+           ajuste money, nota varchar(max), noches smallint, codigo varchar(50), baja date, nombre varchar(200), activo bit,
+           precio numeric(18,2), categoria_circuito varchar(50)) s
+    WHERE NOT EXISTS (SELECT 1 FROM Eurovip.servicio e WHERE e.codigo = s.codigo)
+) AS s ON 1 = 0
+WHEN NOT MATCHED THEN
+    INSERT (id_tipo_servicio, id_idioma, id_moneda, id_campanya, id_Proveedor, apertura, usuario, precio_base, descuento, precio_mas_menos,
+            ajuste, nota, noches, codigo, baja, nombre, activo, categoria_circuito)
+    VALUES (s.id_tipo_servicio, s.id_idioma, 'DOP', s.id_campanya, s.id_Proveedor, s.apertura, s.usuario, s.precio_base, s.descuento,
+            s.precio_mas_menos, s.ajuste, LTRIM(RTRIM(s.nota)), s.noches, s.codigo, s.baja, LTRIM(RTRIM(s.nombre)), s.activo, s.categoria_circuito)
+OUTPUT s.id_servicio, inserted.id_servicio INTO @map (viejo, nuevo);
+SELECT @n = COUNT(*) FROM @map; PRINT CONCAT('Salidas (servicio) copiadas: ', @n);
+
+-- 6) servicio_circuito (fecha de salida)
+INSERT INTO Eurovip.servicio_circuito (id_servicio, nombre_circuito, id_idoma, desde, hasta, id_pais_origen, origen)
+SELECT m.nuevo, LTRIM(RTRIM(x.nombre_circuito)), x.id_idoma, x.desde,
+       DATEADD(day, ISNULL((SELECT s.noches FROM Eurovip.servicio s WHERE s.id_servicio = m.nuevo), 0), x.desde), 'ES', 'Madrid'
+FROM OPENJSON(@jSc) WITH (id_servicio int, nombre_circuito varchar(100), id_idoma char(2), desde date, hasta date) x
+JOIN @map m ON m.viejo = x.id_servicio;
+PRINT CONCAT('Fechas de salida: ', @@ROWCOUNT);
+
+-- 7) servicio_itinerario (vuelos)
+INSERT INTO Eurovip.servicio_itinerario (id_servicio, segmento, id_proveedor, id_estacion_origen, origen, id_idioma, id_pais_origen,
+            id_estacion_destino, destino, id_pais_destino, vuelo, fecha_salida, hora_salida, fecha_regreso, hora_regreso, clase, conexion)
+SELECT m.nuevo, x.segmento, x.id_proveedor, x.id_estacion_origen, LTRIM(RTRIM(x.origen)), x.id_idioma, x.id_pais_origen,
+       x.id_estacion_destino, LTRIM(RTRIM(x.destino)), x.id_pais_destino, LTRIM(RTRIM(x.vuelo)), x.fecha_salida, x.hora_salida,
+       x.fecha_regreso, x.hora_regreso, x.clase, x.conexion
+FROM OPENJSON(@jSi) WITH (id_servicio int, segmento smallint, id_proveedor varchar(10), id_estacion_origen varchar(10), origen varchar(100),
+     id_idioma char(2), id_pais_origen char(2), id_estacion_destino varchar(10), destino varchar(100), id_pais_destino char(2), vuelo varchar(20),
+     fecha_salida date, hora_salida varchar(10), fecha_regreso date, hora_regreso varchar(10), clase char(1), conexion bit) x
+JOIN @map m ON m.viejo = x.id_servicio;
+PRINT CONCAT('Vuelos: ', @@ROWCOUNT);
+
+-- 8) servicio_tasa
+INSERT INTO Eurovip.servicio_tasa (id_Servicio, id_tasa, id_idioma, valor)
+SELECT m.nuevo, x.id_tasa, x.id_idioma, x.valor
+FROM OPENJSON(@jTasa) WITH (id_Servicio int, id_tasa varchar(100), id_idioma char(2), valor money) x
+JOIN @map m ON m.viejo = x.id_Servicio;
+PRINT CONCAT('Tasas: ', @@ROWCOUNT);
+
+-- 9) alojamiento_circuito
+INSERT INTO Eurovip.alojamiento_circuito (id_servicio, id_idioma, id_tipo_servicio, id_campanya, id_moneda, id_pais_origen, id_origen,
+            id_pais_destino, id_destino, caratula, precio_web, nombre_circuito)
+SELECT m.nuevo, x.id_idioma, x.id_tipo_servicio, x.id_campanya, 'DOP', x.id_pais_origen, LTRIM(RTRIM(x.id_origen)), x.id_pais_destino,
+       LTRIM(RTRIM(x.id_destino)), x.caratula, x.precio_web, LTRIM(RTRIM(x.nombre_circuito))
+FROM OPENJSON(@jAc) WITH (id_servicio int, id_idioma char(2), id_tipo_servicio varchar(20), id_campanya smallint, id_pais_origen char(2),
+     id_origen varchar(50), id_pais_destino varchar(10), id_destino varchar(100), caratula varchar(500), precio_web money, nombre_circuito varchar(100)) x
+JOIN @map m ON m.viejo = x.id_servicio;
+PRINT CONCAT('Alojamiento_circuito: ', @@ROWCOUNT);
+
+-- 10) inicio: tarjetas CIRCUITO de la HOME
+;WITH j AS (
+    SELECT * FROM OPENJSON(@jIni) WITH (id_servicio int, id_idioma char(2), id_campanya smallint, id_pais_origen char(2), origen varchar(30),
+           id_paisDestino char(2), id_destino varchar(1500), descripcion varchar(max), latitud varchar(50), longitud varchar(50),
+           precioWeb decimal(19,4), id_contenedor int, contenedor varchar(30), posicion_contenedor int, posicion_destino int, estado bit,
+           notas nvarchar(1000), noches int)
+)
+INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino,
+                            id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor,
+                            posicion_contenedor, posicion_destino, estado, notas, noches)
+SELECT COALESCE(m.nuevo, barata.id_servicio), j.id_idioma, 'CIRCUITO', j.id_campanya, 'DOP', j.id_pais_origen, LTRIM(RTRIM(j.origen)),
+       j.id_paisDestino, LTRIM(RTRIM(j.id_destino)), REPLACE(LTRIM(RTRIM(j.descripcion)), ' ', '') + '.webp', LTRIM(RTRIM(j.descripcion)),
+       j.latitud, j.longitud, j.precioWeb, j.id_contenedor, j.contenedor, j.posicion_contenedor, j.posicion_destino, j.estado, j.notas, j.noches
+FROM j
+LEFT JOIN @map m ON m.viejo = j.id_servicio
+OUTER APPLY (SELECT TOP 1 s.id_servicio FROM Eurovip.servicio s JOIN Eurovip.servicio_circuito c ON c.id_servicio = s.id_servicio
+             WHERE c.nombre_circuito = LTRIM(RTRIM(j.descripcion)) AND s.id_servicio IN (SELECT nuevo FROM @map) ORDER BY s.precio) barata
+WHERE COALESCE(m.nuevo, barata.id_servicio) IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM Eurovip.inicio i WHERE i.tipo_servicio = 'CIRCUITO' AND i.descripcion = LTRIM(RTRIM(j.descripcion)));
+PRINT CONCAT('Tarjetas CIRCUITO en inicio: ', @@ROWCOUNT);
+
+-- Comprobación
+SELECT 'circuitos' t, COUNT(*) n FROM Eurovip.circuito
+UNION ALL SELECT 'salidas', COUNT(*) FROM Eurovip.servicio WHERE id_tipo_servicio = 'CIRCUITO'
+UNION ALL SELECT 'salidas futuras', COUNT(*) FROM Eurovip.servicio_circuito WHERE desde > CAST(GETDATE() AS date)
+UNION ALL SELECT 'salidas sin fecha', COUNT(*) FROM Eurovip.servicio s WHERE id_tipo_servicio = 'CIRCUITO' AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio_circuito c WHERE c.id_servicio = s.id_servicio)
+UNION ALL SELECT 'circuitos sin destino', COUNT(*) FROM Eurovip.circuito c WHERE NOT EXISTS (SELECT 1 FROM Eurovip.circuito_destino d WHERE d.nombre_circuito = c.nombre_circuito)
+UNION ALL SELECT 'destinos no existen', COUNT(*) FROM Eurovip.circuito_destino cd WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = cd.id_destino AND d.id_idioma = 'ES')
+UNION ALL SELECT 'moneda no DOP', COUNT(*) FROM Eurovip.servicio WHERE id_moneda <> 'DOP';
+SELECT id, id_servicio, descripcion, id_destino, caratulaDestino, CAST(precioWeb AS decimal(10,2)) precio FROM Eurovip.inicio WHERE tipo_servicio = 'CIRCUITO' ORDER BY id;
 COMMIT;
