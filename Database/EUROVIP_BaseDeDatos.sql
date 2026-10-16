@@ -3315,6 +3315,15 @@ GO
                "Usuarios y accesos") y Eurovip.spPortalBuscarTraslados para la web. Tablas vacías:
                los traslados se cargan desde la pantalla /Traslados/Index.
 
+   16/10/2026  EXCURSIONES DE LA ROMANA Y SAMANÁ COPIADAS DE VIAJEVDT (a pedido de la usuaria: "La Romana y
+               Samaná: copia las excursiones de estos 2 destinos de ViajeVDT a Eurovip.servicio_excursion").
+               ViajeVDT solo se leyó. Script al final ("EXCURSIONES LA ROMANA Y SAMANÁ 16/10/2026"); se
+               ensayó con ROLLBACK y se aplicó.
+               • 24 excursiones: La Romana 18 (desde 68) y Samaná 6 (desde 48), todas con su MISMO número
+                 de ViajeVDT (37-39, 188-193, 311-325: estaban libres). Ninguna trae descripción.
+               • Tarjetas de la Home creadas solas (spActualizaInicioExcursion): id 90 "Excursiones en
+                 La Romana" e id 91 "Excursiones en Samaná", en la sección EXCURSIONES.
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
@@ -4052,4 +4061,52 @@ UNION ALL SELECT 'circuitos sin destino', COUNT(*) FROM Eurovip.circuito c WHERE
 UNION ALL SELECT 'destinos no existen', COUNT(*) FROM Eurovip.circuito_destino cd WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = cd.id_destino AND d.id_idioma = 'ES')
 UNION ALL SELECT 'moneda no DOP', COUNT(*) FROM Eurovip.servicio WHERE id_moneda <> 'DOP';
 SELECT id, id_servicio, descripcion, id_destino, caratulaDestino, CAST(precioWeb AS decimal(10,2)) precio FROM Eurovip.inicio WHERE tipo_servicio = 'CIRCUITO' ORDER BY id;
+COMMIT;
+
+
+/* ##########################################################################################
+   EXCURSIONES LA ROMANA Y SAMANÁ 16/10/2026 (explicación en la BITÁCORA). Script tal cual se aplicó.
+   ########################################################################################## */
+/* Copia de las excursiones de La Romana y Samaná de ViajeVDT.dbo.servicio_excursion a TropitoursVDT.Eurovip.servicio_excursion
+   — 16/10/2026. ViajeVDT (10.10.10.29) solo se leyó. 24 excursiones: La Romana 18 y Samaná 6 (ninguna trae descripción).
+   • Mismo número (id_Excursion) que en ViajeVDT cuando está libre en Eurovip; si ya lo usa otra excursión, número nuevo.
+   • Destino escrito como en Eurovip.destino ('La Romana', 'Samaná'); nombres sin espacios de más.
+   • No se repite: si ya hay una excursión con el mismo nombre en ese destino, se salta.
+   • Al final se actualizan las tarjetas de la Home (una por destino) con spActualizaInicioExcursion. */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRAN;
+DECLARE @json NVARCHAR(MAX) = N'[{"id_Excursion":37,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Isla Saona (desde Bayahibe\/La Romana)","descripcion":"","cancelable":false,"precio":68.0000},{"id_Excursion":38,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Santo Domingo City Tour (desde Bayahibe\/La Romana)","descripcion":"","cancelable":false,"precio":82.0000},{"id_Excursion":39,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Bayahibe Runners","descripcion":null,"cancelable":false,"precio":82.0000},{"id_Excursion":188,"id_destino":"Samaná","id_tipo_servicio":"Excursion","nombre":"Excursión Limón a Caballo","descripcion":null,"cancelable":false,"precio":48.0000},{"id_Excursion":189,"id_destino":"Samaná","id_tipo_servicio":"Excursion","nombre":"Excursión Monkeyland","descripcion":null,"cancelable":false,"precio":63.0000},{"id_Excursion":190,"id_destino":"Samaná","id_tipo_servicio":"Excursion","nombre":"Excursión Tirolesas","descripcion":"","cancelable":false,"precio":73.0000},{"id_Excursion":191,"id_destino":"Samaná","id_tipo_servicio":"Excursion","nombre":"Excursión Playa Rincón Samaná","descripcion":null,"cancelable":false,"precio":82.0000},{"id_Excursion":192,"id_destino":"Samaná","id_tipo_servicio":"Excursion","nombre":"Excursión Cascada el Limón","descripcion":null,"cancelable":false,"precio":82.0000},{"id_Excursion":193,"id_destino":"Samaná","id_tipo_servicio":"Excursion","nombre":"Excursión Tirolesas + Monkeyland ","descripcion":null,"cancelable":false,"precio":87.0000},{"id_Excursion":311,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Zipline Adventure","descripcion":"","cancelable":false,"precio":87.5000},{"id_Excursion":312,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Saona Blue Lagoon","descripcion":null,"cancelable":false,"precio":99.0000},{"id_Excursion":313,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Zipline Adventure","descripcion":"","cancelable":false,"precio":87.5000},{"id_Excursion":314,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Saona Blue Lagoon","descripcion":null,"cancelable":false,"precio":99.0000},{"id_Excursion":315,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Coco Bongo Regular Entrance","descripcion":null,"cancelable":false,"precio":101.0000},{"id_Excursion":316,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Zipline Adventure","descripcion":"","cancelable":false,"precio":87.5000},{"id_Excursion":317,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Saona Blue Lagoon","descripcion":null,"cancelable":false,"precio":99.0000},{"id_Excursion":318,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Zipline Adventure","descripcion":"","cancelable":false,"precio":87.5000},{"id_Excursion":319,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Saona Blue Lagoon","descripcion":null,"cancelable":false,"precio":99.0000},{"id_Excursion":320,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Zipline Adventure","descripcion":"","cancelable":false,"precio":87.5000},{"id_Excursion":321,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Saona Blue Lagoon","descripcion":null,"cancelable":false,"precio":99.0000},{"id_Excursion":322,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Zipline Adventure","descripcion":"","cancelable":false,"precio":87.5000},{"id_Excursion":323,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Saona Blue Lagoon","descripcion":null,"cancelable":false,"precio":99.0000},{"id_Excursion":324,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Coco Bongo Regular Entrance","descripcion":null,"cancelable":false,"precio":101.0000},{"id_Excursion":325,"id_destino":"La Romana","id_tipo_servicio":"Excursion","nombre":"Excursión Samaná, Cascada El Limón e Isla Bacardi desde Bayahibe","descripcion":"","cancelable":false,"precio":163.5000}]';
+DECLARE @j TABLE (id int, destino varchar(50), tipo varchar(20), nombre varchar(500), descripcion varchar(max), cancelable bit, precio money);
+INSERT @j
+SELECT j.id_Excursion,
+       ISNULL((SELECT TOP 1 d.id_destino FROM Eurovip.destino d WHERE d.id_destino = LTRIM(RTRIM(j.id_destino)) AND d.id_idioma = 'ES'), LTRIM(RTRIM(j.id_destino))),
+       ISNULL(j.id_tipo_servicio, 'Excursion'),
+       LTRIM(RTRIM(REPLACE(REPLACE(j.nombre, '   ', ' '), '  ', ' '))), NULLIF(LTRIM(RTRIM(j.descripcion)), ''), j.cancelable, j.precio
+FROM OPENJSON(@json) WITH (id_Excursion int, id_destino varchar(50), id_tipo_servicio varchar(20), nombre varchar(500), descripcion varchar(max), cancelable bit, precio money) j;
+DELETE x FROM @j x WHERE EXISTS (SELECT 1 FROM Eurovip.servicio_excursion e WHERE e.nombre = x.nombre AND e.id_destino = x.destino);
+PRINT CONCAT('Ya estaban (se saltan): ', @@ROWCOUNT);
+
+-- 1) Con el mismo número (libre en Eurovip)
+SET IDENTITY_INSERT Eurovip.servicio_excursion ON;
+INSERT INTO Eurovip.servicio_excursion (id_Excursion, id_destino, id_tipo_servicio, nombre, descripcion, cancelable, precio)
+SELECT x.id, x.destino, x.tipo, x.nombre, x.descripcion, x.cancelable, x.precio FROM @j x
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.servicio_excursion e WHERE e.id_Excursion = x.id);
+PRINT CONCAT('Copiadas con el mismo número: ', @@ROWCOUNT);
+SET IDENTITY_INSERT Eurovip.servicio_excursion OFF;
+
+-- 2) Con número nuevo (el suyo ya lo usa otra excursión)
+INSERT INTO Eurovip.servicio_excursion (id_destino, id_tipo_servicio, nombre, descripcion, cancelable, precio)
+SELECT x.destino, x.tipo, x.nombre, x.descripcion, x.cancelable, x.precio FROM @j x
+WHERE NOT EXISTS (SELECT 1 FROM Eurovip.servicio_excursion e WHERE e.nombre = x.nombre AND e.id_destino = x.destino)
+ORDER BY x.id;
+PRINT CONCAT('Copiadas con número nuevo: ', @@ROWCOUNT);
+
+-- 3) Tarjetas de la Home
+EXEC Eurovip.spActualizaInicioExcursion 'La Romana';
+EXEC Eurovip.spActualizaInicioExcursion 'Samaná';
+
+SELECT id_destino, COUNT(*) n, MIN(precio) desde FROM Eurovip.servicio_excursion GROUP BY id_destino;
+SELECT id, id_servicio, id_destino, descripcion, CAST(precioWeb AS decimal(10,2)) precio, contenedor FROM Eurovip.inicio WHERE tipo_servicio = 'EXCURSION';
+SELECT 'destino no existe' t, COUNT(*) FROM Eurovip.servicio_excursion e WHERE NOT EXISTS (SELECT 1 FROM Eurovip.destino d WHERE d.id_destino = e.id_destino AND d.id_idioma = 'ES');
 COMMIT;
