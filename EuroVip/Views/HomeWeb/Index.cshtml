@@ -22,8 +22,15 @@
     .hw-fuera summary::-webkit-details-marker { display: none; }
     .hw-fuera summary span { font-weight: 600; opacity: .85; font-size: 13px; }
     .hw-fuera summary .fl { margin-left: auto; transition: transform .2s; }
-    .hw-fuera[open] summary .fl { transform: rotate(180deg); }
+    .hw-fuera[open] > summary .fl { transform: rotate(180deg); }
     .hw-fuera-l { display: grid; gap: 8px; padding: 0 14px 14px; }
+    .hw-fuera summary .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .hw-fuera summary .chips em { font-style: normal; font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: rgba(255,255,255,.75); }
+    .hw-fuera-g { border-radius: 14px; border: 1px solid var(--ev-line); background: var(--ev-surface); color: var(--ev-text); }
+    .hw-fuera .hw-fuera-g > summary { padding: 10px 12px; font-weight: 800; }
+    .hw-fuera-g > summary .n { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--ev-surface-2); color: var(--ev-muted); opacity: 1; }
+    .hw-fuera-g[open] > summary .fl { transform: rotate(180deg); }
+    .hw-fuera-g > .hw-fuera-l { padding: 0 10px 10px; }
     .hw-fuera-l .it { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--ev-surface); color: var(--ev-text); border: 1px solid var(--ev-line); }
     .hw-fuera-l .ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--ev-mint); color: var(--ev-deep); flex-shrink: 0; font-size: 17px; }
     .hw-fuera-l .ic.mal { background: #FEF3C7; color: #B54708; }
@@ -282,19 +289,30 @@ const HW = (() => {
         const f = D.fuera || [];
         const sinVenta = f.filter(x => !x.proxima);   // incluye hoteles ocultos o sin sección
         if (!f.length) { $('#hwFuera').innerHTML = ''; return; }
-        $('#hwFuera').innerHTML = `
-            <details class="hw-fuera ${sinVenta.length ? 'mal' : ''}" ${sinVenta.length ? 'open' : ''}>
-                <summary><i class="bi ${sinVenta.length ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}"></i>
-                    <b>${f.length} ${f.length === 1 ? 'cosa cargada no sale' : 'cosas cargadas no salen'} en la Home</b>
-                    <span>${sinVenta.length ? `${sinVenta.length} sin fechas a la venta · ` : ''}toca para ver por qué</span><i class="bi bi-chevron-down fl"></i></summary>
-                <div class="hw-fuera-l">${f.map(x => `
+        // Desplegable cerrado de entrada (solo el resumen); dentro, un grupo desplegable por tipo
+        const grupos = [['CIRCUITO', 'Circuitos', 'bi-signpost-split'], ['OFERTA', 'Ofertas de hotel', 'bi-building'], ['HOTEL', 'Hoteles', 'bi-house-heart']]
+            .map(([t, n, i]) => ({ t, n, i, l: f.filter(x => (['CIRCUITO', 'HOTEL'].includes(x.tipo) ? x.tipo : 'OFERTA') === t) })).filter(g => g.l.length);
+        let abierto = false; try { abierto = localStorage.getItem('ev.homeweb.fuera') === '1'; } catch { }
+        const item = x => `
                     <div class="it">
                         <span class="ic ${x.proxima ? '' : 'mal'}"><i class="bi ${x.tipo === 'CIRCUITO' ? 'bi-signpost-split' : x.tipo === 'HOTEL' ? 'bi-house-heart' : 'bi-building'}"></i></span>
                         <div class="tx"><b>${esc(x.nombre)} <small>${x.tipo === 'CIRCUITO' ? 'Circuito' : x.tipo === 'HOTEL' ? 'Hotel' : 'Ofertas de hotel'}</small></b><span>${esc(x.motivo)}</span></div>
                         ${x.url ? `<a class="ev-btn sm" href="${esc(x.url)}"><i class="bi ${x.tipo === 'HOTEL' ? 'bi-pencil' : 'bi-plus-lg'}"></i> ${esc(x.accion)}</a>` : ''}
-                    </div>`).join('')}
+                    </div>`;
+        $('#hwFuera').innerHTML = `
+            <details class="hw-fuera ${sinVenta.length ? 'mal' : ''}" ${abierto ? 'open' : ''}>
+                <summary><i class="bi ${sinVenta.length ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}"></i>
+                    <b>${f.length} ${f.length === 1 ? 'cosa cargada no sale' : 'cosas cargadas no salen'} en la Home</b>
+                    <span class="chips">${grupos.map(g => `<em>${g.l.length} ${g.n.toLowerCase()}</em>`).join('')}</span>
+                    <span>${sinVenta.length ? `${sinVenta.length} sin fechas a la venta · ` : ''}toca para ver por qué</span><i class="bi bi-chevron-down fl"></i></summary>
+                <div class="hw-fuera-l">${grupos.map(g => `
+                    <details class="hw-fuera-g" ${grupos.length === 1 ? 'open' : ''}>
+                        <summary><i class="bi ${g.i}"></i> ${g.n} <span class="n">${g.l.length}</span><i class="bi bi-chevron-down fl"></i></summary>
+                        <div class="hw-fuera-l">${g.l.map(item).join('')}</div>
+                    </details>`).join('')}
                 </div>
             </details>`;
+        $('#hwFuera .hw-fuera').addEventListener('toggle', e => { try { localStorage.setItem('ev.homeweb.fuera', e.target.open ? '1' : '0'); } catch { } });
     }
 
     function pintarTodo() {
