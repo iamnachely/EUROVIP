@@ -2866,6 +2866,131 @@ GO
 
 
 /* ##########################################################################################
+   FASE 15 — TRASLADOS  (16/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: "debo hacer un mantenimiento para que el usuario cargue Traslados
+   para la web, con sus imágenes y datos, en base a la búsqueda de traslados del tour operador
+   (Hotelbeds): ver, crear, editar, cargar imagen, eliminar, desactivar".
+   No había nada de traslados ni en Eurovip ni en ViajeVDT: se crea desde cero.
+   Cómo funciona (explicado fácil):
+     • El cliente busca en la web: Desde (aeropuerto, ej. PUJ) · A (su hotel) · ida y vuelta o solo
+       ida · viajeros. La web le muestra las opciones activas de ese aeropuerto al destino del hotel.
+     • Cada fila de Eurovip.traslado es UNA opción: Compartido o Privado, categoría (Estándar,
+       Premium, Lujo), vehículo, maletas, duración, pasajeros mínimo/máximo, precio y foto.
+     • Se asocia al DESTINO (la zona de los hoteles) y al aeropuerto de salida; por defecto vale para
+       todos los hoteles del destino y, si no, solo para los hoteles de Eurovip.traslado_alojamiento.
+       No se asocia a ofertas: el cliente lo añade a su reserva del hotel.
+     • Pantalla: /Traslados/Index (módulo «traslados»). La web: Eurovip.spPortalBuscarTraslados.
+   Cómo se aplicó: CAMBIO 52 a 55, tal cual aquí. Probado con 4 traslados de ejemplo dentro de una
+   transacción con ROLLBACK (no quedó ninguno).
+   ########################################################################################## */
+/* ---------- CAMBIO 52: Eurovip.traslado — un traslado que se vende en la web ----------
+   Igual que en la búsqueda de traslados del tour operador (Hotelbeds): "Desde" un aeropuerto, "A" un destino
+   (la zona de los hoteles) o solo a algunos hoteles, ida y vuelta o solo ida, y por cada opción:
+   tipo (Compartido / Privado), categoría (Estándar / Premium / Lujo), vehículo, maletas, duración,
+   pasajeros mínimo y máximo, precio y foto del vehículo.
+     • cobro = 'VEHICULO'  -> el precio es para todos los viajeros ("Precio ida y vuelta, para todos los viajeros")
+       cobro = 'PERSONA'   -> el precio se multiplica por la cantidad de pasajeros
+     • precio_ida / precio_ida_vuelta: al menos uno. Moneda DOP como todo Eurovip.
+     • todos_hoteles = 1 -> sirve para cualquier hotel del destino; 0 -> solo los de Eurovip.traslado_alojamiento.
+     • imagen = nombre del archivo en wwwroot/imagenes/traslados (lo pone la pantalla al subir la foto).
+     • activo = 0 -> no sale en la web (desactivado), pero no se borra. */
+IF OBJECT_ID('Eurovip.traslado') IS NULL
+CREATE TABLE Eurovip.traslado (
+    id_traslado         int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_traslado PRIMARY KEY,
+    nombre              varchar(150) NOT NULL,
+    tipo                varchar(20)  NOT NULL CONSTRAINT CK_Eurovip_traslado_tipo CHECK (tipo IN ('COMPARTIDO', 'PRIVADO')),
+    categoria           varchar(20)  NOT NULL CONSTRAINT DF_Eurovip_traslado_categoria DEFAULT ('ESTANDAR')
+                                     CONSTRAINT CK_Eurovip_traslado_categoria CHECK (categoria IN ('ESTANDAR', 'PREMIUM', 'LUJO')),
+    vehiculo            varchar(20)  NOT NULL CONSTRAINT CK_Eurovip_traslado_vehiculo CHECK (vehiculo IN ('BUS', 'MINIBUS', 'VAN', 'COCHE', 'LIMUSINA')),
+    id_estacion_origen  varchar(10)  NOT NULL,
+    id_destino          varchar(50)  NOT NULL,
+    id_pais             char(2)      NULL,
+    maletas             smallint     NOT NULL CONSTRAINT DF_Eurovip_traslado_maletas DEFAULT (1),
+    duracion_min        smallint     NULL,
+    pasajeros_min       smallint     NOT NULL CONSTRAINT DF_Eurovip_traslado_pmin DEFAULT (1),
+    pasajeros_max       smallint     NOT NULL,
+    cobro               varchar(10)  NOT NULL CONSTRAINT DF_Eurovip_traslado_cobro DEFAULT ('VEHICULO')
+                                     CONSTRAINT CK_Eurovip_traslado_cobro CHECK (cobro IN ('VEHICULO', 'PERSONA')),
+    precio_ida          money        NULL,
+    precio_ida_vuelta   money        NULL,
+    id_moneda           char(3)      NOT NULL CONSTRAINT DF_Eurovip_traslado_moneda DEFAULT ('DOP'),
+    cancelable          bit          NOT NULL CONSTRAINT DF_Eurovip_traslado_cancelable DEFAULT (1),
+    horas_cancelacion   smallint     NULL,
+    descripcion         varchar(max) NULL,
+    imagen              varchar(200) NULL,
+    todos_hoteles       bit          NOT NULL CONSTRAINT DF_Eurovip_traslado_todos DEFAULT (1),
+    activo              bit          NOT NULL CONSTRAINT DF_Eurovip_traslado_activo DEFAULT (1),
+    usuario             varchar(50)  NULL,
+    fecha_alta          datetime2(0) NOT NULL CONSTRAINT DF_Eurovip_traslado_alta DEFAULT (SYSDATETIME()),
+    fecha_modificacion  datetime2(0) NULL,
+    CONSTRAINT CK_Eurovip_traslado_precio CHECK (precio_ida IS NOT NULL OR precio_ida_vuelta IS NOT NULL),
+    CONSTRAINT CK_Eurovip_traslado_pasajeros CHECK (pasajeros_min >= 1 AND pasajeros_max >= pasajeros_min)
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_traslado_ruta' AND object_id = OBJECT_ID('Eurovip.traslado'))
+    CREATE INDEX IX_Eurovip_traslado_ruta ON Eurovip.traslado (id_estacion_origen, id_destino, activo);
+GO
+
+/* ---------- CAMBIO 53: Eurovip.traslado_alojamiento — hoteles a los que llega un traslado ----------
+   Solo se usa cuando traslado.todos_hoteles = 0. Al borrar el traslado se borran sus filas. */
+IF OBJECT_ID('Eurovip.traslado_alojamiento') IS NULL
+CREATE TABLE Eurovip.traslado_alojamiento (
+    id_traslado     int NOT NULL CONSTRAINT FK_Eurovip_traslado_alojamiento_traslado REFERENCES Eurovip.traslado (id_traslado) ON DELETE CASCADE,
+    id_alojamiento  int NOT NULL,
+    CONSTRAINT PK_Eurovip_traslado_alojamiento PRIMARY KEY (id_traslado, id_alojamiento)
+);
+GO
+
+/* ---------- CAMBIO 54: módulo «traslados» (Usuarios y accesos) ---------- */
+IF NOT EXISTS (SELECT 1 FROM Eurovip.UsuarioAcceso WHERE clave = 'traslados')
+    INSERT INTO Eurovip.UsuarioAcceso (nombre_modulo, Categoria, clave, controladores, icono, descripcion, orden)
+    VALUES (N'Traslados', N'Cargas', 'traslados', 'Traslados', 'bi-bus-front', N'Ver, cargar, editar, desactivar y eliminar traslados con su foto.', 36);
+GO
+
+/* ---------- CAMBIO 55: consulta para la WEB — buscar traslados ----------
+   Como el buscador del tour operador: Desde (aeropuerto) · A (hotel o destino) · Viajeros · Ida y vuelta / Sólo ida.
+     @Origen       = código del aeropuerto (ej. 'PUJ')
+     @IdAlojamiento= hotel elegido (opcional; si viene, el destino es el del hotel)
+     @Destino      = destino (si no se eligió hotel)
+     @Pasajeros    = adultos + niños
+     @IdaVuelta    = 1 ida y vuelta, 0 solo ida
+   Devuelve solo los activos con precio para esa opción y cupo para esos pasajeros, del más barato al más caro.
+   precio_total = precio (si se cobra por vehículo) o precio × pasajeros (si se cobra por persona). */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalBuscarTraslados
+    @Origen        varchar(10),
+    @IdAlojamiento int = NULL,
+    @Destino       varchar(50) = NULL,
+    @Pasajeros     int = 1,
+    @IdaVuelta     bit = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @IdAlojamiento IS NOT NULL
+        SELECT TOP 1 @Destino = LTRIM(RTRIM(id_destino)) FROM Eurovip.alojamiento WHERE id_alojamiento = @IdAlojamiento;
+    SET @Pasajeros = CASE WHEN ISNULL(@Pasajeros, 0) < 1 THEN 1 ELSE @Pasajeros END;
+
+    SELECT t.id_traslado, t.nombre, t.tipo, t.categoria, t.vehiculo, t.id_estacion_origen AS origen,
+           (SELECT TOP 1 e.nombre FROM Eurovip.estacion e WHERE e.id_estacion = t.id_estacion_origen) AS origen_nombre,
+           t.id_destino AS destino, t.maletas, t.duracion_min, t.pasajeros_min, t.pasajeros_max, t.cobro,
+           CAST(CASE WHEN @IdaVuelta = 1 THEN t.precio_ida_vuelta ELSE t.precio_ida END AS decimal(19,4)) AS precio,
+           CAST(CASE WHEN @IdaVuelta = 1 THEN t.precio_ida_vuelta ELSE t.precio_ida END
+                * CASE WHEN t.cobro = 'PERSONA' THEN @Pasajeros ELSE 1 END AS decimal(19,4)) AS precio_total,
+           t.id_moneda, t.cancelable, t.horas_cancelacion, t.descripcion,
+           CASE WHEN t.imagen IS NULL THEN NULL ELSE '/imagenes/traslados/' + t.imagen END AS imagen
+      FROM Eurovip.traslado t
+     WHERE t.activo = 1
+       AND t.id_estacion_origen = @Origen
+       AND (@Destino IS NULL OR t.id_destino = @Destino)
+       AND (CASE WHEN @IdaVuelta = 1 THEN t.precio_ida_vuelta ELSE t.precio_ida END) IS NOT NULL
+       AND @Pasajeros BETWEEN t.pasajeros_min AND t.pasajeros_max
+       AND (t.todos_hoteles = 1 OR @IdAlojamiento IS NULL
+            OR EXISTS (SELECT 1 FROM Eurovip.traslado_alojamiento a WHERE a.id_traslado = t.id_traslado AND a.id_alojamiento = @IdAlojamiento))
+     ORDER BY precio_total, t.tipo, t.categoria;
+END
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -3184,6 +3309,11 @@ GO
                  quedaron como circuitos distintos.
 
    16/10/2026  FASE 14 aplicada (CAMBIO 48 a 51): excursiones en la Home (ver FASE 14).
+
+   16/10/2026  FASE 15 aplicada (CAMBIO 52 a 55): traslados — tablas Eurovip.traslado y
+               Eurovip.traslado_alojamiento, módulo 'traslados' (id 13; dárselo a los usuarios en
+               "Usuarios y accesos") y Eurovip.spPortalBuscarTraslados para la web. Tablas vacías:
+               los traslados se cargan desde la pantalla /Traslados/Index.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

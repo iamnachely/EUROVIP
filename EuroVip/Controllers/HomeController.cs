@@ -32,6 +32,7 @@ namespace EuroVip.Controllers
             ("Nuevo paquete (Express)", "cargar paquete oferta hotel express nueva carga manual", "/CargaManual/Express", "carga_manual", "bi-lightning-charge"),
             ("Nuevo paquete con Excel (Clásica)", "cargar paquete oferta excel clasica", "/CargaManual/Clasica", "carga_manual", "bi-file-earmark-excel"),
             ("Excursiones", "excursiones excursion tour actividad buscar cargar editar foto", "/Excursiones/Index", "excursiones", "bi-compass"),
+            ("Traslados", "traslados traslado transfer aeropuerto hotel shuttle compartido privado van", "/Traslados/Index", "traslados", "bi-bus-front"),
             ("Paquetes cargados", "lista paquetes ofertas editar desactivar", "/Ofertas/Index", "carga_manual", "bi-pencil-square"),
             ("Nuevo hotel", "crear hotel vitrina", "/Hoteles/Index?nuevo=1", "hoteles", "bi-building-add"),
             ("Hoteles", "hotel fotos vitrina", "/Hoteles/Index", "hoteles", "bi-building"),
@@ -227,7 +228,7 @@ namespace EuroVip.Controllers
             new() { Titulo = "Carga de Hoteles", Descripcion = "Publica hoteles en la vitrina: precio, régimen e imagen.", Icono = "bi-building", Etiqueta = "Disponible", Url = "/Hoteles/Index", Disponible = true, Modulo = "hoteles" },
             new() { Titulo = "Paquetes",         Descripcion = "Ofertas de hotel: Express o Clásica (con Excel). Vuelo opcional.", Icono = "bi-box-seam", Etiqueta = "Disponible", Url = "/Ofertas/Index", Disponible = true, Modulo = "carga_manual" },
             new() { Titulo = "Excursiones",      Descripcion = "Excursiones por destino: precio, cancelación, descripción y foto.", Icono = "bi-compass", Etiqueta = "Disponible", Url = "/Excursiones/Index", Disponible = true, Modulo = "excursiones" },
-            new() { Titulo = "Carga Traslado",   Descripcion = "Traslados aeropuerto ↔ hotel y entre ciudades.",   Icono = "bi-car-front",      Etiqueta = "Nuevo" },
+            new() { Titulo = "Traslados",        Descripcion = "Traslados aeropuerto → hotel: compartido o privado, vehículo, precio y foto.", Icono = "bi-bus-front", Etiqueta = "Disponible", Url = "/Traslados/Index", Disponible = true, Modulo = "traslados" },
             new() { Titulo = "Carga Circuito",   Descripcion = "Catálogo, itinerario, hoteles y salidas. Vuelo opcional.", Icono = "bi-signpost-split", Etiqueta = "Disponible", Url = "/Circuitos/Index", Disponible = true, Modulo = "circuitos" },
         };
 

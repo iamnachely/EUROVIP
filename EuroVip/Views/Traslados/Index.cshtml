@@ -1,0 +1,696 @@
+@{
+    ViewData["Title"] = "Traslados";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<style>
+    /* Indicadores que también filtran */
+    .tr-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 18px 0 4px; }
+    .tr-kpi { text-align: left; border: 1px solid var(--ev-line); background: var(--ev-surface); border-radius: 18px; padding: 14px 16px; cursor: pointer; font: inherit; color: inherit;
+              transition: border-color .2s, transform .2s, box-shadow .2s; }
+    .tr-kpi:hover { transform: translateY(-2px); box-shadow: var(--ev-shadow); }
+    .tr-kpi.on { border-color: var(--ev-teal); box-shadow: 0 0 0 4px rgba(116,242,230,.3); }
+    .tr-kpi b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.6px; }
+    .tr-kpi small { color: var(--ev-muted); font-weight: 700; font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+    .tr-kpi.mal b { color: #B54708; }
+    .tr-cuenta { color: var(--ev-muted); font-weight: 700; font-size: 13px; margin: 6px 0 12px; }
+
+    /* Ayuda: cómo funciona */
+    .tr-ayuda { border-radius: 20px; border: 1px solid #B3FFF3; background: #ECFEFB; color: #0E6F68; margin: 14px 0 4px; }
+    .tr-ayuda summary { list-style: none; cursor: pointer; display: flex; gap: 10px; align-items: center; padding: 13px 18px; font-weight: 800; font-size: 14px; }
+    .tr-ayuda summary::-webkit-details-marker { display: none; }
+    .tr-ayuda summary .fl { margin-left: auto; transition: transform .2s; }
+    .tr-ayuda[open] summary .fl { transform: rotate(180deg); }
+    .tr-ayuda ol { margin: 0; padding: 0 22px 16px 40px; display: grid; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--ev-text); }
+
+    /* Sección de una ruta */
+    .tr-sec { margin-bottom: 26px; }
+    .tr-sec-h { display: flex; gap: 16px; align-items: center; padding: 18px 22px; border-radius: 22px; color: #fff; margin-bottom: 14px;
+                background: linear-gradient(135deg, #0B2530, #0E6F68 60%, #2BD4C4); flex-wrap: wrap; }
+    .tr-sec-h .ruta { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; flex-wrap: wrap; }
+    .tr-sec-h .punto { display: grid; gap: 1px; }
+    .tr-sec-h .punto small { font: 800 11px var(--ev-font); letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+    .tr-sec-h .punto b { font-size: 19px; letter-spacing: -.3px; }
+    .tr-sec-h .flecha { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.14); font-size: 18px; }
+    .tr-sec-h .res { font-weight: 600; opacity: .9; font-size: 13.5px; }
+    .tr-sec.plegada .tr-sec-cuerpo { display: none; }
+    .tr-pleg { width: 40px; height: 40px; border-radius: 13px; border: 1px solid rgba(255,255,255,.4); background: rgba(255,255,255,.12); color: #fff; cursor: pointer; font-size: 17px; transition: transform .3s; }
+    .tr-sec.plegada .tr-pleg { transform: rotate(-90deg); }
+
+    /* Tarjeta (como en la búsqueda del tour operador) */
+    .tr-lista { display: grid; gap: 14px; }
+    .tr-card { display: grid; grid-template-columns: 230px minmax(0, 1fr) 230px; gap: 0; border-radius: 20px; border: 1px solid var(--ev-line); background: var(--ev-surface); overflow: hidden;
+               transition: transform .25s var(--ev-ease), box-shadow .25s, border-color .25s; }
+    .tr-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); border-color: var(--ev-aqua); }
+    .tr-card.off { opacity: .6; }
+    .tr-card.off .tr-foto img { filter: grayscale(1); }
+    .tr-foto { position: relative; background: #F4F7F8; display: grid; place-items: center; cursor: pointer; min-height: 170px; }
+    .tr-foto img { width: 100%; height: 100%; object-fit: contain; padding: 12px; display: block; }
+    .tr-foto .sin { text-align: center; color: var(--ev-muted); font-weight: 700; font-size: 12.5px; }
+    .tr-foto .sin i { font-size: 44px; display: block; color: var(--ev-line); }
+    .tr-foto.sobre { outline: 3px dashed var(--ev-teal); outline-offset: -8px; }
+    .tr-foto .subiendo { position: absolute; inset: 0; background: rgba(11,18,21,.55); color: #fff; display: grid; place-items: center; font-weight: 800; }
+    .tr-mid { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .tr-tit { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .tr-tit h3 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.4px; }
+    .tr-cat { font: 700 12px var(--ev-font); padding: 3px 10px; border-radius: 99px; border: 1px solid var(--ev-text); }
+    .tr-cat.PREMIUM, .tr-cat.LUJO { background: var(--ev-ink); color: #fff; border-color: var(--ev-ink); }
+    .tr-nom { color: var(--ev-muted); font-size: 12.5px; font-weight: 600; margin-top: -6px; }
+    .tr-feat { display: grid; grid-template-columns: repeat(2, minmax(0, max-content)); gap: 6px 26px; font-size: 13.5px; font-weight: 600; }
+    .tr-feat span { display: inline-flex; gap: 7px; align-items: center; }
+    .tr-feat i { color: var(--ev-deep); }
+    .tr-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+    .tr-chip { font: 700 11.5px var(--ev-font); padding: 4px 9px; border-radius: 9px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); display: inline-flex; gap: 5px; align-items: center; }
+    .tr-chip.ok { background: #ECFDF3; color: #067647; border-color: #ABEFC6; }
+    .tr-chip.no { background: #FEF3F2; color: #B42318; border-color: #FECDCA; }
+    .tr-chip.av { background: #FFFAEB; color: #93370D; border-color: #FEDF89; }
+    .tr-der { border-left: 1px solid var(--ev-line); margin: 14px 0; padding: 2px 18px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
+    .tr-der .pr { font-size: 24px; font-weight: 800; letter-spacing: -.5px; }
+    .tr-der .nota { color: var(--ev-muted); font-size: 12.5px; font-weight: 600; line-height: 1.35; }
+    .tr-der .ida { font-size: 13px; font-weight: 700; }
+    .tr-der .acc { margin-top: auto; display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; padding-top: 8px; }
+    @@media (max-width: 900px) { .tr-card { grid-template-columns: 1fr; } .tr-der { border-left: 0; border-top: 1px solid var(--ev-line); margin: 0 18px; padding: 12px 0 16px; align-items: flex-start; text-align: left; } .tr-der .acc { justify-content: flex-start; } }
+
+    /* Editor */
+    .tr-paso { border: 1px solid var(--ev-line); border-radius: 18px; padding: 14px 16px 6px; margin-bottom: 14px; }
+    .tr-paso > h3 { margin: 0 0 12px; font-size: 14.5px; font-weight: 800; display: flex; gap: 8px; align-items: center; }
+    .tr-paso > h3 .n { width: 24px; height: 24px; border-radius: 50%; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-size: 12px; }
+    .tr-paso > h3 small { margin-left: auto; color: var(--ev-muted); font-weight: 600; font-size: 12px; }
+    .tr-seg { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tr-seg button { flex: 1; min-width: 110px; border: 1px solid var(--ev-line); background: var(--ev-surface); border-radius: 14px; padding: 10px 12px; cursor: pointer; font: 700 13.5px var(--ev-font); color: var(--ev-text);
+                     display: flex; gap: 8px; align-items: center; justify-content: center; }
+    .tr-seg button.on { border-color: var(--ev-ink); background: var(--ev-ink); color: var(--ev-aqua); }
+    .tr-seg button small { display: block; font-weight: 600; opacity: .7; font-size: 11px; }
+    .tr-zona { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; align-items: center; padding: 12px; border-radius: 18px; border: 2px dashed var(--ev-line);
+               background: var(--ev-surface-2); margin-bottom: 14px; }
+    .tr-zona.sobre { border-color: var(--ev-teal); background: var(--ev-mint); }
+    .tr-zona-prev { aspect-ratio: 16/10; border-radius: 12px; overflow: hidden; background: #fff; display: grid; place-items: center; }
+    .tr-zona-prev img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .tr-zona-prev .sin { color: var(--ev-muted); font-weight: 700; font-size: 12.5px; text-align: center; }
+    .tr-zona-acc { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .tr-zona-acc small { flex-basis: 100%; color: var(--ev-muted); font-weight: 600; }
+    .tr-money { display: flex; align-items: center; border: 1px solid var(--ev-line); border-radius: 14px; background: var(--ev-surface); overflow: hidden; }
+    .tr-money b { padding: 0 12px; color: var(--ev-muted); font-weight: 800; }
+    .tr-money input { border: 0 !important; box-shadow: none !important; flex: 1; min-width: 0; }
+    .tr-busc { position: absolute; left: 0; right: 0; top: 100%; z-index: 30; background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 14px; box-shadow: var(--ev-shadow); margin-top: 4px; max-height: 260px; overflow: auto; }
+    .tr-busc button { display: flex; width: 100%; justify-content: space-between; gap: 8px; border: 0; background: none; padding: 9px 12px; cursor: pointer; font: 600 13.5px var(--ev-font); color: var(--ev-text); text-align: left; }
+    .tr-busc button:hover { background: var(--ev-surface-2); }
+    .tr-busc small { color: var(--ev-muted); }
+    .tr-hoteles { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .tr-hoteles span { display: inline-flex; gap: 6px; align-items: center; font: 700 12.5px var(--ev-font); padding: 5px 6px 5px 10px; border-radius: 10px; background: var(--ev-grad-soft); }
+    .tr-hoteles button { border: 0; background: rgba(0,0,0,.08); border-radius: 7px; width: 22px; height: 22px; cursor: pointer; }
+    .ui-f.err .tr-hoteles-caja { border-color: #F04438; }
+    .tr-prev { border-radius: 18px; background: var(--ev-surface-2); padding: 14px; margin-top: 6px; }
+    .tr-prev .tr-card { grid-template-columns: 150px minmax(0,1fr) 170px; }
+    .tr-prev .tr-card:hover { transform: none; }
+    .tr-prev .tr-foto { min-height: 120px; }
+    .tr-prev .tr-tit h3 { font-size: 18px; }
+    .tr-prev .tr-der .pr { font-size: 20px; }
+    .tr-sim { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 12px; }
+    .tr-sim .total { margin-left: auto; text-align: right; }
+    .tr-sim .total b { display: block; font-size: 24px; font-weight: 800; }
+    .tr-sim .total small { color: var(--ev-muted); font-weight: 600; }
+    @@media (max-width: 640px) { .tr-zona { grid-template-columns: 1fr; } .tr-prev .tr-card { grid-template-columns: 1fr; } }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="ui-hero ev-rise">
+    <i class="bi bi-bus-front ui-hero-ico" aria-hidden="true"></i>
+    <div>
+        <span class="ev-chip dark"><i class="bi bi-bus-front"></i> Catálogo · Traslados</span>
+        <h1>Traslados</h1>
+        <p>Carga los traslados del aeropuerto al hotel como en el tour operador: desde qué aeropuerto, a qué destino u hoteles, si es compartido o privado, el vehículo, maletas, pasajeros, precio y foto.</p>
+    </div>
+    <div class="ui-hero-acts">
+        <button class="ev-btn" type="button" id="trNuevo"><i class="bi bi-plus-lg"></i> Nuevo traslado</button>
+    </div>
+    <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+        <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+        <g><path d="M-240 26 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 q30 -6 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
+    </svg>
+</section>
+
+<details class="tr-ayuda" id="trAyuda">
+    <summary><i class="bi bi-lightbulb"></i> ¿Cómo funcionan los traslados? <i class="bi bi-chevron-down fl"></i></summary>
+    <ol>
+        <li>El cliente busca en la web: <b>Desde</b> un aeropuerto (ej. PUJ, Punta Cana) <b>A</b> su hotel, las fechas, <b>ida y vuelta o solo ida</b> y cuántos viajeros.</li>
+        <li>La web le muestra todos los traslados <b>activos</b> de ese aeropuerto al destino del hotel, del más barato al más caro (como en el tour operador).</li>
+        <li>Cada traslado es una <b>opción</b>: Compartido (con otros pasajeros, en autobús) o Privado (solo ellos, en van o coche), con su categoría (Estándar, Premium…).</li>
+        <li>El precio puede ser <b>para todos los viajeros</b> (un precio por el vehículo) o <b>por persona</b> (se multiplica por los viajeros). Carga el de ida y vuelta, el de solo ida, o los dos.</li>
+        <li>Por defecto sirve para <b>todos los hoteles del destino</b>; si un traslado solo llega a algunos hoteles, elígelos.</li>
+        <li><b>Desactivar</b> lo quita de la web sin borrarlo. La foto es la del vehículo.</li>
+    </ol>
+</details>
+
+<div class="tr-kpis" id="trKpis" aria-label="Resumen (pulsa para filtrar)"></div>
+
+<div class="ui-toolbar">
+    <label class="ui-search"><i class="bi bi-search"></i><input id="trQ" type="search" placeholder="Buscar por nombre, aeropuerto, destino u hotel…" autocomplete="off" /></label>
+    <select class="ui-select" id="trOrigen" title="Aeropuerto"><option value="">Todos los aeropuertos</option></select>
+    <select class="ui-select" id="trDestino" title="Destino"><option value="">Todos los destinos</option></select>
+    <select class="ui-select" id="trOrden" title="Ordenar">
+        <option value="precio_asc">Precio: menor a mayor</option>
+        <option value="precio_desc">Precio: mayor a menor</option>
+        <option value="nombre">Nombre (A-Z)</option>
+        <option value="recientes">Más recientes</option>
+    </select>
+</div>
+<div class="tr-cuenta" id="trCuenta" aria-live="polite"></div>
+<div id="trLista"><div class="ui-skel" style="height:320px"></div></div>
+
+<!-- ===================== EDITOR ===================== -->
+<aside class="ui-drawer" id="trEditor" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-bus-front"></i></div>
+        <div style="min-width:0"><h2 id="edTitulo">Nuevo traslado</h2><small id="edSub">Los campos con * son obligatorios.</small></div>
+        <button class="ui-ibtn x" type="button" id="edCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db">
+        <div class="tr-zona" id="edZona">
+            <div class="tr-zona-prev" id="edPrev"></div>
+            <div class="tr-zona-acc">
+                <b>Foto del vehículo</b>
+                <small>Arrastra una imagen aquí o pulsa «Subir foto» (mejor con fondo blanco, como en el tour operador). JPG, PNG o WebP hasta 10 MB.</small>
+                <label class="ev-btn ghost sm" style="cursor:pointer"><i class="bi bi-upload"></i> <span id="edSubirTxt">Subir foto</span><input type="file" id="edArchivo" accept="image/jpeg,image/png,image/webp" hidden></label>
+                <button type="button" class="ev-btn ghost sm" id="edQuitarFoto" hidden><i class="bi bi-trash3"></i> Quitar foto</button>
+            </div>
+        </div>
+
+        <section class="tr-paso"><h3><span class="n">1</span> Ruta <small>Desde → A</small></h3>
+            <div class="ui-row">
+                <div class="ui-f" style="position:relative"><label for="edOrigen">Desde (aeropuerto) *</label>
+                    <input id="edOrigen" maxlength="60" placeholder="Código o nombre… ej. PUJ" autocomplete="off" role="combobox" aria-expanded="false">
+                    <div class="tr-busc" id="edOrigenBusc" hidden role="listbox"></div><span class="msg"></span></div>
+                <div class="ui-f" style="position:relative"><label for="edDestino">A (destino de los hoteles) *</label>
+                    <input id="edDestino" maxlength="50" placeholder="Escribe para buscar… ej. Punta Cana" autocomplete="off" role="combobox" aria-expanded="false">
+                    <div class="tr-busc" id="edDestinoBusc" hidden role="listbox"></div><span class="msg"></span></div>
+            </div>
+            <div class="ui-f" id="edHotelesF"><label class="ui-switch"><input type="checkbox" id="edTodos" checked><span class="tr"></span> Sirve para todos los hoteles del destino</label>
+                <div id="edHotelesCaja" hidden style="position:relative;margin-top:8px">
+                    <input id="edHotelQ" placeholder="Busca un hotel del destino y pulsa para añadirlo…" autocomplete="off">
+                    <div class="tr-busc" id="edHotelBusc" hidden role="listbox"></div>
+                    <div class="tr-hoteles" id="edHoteles"></div>
+                </div><span class="msg"></span></div>
+        </section>
+
+        <section class="tr-paso"><h3><span class="n">2</span> Opción de traslado</h3>
+            <div class="ui-f"><label>Tipo *</label>
+                <div class="tr-seg" id="edTipo">
+                    <button type="button" data-v="COMPARTIDO"><i class="bi bi-people"></i><span>Compartido<small>con otros pasajeros</small></span></button>
+                    <button type="button" data-v="PRIVADO"><i class="bi bi-person-check"></i><span>Privado<small>solo el cliente</small></span></button>
+                </div><span class="msg"></span></div>
+            <div class="ui-row">
+                <div class="ui-f"><label for="edCategoria">Categoría *</label><select id="edCategoria"></select><span class="msg"></span></div>
+                <div class="ui-f"><label for="edVehiculo">Vehículo *</label><select id="edVehiculo"></select><span class="msg"></span></div>
+            </div>
+            <div class="ui-f"><label for="edNombre">Nombre interno * <em>se arma solo; puedes cambiarlo</em></label>
+                <input id="edNombre" maxlength="150" placeholder="Ej. Compartido Estándar PUJ a Punta Cana"><span class="msg"></span></div>
+        </section>
+
+        <section class="tr-paso"><h3><span class="n">3</span> Capacidad</h3>
+            <div class="ui-row" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+                <div class="ui-f"><label for="edMaletas">Maletas permitidas</label><input id="edMaletas" type="number" min="0" max="50" value="2"><span class="msg"></span></div>
+                <div class="ui-f"><label for="edDuracion">Duración (minutos)</label><input id="edDuracion" type="number" min="1" max="1440" placeholder="Ej. 45"><span class="msg"></span></div>
+                <div class="ui-f"><label for="edPmin">Pasajeros mínimo *</label><input id="edPmin" type="number" min="1" max="999" value="1"><span class="msg"></span></div>
+                <div class="ui-f"><label for="edPmax">Pasajeros máximo *</label><input id="edPmax" type="number" min="1" max="999" value="99"><span class="msg"></span></div>
+            </div>
+        </section>
+
+        <section class="tr-paso"><h3><span class="n">4</span> Precio <small>en <span class="sim">RD$</span></small></h3>
+            <div class="ui-f"><label>¿Cómo se cobra? *</label>
+                <div class="tr-seg" id="edCobro">
+                    <button type="button" data-v="VEHICULO"><i class="bi bi-bus-front"></i><span>Para todos los viajeros<small>un precio por el vehículo</small></span></button>
+                    <button type="button" data-v="PERSONA"><i class="bi bi-person"></i><span>Por persona<small>se multiplica por los viajeros</small></span></button>
+                </div></div>
+            <div class="ui-row">
+                <div class="ui-f"><label for="edPrecioIV">Precio ida y vuelta</label>
+                    <div class="tr-money"><b class="sim">RD$</b><input id="edPrecioIV" type="number" min="0" step="0.01" placeholder="Ej. 22.72"></div><span class="msg"></span></div>
+                <div class="ui-f"><label for="edPrecioI">Precio solo ida</label>
+                    <div class="tr-money"><b class="sim">RD$</b><input id="edPrecioI" type="number" min="0" step="0.01" placeholder="Opcional"></div><span class="msg"></span></div>
+            </div>
+            <small style="color:var(--ev-muted);font-weight:600;display:block;margin:-4px 0 10px">Carga al menos uno. Si dejas uno vacío, esa opción no sale en la web.</small>
+        </section>
+
+        <section class="tr-paso"><h3><span class="n">5</span> Condiciones y descripción</h3>
+            <div class="ui-row">
+                <div class="ui-f"><label class="ui-switch"><input type="checkbox" id="edCancelable" checked><span class="tr"></span> Se puede cancelar</label></div>
+                <div class="ui-f" id="edHorasF"><label for="edHoras">Gratis hasta (horas antes)</label><input id="edHoras" type="number" min="0" max="720" placeholder="Ej. 24"><span class="msg"></span></div>
+            </div>
+            <div class="ui-f"><label for="edDesc">Descripción <em>se ve en la web: punto de encuentro, qué incluye…</em></label>
+                <textarea id="edDesc" rows="4" placeholder="Ej. Un representante le espera a la salida de la terminal con un cartel. Incluye asistencia en español."></textarea></div>
+            <div class="ui-f"><label class="ui-switch"><input type="checkbox" id="edActivo" checked><span class="tr"></span> Activo (sale en la web)</label></div>
+        </section>
+
+        <div class="ui-f"><label>Así lo verá el cliente</label><div class="tr-prev" id="edVista"></div></div>
+    </div>
+    <div class="ui-df">
+        <button class="ev-btn ghost" type="button" id="edEliminar"><i class="bi bi-trash3"></i> Eliminar</button>
+        <span class="hint">Ctrl + Enter guarda</span>
+        <button class="ev-btn ghost" type="button" id="edCancelar">Cancelar</button>
+        <button class="ev-btn" type="button" id="edGuardar"><i class="bi bi-check2-circle"></i> Guardar</button>
+    </div>
+</aside>
+
+<!-- ===================== VER ===================== -->
+<aside class="ui-drawer" id="trVer" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-eye"></i></div>
+        <div style="min-width:0"><h2 id="verTitulo">Traslado</h2><small id="verSub"></small></div>
+        <button class="ui-ibtn x" type="button" id="verCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="verCuerpo"></div>
+    <div class="ui-df">
+        <span class="hint">Así lo verá el cliente</span>
+        <button class="ev-btn ghost" type="button" id="verDuplicar"><i class="bi bi-copy"></i> Duplicar</button>
+        <button class="ev-btn" type="button" id="verEditar"><i class="bi bi-pencil"></i> Editar</button>
+    </div>
+</aside>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script>
+(() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    const editor = EV.drawer($('#trEditor'));
+    const visor = EV.drawer($('#trVer'));
+    let todos = [], V = { tipos: {}, categorias: {}, vehiculos: {}, cobros: {} };
+    let actual = null, fotoNueva = null, quitarFoto = false, verId = null, nombreTocado = false;
+    let hoteles = [];                  // [{valor, texto}] elegidos en el editor
+    let origenNombre = '';             // nombre del aeropuerto elegido (para el nombre y la vista)
+    const st = { q: '', origen: '', destino: '', filtro: '', orden: 'precio_asc' };
+    let plegadas = new Set();
+    try { plegadas = new Set(JSON.parse(localStorage.getItem('ev-traslados-plegadas') || '[]')); } catch { }
+    const guardarPlegadas = () => { try { localStorage.setItem('ev-traslados-plegadas', JSON.stringify([...plegadas])); } catch { } };
+
+    const precio = v => v == null ? '—' : `${EV.simbolo()} ${EV.fmt(v, Number(v) % 1 ? 2 : 0)}`;
+    const menor = t => Math.min(t.precio_Ida_Vuelta ?? Infinity, t.precio_Ida ?? Infinity);
+    const ICONO = { BUS: 'bi-bus-front', MINIBUS: 'bi-bus-front', VAN: 'bi-truck-front', COCHE: 'bi-car-front', LIMUSINA: 'bi-car-front-fill' };
+
+    // ---------------- datos ----------------
+    async function cargar() {
+        try { const r = await EV.api('/Traslados/Listar'); todos = r.traslados; V = r.valores; }
+        catch (e) { $('#trLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar los traslados</h3><p>${esc(e.message)}</p></div>`; return; }
+        llenarSelect('#trOrigen', 'Todos los aeropuertos', [...new Map(todos.map(t => [t.id_Estacion_Origen, `${t.id_Estacion_Origen} · ${t.origen_Nombre || ''}`])).entries()]);
+        llenarSelect('#trDestino', 'Todos los destinos', [...new Set(todos.map(t => t.id_Destino))].sort((a, b) => a.localeCompare(b, 'es')).map(d => [d, d]));
+        $('#edCategoria').innerHTML = Object.entries(V.categorias).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+        $('#edVehiculo').innerHTML = Object.entries(V.vehiculos).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+        if (!todos.length) $('#trAyuda').open = true;
+        pintar();
+    }
+
+    function llenarSelect(sel, todosTxt, pares) {
+        const s = $(sel), antes = s.value;
+        s.innerHTML = `<option value="">${todosTxt}</option>` + pares.map(([v, t]) => `<option value="${esc(v)}" ${v === antes ? 'selected' : ''}>${esc(t)}</option>`).join('');
+    }
+
+    function filtrados() {
+        const q = st.q.toLowerCase();
+        const l = todos.filter(t =>
+            (!st.origen || t.id_Estacion_Origen === st.origen) && (!st.destino || t.id_Destino === st.destino) &&
+            (!q || [t.nombre, t.id_Estacion_Origen, t.origen_Nombre, t.id_Destino, ...t.hoteles.map(h => h.texto)].some(x => (x || '').toLowerCase().includes(q)) || String(t.id_Traslado) === q) &&
+            (st.filtro === '' || (st.filtro === 'activos' && t.activo) || (st.filtro === 'inactivos' && !t.activo) || (st.filtro === 'sinfoto' && !t.imagen) ||
+             (st.filtro === 'COMPARTIDO' && t.tipo === 'COMPARTIDO') || (st.filtro === 'PRIVADO' && t.tipo === 'PRIVADO')));
+        const cmp = {
+            precio_asc: (a, b) => menor(a) - menor(b),
+            precio_desc: (a, b) => menor(b) - menor(a),
+            nombre: (a, b) => a.nombre.localeCompare(b.nombre, 'es'),
+            recientes: (a, b) => b.id_Traslado - a.id_Traslado
+        }[st.orden];
+        return l.sort(cmp);
+    }
+
+    function pintarKpis() {
+        const k = [
+            ['', todos.length, 'Traslados', 'bi-bus-front'],
+            ['activos', todos.filter(t => t.activo).length, 'Activos en la web', 'bi-check2-circle'],
+            ['inactivos', todos.filter(t => !t.activo).length, 'Desactivados', 'bi-pause-circle'],
+            ['COMPARTIDO', todos.filter(t => t.tipo === 'COMPARTIDO').length, 'Compartidos', 'bi-people'],
+            ['PRIVADO', todos.filter(t => t.tipo === 'PRIVADO').length, 'Privados', 'bi-person-check'],
+            ['sinfoto', todos.filter(t => !t.imagen).length, 'Sin foto', 'bi-image', true]
+        ];
+        $('#trKpis').innerHTML = k.map(([f, n, t, i, alerta]) => `<button type="button" class="tr-kpi ${st.filtro === f ? 'on' : ''} ${alerta && n ? 'mal' : ''}" data-filtro="${f}" aria-pressed="${st.filtro === f}">
+            <b>${EV.fmt(n)}</b><small><i class="bi ${i}"></i> ${t}</small></button>`).join('');
+    }
+
+    /** La tarjeta: igual que el resultado de la búsqueda del tour operador. */
+    function tarjeta(t, conAcciones = true) {
+        const pv = t.precio_Ida_Vuelta, pi = t.precio_Ida;
+        const para = t.cobro === 'PERSONA' ? 'por persona' : 'para todos los viajeros';
+        return `<article class="tr-card ${t.activo ? '' : 'off'}" data-id="${t.id_Traslado ?? ''}">
+            <div class="tr-foto" ${conAcciones ? `data-accion="ver" data-soltar="${t.id_Traslado}" title="Ver · arrastra una foto aquí para cambiarla"` : ''}>
+                ${t.imagen ? `<img src="${esc(t.imagen)}" alt="Foto del vehículo" loading="lazy">` : `<span class="sin"><i class="bi ${ICONO[t.vehiculo] || 'bi-bus-front'}"></i>Sin foto${conAcciones ? '<br><small>Arrastra una aquí</small>' : ''}</span>`}
+            </div>
+            <div class="tr-mid">
+                <div class="tr-tit"><h3>${esc(V.tipos[t.tipo] || t.tipo)}</h3><span class="tr-cat ${esc(t.categoria)}">${esc(V.categorias[t.categoria] || t.categoria)} ${t.vehiculo === 'BUS' || t.vehiculo === 'MINIBUS' ? 'shuttle' : esc((V.vehiculos[t.vehiculo] || '').toLowerCase())}</span></div>
+                ${conAcciones ? `<div class="tr-nom">n.º ${t.id_Traslado} · ${esc(t.nombre)}</div>` : ''}
+                <div class="tr-feat">
+                    <span><i class="bi bi-suitcase2"></i> ${t.maletas} maleta${t.maletas === 1 ? '' : 's'} permitida${t.maletas === 1 ? '' : 's'}</span>
+                    <span><i class="bi bi-clock"></i> ${t.duracion_Min ? `${t.duracion_Min} min. duración estimada` : 'Duración sin indicar'}</span>
+                    <span><i class="bi bi-person"></i> ${t.pasajeros_Min} pasajero(s) mínimo</span>
+                    <span><i class="bi bi-people"></i> ${t.pasajeros_Max} pasajero(s) máximo</span>
+                </div>
+                <div class="tr-chips">
+                    ${conAcciones ? (t.activo ? '<span class="tr-chip ok"><i class="bi bi-broadcast"></i> En la web</span>' : '<span class="tr-chip av"><i class="bi bi-pause-circle"></i> Desactivado</span>') : ''}
+                    ${t.cancelable ? `<span class="tr-chip ok"><i class="bi bi-check2"></i> Cancelable${t.horas_Cancelacion != null ? ` hasta ${t.horas_Cancelacion} h antes` : ''}</span>` : '<span class="tr-chip no"><i class="bi bi-x"></i> No cancelable</span>'}
+                    <span class="tr-chip"><i class="bi bi-building"></i> ${t.todos_Hoteles ? `Todos los hoteles de ${esc(t.id_Destino)}` : `${t.hoteles.length} hotel${t.hoteles.length === 1 ? '' : 'es'}`}</span>
+                </div>
+            </div>
+            <div class="tr-der">
+                ${pv != null ? `<div class="pr">${precio(pv)}</div><div class="nota">Precio ida y vuelta, ${para}.</div>` : `<div class="pr">${precio(pi)}</div><div class="nota">Precio solo ida, ${para}.</div>`}
+                ${pv != null && pi != null ? `<div class="ida">Solo ida: ${precio(pi)}</div>` : ''}
+                <div class="acc">${conAcciones ? acciones(t) : '<span class="ev-btn sm" style="pointer-events:none">Seleccionar traslado</span>'}</div>
+            </div>
+        </article>`;
+    }
+
+    const acciones = t => `<button type="button" class="ui-ibtn" data-accion="ver" title="Ver"><i class="bi bi-eye"></i></button>
+        <button type="button" class="ui-ibtn" data-accion="editar" title="Editar"><i class="bi bi-pencil"></i></button>
+        <button type="button" class="ui-ibtn" data-accion="duplicar" title="Duplicar"><i class="bi bi-copy"></i></button>
+        <button type="button" class="ui-ibtn" data-accion="activar" title="${t.activo ? 'Desactivar (quitar de la web)' : 'Activar (mostrar en la web)'}"><i class="bi ${t.activo ? 'bi-pause-circle' : 'bi-play-circle'}"></i></button>
+        <button type="button" class="ui-ibtn danger" data-accion="eliminar" title="Eliminar"><i class="bi bi-trash3"></i></button>`;
+
+    function pintar() {
+        pintarKpis();
+        const l = filtrados();
+        $('#trCuenta').textContent = l.length === todos.length ? `${EV.fmt(l.length)} traslados` : `Mostrando ${EV.fmt(l.length)} de ${EV.fmt(todos.length)}`;
+        if (!todos.length) {
+            $('#trLista').innerHTML = `<div class="ui-empty"><i class="bi bi-bus-front" style="font-size:40px"></i><h3>Todavía no hay traslados</h3><p>Crea el primero con «Nuevo traslado». Ej.: desde PUJ a Punta Cana, Compartido Estándar.</p></div>`;
+            return;
+        }
+        if (!l.length) {
+            $('#trLista').innerHTML = `<div class="ui-empty"><i class="bi bi-search" style="font-size:36px"></i><h3>No hay traslados con ese filtro</h3><p>Prueba con otra palabra o <a href="#" id="trLimpiar">quita los filtros</a>.</p></div>`;
+            return;
+        }
+        // Una sección por ruta: aeropuerto → destino
+        const grupos = new Map();
+        l.forEach(t => { const k = t.id_Estacion_Origen + '|' + t.id_Destino; if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(t); });
+        $('#trLista').innerHTML = [...grupos.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([k, lista]) => {
+            const [o, d] = k.split('|'), plegada = plegadas.has(k) && !st.q && !st.filtro;
+            const min = Math.min(...lista.map(menor)), act = lista.filter(t => t.activo).length;
+            return `<section class="tr-sec ${plegada ? 'plegada' : ''}" data-ruta="${esc(k)}">
+                <header class="tr-sec-h">
+                    <div class="ruta">
+                        <div class="punto"><small><i class="bi bi-airplane"></i> Desde</small><b>${esc(o)} · ${esc(lista[0].origen_Nombre || '')}</b></div>
+                        <span class="flecha"><i class="bi bi-arrow-right"></i></span>
+                        <div class="punto"><small><i class="bi bi-geo-alt"></i> A</small><b>${esc(d)}</b></div>
+                        <span class="res">${lista.length} opci${lista.length === 1 ? 'ón' : 'ones'} · ${act} activa${act === 1 ? '' : 's'}${isFinite(min) ? ` · desde <b>${precio(min)}</b>` : ''}</span>
+                    </div>
+                    <button type="button" class="ev-btn sm" data-nuevo-en="${esc(k)}"><i class="bi bi-plus-lg"></i> Opción en esta ruta</button>
+                    <button type="button" class="tr-pleg" data-plegar="${esc(k)}" aria-expanded="${!plegada}" title="Mostrar u ocultar"><i class="bi bi-chevron-down"></i></button>
+                </header>
+                <div class="tr-sec-cuerpo"><div class="tr-lista">${lista.map(t => tarjeta(t)).join('')}</div></div>
+            </section>`;
+        }).join('');
+    }
+
+    // ---------------- ver ----------------
+    function ver(id) {
+        const t = todos.find(x => x.id_Traslado === id); if (!t) return;
+        verId = id;
+        $('#verTitulo').textContent = t.nombre;
+        $('#verSub').textContent = `n.º ${t.id_Traslado} · ${t.id_Estacion_Origen} → ${t.id_Destino}${t.activo ? '' : ' · desactivado'}`;
+        $('#verCuerpo').innerHTML = `
+            <div class="tr-prev" style="margin:0 0 14px">${tarjeta(t, false)}</div>
+            <section class="tr-paso"><h3><i class="bi bi-calculator"></i> Probar el precio</h3>
+                <div class="tr-sim">
+                    <div class="ui-f"><label for="simP">Viajeros</label><input id="simP" type="number" min="1" max="999" value="${Math.max(2, t.pasajeros_Min)}" style="width:110px"></div>
+                    <div class="ui-f"><label for="simIV">Viaje</label><select id="simIV"><option value="1">Ida y vuelta</option><option value="0">Sólo ida</option></select></div>
+                    <div class="total" id="simTotal"></div>
+                </div></section>
+            <section class="tr-paso"><h3><i class="bi bi-info-circle"></i> Detalles</h3>
+                <p style="margin:0 0 8px"><b>Desde:</b> ${esc(t.id_Estacion_Origen)} · ${esc(t.origen_Nombre || '')}<br><b>A:</b> ${esc(t.id_Destino)} — ${t.todos_Hoteles ? 'todos los hoteles del destino' : t.hoteles.map(h => esc(h.texto)).join(', ')}<br>
+                   <b>Vehículo:</b> ${esc(V.vehiculos[t.vehiculo] || t.vehiculo)} · <b>Cobro:</b> ${esc(V.cobros[t.cobro] || t.cobro)}</p>
+                <div style="white-space:pre-line;color:var(--ev-muted);font-weight:600;margin-bottom:10px">${t.descripcion ? esc(t.descripcion) : 'Sin descripción.'}</div>
+                <small style="color:var(--ev-muted)">Cargado por ${esc(t.usuario || '—')} el ${new Date(t.fecha_Alta).toLocaleDateString('es')}${t.fecha_Modificacion ? ` · modificado el ${new Date(t.fecha_Modificacion).toLocaleDateString('es')}` : ''}</small>
+            </section>`;
+        const sim = () => {
+            const p = Math.max(1, +$('#simP').value || 1), iv = $('#simIV').value === '1', base = iv ? t.precio_Ida_Vuelta : t.precio_Ida;
+            const ok = p >= t.pasajeros_Min && p <= t.pasajeros_Max;
+            $('#simTotal').innerHTML = base == null ? `<b style="font-size:16px">No se vende ${iv ? 'ida y vuelta' : 'solo ida'}</b>`
+                : !ok ? `<b style="font-size:16px;color:#B42318">No sale: admite de ${t.pasajeros_Min} a ${t.pasajeros_Max} pasajeros</b>`
+                : `<b>${precio(t.cobro === 'PERSONA' ? base * p : base)}</b><small>${t.cobro === 'PERSONA' ? `${precio(base)} × ${p} viajeros` : `para los ${p} viajeros`}</small>`;
+        };
+        $('#simP').oninput = $('#simIV').onchange = sim; sim();
+        visor.abrir();
+    }
+
+    // ---------------- editor ----------------
+    const seg = (sel, v) => $$(`${sel} button`).forEach(b => b.classList.toggle('on', b.dataset.v === v));
+    const segVal = sel => $(`${sel} button.on`)?.dataset.v;
+    const num = sel => $(sel).value === '' ? null : Number($(sel).value);
+
+    function pintarFoto(url) {
+        $('#edPrev').innerHTML = url ? `<img src="${esc(url)}" alt="Foto">` : `<span class="sin"><i class="bi bi-bus-front" style="font-size:36px;display:block;color:var(--ev-line)"></i>Sin foto</span>`;
+        $('#edQuitarFoto').hidden = !url;
+        $('#edSubirTxt').textContent = url ? 'Cambiar foto' : 'Subir foto';
+    }
+
+    function pintarHoteles() {
+        $('#edHotelesCaja').hidden = $('#edTodos').checked;
+        $('#edHoteles').innerHTML = hoteles.length ? hoteles.map(h => `<span>${esc(h.texto)}<button type="button" data-quitar="${esc(h.valor)}" aria-label="Quitar ${esc(h.texto)}">×</button></span>`).join('')
+            : '<small style="color:var(--ev-muted);font-weight:600">Todavía no elegiste hoteles.</small>';
+    }
+
+    function nombreSugerido() {
+        const o = $('#edOrigen').value.trim().split(' ')[0].toUpperCase(), d = $('#edDestino').value.trim();
+        return `${V.tipos[segVal('#edTipo')] || ''} ${V.categorias[$('#edCategoria').value] || ''} ${o || '…'} a ${d || '…'}`.replace(/\s+/g, ' ').trim();
+    }
+
+    function leer() {
+        return {
+            Id_Traslado: actual?.id_Traslado ?? null,
+            Nombre: $('#edNombre').value.trim(), Tipo: segVal('#edTipo'), Categoria: $('#edCategoria').value, Vehiculo: $('#edVehiculo').value,
+            Id_Estacion_Origen: $('#edOrigen').value.trim().split(' ')[0].toUpperCase(), Id_Destino: $('#edDestino').value.trim(),
+            Maletas: num('#edMaletas') ?? 0, Duracion_Min: num('#edDuracion'), Pasajeros_Min: num('#edPmin') ?? 1, Pasajeros_Max: num('#edPmax') ?? 1,
+            Cobro: segVal('#edCobro'), Precio_Ida_Vuelta: num('#edPrecioIV'), Precio_Ida: num('#edPrecioI'),
+            Cancelable: $('#edCancelable').checked, Horas_Cancelacion: $('#edCancelable').checked ? num('#edHoras') : null,
+            Descripcion: $('#edDesc').value.trim() || null, Todos_Hoteles: $('#edTodos').checked, Hoteles: hoteles.map(h => +h.valor), Activo: $('#edActivo').checked
+        };
+    }
+
+    function vistaPrevia() {
+        if (!nombreTocado) $('#edNombre').value = nombreSugerido();
+        $('#edHorasF').hidden = !$('#edCancelable').checked;
+        const d = leer();
+        const t = {
+            id_Traslado: actual?.id_Traslado, nombre: d.Nombre, tipo: d.Tipo, categoria: d.Categoria, vehiculo: d.Vehiculo, id_Destino: d.Id_Destino || 'el destino',
+            maletas: d.Maletas, duracion_Min: d.Duracion_Min, pasajeros_Min: d.Pasajeros_Min, pasajeros_Max: d.Pasajeros_Max, cobro: d.Cobro,
+            precio_Ida: d.Precio_Ida, precio_Ida_Vuelta: d.Precio_Ida_Vuelta, cancelable: d.Cancelable, horas_Cancelacion: d.Horas_Cancelacion,
+            todos_Hoteles: d.Todos_Hoteles, hoteles, activo: true, imagen: $('#edPrev img')?.src
+        };
+        $('#edVista').innerHTML = tarjeta(t, false);
+    }
+
+    function abrir(t, ruta) {
+        actual = t || null; fotoNueva = null; quitarFoto = false;
+        $('#edTitulo').textContent = t ? 'Editar traslado' : 'Nuevo traslado';
+        $('#edSub').textContent = t ? `n.º ${t.id_Traslado} · los cambios se guardan al pulsar Guardar` : 'Los campos con * son obligatorios.';
+        const [o, d] = (ruta || '').split('|');
+        $('#edOrigen').value = t ? `${t.id_Estacion_Origen} · ${t.origen_Nombre || ''}` : (o ? `${o} · ${todos.find(x => x.id_Estacion_Origen === o)?.origen_Nombre || ''}` : '');
+        $('#edDestino').value = t?.id_Destino || d || '';
+        seg('#edTipo', t?.tipo || 'COMPARTIDO');
+        $('#edCategoria').value = t?.categoria || 'ESTANDAR';
+        $('#edVehiculo').value = t?.vehiculo || 'BUS';
+        $('#edMaletas').value = t?.maletas ?? 2;
+        $('#edDuracion').value = t?.duracion_Min ?? '';
+        $('#edPmin').value = t?.pasajeros_Min ?? 1;
+        $('#edPmax').value = t?.pasajeros_Max ?? 99;
+        seg('#edCobro', t?.cobro || 'VEHICULO');
+        $('#edPrecioIV').value = t?.precio_Ida_Vuelta ?? '';
+        $('#edPrecioI').value = t?.precio_Ida ?? '';
+        $('#edCancelable').checked = t ? t.cancelable : true;
+        $('#edHoras').value = t?.horas_Cancelacion ?? '';
+        $('#edDesc').value = t?.descripcion || '';
+        $('#edActivo').checked = t ? t.activo : true;
+        $('#edTodos').checked = t ? t.todos_Hoteles : true;
+        hoteles = (t?.hoteles || []).map(h => ({ valor: h.valor, texto: h.texto }));
+        nombreTocado = !!t;
+        $('#edNombre').value = t?.nombre || '';
+        $('#edEliminar').hidden = !t;
+        $$('#trEditor .ui-f').forEach(f => f.classList.remove('err'));
+        $$('#trEditor .msg').forEach(m => m.textContent = '');
+        pintarFoto(t?.imagen); pintarHoteles(); vistaPrevia();
+        editor.abrir();
+        setTimeout(() => (t ? $('#edNombre') : $('#edOrigen')).focus(), 80);
+    }
+
+    function marcar(campo, msg) {
+        const el = { Nombre: '#edNombre', Id_Estacion_Origen: '#edOrigen', Id_Destino: '#edDestino', Tipo: '#edTipo', Categoria: '#edCategoria', Vehiculo: '#edVehiculo',
+                     Maletas: '#edMaletas', Duracion_Min: '#edDuracion', Pasajeros_Min: '#edPmin', Pasajeros_Max: '#edPmax', Precio_Ida_Vuelta: '#edPrecioIV',
+                     Precio_Ida: '#edPrecioI', Horas_Cancelacion: '#edHoras', Hoteles: '#edTodos' }[campo.replace(/^\$\./, '')];
+        if (!el) return;
+        const f = $(el).closest('.ui-f'); f.classList.add('err'); $('.msg', f).textContent = msg;
+    }
+
+    function elegirFoto(archivo) {
+        if (!archivo) return;
+        if (!/^image\/(jpeg|png|webp)$/.test(archivo.type)) { EV.toast('Usa una imagen JPG, PNG o WebP.', 'err'); return; }
+        if (archivo.size > 10_000_000) { EV.toast('La imagen pesa más de 10 MB.', 'err'); return; }
+        fotoNueva = archivo; quitarFoto = false;
+        pintarFoto(URL.createObjectURL(archivo)); vistaPrevia();
+        $('#trEditor').dispatchEvent(new Event('ev-cambio'));
+    }
+
+    const subirFoto = (id, archivo, alAvanzar) => { const fd = new FormData(); fd.append('id', id); fd.append('archivo', archivo); return EVProgreso.subir('/Traslados/SubirImagen', fd, alAvanzar); };
+
+    async function guardar() {
+        $$('#trEditor .ui-f').forEach(f => f.classList.remove('err'));
+        $$('#trEditor .msg').forEach(m => m.textContent = '');
+        const dto = leer();
+        const faltan = [];
+        if (!dto.Id_Estacion_Origen) faltan.push(['Id_Estacion_Origen', 'Elige el aeropuerto']);
+        if (!dto.Id_Destino) faltan.push(['Id_Destino', 'Elige el destino']);
+        if (!dto.Nombre) faltan.push(['Nombre', 'Escribe el nombre']);
+        if (dto.Pasajeros_Max < dto.Pasajeros_Min) faltan.push(['Pasajeros_Max', 'No puede ser menor que el mínimo']);
+        if (dto.Precio_Ida_Vuelta == null && dto.Precio_Ida == null) faltan.push(['Precio_Ida_Vuelta', 'Escribe al menos un precio']);
+        if (!dto.Todos_Hoteles && !dto.Hoteles.length) faltan.push(['Hoteles', 'Elige al menos un hotel']);
+        if (faltan.length) { faltan.forEach(([c, m]) => marcar(c, m)); EV.toast('Revisa los campos marcados.', 'err'); return; }
+
+        const b = $('#edGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
+        const barra = EVProgreso.abrir(actual ? 'Guardando el traslado' : 'Cargando el traslado');
+        try {
+            barra.poner(20, 'Guardando los datos…');
+            const r = await EV.post('/Traslados/Guardar', dto);
+            let aviso = '';
+            if (fotoNueva) {
+                barra.poner(40, 'Subiendo la foto…');
+                try { await subirFoto(r.id, fotoNueva, p => barra.poner(40 + p * 0.5, `Subiendo la foto… ${Math.round(p)}%`)); }
+                catch (ef) { aviso = ' La foto no se pudo subir: ' + ef.message; }
+            } else if (quitarFoto && actual) {
+                try { await EV.post('/Traslados/QuitarImagen?id=' + actual.id_Traslado); } catch { }
+            }
+            barra.poner(95, 'Actualizando la lista…');
+            editor.cerrar(true);
+            await cargar();
+            barra.poner(100, '¡Listo!');
+            EV.toast(r.mensaje + aviso, aviso ? 'err' : 'ok');
+            EV.resaltar(document.querySelector(`.tr-card[data-id="${r.id}"]`));
+        } catch (e) {
+            Object.entries(e.data?.errores || {}).forEach(([c, m]) => marcar(c, m));
+            EV.toast(e.message, 'err');
+        } finally { barra.cerrar(); b.disabled = false; b.innerHTML = html; }
+    }
+
+    async function eliminar(id) {
+        const t = todos.find(x => x.id_Traslado === id); if (!t) return;
+        if (!await EV.confirmar({ titulo: '¿Eliminar el traslado?', peligro: true, si: 'Sí, eliminar',
+            texto: `Se eliminará <b>${esc(t.nombre)}</b>${t.imagen ? ' con su foto' : ''}. No se puede deshacer.<br>Si solo quieres que no salga en la web, mejor <b>desactívalo</b>.` })) return;
+        try { const r = await EV.post('/Traslados/Eliminar?id=' + id); EV.toast(r.mensaje); editor.cerrar(true); visor.cerrar(true); await cargar(); }
+        catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    async function activar(id) {
+        const t = todos.find(x => x.id_Traslado === id); if (!t) return;
+        try { const r = await EV.post(`/Traslados/Activar?id=${id}&activo=${!t.activo}`); EV.toast(r.mensaje); await cargar(); }
+        catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    async function duplicar(id) {
+        try { const r = await EV.post('/Traslados/Duplicar?id=' + id); EV.toast(r.mensaje); visor.cerrar(true); await cargar(); abrir(todos.find(x => x.id_Traslado === r.id)); }
+        catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    async function soltarEnTarjeta(id, archivo, zona) {
+        if (!/^image\/(jpeg|png|webp)$/.test(archivo.type)) { EV.toast('Usa una imagen JPG, PNG o WebP.', 'err'); return; }
+        const capa = document.createElement('div'); capa.className = 'subiendo'; capa.textContent = 'Subiendo… 0%'; zona.appendChild(capa);
+        try { const r = await subirFoto(id, archivo, p => capa.textContent = `Subiendo… ${Math.round(p)}%`); EV.toast(r.mensaje); await cargar(); }
+        catch (e) { EV.toast(e.message, 'err'); capa.remove(); }
+    }
+
+    // ---------------- buscadores (aeropuerto, destino, hotel) ----------------
+    function buscador(input, caja, url, elegir) {
+        let n = 0;
+        const buscar = EV.debounce(async () => {
+            const k = ++n; let l = [];
+            try { l = await EV.api(url()); } catch { }
+            if (k !== n) return;
+            $(caja).innerHTML = l.map(o => `<button type="button" role="option" data-v="${esc(o.valor)}" data-t="${esc(o.texto)}">${esc(o.texto)}<small>${esc([o.valor !== o.texto ? o.valor : '', o.extra].filter(Boolean).join(' · '))}</small></button>`).join('')
+                || '<div style="padding:10px 12px;color:var(--ev-muted);font-weight:600">Sin resultados</div>';
+            $(caja).hidden = document.activeElement !== $(input);
+            $(input).setAttribute('aria-expanded', String(!$(caja).hidden));
+        }, 200);
+        $(input).addEventListener('input', buscar);
+        $(input).addEventListener('focus', buscar);
+        $(input).addEventListener('blur', () => setTimeout(() => { $(caja).hidden = true; $(input).setAttribute('aria-expanded', 'false'); }, 150));
+        $(caja).addEventListener('mousedown', e => { const o = e.target.closest('[data-v]'); if (!o) return; e.preventDefault(); elegir(o.dataset.v, o.dataset.t); $(caja).hidden = true; vistaPrevia(); $('#trEditor').dispatchEvent(new Event('ev-cambio')); });
+    }
+
+    // ---------------- inicio ----------------
+    function iniciar() {
+        $('#trNuevo').onclick = () => abrir(null);
+        $('#trQ').addEventListener('input', EV.debounce(e => { st.q = e.target.value.trim(); pintar(); }, 200));
+        $('#trOrigen').onchange = e => { st.origen = e.target.value; pintar(); };
+        $('#trDestino').onchange = e => { st.destino = e.target.value; pintar(); };
+        $('#trOrden').onchange = e => { st.orden = e.target.value; pintar(); };
+        $('#trKpis').addEventListener('click', e => { const k = e.target.closest('[data-filtro]'); if (!k) return; st.filtro = st.filtro === k.dataset.filtro ? '' : k.dataset.filtro; pintar(); });
+        $('#trLista').addEventListener('click', e => {
+            if (e.target.id === 'trLimpiar') { e.preventDefault(); Object.assign(st, { q: '', origen: '', destino: '', filtro: '' }); $('#trQ').value = ''; $('#trOrigen').value = ''; $('#trDestino').value = ''; pintar(); return; }
+            const nuevo = e.target.closest('[data-nuevo-en]'); if (nuevo) { abrir(null, nuevo.dataset.nuevoEn); return; }
+            const pleg = e.target.closest('[data-plegar]');
+            if (pleg) {
+                const k = pleg.dataset.plegar;
+                if (plegadas.has(k)) plegadas.delete(k); else plegadas.add(k);
+                guardarPlegadas(); pleg.closest('.tr-sec').classList.toggle('plegada', plegadas.has(k)); pleg.setAttribute('aria-expanded', String(!plegadas.has(k)));
+                return;
+            }
+            const card = e.target.closest('.tr-card[data-id]'); if (!card) return;
+            const id = +card.dataset.id, acc = e.target.closest('[data-accion]')?.dataset.accion;
+            if (acc === 'editar') abrir(todos.find(x => x.id_Traslado === id));
+            else if (acc === 'duplicar') duplicar(id);
+            else if (acc === 'activar') activar(id);
+            else if (acc === 'eliminar') eliminar(id);
+            else if (acc === 'ver') ver(id);
+        });
+        $('#trLista').addEventListener('dragover', e => { const z = e.target.closest('[data-soltar]'); if (z && e.dataTransfer.types.includes('Files')) { e.preventDefault(); z.classList.add('sobre'); } });
+        $('#trLista').addEventListener('dragleave', e => e.target.closest('[data-soltar]')?.classList.remove('sobre'));
+        $('#trLista').addEventListener('drop', e => {
+            const z = e.target.closest('[data-soltar]'); if (!z) return;
+            e.preventDefault(); z.classList.remove('sobre');
+            const f = e.dataTransfer.files[0]; if (f) soltarEnTarjeta(+z.dataset.soltar, f, z);
+        });
+
+        // Editor
+        buscador('#edOrigen', '#edOrigenBusc', () => '/Traslados/Aeropuertos?q=' + encodeURIComponent($('#edOrigen').value.trim().split(' ')[0]),
+            (v, t) => $('#edOrigen').value = `${v} · ${t}`);
+        buscador('#edDestino', '#edDestinoBusc', () => '/Traslados/Destinos?q=' + encodeURIComponent($('#edDestino').value.trim()),
+            v => { if ($('#edDestino').value !== v) hoteles = []; $('#edDestino').value = v; pintarHoteles(); });
+        buscador('#edHotelQ', '#edHotelBusc', () => `/Traslados/Hoteles?destino=${encodeURIComponent($('#edDestino').value.trim())}&q=${encodeURIComponent($('#edHotelQ').value.trim())}`,
+            (v, t) => { if (!hoteles.some(h => h.valor === v)) hoteles.push({ valor: v, texto: t }); $('#edHotelQ').value = ''; pintarHoteles(); });
+        $('#edHoteles').addEventListener('click', e => { const q = e.target.closest('[data-quitar]'); if (!q) return; hoteles = hoteles.filter(h => h.valor !== q.dataset.quitar); pintarHoteles(); vistaPrevia(); });
+        $('#edTodos').onchange = () => { pintarHoteles(); vistaPrevia(); };
+        $$('#edTipo button, #edCobro button').forEach(b => b.onclick = () => {
+            seg('#' + b.parentElement.id, b.dataset.v);
+            // Sugerencia: privado → van; compartido → autobús
+            if (b.parentElement.id === 'edTipo' && !actual) $('#edVehiculo').value = b.dataset.v === 'PRIVADO' ? 'VAN' : 'BUS';
+            vistaPrevia(); $('#trEditor').dispatchEvent(new Event('ev-cambio'));
+        });
+        $('#edNombre').addEventListener('input', () => { nombreTocado = $('#edNombre').value.trim() !== ''; });
+        $('#trEditor .ui-db').addEventListener('input', EV.debounce(e => { if (e.target.id !== 'edHotelQ') vistaPrevia(); }, 120));
+        $('#trEditor .ui-db').addEventListener('change', vistaPrevia);
+        $('#edArchivo').onchange = e => { elegirFoto(e.target.files[0]); e.target.value = ''; };
+        $('#edQuitarFoto').onclick = () => { fotoNueva = null; quitarFoto = true; pintarFoto(null); vistaPrevia(); $('#trEditor').dispatchEvent(new Event('ev-cambio')); };
+        const zona = $('#edZona');
+        zona.addEventListener('dragover', e => { e.preventDefault(); zona.classList.add('sobre'); });
+        zona.addEventListener('dragleave', () => zona.classList.remove('sobre'));
+        zona.addEventListener('drop', e => { e.preventDefault(); zona.classList.remove('sobre'); elegirFoto(e.dataTransfer.files[0]); });
+        $('#edGuardar').onclick = guardar;
+        $('#edCancelar').onclick = $('#edCerrar').onclick = () => editor.cerrar();
+        $('#edEliminar').onclick = () => actual && eliminar(actual.id_Traslado);
+        $('#verCerrar').onclick = () => visor.cerrar();
+        $('#verEditar').onclick = () => { const t = todos.find(x => x.id_Traslado === verId); visor.cerrar(true); abrir(t); };
+        $('#verDuplicar').onclick = () => verId && duplicar(verId);
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { editor.cerrar(); visor.cerrar(); }
+            if (editor.abierto() && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); guardar(); }
+        });
+        cargar();
+    }
+    document.addEventListener('DOMContentLoaded', iniciar);
+})();
+</script>
+}
