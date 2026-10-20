@@ -220,7 +220,7 @@
 <section class="ui-pane" id="pTabla">
     <div class="ui-toolbar" style="margin-top:0">
         <label class="ui-search"><i class="bi bi-search"></i><input id="tQ" type="search" placeholder="Buscar destino, origen, descripción, nº de servicio…"></label>
-        <select class="ui-select" id="tTipo"><option value="">Todos los tipos</option><option>OFERTA</option><option>CIRCUITO</option><option>HOTEL</option><option>EXCURSION</option><option>COMBINADO</option></select>
+        <select class="ui-select" id="tTipo"><option value="">Todos los tipos</option><option>OFERTA</option><option>CIRCUITO</option><option>HOTEL</option><option>EXCURSION</option><option>TRASLADO</option><option>COMBINADO</option></select>
         <select class="ui-select" id="tSec"><option value="">Todas las secciones</option><option value="-1">Sin sección</option></select>
         <select class="ui-select" id="tEst"><option value="">Visibles y ocultas</option><option value="1">Visibles</option><option value="0">Ocultas</option><option value="v">Ya no se venden</option></select>
         <button type="button" class="ev-btn sm" onclick="HW.nuevaTarjeta()"><i class="bi bi-plus-lg"></i> Nueva tarjeta</button>
@@ -277,7 +277,7 @@ const HW = (() => {
     const img = (ruta, d = dev) => !ruta ? '' : `${{ web: D.imagenes.web, tablet: D.imagenes.tablet, movil: D.imagenes.movil }[d]}/${encodeURIComponent(ruta)}`;
     // t.imagen la calcula el servidor desde las carpetas del proyecto (fotos de Hoteles y portadas de Circuitos)
     const carat = t => t.imagen || (t.caratulaDestino && (EV.esUrl(t.caratulaDestino) || t.caratulaDestino.startsWith('/')) ? t.caratulaDestino : null);
-    const tipoChip = { OFERTA: 'Oferta', CIRCUITO: 'Circuito', HOTEL: 'Hotel', EXCURSION: 'Excursiones', COMBINADO: 'Combinado' };
+    const tipoChip = { OFERTA: 'Oferta', CIRCUITO: 'Circuito', HOTEL: 'Hotel', EXCURSION: 'Excursiones', TRASLADO: 'Traslados', COMBINADO: 'Combinado' };
 
     async function cargar() {
         D = await EV.api('/HomeWeb/Datos');
@@ -355,7 +355,7 @@ const HW = (() => {
                 <div class="chips"><span>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</span>${t.vigente === false ? '<span class="mal">Ya no se vende</span>' : ''}${t.estado ? '' : '<span class="oc">Oculta</span>'}</div>
                 <div class="acc"><button type="button" class="edt" title="Editar tarjeta" aria-label="Editar tarjeta"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="ojo" data-ojo="${t.id}" title="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}" aria-label="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div></div>
-            <div class="tx"><b>${esc(t.descripcion && ['CIRCUITO', 'EXCURSION'].includes(t.tipo_Servicio) ? t.descripcion : t.id_Destino)}</b><small>${esc(t.origen)} · ${esc(t.campanya || '#' + t.id_Campanya)}${t.noches ? ` · ${t.noches} noches` : ''}</small>
+            <div class="tx"><b>${esc(t.descripcion && ['CIRCUITO', 'EXCURSION', 'TRASLADO'].includes(t.tipo_Servicio) ? t.descripcion : t.id_Destino)}</b><small>${esc(t.origen)} · ${esc(t.campanya || '#' + t.id_Campanya)}${t.noches ? ` · ${t.noches} noches` : ''}</small>
                 <div class="pr">${t.precioWeb ? `desde <b>${EV.dinero(t.precioWeb)}</b>` : 'sin precio'}</div></div></div>`;
     };
 
@@ -598,7 +598,7 @@ const HW = (() => {
             <div class="ui-sec"><div class="ui-sec-t"><span>1</span> Qué se muestra</div>
                 <div class="hc-prev" id="tdPrev" style="border-radius:16px;overflow:hidden;margin-bottom:12px;max-height:200px;background:var(--ev-grad-soft)"></div>
                 <div class="ui-row r3">
-                    <div class="ui-f"><label>Tipo</label><select id="tTipoF">${['OFERTA', 'CIRCUITO', 'HOTEL', 'EXCURSION', 'COMBINADO'].map(x => `<option>${x}</option>`).join('')}</select></div>
+                    <div class="ui-f"><label>Tipo</label><select id="tTipoF">${['OFERTA', 'CIRCUITO', 'HOTEL', 'EXCURSION', 'TRASLADO', 'COMBINADO'].map(x => `<option>${x}</option>`).join('')}</select></div>
                     <div class="ui-f"><label>Campaña *</label><select id="tCam">${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)}</option>`).join('')}</select></div>
                     <div class="ui-f"><label>Sección</label><select id="tSecF"><option value="">— Sin sección —</option>${D.contenedores.map(c => `<option value="${c.id_Contenedor}">${esc(c.nombre)}</option>`).join('')}</select></div>
                 </div>

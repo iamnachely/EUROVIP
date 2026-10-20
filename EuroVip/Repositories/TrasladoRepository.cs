@@ -81,8 +81,10 @@ namespace EuroVip.Repositories
                 Descripcion = string.IsNullOrWhiteSpace(d.Descripcion) ? null : d.Descripcion.Trim(), d.Todos_Hoteles, d.Activo, usuario
             };
             int id;
+            string? destinoAntes = null;
             if (d.Id_Traslado is int existente)
             {
+                destinoAntes = await cn.ExecuteScalarAsync<string?>("SELECT id_destino FROM Eurovip.traslado WHERE id_traslado = @id", new { id = existente }, tx);
                 var n = await cn.ExecuteAsync(@"
                     UPDATE Eurovip.traslado SET nombre = @Nombre, tipo = @Tipo, categoria = @Categoria, vehiculo = @Vehiculo,
                            id_estacion_origen = @Id_Estacion_Origen, id_destino = @Id_Destino,
@@ -114,19 +116,37 @@ namespace EuroVip.Repositories
                 foreach (var h in d.Hoteles.Distinct())
                     await cn.ExecuteAsync("INSERT INTO Eurovip.traslado_alojamiento (id_traslado, id_alojamiento) VALUES (@id, @h)", new { id, h }, tx);
             tx.Commit();
+            await ActualizarInicioAsync(cn, destinoAntes, d.Id_Destino);
             return id;
         }
 
         public async Task<bool> EliminarAsync(int id)
         {
             using var cn = _db.Conexion();
-            return await cn.ExecuteAsync("DELETE FROM Eurovip.traslado WHERE id_traslado = @id", new { id }) > 0;
+            var destino = await cn.ExecuteScalarAsync<string?>("DELETE FROM Eurovip.traslado OUTPUT deleted.id_destino WHERE id_traslado = @id", new { id });
+            if (destino is null) return false;
+            await ActualizarInicioAsync(cn, destino);
+            return true;
         }
 
         public async Task<bool> ActivarAsync(int id, bool activo)
         {
             using var cn = _db.Conexion();
-            return await cn.ExecuteAsync("UPDATE Eurovip.traslado SET activo = @activo, fecha_modificacion = SYSDATETIME() WHERE id_traslado = @id", new { id, activo }) > 0;
+            var destino = await cn.ExecuteScalarAsync<string?>(@"UPDATE Eurovip.traslado SET activo = @activo, fecha_modificacion = SYSDATETIME()
+                                                                OUTPUT inserted.id_destino WHERE id_traslado = @id", new { id, activo });
+            if (destino is null) return false;
+            await ActualizarInicioAsync(cn, destino);
+            return true;
+        }
+
+        /// <summary>
+        /// Tarjeta de la Home (Eurovip.inicio, tipo 'TRASLADO'): una por destino con el precio "desde" del más barato activo.
+        /// spActualizaInicioTraslado la crea, la actualiza o la borra si el destino se quedó sin traslados activos.
+        /// </summary>
+        private static async Task ActualizarInicioAsync(IDbConnection cn, params string?[] destinos)
+        {
+            foreach (var d in destinos.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
+                await cn.ExecuteAsync("Eurovip.spActualizaInicioTraslado", new { destino = d }, commandType: CommandType.StoredProcedure);
         }
 
         public async Task PonerImagenAsync(int id, string? archivo)

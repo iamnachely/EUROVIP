@@ -2991,6 +2991,114 @@ END
 GO
 
 /* ##########################################################################################
+   FASE 16 — TRASLADOS EN LA HOME  (20/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: "agregar los traslados a la tabla inicio organizados por destino:
+   en inicio una sola vez Punta Cana y al entrar salen todos los de Punta Cana; cuando el usuario
+   cargue un traslado, que se cargue en inicio si es un destino nuevo y, si no, que quede en la
+   tabla intermedia".
+   Cómo queda (igual que las excursiones, FASE 14):
+     • Eurovip.inicio: UNA tarjeta por destino con tipo_servicio = 'TRASLADO' ("Traslados en Punta
+       Cana", "desde" = el traslado activo más barato, foto del destino), en la sección «TRASLADOS».
+     • La "tabla intermedia" es Eurovip.traslado: ahí están todos los traslados de cada destino.
+     • La pantalla de Traslados llama a spActualizaInicioTraslado al guardar, duplicar, activar/
+       desactivar y eliminar: crea la tarjeta si el destino es nuevo, la actualiza si ya estaba
+       (respetando sección/posición/visible) y la borra si el destino se queda sin traslados activos.
+     • Web: al pulsar la tarjeta → spPortalListarTraslados @Destino (todos los activos de ese destino).
+   Cómo se aplicó: CAMBIO 56 a 58 y la carga inicial (al final de esta fase).
+   ########################################################################################## */
+/* ---------- CAMBIO 56: sección «TRASLADOS» de la Home ---------- */
+IF NOT EXISTS (SELECT 1 FROM Eurovip.contenedores WHERE nombre = 'TRASLADOS' AND UPPER(id_idioma) = 'ES')
+    INSERT INTO Eurovip.contenedores (nombre, posicion, estado, id_idioma) VALUES ('TRASLADOS', 5, 1, 'es');
+GO
+
+/* ---------- CAMBIO 57: spActualizaInicioTraslado — tarjeta de traslados de un destino en la Home ----------
+   Igual que spActualizaInicioExcursion, pero con Eurovip.traslado (que hace de tabla intermedia):
+     • Una sola tarjeta por destino en Eurovip.inicio (tipo_servicio = 'TRASLADO', id_destino = el destino).
+     • Solo cuentan los traslados ACTIVOS. id_servicio = el más barato (id_traslado) y precioWeb = su precio
+       más bajo (ida y vuelta o solo ida), para el "desde …".
+     • Si el destino ya tenía tarjeta se ACTUALIZA (se respeta sección, posición y visible del editor de la Home).
+     • Si el destino se queda sin traslados activos, la tarjeta se borra.
+   La pantalla de Traslados lo llama al guardar, duplicar, activar/desactivar y eliminar. */
+CREATE OR ALTER PROCEDURE Eurovip.spActualizaInicioTraslado
+    @destino varchar(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    SET @destino = LTRIM(RTRIM(@destino));
+    IF ISNULL(@destino, '') = '' RETURN;
+
+    BEGIN TRAN;
+    DECLARE @id int, @precio money, @pais char(2), @imagen varchar(300), @cont int;
+
+    SELECT TOP 1 @id = id_traslado,
+                 @precio = CASE WHEN precio_ida_vuelta IS NULL THEN precio_ida
+                                WHEN precio_ida IS NULL OR precio_ida_vuelta <= precio_ida THEN precio_ida_vuelta ELSE precio_ida END
+    FROM Eurovip.traslado
+    WHERE activo = 1 AND id_destino = @destino
+    ORDER BY CASE WHEN precio_ida_vuelta IS NULL THEN precio_ida
+                  WHEN precio_ida IS NULL OR precio_ida_vuelta <= precio_ida THEN precio_ida_vuelta ELSE precio_ida END, id_traslado;
+
+    IF @id IS NULL
+    BEGIN
+        DELETE FROM Eurovip.inicio WHERE tipo_servicio = 'TRASLADO' AND id_destino = @destino AND id_idioma = 'ES';
+        COMMIT;
+        RETURN;
+    END
+
+    SELECT TOP 1 @pais = id_pais, @imagen = caratula FROM Eurovip.destino WHERE id_destino = @destino AND id_idioma = 'ES';
+    SELECT TOP 1 @cont = id_contenedor FROM Eurovip.contenedores WHERE nombre = 'TRASLADOS' AND UPPER(id_idioma) = 'ES';
+
+    IF EXISTS (SELECT 1 FROM Eurovip.inicio WHERE tipo_servicio = 'TRASLADO' AND id_destino = @destino AND id_idioma = 'ES')
+        UPDATE Eurovip.inicio
+           SET id_servicio = @id, precioWeb = @precio, id_moneda = 'DOP', id_paisDestino = ISNULL(@pais, id_paisDestino),
+               caratulaDestino = ISNULL(@imagen, caratulaDestino), descripcion = 'Traslados en ' + @destino
+         WHERE tipo_servicio = 'TRASLADO' AND id_destino = @destino AND id_idioma = 'ES';
+    ELSE
+        INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino,
+                                    id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor,
+                                    posicion_contenedor, posicion_destino, estado, notas, noches)
+        SELECT @id, 'ES', 'TRASLADO', 99, 'DOP', 'ES', 'Madrid', ISNULL(@pais, 'DO'),
+               @destino, @imagen, 'Traslados en ' + @destino, NULL, NULL, @precio, @cont, CASE WHEN @cont IS NULL THEN NULL ELSE 'TRASLADOS' END,
+               (SELECT posicion FROM Eurovip.contenedores WHERE id_contenedor = @cont),
+               (SELECT ISNULL(MAX(posicion_destino), 0) + 1 FROM Eurovip.inicio WHERE id_contenedor = @cont), 1, NULL, NULL;
+    COMMIT;
+END
+GO
+
+/* ---------- CAMBIO 58: consulta para la WEB — todos los traslados de un destino ----------
+   Al pulsar la tarjeta TRASLADO de la Home (columna "destino" de spPortalListarInicio) la web llama a
+   spPortalListarTraslados @Destino: todos los traslados activos de ese destino, agrupables por aeropuerto,
+   del más barato al más caro. Para buscar con viajeros e ida y vuelta sigue estando spPortalBuscarTraslados. */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarTraslados
+    @Destino varchar(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT t.id_traslado, t.nombre, t.tipo, t.categoria, t.vehiculo, t.id_estacion_origen AS origen,
+           (SELECT TOP 1 e.nombre FROM Eurovip.estacion e WHERE e.id_estacion = t.id_estacion_origen) AS origen_nombre,
+           t.id_destino AS destino, t.maletas, t.duracion_min, t.pasajeros_min, t.pasajeros_max, t.cobro,
+           CAST(t.precio_ida AS decimal(19,4)) AS precio_ida, CAST(t.precio_ida_vuelta AS decimal(19,4)) AS precio_ida_vuelta,
+           t.id_moneda, t.cancelable, t.horas_cancelacion, t.descripcion, t.todos_hoteles,
+           CASE WHEN t.imagen IS NULL THEN NULL ELSE '/imagenes/traslados/' + t.imagen END AS imagen
+      FROM Eurovip.traslado t
+     WHERE t.activo = 1 AND (@Destino IS NULL OR t.id_destino = LTRIM(RTRIM(@Destino)))
+     ORDER BY t.id_destino, t.id_estacion_origen,
+              CASE WHEN t.precio_ida_vuelta IS NULL THEN t.precio_ida ELSE t.precio_ida_vuelta END, t.tipo, t.categoria;
+END
+GO
+
+/* Carga inicial (20/10/2026): una tarjeta TRASLADO por cada destino que ya tiene traslados.
+   Resultado: tarjeta id 92 "Traslados en Punta Cana", desde 20,00, sección TRASLADOS (id 55). */
+DECLARE @d varchar(50);
+DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT DISTINCT id_destino FROM Eurovip.traslado;
+OPEN c; FETCH NEXT FROM c INTO @d;
+WHILE @@FETCH_STATUS = 0 BEGIN EXEC Eurovip.spActualizaInicioTraslado @d; FETCH NEXT FROM c INTO @d; END
+CLOSE c; DEALLOCATE c;
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -3323,6 +3431,10 @@ GO
                  de ViajeVDT (37-39, 188-193, 311-325: estaban libres). Ninguna trae descripción.
                • Tarjetas de la Home creadas solas (spActualizaInicioExcursion): id 90 "Excursiones en
                  La Romana" e id 91 "Excursiones en Samaná", en la sección EXCURSIONES.
+
+   20/10/2026  FASE 16 aplicada (CAMBIO 56 a 58): traslados en la Home, una tarjeta por destino
+               (ver FASE 16). Carga inicial: "Traslados en Punta Cana" (inicio id 92), con los 3 traslados
+               que ya había cargado la usuaria.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

@@ -55,14 +55,14 @@ namespace EuroVip.Controllers
         /// Imagen de la tarjeta desde las carpetas del proyecto (lo que se carga en Hoteles y Circuitos):
         ///  • HOTEL: /imagenes/hoteles/{nombre del hotel}.webp
         ///  • CIRCUITO: la portada del circuito (/imagenes/circuitos/{circuito.caratula})
-        ///  • EXCURSION: la foto del destino (/imagenes/destinos/{destino}.webp)
+        ///  • EXCURSION y TRASLADO: la foto del destino (/imagenes/destinos/{destino}.webp)
         ///  • si no hay archivo, la URL que tenga la tarjeta (si es una dirección web o una ruta del sitio).
         /// </summary>
         private void PonerImagen(HwTarjeta t)
         {
             if (string.Equals(t.Tipo_Servicio, "HOTEL", StringComparison.OrdinalIgnoreCase))
                 t.Imagen = _img.Buscar("hoteles", t.Id_Destino)?.Url;
-            else if (string.Equals(t.Tipo_Servicio, "EXCURSION", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(t.Tipo_Servicio, "EXCURSION", StringComparison.OrdinalIgnoreCase) || string.Equals(t.Tipo_Servicio, "TRASLADO", StringComparison.OrdinalIgnoreCase))
                 t.Imagen = _img.Buscar("destinos", t.Id_Destino)?.Url;
             else if (string.Equals(t.Tipo_Servicio, "CIRCUITO", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(t.Caratula_Circuito))
                 t.Imagen = t.Caratula_Circuito.StartsWith("/") || Uri.IsWellFormedUriString(t.Caratula_Circuito, UriKind.Absolute)
