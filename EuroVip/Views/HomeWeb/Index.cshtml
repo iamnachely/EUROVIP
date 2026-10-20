@@ -348,13 +348,15 @@ const HW = (() => {
     }
 
     // ===================== VISTA: secciones y tarjetas =====================
+    /** Sin sección (o de una sección que ya no existe): la base la deja oculta (trigger trInicioSinSeccion). */
+    const sinSeccion = t => !D.contenedores.some(c => c.id_Contenedor === t.id_Contenedor);
     const cardHtml = t => {
-        const c = carat(t);
+        const c = carat(t), sin = sinSeccion(t);
         return `<div class="hw-card ${t.estado ? '' : 'oculta'}" draggable="true" data-t="${t.id}" title="Clic para editar · arrastra para mover">
             <div class="img">${c ? `<img src="${esc(c)}" alt="" loading="lazy" onerror="this.remove()">` : esc(EV.iniciales(t.id_Destino))}
-                <div class="chips"><span>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</span>${t.vigente === false ? '<span class="mal">Ya no se vende</span>' : ''}${t.estado ? '' : '<span class="oc">Oculta</span>'}</div>
+                <div class="chips"><span>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</span>${t.vigente === false ? '<span class="mal">Ya no se vende</span>' : ''}${t.estado ? '' : `<span class="oc">${sin ? 'Oculta · sin sección' : 'Oculta'}</span>`}</div>
                 <div class="acc"><button type="button" class="edt" title="Editar tarjeta" aria-label="Editar tarjeta"><i class="bi bi-pencil"></i></button>
-                    <button type="button" class="ojo" data-ojo="${t.id}" title="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}" aria-label="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div></div>
+                    <button type="button" class="ojo" data-ojo="${t.id}" title="${sin ? 'Sin sección: arrástrala a una sección para que salga en la web' : t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}" aria-label="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div></div>
             <div class="tx"><b>${esc(t.descripcion && ['CIRCUITO', 'EXCURSION', 'TRASLADO'].includes(t.tipo_Servicio) ? t.descripcion : t.id_Destino)}</b><small>${esc(t.origen)} · ${esc(t.campanya || '#' + t.id_Campanya)}${t.noches ? ` · ${t.noches} noches` : ''}</small>
                 <div class="pr">${t.precioWeb ? `desde <b>${EV.dinero(t.precioWeb)}</b>` : 'sin precio'}</div></div></div>`;
     };
@@ -373,7 +375,7 @@ const HW = (() => {
                 <div class="hw-cards" data-cards="${c.id_Contenedor}">${c.tarjetas.map(cardHtml).join('')}<button type="button" class="hw-add" data-addsec="${c.id_Contenedor}"><span><i class="bi bi-plus-circle"></i>Agregar tarjeta</span></button></div>
             </section>`).join('') || '<div class="ui-empty"><p>No hay secciones. Crea la primera.</p></div>';
         $('#hwSin').innerHTML = `<div class="hw-sec-h"><i class="bi bi-inbox" style="font-size:18px;color:var(--ev-muted)"></i><h3 style="font-size:14px">Sin sección</h3><span class="n">${D.sinContenedor.length}</span>
-                <span class="hw-tip" style="margin-left:8px">no salen en la Home hasta que las arrastres a una sección</span></div>
+                <span class="hw-tip" style="margin-left:8px"><i class="bi bi-eye-slash"></i> se ocultan solas: no salen en la web hasta que las arrastres a una sección (entonces vuelven a verse)</span></div>
             <div class="hw-cards" data-cards="">${D.sinContenedor.map(cardHtml).join('') || '<span class="hw-tip" style="padding:10px">Vacío. Puedes soltar aquí una tarjeta para sacarla de su sección.</span>'}</div>`;
     }
 
@@ -655,6 +657,7 @@ const HW = (() => {
 
     async function estadoTarjeta(id) {
         const t = todas().find(x => x.id === id); if (!t) return;
+        if (!t.estado && sinSeccion(t)) { EV.toast('Esta tarjeta no tiene sección: arrástrala a una sección y saldrá en la web sola.', 'err'); return; }
         try { const r = await EV.post('/HomeWeb/EstadoTarjeta', { Id: id, Estado: !t.estado }); EV.toast(r.mensaje, 'ok', { texto: 'Deshacer', accion: async () => { await EV.post('/HomeWeb/EstadoTarjeta', { Id: id, Estado: t.estado }); cargar(); } }); cargar(); }
         catch (e) { EV.toast(e.message, 'err'); }
     }

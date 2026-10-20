@@ -113,7 +113,9 @@ namespace EuroVip.Controllers
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EstadoTarjeta([FromBody] EstadoDto dto)
         {
-            var r = await _repo.EstadoTarjetaAsync(dto.Id, dto.Estado);
+            bool? r;
+            try { r = await _repo.EstadoTarjetaAsync(dto.Id, dto.Estado); }
+            catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
             if (r is null) return NotFound(new { mensaje = "No encontramos esa tarjeta." });
             await Auditar("Home_TarjetaEstado", dto);
             return Json(new { ok = true, mensaje = dto.Estado ? "Tarjeta visible en la web." : "Tarjeta oculta en la web." });

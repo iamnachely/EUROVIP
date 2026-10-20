@@ -169,6 +169,11 @@ namespace EuroVip.Repositories
         public async Task<bool?> EstadoTarjetaAsync(int id, bool estado)
         {
             using var cn = _db.Conexion();
+            // Sin sección no se puede mostrar: el trigger trInicioSinSeccion la deja oculta (CAMBIO 61)
+            if (estado && await cn.ExecuteScalarAsync<int>(@"SELECT COUNT(*) FROM Eurovip.inicio i
+                    WHERE i.id = @id AND i.id_idioma = @Idioma AND (i.id_contenedor IS NULL
+                          OR NOT EXISTS (SELECT 1 FROM Eurovip.contenedores c WHERE c.id_contenedor = i.id_contenedor))", new { id, Idioma }) > 0)
+                throw new InvalidOperationException("Esta tarjeta no tiene sección: ponla en una sección y saldrá en la web sola.");
             var n = await cn.ExecuteAsync("UPDATE Eurovip.inicio SET estado = @estado WHERE id = @id AND id_idioma = @Idioma", new { id, estado, Idioma });
             return n == 0 ? null : estado;
         }

@@ -3186,6 +3186,94 @@ END
 GO
 
 /* ##########################################################################################
+   FASE 19 — «SIN SECCIÓN» = OCULTA EN LA WEB  (20/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: "en /HomeWeb/Index, si algo queda en Sin sección que se desactive,
+   que quede oculta solo si no tiene un contenedor asignado".
+   Cómo: trigger en Eurovip.inicio (vale para cualquier camino que mueva una tarjeta) + spSincronizaInicio
+   oculta también las de secciones borradas por otro lado. Probado con ROLLBACK: sin sección → oculta;
+   a una sección → visible; oculta a mano dentro de una sección → sigue oculta; sección borrada → oculta.
+   Al aplicarlo no había ninguna tarjeta sin sección (no cambió ningún dato).
+   ########################################################################################## */
+/* ---------- CAMBIO 61: tarjeta «Sin sección» = oculta en la web ----------
+   Regla: una tarjeta de Eurovip.inicio sin sección (id_contenedor vacío o de una sección que ya no existe) queda
+   OCULTA (estado = 0); solo por eso. Se hace con un trigger para que valga venga de donde venga el cambio:
+   pantalla Home de la web, carga de ofertas (spActualizaInicio), excursiones, traslados, eliminar una sección…
+     • Si queda sin sección -> estado = 0.
+     • Si estaba sin sección (y por eso oculta) y la ponen en una sección -> estado = 1 (vuelve a salir).
+       Las que se ocultaron a mano estando en una sección no se tocan. */
+CREATE OR ALTER TRIGGER Eurovip.trInicioSinSeccion ON Eurovip.inicio
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+
+    UPDATE i SET estado = 0
+    FROM Eurovip.inicio i JOIN inserted x ON x.id = i.id
+    WHERE ISNULL(i.estado, 1) = 1
+      AND (i.id_contenedor IS NULL OR NOT EXISTS (SELECT 1 FROM Eurovip.contenedores c WHERE c.id_contenedor = i.id_contenedor));
+
+    UPDATE i SET estado = 1
+    FROM Eurovip.inicio i JOIN inserted x ON x.id = i.id JOIN deleted d ON d.id = i.id
+    WHERE i.estado = 0 AND ISNULL(d.estado, 1) = 0
+      AND (d.id_contenedor IS NULL OR NOT EXISTS (SELECT 1 FROM Eurovip.contenedores c WHERE c.id_contenedor = d.id_contenedor))
+      AND EXISTS (SELECT 1 FROM Eurovip.contenedores c WHERE c.id_contenedor = i.id_contenedor);
+END
+GO
+
+/* spSincronizaInicio (CAMBIO 59) también oculta las tarjetas cuya sección se borró por otro camino (el trigger solo
+   salta cuando cambia la tarjeta, no cuando se borra la sección). */
+CREATE OR ALTER PROCEDURE Eurovip.spSincronizaInicio
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @pend TABLE (tipo varchar(20), destino varchar(50));
+
+    -- Tarjetas sin sección -> ocultas (CAMBIO 61)
+    UPDATE i SET estado = 0 FROM Eurovip.inicio i
+    WHERE ISNULL(i.estado, 1) = 1
+      AND (i.id_contenedor IS NULL OR NOT EXISTS (SELECT 1 FROM Eurovip.contenedores c WHERE c.id_contenedor = i.id_contenedor));
+
+    -- Excursiones: lo que debería haber (una por destino, la más barata) contra lo que hay
+    ;WITH deberia AS (
+        SELECT d, id, precio FROM (
+            SELECT LTRIM(RTRIM(id_destino)) d, id_Excursion id, NULLIF(precio, 0) precio,
+                   ROW_NUMBER() OVER (PARTITION BY LTRIM(RTRIM(id_destino)) ORDER BY CASE WHEN ISNULL(precio, 0) > 0 THEN 0 ELSE 1 END, precio, id_Excursion) n
+            FROM Eurovip.servicio_excursion WHERE ISNULL(id_destino, '') <> '') x WHERE n = 1
+    ), hay AS (SELECT id_destino d, id_servicio id, precioWeb precio FROM Eurovip.inicio WHERE tipo_servicio = 'EXCURSION' AND id_idioma = 'ES')
+    INSERT @pend
+    SELECT 'EXCURSION', ISNULL(a.d, b.d) FROM deberia a FULL JOIN hay b ON b.d = a.d
+    WHERE a.d IS NULL OR b.d IS NULL OR a.id <> b.id OR ISNULL(a.precio, -1) <> ISNULL(b.precio, -1);
+
+    -- Traslados: solo los activos
+    ;WITH base AS (
+        SELECT id_destino d, id_traslado id,
+               CASE WHEN precio_ida_vuelta IS NULL THEN precio_ida
+                    WHEN precio_ida IS NULL OR precio_ida_vuelta <= precio_ida THEN precio_ida_vuelta ELSE precio_ida END precio
+        FROM Eurovip.traslado WHERE activo = 1
+    ), deberia AS (
+        SELECT d, id, precio FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY d ORDER BY precio, id) n FROM base) x WHERE n = 1
+    ), hay AS (SELECT id_destino d, id_servicio id, precioWeb precio FROM Eurovip.inicio WHERE tipo_servicio = 'TRASLADO' AND id_idioma = 'ES')
+    INSERT @pend
+    SELECT 'TRASLADO', ISNULL(a.d, b.d) FROM deberia a FULL JOIN hay b ON b.d = a.d
+    WHERE a.d IS NULL OR b.d IS NULL OR a.id <> b.id OR ISNULL(a.precio, -1) <> ISNULL(b.precio, -1);
+
+    DECLARE @t varchar(20), @d varchar(50);
+    DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT DISTINCT tipo, destino FROM @pend;
+    OPEN c; FETCH NEXT FROM c INTO @t, @d;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        IF @t = 'EXCURSION' EXEC Eurovip.spActualizaInicioExcursion @d; ELSE EXEC Eurovip.spActualizaInicioTraslado @d;
+        FETCH NEXT FROM c INTO @t, @d;
+    END
+    CLOSE c; DEALLOCATE c;
+
+    SELECT tipo, destino FROM @pend;   -- lo que se arregló (vacío si todo estaba bien)
+END
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -3529,6 +3617,9 @@ GO
                (destino.caratula vacía): sus tarjetas de excursiones y traslados salen sin foto.
 
    20/10/2026  FASE 18 aplicada (CAMBIO 60): nombres de sección de la Home con emojis (nvarchar).
+
+   20/10/2026  FASE 19 aplicada (CAMBIO 61): tarjetas «Sin sección» ocultas en la web (trigger
+               trInicioSinSeccion). No había ninguna sin sección: no cambió ningún dato.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
