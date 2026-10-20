@@ -685,8 +685,8 @@ const HW = (() => {
         $('#hwDev').addEventListener('click', e => { const b = e.target.closest('[data-dev]'); if (!b) return; dev = b.dataset.dev; $$('#hwDev button').forEach(x => x.classList.toggle('on', x === b)); $('#hwMarco').dataset.dev = dev; pintarSlider(); });
         $('#hwSlider').onclick = () => tabs.ir('pCarrusel');
         $('#hwNuevaSec').onclick = async () => {
-            const nombre = await EV.pedir({ titulo: 'Nueva sección de la Home', etiqueta: 'Nombre de la sección', si: 'Crear sección', icono: 'plus-lg', maxlength: 100,
-                ayuda: 'Ej. CARIBE, OFERTAS DE VERANO. Luego arrastra tarjetas a la sección.' });
+            const nombre = await EV.pedir({ titulo: 'Nueva sección de la Home', etiqueta: 'Nombre de la sección', si: 'Crear sección', icono: 'plus-lg', maxlength: 60,
+                ayuda: 'Ej. 🌴 CARIBE, ☀️ OFERTAS DE VERANO. Puedes poner emojis (en Windows: tecla Windows + punto). Luego arrastra tarjetas a la sección.' });
             if (!nombre?.trim()) return;
             try { const r = await EV.post('/HomeWeb/Seccion', { Nombre: nombre.trim(), Estado: true }); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
         };
@@ -699,7 +699,7 @@ const HW = (() => {
             const so = e.target.closest('[data-secojo]');
             if (so) { const c = D.contenedores.find(x => x.id_Contenedor === +so.dataset.secojo); try { const r = await EV.post('/HomeWeb/Seccion', { Id_Contenedor: c.id_Contenedor, Nombre: c.nombre, Estado: !c.estado }); EV.toast(c.estado ? 'Sección oculta en la web.' : 'Sección visible en la web.'); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
             const sr = e.target.closest('[data-secren]');
-            if (sr) { const c = D.contenedores.find(x => x.id_Contenedor === +sr.dataset.secren); const n = await EV.pedir({ titulo: 'Cambiar nombre de la sección', etiqueta: 'Nombre', valor: c.nombre, maxlength: 100 }); if (!n?.trim() || n.trim() === c.nombre) return;
+            if (sr) { const c = D.contenedores.find(x => x.id_Contenedor === +sr.dataset.secren); const n = await EV.pedir({ titulo: 'Cambiar nombre de la sección', etiqueta: 'Nombre', valor: c.nombre, maxlength: 60, ayuda: 'Puedes poner emojis (en Windows: tecla Windows + punto). Ej. 🚐 TRASLADOS' }); if (!n?.trim() || n.trim() === c.nombre) return;
                 try { const r = await EV.post('/HomeWeb/Seccion', { Id_Contenedor: c.id_Contenedor, Nombre: n.trim(), Estado: c.estado }); EV.toast(r.mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } return; }
             const sd = e.target.closest('[data-secdel]');
             if (sd) { const c = D.contenedores.find(x => x.id_Contenedor === +sd.dataset.secdel);

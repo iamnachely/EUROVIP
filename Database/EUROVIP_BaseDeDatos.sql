@@ -3160,6 +3160,32 @@ END
 GO
 
 /* ##########################################################################################
+   FASE 18 — EMOJIS EN LOS NOMBRES DE LAS SECCIONES DE LA HOME  (20/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: "en /HomeWeb/Index que los nombres de los contenedores acepten
+   emojis". Con varchar los emojis se guardaban como "?". Se pasa a nvarchar (Unicode) el nombre
+   de la sección y su copia en cada tarjeta, y el SP que la rehace. Probado con ROLLBACK:
+   N'🚐 TRASLADOS' se guarda y se lee igual en contenedores e inicio.
+   ########################################################################################## */
+/* ---------- CAMBIO 60: nombres de las secciones de la Home con emojis ----------
+   varchar guarda los emojis como "?" (no existen en la página de códigos Latin1). Pasan a nvarchar (Unicode):
+     • Eurovip.contenedores.nombre  varchar(255) -> nvarchar(255)
+     • Eurovip.inicio.contenedor    varchar(30)  -> nvarchar(100)  (copia del nombre en cada tarjeta; un emoji ocupa 2)
+     • spActualizaInicio guardaba el nombre en una variable VARCHAR(50) al rehacer las tarjetas: pasa a NVARCHAR(100).
+   Los nombres que ya había no cambian. */
+ALTER TABLE Eurovip.contenedores ALTER COLUMN nombre nvarchar(255) NOT NULL;
+ALTER TABLE Eurovip.inicio ALTER COLUMN contenedor nvarchar(100) NULL;
+GO
+DECLARE @def nvarchar(max) = OBJECT_DEFINITION(OBJECT_ID('Eurovip.spActualizaInicio'));
+IF @def LIKE '%contenedor VARCHAR(50)%'
+BEGIN
+    SET @def = REPLACE(@def, 'contenedor VARCHAR(50)', 'contenedor NVARCHAR(100)');
+    SET @def = STUFF(@def, PATINDEX('%CREATE%PROCEDURE%', @def), CHARINDEX('PROCEDURE', @def) - PATINDEX('%CREATE%PROCEDURE%', @def), 'CREATE OR ALTER ');
+    EXEC sp_executesql @def;
+END
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -3501,6 +3527,8 @@ GO
                FASE 16. Se creó la tarjeta (inicio id 105, "Traslados en La Romana", desde 40) y se aplicó
                FASE 17 (CAMBIO 59, spSincronizaInicio). Nota: el destino La Romana no tiene carátula
                (destino.caratula vacía): sus tarjetas de excursiones y traslados salen sin foto.
+
+   20/10/2026  FASE 18 aplicada (CAMBIO 60): nombres de sección de la Home con emojis (nvarchar).
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

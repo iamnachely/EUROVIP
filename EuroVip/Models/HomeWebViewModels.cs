@@ -109,7 +109,7 @@ namespace EuroVip.Models
     public class HwContenedorDto
     {
         public int? Id_Contenedor { get; set; }
-        [Required(ErrorMessage = "Escribe el nombre de la sección")] [StringLength(30, ErrorMessage = "Máximo 30 letras")]
+        [Required(ErrorMessage = "Escribe el nombre de la sección")] [StringLength(60, ErrorMessage = "Máximo 60 caracteres (cada emoji cuenta como 2)")]
         public string Nombre { get; set; } = "";
         public bool Estado { get; set; } = true;
     }
