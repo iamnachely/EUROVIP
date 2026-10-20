@@ -67,6 +67,8 @@ namespace EuroVip.Repositories
         public async Task<HwDatos> DatosAsync()
         {
             using var cn = _db.Conexion();
+            // Arregla las tarjetas EXCURSION / TRASLADO de la Home que falten o estén desactualizadas (no escribe si están bien)
+            await cn.ExecuteAsync("Eurovip.spSincronizaInicio", commandType: System.Data.CommandType.StoredProcedure);
             var conts = (await cn.QueryAsync<HwContenedor>(@"
                 SELECT id_contenedor AS Id_Contenedor, nombre AS Nombre, posicion AS Posicion, CAST(ISNULL(estado, 1) AS bit) AS Estado
                 FROM Eurovip.contenedores WHERE UPPER(id_idioma) = @Idioma ORDER BY posicion, id_contenedor", new { Idioma })).ToList();

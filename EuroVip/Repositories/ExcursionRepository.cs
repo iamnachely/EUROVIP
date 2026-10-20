@@ -34,6 +34,8 @@ namespace EuroVip.Repositories
         public async Task<List<Excursion>> ListarAsync()
         {
             using var cn = _db.Conexion();
+            // Arregla las tarjetas EXCURSION / TRASLADO de la Home que falten o estén desactualizadas (no escribe si están bien)
+            await cn.ExecuteAsync("Eurovip.spSincronizaInicio", commandType: System.Data.CommandType.StoredProcedure);
             return (await cn.QueryAsync<Excursion>($"SELECT {Columnas} FROM Eurovip.servicio_excursion ORDER BY nombre")).ToList();
         }
 

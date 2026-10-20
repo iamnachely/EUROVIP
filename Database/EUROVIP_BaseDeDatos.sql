@@ -3099,6 +3099,67 @@ CLOSE c; DEALLOCATE c;
 GO
 
 /* ##########################################################################################
+   FASE 17 — LA HOME SE REVISA SOLA (excursiones y traslados)  (20/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: la usuaria cargó un traslado en La Romana y no salió en la Home. Causa: se guardó con
+   la versión de la pantalla anterior a FASE 16 (la app local se recompiló 3 minutos después), que
+   todavía no creaba la tarjeta. Se creó a mano con spActualizaInicioTraslado 'La Romana' (inicio
+   id 105) y, para que no vuelva a pasar, la Home de la web, Excursiones y Traslados llaman a
+   spSincronizaInicio al abrirse: arregla las tarjetas que falten, sobren o tengan otro "desde".
+   Probado con ROLLBACK (borrar la tarjeta de La Romana y estropear la de Punta Cana → las arregla
+   respetando posición y visible).
+   ########################################################################################## */
+/* ---------- CAMBIO 59: spSincronizaInicio — revisa que la Home tenga bien las tarjetas de EXCURSION y TRASLADO ----------
+   Por qué: un traslado de La Romana se cargó con una versión de la pantalla que todavía no creaba la tarjeta y no salió
+   en la Home. Para que no vuelva a pasar (versión vieja en el servidor, datos cargados a mano en la base…), este SP
+   busca los destinos cuya tarjeta falta, sobra o tiene otro "desde" y los arregla con spActualizaInicioExcursion /
+   spActualizaInicioTraslado (que respetan sección, posición y visible). Si todo está bien no escribe nada.
+   Lo llaman: la pantalla Home de la web, Excursiones y Traslados al abrirse. */
+CREATE OR ALTER PROCEDURE Eurovip.spSincronizaInicio
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @pend TABLE (tipo varchar(20), destino varchar(50));
+
+    -- Excursiones: lo que debería haber (una por destino, la más barata) contra lo que hay
+    ;WITH deberia AS (
+        SELECT d, id, precio FROM (
+            SELECT LTRIM(RTRIM(id_destino)) d, id_Excursion id, NULLIF(precio, 0) precio,
+                   ROW_NUMBER() OVER (PARTITION BY LTRIM(RTRIM(id_destino)) ORDER BY CASE WHEN ISNULL(precio, 0) > 0 THEN 0 ELSE 1 END, precio, id_Excursion) n
+            FROM Eurovip.servicio_excursion WHERE ISNULL(id_destino, '') <> '') x WHERE n = 1
+    ), hay AS (SELECT id_destino d, id_servicio id, precioWeb precio FROM Eurovip.inicio WHERE tipo_servicio = 'EXCURSION' AND id_idioma = 'ES')
+    INSERT @pend
+    SELECT 'EXCURSION', ISNULL(a.d, b.d) FROM deberia a FULL JOIN hay b ON b.d = a.d
+    WHERE a.d IS NULL OR b.d IS NULL OR a.id <> b.id OR ISNULL(a.precio, -1) <> ISNULL(b.precio, -1);
+
+    -- Traslados: solo los activos
+    ;WITH base AS (
+        SELECT id_destino d, id_traslado id,
+               CASE WHEN precio_ida_vuelta IS NULL THEN precio_ida
+                    WHEN precio_ida IS NULL OR precio_ida_vuelta <= precio_ida THEN precio_ida_vuelta ELSE precio_ida END precio
+        FROM Eurovip.traslado WHERE activo = 1
+    ), deberia AS (
+        SELECT d, id, precio FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY d ORDER BY precio, id) n FROM base) x WHERE n = 1
+    ), hay AS (SELECT id_destino d, id_servicio id, precioWeb precio FROM Eurovip.inicio WHERE tipo_servicio = 'TRASLADO' AND id_idioma = 'ES')
+    INSERT @pend
+    SELECT 'TRASLADO', ISNULL(a.d, b.d) FROM deberia a FULL JOIN hay b ON b.d = a.d
+    WHERE a.d IS NULL OR b.d IS NULL OR a.id <> b.id OR ISNULL(a.precio, -1) <> ISNULL(b.precio, -1);
+
+    DECLARE @t varchar(20), @d varchar(50);
+    DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT DISTINCT tipo, destino FROM @pend;
+    OPEN c; FETCH NEXT FROM c INTO @t, @d;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        IF @t = 'EXCURSION' EXEC Eurovip.spActualizaInicioExcursion @d; ELSE EXEC Eurovip.spActualizaInicioTraslado @d;
+        FETCH NEXT FROM c INTO @t, @d;
+    END
+    CLOSE c; DEALLOCATE c;
+
+    SELECT tipo, destino FROM @pend;   -- lo que se arregló (vacío si todo estaba bien)
+END
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -3435,6 +3496,11 @@ GO
    20/10/2026  FASE 16 aplicada (CAMBIO 56 a 58): traslados en la Home, una tarjeta por destino
                (ver FASE 16). Carga inicial: "Traslados en Punta Cana" (inicio id 92), con los 3 traslados
                que ya había cargado la usuaria.
+
+   20/10/2026  Traslado n.º 9 (La Romana) sin tarjeta en la Home: se cargó con la versión anterior a
+               FASE 16. Se creó la tarjeta (inicio id 105, "Traslados en La Romana", desde 40) y se aplicó
+               FASE 17 (CAMBIO 59, spSincronizaInicio). Nota: el destino La Romana no tiene carátula
+               (destino.caratula vacía): sus tarjetas de excursiones y traslados salen sin foto.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
