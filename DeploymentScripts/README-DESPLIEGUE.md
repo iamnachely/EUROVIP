@@ -41,23 +41,24 @@ C:\inetpub\wwwroot\eurovip\Green\appsettings.Local.json
 Si la base está en el mismo servidor, la cadena de conexión puede usar `localhost`.
 El despliegue conserva estos archivos (no los pisa).
 
-### 3b. Fotos de productos (`multimedia`)
-Las fotos de destinos, países, hoteles, alojamientos, circuitos, excursiones y traslados se guardan en
-`Eurovip.imagen` / `Eurovip.multimedia` y el archivo en una carpeta base (documento `Database/esquema-multimedia.md`).
-El itinerario de circuito y el slider siguen como estaban. Se configura en `appsettings.Local.json` (opcional):
-```json
-"Multimedia": {
-  "CarpetaFisica": "D:\\EuroVIP\\Imagenes\\multimedia",
-  "Url": "/multimedia"
-}
-```
-- Sin configurar: `wwwroot\multimedia` y la URL `/multimedia` (el despliegue la conserva).
-- Con `CarpetaFisica` fuera del sitio, la app la publica en la ruta de `Url`; si `Url` es una dirección
-  completa (`https://servidor-de-imagenes/multimedia`), las fotos las sirve ese servidor.
-- **Importante:** la base de datos es la misma para la app del servidor y la de cada computadora. Para que todos
-  vean las mismas fotos, `CarpetaFisica` y `Url` deben apuntar al mismo sitio en todas.
-- Después del primer despliegue con multimedia: **Herramientas → Fotos (multimedia) → Pasar las fotos de antes**
-  (Superadministrador), en la app del servidor (es donde están las fotos viejas).
+### 3b. Fotos (carpeta de fotos de Eurovip)
+Todas las fotos se guardan en la carpeta del sitio de fotos y se ven desde `fotos.eurovip.com`:
+
+| Qué | Carpeta (en el servidor) | Se ve en |
+|---|---|---|
+| Base | `C:\inetpub\wwwroot\photosVacacionalparce\eurovip\` | `https://fotos.eurovip.com/eurovip/` |
+| Destinos, países, hoteles, alojamientos, excursiones, traslados | `…\eurovip\destinos\{destino}\`, `paises\{código}\`, `hoteles\{n.º}\`, `alojamientos\{id}\`, `excursiones\{id}\`, `traslados\{id}\` | `…/eurovip/destinos/punta-cana/{código}.webp` |
+| Circuitos (portada, intermedia, galería) | `…\eurovip\circuitos\{circuito}\` | |
+| Itinerario de circuito | `…\eurovip\circuitos\itinerario\{circuito}\` | |
+| Slider (web, tablet, móvil) | `…\eurovip\slider\`, `slider\md\`, `slider\sm\` | `…/eurovip/slider/…` |
+
+- Los nombres de archivo son un código aleatorio (`3f2a9c1e….webp`): nunca se pisa una foto. El slider conserva el nombre que se le da al cargarlo.
+- Se configura en `appsettings.json`: `Multimedia:CarpetaFisica`, `Multimedia:Url` y `Eurovip:Slider` (con `Anterior` = la carpeta de antes del slider).
+- **Permisos:** la identidad `IIS AppPool\eurovipBack` necesita **Modificar** en `C:\inetpub\wwwroot\photosVacacionalparce\eurovip`.
+- **Primera vez:** en la app del servidor, **Herramientas → Fotos → Pasar las fotos de antes** (Superadministrador): copia a la
+  carpeta nueva las fotos que estaban en `wwwroot\imagenes` y los archivos del slider de la carpeta anterior. No borra nada.
+- La base es la misma para la app del servidor y la de cada computadora, pero la carpeta `C:\inetpub\…` está en el servidor:
+  las fotos se suben desde la app del servidor (desde otra computadora se guardarían en su propio disco).
 
 ### 4. Permisos de escritura
 La identidad del grupo `IIS AppPool\eurovip` necesita **modificar** en `C:\inetpub\wwwroot\eurovip`

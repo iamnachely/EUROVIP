@@ -58,12 +58,19 @@ namespace EuroVip.Services
         Task<int> EliminarProductoAsync(string tipo, string clave);
         Task<int> CambiarClaveAsync(string tipo, string vieja, string nueva, IDbConnection cn, IDbTransaction tx);
         Task<ResumenMigracion> MigrarImagenesViejasAsync();
+        /// <summary>Foto de un día del itinerario de circuito: NO va en Eurovip.multimedia (se guarda en circuito_itinerario.caratula),
+        /// pero el archivo va en la misma base: {base}/circuitos/itinerario/{slug del circuito}/{GUID}.webp. Devuelve su URL.</summary>
+        Task<string> GuardarItinerarioAsync(string circuito, Stream origen);
     }
 
     public class ResumenMigracion
     {
         public Dictionary<string, int> Pasadas { get; } = new();
         public Dictionary<string, int> YaEstaban { get; } = new();
+        /// <summary>Fotos del itinerario de circuito copiadas a la carpeta nueva (circuito_itinerario.caratula actualizado).</summary>
+        public int Itinerario { get; set; }
+        /// <summary>Archivos del slider copiados de la carpeta anterior a la nueva (mismo nombre: carrusel no cambia).</summary>
+        public int Slider { get; set; }
         public List<string> SinArchivo { get; } = new();
         public List<string> Errores { get; } = new();
     }
@@ -94,6 +101,7 @@ namespace EuroVip.Services
 
         private readonly ICircuitoRepository _db;
         private readonly IWebHostEnvironment _env;
+        private readonly IConfiguration _cfg;
         private readonly ILogger<Multimedia> _log;
 
         public string CarpetaBase { get; }
@@ -101,7 +109,7 @@ namespace EuroVip.Services
 
         public Multimedia(ICircuitoRepository db, IWebHostEnvironment env, IConfiguration cfg, ILogger<Multimedia> log)
         {
-            _db = db; _env = env; _log = log;
+            _db = db; _env = env; _log = log; _cfg = cfg;
             var c = cfg["Multimedia:CarpetaFisica"];
             CarpetaBase = string.IsNullOrWhiteSpace(c) ? Path.Combine(env.WebRootPath, "multimedia") : c.Trim();
             UrlBase = (string.IsNullOrWhiteSpace(cfg["Multimedia:Url"]) ? "/multimedia" : cfg["Multimedia:Url"]!.Trim()).TrimEnd('/');
@@ -446,6 +454,18 @@ namespace EuroVip.Services
         /// de circuito, destinos (destino.caratula), alojamientos (alojamiento.caratula local) y hoteles de la pantalla Hoteles.
         /// No toca el itinerario de circuito ni el slider. No borra los archivos viejos. Se puede repetir: salta lo que ya tiene portada.
         /// </summary>
+        public async Task<string> GuardarItinerarioAsync(string circuito, Stream origen)
+        {
+            var slug = Slug(circuito);
+            if (slug == "") throw new InvalidOperationException("Primero escribe el nombre del circuito.");
+            var (datos, _, _) = await ImagenesLocales.ConvertirWebpAsync(origen);
+            var ruta = $"circuitos/itinerario/{slug}/{Guid.NewGuid():N}.webp";
+            var fisica = Fisica(ruta);
+            Directory.CreateDirectory(Path.GetDirectoryName(fisica)!);
+            await File.WriteAllBytesAsync(fisica, datos);
+            return Url(ruta);
+        }
+
         public async Task<ResumenMigracion> MigrarImagenesViejasAsync()
         {
             var r = new ResumenMigracion();
@@ -492,7 +512,59 @@ namespace EuroVip.Services
                     r.Errores.Add($"{etiqueta}: {ex.Message}");
                 }
             }
+            await MigrarItinerarioAsync(r, viejas);
+            MigrarSlider(r);
             return r;
+        }
+
+        /// <summary>Itinerario de circuito: copia los archivos de /imagenes/circuitos/itinerario/… a la base nueva y cambia la caratula.</summary>
+        private async Task MigrarItinerarioAsync(ResumenMigracion r, string viejas)
+        {
+            using var cn = _db.Conexion();
+            var filas = (await cn.QueryAsync<(string Nombre, string Idioma, int Dia, string Caratula)>(
+                "SELECT nombre_circuito, id_idioma, dia, caratula FROM Eurovip.circuito_itinerario WHERE caratula LIKE '/imagenes/circuitos/itinerario/%'")).ToList();
+            foreach (var (nombre, idioma, dia, car) in filas)
+            {
+                try
+                {
+                    var rel = car["/imagenes/".Length..].Split('?')[0];
+                    var vieja = rel.Contains("..") ? null : Path.Combine(viejas, rel.Replace('/', Path.DirectorySeparatorChar));
+                    if (vieja is null || !File.Exists(vieja)) { r.SinArchivo.Add($"Itinerario {nombre} día {dia}: no está el archivo {Path.GetFileName(car)}"); continue; }
+                    await using var st = File.OpenRead(vieja);
+                    var url = await GuardarItinerarioAsync(nombre, st);
+                    await cn.ExecuteAsync("UPDATE Eurovip.circuito_itinerario SET caratula = @url WHERE nombre_circuito = @nombre AND id_idioma = @idioma AND dia = @dia AND caratula = @car",
+                        new { url, nombre, idioma, dia, car });
+                    r.Itinerario++;
+                }
+                catch (Exception ex) { r.Errores.Add($"Itinerario {nombre} día {dia}: {ex.Message}"); }
+            }
+        }
+
+        /// <summary>
+        /// Slider: copia los archivos de la carpeta anterior (Eurovip:Slider:Anterior:Fisico/FisicoMd/FisicoSm) a la nueva
+        /// (Eurovip:Slider:Fisico/FisicoMd/FisicoSm) con el mismo nombre, sin pisar los que ya estén. La tabla carrusel no cambia.
+        /// </summary>
+        private void MigrarSlider(ResumenMigracion r)
+        {
+            foreach (var k in new[] { "Fisico", "FisicoMd", "FisicoSm" })
+            {
+                var de = _cfg[$"Eurovip:Slider:Anterior:{k}"];
+                var a = _cfg[$"Eurovip:Slider:{k}"];
+                if (string.IsNullOrWhiteSpace(de) || string.IsNullOrWhiteSpace(a) || !Directory.Exists(de)
+                    || string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(de)), Path.TrimEndingDirectorySeparator(Path.GetFullPath(a)), StringComparison.OrdinalIgnoreCase)) continue;
+                try
+                {
+                    Directory.CreateDirectory(a);
+                    foreach (var f in Directory.GetFiles(de))   // solo esa carpeta: md y sm tienen su propia clave
+                    {
+                        var destino = Path.Combine(a, Path.GetFileName(f));
+                        if (File.Exists(destino)) continue;
+                        File.Copy(f, destino);
+                        r.Slider++;
+                    }
+                }
+                catch (Exception ex) { r.Errores.Add($"Slider ({k}): {ex.Message}"); }
+            }
         }
 
         /// <summary>Archivo local de una carátula vieja ("/imagenes/destinos/x.webp" o solo "x.webp"); null si es una URL externa.</summary>

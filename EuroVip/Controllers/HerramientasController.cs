@@ -187,8 +187,9 @@ namespace EuroVip.Controllers
             var r = await _mm.MigrarImagenesViejasAsync();
             await Auditar("Herramienta_MigrarImagenes", new { r.Pasadas, r.YaEstaban, sinArchivo = r.SinArchivo.Count, r.Errores });
             var total = r.Pasadas.Values.Sum();
-            return Json(new { ok = true, pasadas = r.Pasadas, yaEstaban = r.YaEstaban, sinArchivo = r.SinArchivo, errores = r.Errores,
-                              mensaje = total == 0 ? "No había fotos nuevas que pasar." : $"Se pasaron {total} fotos a multimedia." });
+            return Json(new { ok = true, pasadas = r.Pasadas, yaEstaban = r.YaEstaban, sinArchivo = r.SinArchivo, errores = r.Errores, itinerario = r.Itinerario, slider = r.Slider,
+                              mensaje = total + r.Itinerario + r.Slider == 0 ? "No había fotos nuevas que pasar."
+                                      : $"Se pasaron {total} fotos a multimedia, {r.Itinerario} del itinerario y {r.Slider} archivos del slider." });
         }
 
         private Task Auditar(string tipo, object cambios) =>

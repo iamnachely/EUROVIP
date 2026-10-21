@@ -207,7 +207,7 @@
         </div>
         <div class="ht-panel">
             <h3><i class="bi bi-images"></i> Fotos (multimedia)</h3>
-            <p style="margin:0 0 8px;color:var(--ev-muted);font-size:13px;font-weight:600">Las fotos de destinos, países, hoteles, alojamientos, circuitos (portada, intermedia y galería), excursiones y traslados se guardan en <code>multimedia/</code>. El itinerario de circuito y el slider siguen como estaban.</p>
+            <p style="margin:0 0 8px;color:var(--ev-muted);font-size:13px;font-weight:600">Todas las fotos van a la carpeta de fotos (<code>photosVacacionalparce\eurovip</code>, fotos.eurovip.com/eurovip): destinos, países, hoteles, alojamientos, circuitos (portada, intermedia, galería e itinerario), excursiones, traslados y slider.</p>
             <div id="mmResumen" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
             @if ((Context.Items[EuroVip.Helpers.AccesoModuloFilter.ClavePermisos] as PermisosUsuario)?.EsSuper == true)
             {
@@ -263,13 +263,13 @@
     resumenFotos();
     $('#mmMigrar')?.addEventListener('click', async e => {
         if (!await EV.confirmar({ titulo: '¿Pasar las fotos de antes?', si: 'Sí, pasarlas',
-            texto: 'Copia a <code>multimedia/</code> las portadas de excursiones, traslados, circuitos, destinos, alojamientos y hoteles que estaban en <code>imagenes/</code>. No borra nada y lo que ya tiene portada se salta. Hazlo en el servidor donde están las fotos.' })) return;
+            texto: 'Copia a la carpeta de fotos (fotos.eurovip.com/eurovip) las portadas de excursiones, traslados, circuitos, destinos, alojamientos y hoteles, las fotos del itinerario de circuito y los archivos del slider. No borra nada y lo que ya está se salta. Hazlo en la app del servidor (allí están las fotos).' })) return;
         const b = e.currentTarget, html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Pasando…';
         try {
             const r = await EV.post('/Herramientas/MigrarImagenes');
             EV.toast(r.mensaje);
             const lista = o => Object.entries(o).map(([t, n]) => `${EV.fmt(n)} ${NOMBRE_TIPO[t] || t}`).join(', ') || 'ninguna';
-            $('#mmInforme').innerHTML = `<div><b>Pasadas:</b> ${lista(r.pasadas)}</div><div><b>Ya estaban:</b> ${lista(r.yaEstaban)}</div>` +
+            $('#mmInforme').innerHTML = `<div><b>Pasadas:</b> ${lista(r.pasadas)}</div><div><b>Ya estaban:</b> ${lista(r.yaEstaban)}</div><div><b>Itinerario:</b> ${EV.fmt(r.itinerario)} · <b>Slider:</b> ${EV.fmt(r.slider)} archivos</div>` +
                 (r.sinArchivo.length ? `<details><summary>${r.sinArchivo.length} sin archivo en este servidor</summary><div style="max-height:160px;overflow:auto">${r.sinArchivo.map(esc).join('<br>')}</div></details>` : '') +
                 (r.errores.length ? `<div style="color:#B42318"><b>Errores:</b><br>${r.errores.map(esc).join('<br>')}</div>` : '');
             resumenFotos();
