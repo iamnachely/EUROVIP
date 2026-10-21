@@ -206,6 +206,38 @@ namespace EuroVip.Controllers
             catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
         }
 
+        // Fotos de los días desde fuera del editor (botón Fotos de la lista, Home de la web): se guardan AL MOMENTO.
+        [HttpGet]
+        public async Task<IActionResult> Dias(string nombre) =>
+            Json((await _mm.DiasCircuitoAsync(nombre ?? "")).Select(d => new { dia = d.Dia, titulo = d.Titulo, caratula = d.Caratula }));
+
+        [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(12_000_000)]
+        public async Task<IActionResult> FotoDia([FromForm] string nombre, [FromForm] short dia, IFormFile? archivo)
+        {
+            var mal = await ValidarImagen(archivo);
+            if (mal is not null) return BadRequest(new { mensaje = mal });
+            try
+            {
+                await using var st = archivo!.OpenReadStream();
+                var url = await _mm.FotoDiaAsync(nombre ?? "", dia, st);
+                await Auditar("Circuito_FotoDia", new { nombre, dia, url });
+                return Json(new { ok = true, url, mensaje = $"Foto del día {dia} guardada." });
+            }
+            catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> QuitarFotoDia(string nombre, short dia)
+        {
+            try
+            {
+                await _mm.FotoDiaAsync(nombre ?? "", dia, null);
+                await Auditar("Circuito_FotoDiaQuitar", new { nombre, dia });
+                return Json(new { ok = true, mensaje = $"Foto del día {dia} quitada." });
+            }
+            catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        }
+
         private static async Task<string?> ValidarImagen(IFormFile? archivo)
         {
             if (archivo is null || archivo.Length == 0) return "Elige una imagen.";

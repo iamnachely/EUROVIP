@@ -55,21 +55,32 @@ namespace EuroVip.Controllers
             Json((await _repo.FueraDeHomeAsync()).Where(f => string.IsNullOrEmpty(tipo) || string.Equals(f.Tipo, tipo, StringComparison.OrdinalIgnoreCase)));
 
         /// <summary>
-        /// Imagen de la tarjeta. Primero la portada de Eurovip.multimedia; si aún no hay, la de antes:
-        ///  • HOTEL: portada HOTEL del hotel (id_servicio) · antes /imagenes/hoteles/{nombre del hotel}.webp
+        /// Imagen de la tarjeta. Cada tarjeta tiene SU foto (no se comparte con el destino ni con otras tarjetas):
+        ///  • HOTEL: la portada HOTEL del hotel (id_servicio) · antes /imagenes/hoteles/{nombre del hotel}.webp
         ///  • CIRCUITO: la portada del circuito (circuito.caratula: URL de multimedia o /imagenes/circuitos/{archivo})
-        ///  • EXCURSION y TRASLADO: portada DESTINO del destino · antes /imagenes/destinos/{destino}.webp
-        ///  • si no hay archivo, la URL que tenga la tarjeta (si es una dirección web o una ruta del sitio).
+        ///  • las demás (ofertas, excursiones, traslados, cruceros): la foto propia de la tarjeta (multimedia tipo INICIO,
+        ///    copiada en inicio.caratulaDestino) · si no tiene, la que ya tenía la tarjeta.
+        /// Foto_Tipo / Foto_Clave dicen qué fotos se cambian al pulsar la tarjeta.
         /// </summary>
-        private sealed record Fotos(IReadOnlyDictionary<string, string> Hoteles, IReadOnlyDictionary<string, string> Destinos);
-        private async Task<Fotos> FotosAsync() => new(await _mm.PortadasAsync("HOTEL"), await _mm.PortadasAsync("DESTINO"));
+        private sealed record Fotos(IReadOnlyDictionary<string, string> Hoteles, IReadOnlyDictionary<string, string> Tarjetas);
+        private async Task<Fotos> FotosAsync() => new(await _mm.PortadasAsync("HOTEL"), await _mm.PortadasAsync("INICIO"));
 
         private void PonerImagen(HwTarjeta t, Fotos f)
         {
+            t.Foto_Tipo = "INICIO"; t.Foto_Clave = t.Id.ToString();
             if (string.Equals(t.Tipo_Servicio, "HOTEL", StringComparison.OrdinalIgnoreCase))
+            {
+                t.Foto_Tipo = "HOTEL"; t.Foto_Clave = t.Id_Servicio.ToString();
                 t.Imagen = f.Hoteles.TryGetValue(t.Id_Servicio.ToString(), out var h) ? h : _img.Buscar("hoteles", t.Id_Destino)?.Url;
-            else if (string.Equals(t.Tipo_Servicio, "EXCURSION", StringComparison.OrdinalIgnoreCase) || string.Equals(t.Tipo_Servicio, "TRASLADO", StringComparison.OrdinalIgnoreCase))
-                t.Imagen = f.Destinos.TryGetValue((t.Id_Destino ?? "").Trim(), out var d) ? d : _img.Buscar("destinos", t.Id_Destino)?.Url;
+            }
+            else if (string.Equals(t.Tipo_Servicio, "CIRCUITO", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(t.Nombre_Circuito))
+            { t.Foto_Tipo = "CIRCUITO"; t.Foto_Clave = t.Nombre_Circuito.Trim(); }
+
+            if (t.Foto_Tipo == "INICIO" && f.Tarjetas.TryGetValue(t.Id.ToString(), out var propia))
+                t.Imagen = propia;
+            else if ((string.Equals(t.Tipo_Servicio, "EXCURSION", StringComparison.OrdinalIgnoreCase) || string.Equals(t.Tipo_Servicio, "TRASLADO", StringComparison.OrdinalIgnoreCase))
+                     && (t.CaratulaDestino ?? "").StartsWith("/imagenes/destinos/", StringComparison.OrdinalIgnoreCase))
+                t.Imagen = _img.Buscar("destinos", t.Id_Destino)?.Url;   // la foto de antes de la tarjeta, en la carpeta del proyecto
             else if (string.Equals(t.Tipo_Servicio, "CIRCUITO", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(t.Caratula_Circuito))
                 t.Imagen = t.Caratula_Circuito.StartsWith("/") || Uri.IsWellFormedUriString(t.Caratula_Circuito, UriKind.Absolute)
                     ? t.Caratula_Circuito
@@ -152,6 +163,7 @@ namespace EuroVip.Controllers
         {
             var antes = await _repo.TarjetaAsync(id);
             if (!await _repo.EliminarTarjetaAsync(id)) return NotFound(new { mensaje = "No encontramos esa tarjeta." });
+            await _mm.EliminarProductoAsync("INICIO", id.ToString());   // su foto propia (si tenía) se va con ella
             await Auditar("Home_TarjetaEliminar", new { antes });
             return Json(new { ok = true, mensaje = "Tarjeta quitada de la Home." });
         }

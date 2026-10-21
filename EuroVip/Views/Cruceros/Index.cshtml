@@ -270,6 +270,7 @@
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script>
 (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -355,6 +356,7 @@
                     <span class="cz-chip">n.º ${c.id_Crucero}${c.codigo ? ' · ' + esc(c.codigo) : ''}</span></div>
                 <div class="acc">
                     <button type="button" class="ui-ibtn" data-accion="ver" title="Ver como la web"><i class="bi bi-eye"></i></button>
+                    <button type="button" class="ui-ibtn" data-accion="fotos" title="Fotos: portada, banner y galería"><i class="bi bi-images"></i></button>
                     <button type="button" class="ui-ibtn" data-accion="editar" title="Editar"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="ui-ibtn" data-accion="duplicar" title="Duplicar"><i class="bi bi-copy"></i></button>
                     <button type="button" class="ui-ibtn" data-accion="activar" title="${c.activo ? 'Desactivar' : 'Activar'}"><i class="bi ${c.activo ? 'bi-pause-circle' : 'bi-play-circle'}"></i></button>
@@ -730,7 +732,7 @@
         $('#czLista').addEventListener('click', e => {
             const card = e.target.closest('.cz-card'); if (!card) return;
             const id = +card.dataset.id, acc = e.target.closest('[data-accion]')?.dataset.accion;
-            ({ ver, editar: abrir, duplicar, activar, eliminar })[acc]?.(id);
+            ({ ver, editar: abrir, duplicar, activar, eliminar, fotos: x => EVFotos.abrir({ tipo: 'CRUCERO', clave: x, titulo: D.cruceros.find(c => c.id_Crucero === x)?.titulo, alCambiar: EV.debounce(cargar, 400) }) })[acc]?.(id);
         });
         $('#czCats').addEventListener('click', e => {
             const n = e.target.closest('[data-cat-nuevo]'), ed = e.target.closest('[data-cat-ed]');

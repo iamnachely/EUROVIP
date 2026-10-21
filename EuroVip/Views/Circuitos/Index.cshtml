@@ -222,6 +222,7 @@
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script>
 const CX = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -291,6 +292,7 @@ const CX = (() => {
                 </div>
                 <div class="cx-foot">
                     <a class="ev-btn sm aqua" href="/CargaCircuitos/Express?circuito=${encodeURIComponent(c.codigo)}"><i class="bi bi-lightning-charge"></i> Cargar salidas</a>
+                    <button class="ui-ibtn" title="Fotos: portada, galería e itinerario (se guardan al momento)" aria-label="Fotos" onclick="CX.fotos('${esc(c.codigo)}')"><i class="bi bi-images"></i></button>
                     <button class="ui-ibtn" title="Editar" aria-label="Editar" onclick="CX.editar('${esc(c.codigo)}')"><i class="bi bi-pencil"></i></button>
                     <button class="ui-ibtn" title="Duplicar: crear uno parecido" aria-label="Duplicar" onclick="CX.duplicar('${esc(c.codigo)}')"><i class="bi bi-copy"></i></button>
                     <button class="ui-ibtn danger" title="Eliminar" onclick="CX.eliminar('${esc(c.codigo)}')"><i class="bi bi-trash3"></i></button>
@@ -643,6 +645,11 @@ const CX = (() => {
             if (!await EV.confirmar({ titulo: '¿Eliminar categoría?', texto: `Se eliminará <b>${esc(c)}</b> si no está en uso.`, peligro: true, si: 'Eliminar' })) return;
             try { const r = await EV.post('/Circuitos/EliminarCategoria?categoria=' + encodeURIComponent(c)); EV.toast(r.mensaje); cargarCategorias(); }
             catch (e) { EV.toast(e.message, 'err'); }
+        },
+        /** Fotos del circuito (portada, intermedia, galería) y de cada día del itinerario, sin abrir el editor. */
+        fotos: codigo => {
+            const c = lista.find(x => x.codigo === codigo); if (!c) return;
+            EVFotos.abrir({ tipo: 'CIRCUITO', clave: c.nombre, titulo: c.nombre, alCambiar: EV.debounce(cargar, 400) });
         },
         _sinImagen: img => { const d = document.createElement('div'); d.className = 'cx-ph'; d.innerHTML = '<b></b>' + ola; d.firstChild.textContent = img.dataset.ini || ''; img.replaceWith(d); }
     };

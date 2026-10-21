@@ -277,6 +277,8 @@
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script>
 const HW = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -380,7 +382,8 @@ const HW = (() => {
         return `<div class="hw-card ${t.estado ? '' : 'oculta'}" draggable="true" data-t="${t.id}" title="Clic para editar · arrastra para mover">
             <div class="img">${c ? `<img src="${esc(c)}" alt="" loading="lazy" onerror="this.remove()">` : esc(EV.iniciales(t.id_Destino))}
                 <div class="chips"><span>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</span>${t.vigente === false ? '<span class="mal">Ya no se vende</span>' : ''}${t.estado ? '' : `<span class="oc">${sin ? 'Oculta · sin sección' : 'Oculta'}</span>`}</div>
-                <div class="acc"><button type="button" class="edt" title="Editar tarjeta" aria-label="Editar tarjeta"><i class="bi bi-pencil"></i></button>
+                <div class="acc"><button type="button" class="edt" data-foto="${t.id}" title="Cambiar la foto" aria-label="Cambiar la foto"><i class="bi bi-camera"></i></button>
+                    <button type="button" class="edt" title="Editar tarjeta" aria-label="Editar tarjeta"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="ojo" data-ojo="${t.id}" title="${sin ? 'Sin sección: arrástrala a una sección para que salga en la web' : t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}" aria-label="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div></div>
             <div class="tx"><b>${esc(t.descripcion && ['CIRCUITO', 'EXCURSION', 'TRASLADO', 'CRUCERO'].includes(t.tipo_Servicio) ? t.descripcion : t.id_Destino)}</b><small>${esc(t.origen)} · ${esc(t.campanya || '#' + t.id_Campanya)}${t.noches ? ` · ${t.noches} noches` : ''}</small>
                 <div class="pr">${t.precioWeb ? `desde <b>${EV.dinero(t.precioWeb)}</b>` : 'sin precio'}</div></div></div>`;
@@ -631,7 +634,7 @@ const HW = (() => {
     }
 
     // ===================== TARJETAS =====================
-    async function abrirTarjeta(t, idSeccion) {
+    async function abrirTarjeta(t, idSeccion, irAFoto) {
         cat ??= await EVC.catalogos();
         tarjetaActual = t;
         const v = t || { tipo_Servicio: 'OFERTA', id_Pais_Origen: 'ES', origen: '', id_PaisDestino: 'DO', id_Destino: '', estado: true, id_Contenedor: idSeccion ?? null };
@@ -642,8 +645,10 @@ const HW = (() => {
         $('#tdForm').innerHTML = `
             ${t && t.vigente === false ? '<div class="ui-note warn"><i class="bi bi-exclamation-triangle"></i><div>La oferta de esta tarjeta <b>ya no está a la venta</b>. Ocúltala, quítala o pulsa "Traer ofertas a la Home" para poner la más barata vigente.</div></div>' : ''}
             ${t && t.id_Servicio > 0 ? '<div class="ui-note info"><i class="bi bi-magic"></i><div>Esta tarjeta viene de las ofertas: al pulsar "Traer ofertas a la Home" se actualizan su precio e imagen, pero se respetan la sección, el orden y si está oculta.</div></div>' : ''}
+            <div class="ui-sec" id="tdSecFoto"><div class="ui-sec-t"><span><i class="bi bi-camera"></i></span> ${t ? fotoTitulo(t) : 'Foto'}</div>
+                ${t ? '<div id="tdFotos"></div>' : '<div class="ui-help" style="margin:0"><i class="bi bi-info-circle"></i> Guarda la tarjeta y después ábrela para ponerle su foto.</div>'}
+            </div>
             <div class="ui-sec"><div class="ui-sec-t"><span>1</span> Qué se muestra</div>
-                <div class="hc-prev" id="tdPrev" style="border-radius:16px;overflow:hidden;margin-bottom:12px;max-height:200px;background:var(--ev-grad-soft)"></div>
                 <div class="ui-row r3">
                     <div class="ui-f"><label>Tipo</label><select id="tTipoF">${['OFERTA', 'CIRCUITO', 'HOTEL', 'EXCURSION', 'TRASLADO', 'CRUCERO', 'COMBINADO'].map(x => `<option>${x}</option>`).join('')}</select></div>
                     <div class="ui-f"><label>Campaña *</label><select id="tCam">${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)}</option>`).join('')}</select></div>
@@ -656,7 +661,6 @@ const HW = (() => {
                     <div class="ui-f"><label>Destino *</label><input id="tDes" maxlength="1500"><span class="msg"></span></div>
                 </div>
                 <input type="hidden" id="tImg">
-                <div class="ui-help" style="margin:-4px 0 10px"><i class="bi bi-image"></i> La imagen sale de las carpetas del proyecto: en hoteles, la foto cargada en <a href="/Hoteles/Index">Hoteles</a>; en circuitos, la portada cargada en <a href="/Circuitos/Index">Circuitos</a>.</div>
                 <div class="ui-f"><label>Descripción <em>en circuitos es el nombre que se ve</em></label><textarea id="tDesc" rows="2"></textarea></div>
             </div>
             <div class="ui-sec"><div class="ui-sec-t"><span>2</span> Precio y notas</div>
@@ -671,13 +675,19 @@ const HW = (() => {
         $('#tSecF').value = v.id_Contenedor ?? ''; $('#tPO').value = (v.id_Pais_Origen || 'ES').toUpperCase(); $('#tPD').value = (v.id_PaisDestino || 'DO').toUpperCase();
         $('#tOri').value = v.origen || ''; $('#tDes').value = v.id_Destino || ''; $('#tImg').value = v.caratulaDestino || ''; $('#tDesc').value = v.descripcion || '';
         $('#tPre').value = v.precioWeb != null ? Math.round(v.precioWeb) : ''; $('#tNoc').value = v.noches ?? ''; $('#tNot').value = v.notas || ''; $('#tEstF').checked = v.estado !== false;
-        // caratulaDestino se conserva tal cual (en hoteles es el destino, no una imagen); la vista previa usa la imagen de las carpetas
-        const u = carat(v);
-        $('#tdPrev').innerHTML = u ? `<img src="${esc(u)}" alt="" style="width:100%;max-height:200px;object-fit:cover;display:block" onerror="this.remove()">` : '';
+        // caratulaDestino se conserva tal cual (en hoteles es el destino, no una imagen). Las fotos se cambian arriba y se guardan al momento.
+        if (t) EVFotos.montar($('#tdFotos'), { tipo: t.foto_Tipo, clave: t.foto_Clave, alCambiar: items => {
+            // La foto propia de la tarjeta se copia en caratulaDestino: que al pulsar Guardar no se pise con la de antes
+            if (t.foto_Tipo === 'INICIO' && items) $('#tImg').value = items.find(x => x.uso === 'PORTADA')?.url || '';
+            cargar();
+        } });
         EV.picker($('#tOri'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#tPO').value)}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo' }), onSelect: m => $('#tOri').value = m.valor });
         EV.picker($('#tDes'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#tPD').value)}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo-alt' }), onSelect: m => $('#tDes').value = m.valor });
         dT.abrir();
+        if (irAFoto) setTimeout(() => $('#tdSecFoto')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
     }
+    const fotoTitulo = t => ({ INICIO: 'Foto de esta tarjeta <small style="font-weight:600;color:var(--ev-muted)">(solo de esta tarjeta)</small>',
+                               HOTEL: 'Fotos del hotel', CIRCUITO: 'Fotos del circuito y de su itinerario' })[t.foto_Tipo] || 'Foto';
 
     async function guardarTarjeta() {
         const dto = {
@@ -741,7 +751,7 @@ const HW = (() => {
         document.addEventListener('click', async e => {
             const ojo = e.target.closest('[data-ojo]'); if (ojo) { e.stopPropagation(); return estadoTarjeta(+ojo.dataset.ojo); }
             const add = e.target.closest('[data-addsec]'); if (add) return abrirTarjeta(null, +add.dataset.addsec);
-            const card = e.target.closest('.hw-card'); if (card) return abrirTarjeta(todas().find(t => t.id === +card.dataset.t));
+            const card = e.target.closest('.hw-card'); if (card) return abrirTarjeta(todas().find(t => t.id === +card.dataset.t), null, !!e.target.closest('[data-foto]'));
             const tr = e.target.closest('[data-tt]'); if (tr) return abrirTarjeta(todas().find(t => t.id === +tr.dataset.tt));
             const sed = e.target.closest('[data-sed]'); if (sed) return abrirSlide(+sed.dataset.sed);
             const mov = e.target.closest('[data-smover]'); if (mov) return moverSlide(+mov.dataset.smover, +mov.dataset.paso);

@@ -64,6 +64,17 @@ namespace EuroVip.Services
         /// <summary>Guarda una foto suelta (no va en Eurovip.multimedia) en {base}/{carpeta}/{GUID}.webp y devuelve su URL.
         /// carpeta: solo minúsculas, números, "-", "_" y "/" (ej. "cruceros/12/actividades").</summary>
         Task<string> GuardarArchivoAsync(string carpeta, Stream origen);
+        /// <summary>Días del itinerario de un circuito con su foto (circuito_itinerario.caratula).</summary>
+        Task<List<DiaFoto>> DiasCircuitoAsync(string circuito);
+        /// <summary>Cambia (origen con la imagen) o quita (origen null) la foto de un día y la guarda al momento. Devuelve la URL nueva.</summary>
+        Task<string?> FotoDiaAsync(string circuito, short dia, Stream? origen);
+    }
+
+    public sealed class DiaFoto
+    {
+        public short Dia { get; set; }
+        public string? Titulo { get; set; }
+        public string? Caratula { get; set; }
     }
 
     public class ResumenMigracion
@@ -100,6 +111,8 @@ namespace EuroVip.Services
             ["PAIS"] = new("PAIS", "id_pais", false, "paises", "herramientas", "país"),
             ["HOTEL"] = new("HOTEL", "id_hotel", true, "hoteles", "hoteles", "hotel"),
             ["CRUCERO"] = new("CRUCERO", "id_crucero", true, "cruceros", "cruceros", "crucero"),
+            // Foto propia de una tarjeta de la Home (Eurovip.inicio.id): no se comparte con el destino ni con otras tarjetas
+            ["INICIO"] = new("INICIO", "id_inicio", true, "inicio", "home_web", "tarjeta"),
         };
         public static readonly string[] Usos = { "PORTADA", "INTERMEDIA", "GALERIA" };
 
@@ -187,6 +200,7 @@ namespace EuroVip.Services
                 "PAIS" => "SELECT COUNT(*) FROM Eurovip.pais WHERE id_pais = @v",
                 "HOTEL" => "SELECT COUNT(*) FROM Eurovip.inicio WHERE id_servicio = @v AND tipo_servicio = 'HOTEL'",
                 "CRUCERO" => "SELECT COUNT(*) FROM Eurovip.crucero WHERE id_crucero = @v",
+                "INICIO" => "SELECT COUNT(*) FROM Eurovip.inicio WHERE id = @v",
                 _ => throw new InvalidOperationException("Tipo de producto desconocido.")
             };
             return await cn.ExecuteScalarAsync<int>(sql, new { v = Valor(t, clave) }) > 0;
@@ -425,10 +439,14 @@ namespace EuroVip.Services
             {
                 case "DESTINO":
                     await cn.ExecuteAsync(url is not null
-                        ? @"UPDATE Eurovip.destino SET caratula = @url WHERE id_destino = @v;
-                            UPDATE Eurovip.inicio SET caratulaDestino = @url WHERE id_destino = @v AND tipo_servicio IN ('EXCURSION', 'TRASLADO');"
-                        : @"UPDATE Eurovip.destino SET caratula = NULL WHERE id_destino = @v AND caratula = @quitada;
-                            UPDATE Eurovip.inicio SET caratulaDestino = NULL WHERE id_destino = @v AND tipo_servicio IN ('EXCURSION', 'TRASLADO') AND caratulaDestino = @quitada;", p);
+                        ? "UPDATE Eurovip.destino SET caratula = @url WHERE id_destino = @v"
+                        : "UPDATE Eurovip.destino SET caratula = NULL WHERE id_destino = @v AND caratula = @quitada", p);
+                    break;
+                case "INICIO":
+                    // Cada tarjeta tiene su foto: la web la lee de inicio.caratulaDestino (la foto del destino ya no se copia en las tarjetas)
+                    await cn.ExecuteAsync(url is not null
+                        ? "UPDATE Eurovip.inicio SET caratulaDestino = @url WHERE id = @v"
+                        : "UPDATE Eurovip.inicio SET caratulaDestino = NULL WHERE id = @v AND caratulaDestino = @quitada", p);
                     break;
                 case "ALOJAMIENTO":
                     await cn.ExecuteAsync(url is not null
@@ -481,6 +499,27 @@ namespace EuroVip.Services
             Directory.CreateDirectory(Path.GetDirectoryName(fisica)!);
             await File.WriteAllBytesAsync(fisica, datos);
             return Url(ruta);
+        }
+
+        public async Task<List<DiaFoto>> DiasCircuitoAsync(string circuito)
+        {
+            using var cn = _db.Conexion();
+            return (await cn.QueryAsync<DiaFoto>(
+                "SELECT dia AS Dia, titulo AS Titulo, caratula AS Caratula FROM Eurovip.circuito_itinerario WHERE nombre_circuito = @circuito AND id_idioma = 'ES' ORDER BY dia",
+                new { circuito = (circuito ?? "").Trim() })).ToList();
+        }
+
+        public async Task<string?> FotoDiaAsync(string circuito, short dia, Stream? origen)
+        {
+            circuito = (circuito ?? "").Trim();
+            using var cn = _db.Conexion();
+            var p = new { circuito, dia };
+            if (await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.circuito_itinerario WHERE nombre_circuito = @circuito AND id_idioma = 'ES' AND dia = @dia", p) == 0)
+                throw new InvalidOperationException($"El día {dia} no está en el itinerario de ese circuito.");
+            var url = origen is null ? null : await GuardarItinerarioAsync(circuito, origen);
+            await cn.ExecuteAsync("UPDATE Eurovip.circuito_itinerario SET caratula = @url WHERE nombre_circuito = @circuito AND id_idioma = 'ES' AND dia = @dia",
+                new { circuito, dia, url });
+            return url;
         }
 
         public async Task<ResumenMigracion> MigrarImagenesViejasAsync()

@@ -181,14 +181,16 @@ Implementado en BackEurovip (FASE 20 de `Database/EUROVIP_BaseDeDatos.sql`). Dif
 | Tema | Queda | Por qué |
 |---|---|---|
 | Tipos | Además de `ALOJAMIENTO`, `CIRCUITO`, `EXCURSION`, `TRASLADO`: **`DESTINO`** (`id_destino`, carpeta `destinos/{slug}/`), **`PAIS`** (`id_pais`, `paises/{id_pais en minúsculas}/`) y **`HOTEL`** (`id_hotel` = `inicio.id_servicio` de la tarjeta HOTEL de la pantalla Hoteles, `hoteles/{id}/`) | Lo pidió la usuaria: las fotos de destinos, países y hoteles también van aquí. Las tarjetas de la pantalla Hoteles no son filas de `alojamiento` (se identifican por su `id_servicio` en `inicio`). Se amplió como indica §5.4: columna + `CK_…_tipo` + `CK_…_referencia` + `UQ_…_orden` (CAMBIO 64b). |
+| Tarjetas de la Home | Tipo **`INICIO`** (`id_inicio` = `inicio.id`, carpeta `inicio/{id}/`): la foto de UNA tarjeta; su URL se copia en `inicio.caratulaDestino` | Pedido de la usuaria (21/10/2026, FASE 22): cada foto es individual; cambiar la de un destino no cambia las tarjetas de excursiones o traslados. Se cambia desde Home de la web (botón cámara en cada tarjeta). Las tarjetas de hoteles y circuitos usan la foto del hotel / circuito. |
 | Fuera de multimedia | Fotos del **itinerario de circuito** (`circuito_itinerario.caratula` = URL completa) y del **slider** (`carrusel`, por nombre) | Siguen en sus tablas; solo su archivo va en la carpeta de fotos. |
 | Carpeta base | `Multimedia:CarpetaFisica` = `C:\inetpub\wwwroot\photosVacacionalparce\eurovip` y `Multimedia:Url` = `https://fotos.eurovip.com.do/eurovip` (`appsettings.json`) | Pedido de la usuaria (22/10/2026): sitio de fotos fotos.eurovip.com.do. Ahí también van el itinerario de circuito (`circuitos/itinerario/{slug}/`) y el slider (`slider/`, `slider/md/`, `slider/sm/`), aunque no estén en estas tablas. |
 | Formato | Siempre `webp`, 1600 px de lado como máximo, calidad 82 (se convierte al subir) | §5.3 |
-| Columnas de antes | Al cambiar la **portada** se copia su URL en `destino.caratula` (y en las tarjetas EXCURSION/TRASLADO de `inicio`), `alojamiento.caratula` y `circuito.caratula`; `traslado.imagen` se vacía | Para que la Home, los flyers y lo que lee esas columnas siga igual. |
+| Columnas de antes | Al cambiar la **portada** se copia su URL en `destino.caratula` (ya **no** en las tarjetas de `inicio`: cada tarjeta tiene su foto, tipo `INICIO`), `alojamiento.caratula` y `circuito.caratula`; `traslado.imagen` se vacía | Para que la Home, los flyers y lo que lee esas columnas siga igual. |
 | Lectura | Vista `Eurovip.vMultimedia` (`clave` y `ruta` ya armadas). `spPortalListarExcursiones`, `spPortalObtenerExcursion` (+ galería), `spPortalBuscarTraslados` y `spPortalListarTraslados` devuelven `imagen_ruta` | La URL completa es `Catalogo:UrlMultimedia` + `/` + `ruta`. |
 | Fotos de antes | Herramientas → Fotos (multimedia) → «Pasar las fotos de antes» (Superadministrador) | Copia las portadas que estaban en `wwwroot/imagenes` a multimedia; no borra nada y se puede repetir. |
 
-Pantallas: Excursiones, Traslados (portada + galería), Circuitos (portada + intermedia + galería), Hoteles (foto por número de hotel),
+Pantallas: Home de la web (foto de cada tarjeta; en circuitos también las del itinerario), Excursiones, Traslados, Circuitos y Cruceros
+(botón **Fotos** en cada tarjeta de la lista: se guardan al momento, componente `wwwroot/js/eurovip-fotos.js`), Excursiones, Traslados (portada + galería), Circuitos (portada + intermedia + galería), Hoteles (foto por número de hotel),
 Herramientas → Destinos / Alojamientos (portada + galería) y Países (portada + galería). Componente: `wwwroot/js/eurovip-multimedia.js`,
 controlador `/Multimedia` (permiso según el módulo del producto).
 

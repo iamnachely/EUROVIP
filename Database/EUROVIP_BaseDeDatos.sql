@@ -3981,6 +3981,133 @@ GO
 
 
 /* ##########################################################################################
+   FASE 22 — CADA TARJETA DE LA HOME CON SU PROPIA FOTO  (21/10/2026, SOLO en el 93 de desarrollo)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: "que la imagen de cada tarjeta se pueda editar desde Home de la web (/HomeWeb/Index)"
+   y "la imagen de un traslado, excursión, hotel es individual: si cambio una imagen no se puede poner en otro lugar;
+   cambié Punta Cana y se colocó en una excursión y en un traslado".
+   Explicado fácil:
+     • Eurovip.multimedia tiene un tipo nuevo, INICIO (columna id_inicio = Eurovip.inicio.id): la foto de UNA tarjeta.
+       El archivo va a {Multimedia:CarpetaFisica}/inicio/{id}/{GUID}.webp, se lee con {Multimedia:Url}/inicio/…
+       (https://fotos.eurovip.com.do/eurovip/…) y esa URL se copia en inicio.caratulaDestino (lo que lee la web).
+     • Las tarjetas de excursiones, traslados y cruceros ya no copian la foto del destino/categoría al actualizarse.
+       (La app tampoco copia la foto del destino en las tarjetas.)
+     • spActualizaInicio (ofertas/circuitos) borra y rehace la tarjeta: la foto propia pasa a la tarjeta nueva.
+     • Se arreglaron las 2 tarjetas de Punta Cana (excursiones y traslados) que tomaron la foto del destino.
+     • Hoteles y circuitos: su tarjeta muestra la foto del hotel / del circuito (son el mismo producto) y desde la
+       Home se cambian esas (en circuitos también las de cada día del itinerario).
+   Probado con ROLLBACK: foto INICIO en la tarjeta 115, al rehacerla (spActualizaInicio) la foto pasó a la nueva con su
+   URL; spActualizaInicioExcursion/Traslado ya no cambian la foto. Después se aplicó.
+   ########################################################################################## */
+
+/* ---------- CAMBIO 78: foto PROPIA de cada tarjeta de la Home (Eurovip.multimedia tipo INICIO) ----------
+   Pedido: "la imagen de un traslado, excursión, hotel es individual; si cambio una imagen no se puede poner en otro
+   lugar". Cada tarjeta de Eurovip.inicio puede tener su foto en multimedia (tipo INICIO, columna id_inicio = inicio.id).
+   El archivo va a {Multimedia:CarpetaFisica}/inicio/{id}/ y su URL se copia en inicio.caratulaDestino (lo que lee la web).
+   Sin FK a inicio: spActualizaInicio borra y vuelve a crear la tarjeta de ofertas y mueve la foto a la nueva (CAMBIO 80). */
+SET XACT_ABORT ON;
+BEGIN TRAN;
+IF COL_LENGTH('Eurovip.multimedia', 'id_inicio') IS NULL ALTER TABLE Eurovip.multimedia ADD id_inicio int NULL;
+COMMIT;
+GO
+SET XACT_ABORT ON;
+BEGIN TRAN;
+ALTER TABLE Eurovip.multimedia DROP CONSTRAINT CK_Eurovip_multimedia_tipo;
+ALTER TABLE Eurovip.multimedia DROP CONSTRAINT CK_Eurovip_multimedia_referencia;
+ALTER TABLE Eurovip.multimedia ADD CONSTRAINT CK_Eurovip_multimedia_tipo
+    CHECK (tipo IN ('ALOJAMIENTO', 'CIRCUITO', 'EXCURSION', 'TRASLADO', 'DESTINO', 'PAIS', 'HOTEL', 'CRUCERO', 'INICIO'));
+ALTER TABLE Eurovip.multimedia ADD CONSTRAINT CK_Eurovip_multimedia_referencia CHECK (
+       (tipo = 'ALOJAMIENTO' AND id_alojamiento IS NOT NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL AND id_inicio IS NULL)
+    OR (tipo = 'CIRCUITO'    AND id_alojamiento IS NULL AND nombre_circuito IS NOT NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL AND id_inicio IS NULL)
+    OR (tipo = 'EXCURSION'   AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NOT NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL AND id_inicio IS NULL)
+    OR (tipo = 'TRASLADO'    AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NOT NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL AND id_inicio IS NULL)
+    OR (tipo = 'DESTINO'     AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NOT NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL AND id_inicio IS NULL)
+    OR (tipo = 'PAIS'        AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NOT NULL AND id_hotel IS NULL AND id_crucero IS NULL AND id_inicio IS NULL)
+    OR (tipo = 'HOTEL'       AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NOT NULL AND id_crucero IS NULL AND id_inicio IS NULL)
+    OR (tipo = 'CRUCERO'     AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NOT NULL AND id_inicio IS NULL)
+    OR (tipo = 'INICIO'      AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL AND id_inicio IS NOT NULL));
+ALTER TABLE Eurovip.multimedia DROP CONSTRAINT UQ_Eurovip_multimedia_orden;
+ALTER TABLE Eurovip.multimedia ADD CONSTRAINT UQ_Eurovip_multimedia_orden UNIQUE
+    (tipo, id_alojamiento, nombre_circuito, id_excursion, id_traslado, id_destino, id_pais, id_hotel, id_crucero, id_inicio, uso, orden);
+COMMIT;
+GO
+CREATE OR ALTER VIEW Eurovip.vMultimedia
+AS
+SELECT m.id, m.id_imagen, m.tipo, m.uso, m.orden, m.texto_alternativo,
+       m.id_alojamiento, m.nombre_circuito, m.id_excursion, m.id_traslado, m.id_destino, m.id_pais, m.id_hotel, m.id_crucero, m.id_inicio,
+       COALESCE(CAST(m.id_alojamiento AS varchar(50)), m.nombre_circuito, CAST(m.id_excursion AS varchar(50)), CAST(m.id_traslado AS varchar(50)),
+                m.id_destino, m.id_pais, CAST(m.id_hotel AS varchar(50)), CAST(m.id_crucero AS varchar(50)), CAST(m.id_inicio AS varchar(50))) AS clave,
+       i.ruta_relativa + i.nombre_archivo + '.' + i.extension AS ruta,
+       i.nombre_original, i.tamano_bytes, i.ancho, i.alto, i.creado_utc
+  FROM Eurovip.multimedia m
+  JOIN Eurovip.imagen i ON i.id = m.id_imagen;
+GO
+
+/* ---------- CAMBIO 79: las tarjetas de excursiones, traslados y cruceros ya NO copian la foto del destino/categoría ----------
+   Antes, spActualizaInicioExcursion / spActualizaInicioTraslado ponían en la tarjeta la foto del DESTINO cada vez que se
+   guardaba una excursión o un traslado (por eso al cambiar la foto de Punta Cana cambió también su tarjeta de excursiones y
+   la de traslados). Ahora:
+     • Al ACTUALIZAR la tarjeta no se toca su foto (caratulaDestino).
+     • Una tarjeta NUEVA de excursiones o traslados nace sin foto (se le pone la suya desde Home de la web).
+     • La de cruceros nace con la foto de su categoría (es la misma cosa: una tarjeta por categoría) y después no se toca.
+   Se cambia solo esa parte de los procedimientos que ya están en la base (REPLACE sobre su definición actual). */
+SET XACT_ABORT ON;
+DECLARE @sp sysname, @def nvarchar(max), @nuevo nvarchar(max);
+DECLARE c CURSOR LOCAL FAST_FORWARD FOR
+    SELECT v FROM (VALUES ('Eurovip.spActualizaInicioExcursion'), ('Eurovip.spActualizaInicioTraslado'), ('Eurovip.spActualizaInicioCrucero')) x(v);
+OPEN c; FETCH NEXT FROM c INTO @sp;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @def = OBJECT_DEFINITION(OBJECT_ID(@sp));
+    SET @nuevo = REPLACE(@def, N'caratulaDestino = ISNULL(@imagen, caratulaDestino)', N'caratulaDestino = caratulaDestino');
+    IF @sp <> 'Eurovip.spActualizaInicioCrucero' SET @nuevo = REPLACE(@nuevo, N'@destino, @imagen, ', N'@destino, NULL, ');
+    IF @nuevo = @def AND CHARINDEX(N'caratulaDestino = caratulaDestino', @def) = 0 THROW 50078, 'CAMBIO 79: no se encontró el texto a cambiar', 1;
+    IF CHARINDEX(N'CREATE   PROCEDURE', @nuevo) = 0 THROW 50079, 'CAMBIO 79: no se encontró CREATE PROCEDURE', 1;
+    SET @nuevo = REPLACE(@nuevo, N'CREATE   PROCEDURE', N'CREATE OR ALTER PROCEDURE');
+    EXEC sp_executesql @nuevo;
+    FETCH NEXT FROM c INTO @sp;
+END
+CLOSE c; DEALLOCATE c;
+GO
+
+/* ---------- CAMBIO 80: spActualizaInicio (ofertas y circuitos) conserva la foto propia de la tarjeta ----------
+   Ese SP BORRA la tarjeta y la vuelve a crear con la oferta más barata (y la foto del hotel). Si la tarjeta tenía su foto
+   propia (multimedia tipo INICIO), ahora pasa a la tarjeta nueva y se vuelve a poner su URL. */
+SET XACT_ABORT ON;
+DECLARE @def nvarchar(max) = OBJECT_DEFINITION(OBJECT_ID('Eurovip.spActualizaInicio')), @nuevo nvarchar(max);
+IF CHARINDEX(N'id_viejo', @def) = 0
+BEGIN
+    SET @nuevo = REPLACE(@def, N'DECLARE @prev TABLE (estado BIT,', N'DECLARE @prev TABLE (id_viejo INT, caratula_vieja VARCHAR(300), estado BIT,');
+    SET @nuevo = REPLACE(@nuevo, N'SELECT TOP 1 estado, id_contenedor', N'SELECT TOP 1 id, caratulaDestino, estado, id_contenedor');
+    SET @nuevo = REPLACE(@nuevo, N'AND i.id_pais_origen = @idPaisOrigen;', N'AND i.id_pais_origen = @idPaisOrigen;
+
+    -- la foto propia de la tarjeta (Eurovip.multimedia tipo INICIO) pasa a la tarjeta nueva (CAMBIO 80)
+    DECLARE @idNuevo int = (SELECT TOP 1 id FROM Eurovip.inicio
+                             WHERE tipo_servicio = @tipoServicio AND id_campanya = @idCampanya AND id_destino = @destino AND id_idioma = @idIdioma
+                               AND id_moneda = @idMoneda AND origen = @origen AND id_pais_origen = @idPaisOrigen);
+    IF @idNuevo IS NOT NULL AND EXISTS (SELECT 1 FROM Eurovip.multimedia m JOIN @prev p ON m.id_inicio = p.id_viejo)
+    BEGIN
+        UPDATE m SET m.id_inicio = @idNuevo FROM Eurovip.multimedia m JOIN @prev p ON m.id_inicio = p.id_viejo;
+        UPDATE i SET i.caratulaDestino = p.caratula_vieja FROM Eurovip.inicio i CROSS JOIN @prev p WHERE i.id = @idNuevo;
+    END');
+    IF (LEN(@nuevo) - LEN(@def)) < 500 OR CHARINDEX(N'SELECT TOP 1 id, caratulaDestino', @nuevo) = 0 OR CHARINDEX(N'id_viejo INT', @nuevo) = 0
+        THROW 50080, 'CAMBIO 80: no se encontró el texto a cambiar', 1;
+    IF CHARINDEX(N'CREATE   PROCEDURE', @nuevo) = 0 THROW 50081, 'CAMBIO 80: no se encontró CREATE PROCEDURE', 1;
+    SET @nuevo = REPLACE(@nuevo, N'CREATE   PROCEDURE', N'CREATE OR ALTER PROCEDURE');
+    EXEC sp_executesql @nuevo;
+END
+GO
+
+/* ---------- CAMBIO 81: datos — Punta Cana: las tarjetas de excursiones y traslados vuelven a su foto ----------
+   Al cambiar la foto del destino Punta Cana (21/10/2026) se copió en sus tarjetas de excursiones y traslados.
+   Vuelven a la foto de destino de antes (mismo formato que Samaná: /imagenes/destinos/{destino sin espacios}.WebP). */
+UPDATE Eurovip.inicio SET caratulaDestino = '/imagenes/destinos/puntacana.WebP'
+ WHERE tipo_servicio IN ('EXCURSION', 'TRASLADO') AND id_destino = 'Punta Cana'
+   AND caratulaDestino = '/multimedia/destinos/punta-cana/333d4a6ca3d64c5ba511c7aab7e74f23.webp';
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -4363,6 +4490,9 @@ GO
                vista vCruceroDesde, SP de inicio y de la web, multimedia tipo CRUCERO, módulo «cruceros» con
                su contenedor CRUCEROS en la Home). Tablas vacías: los cruceros se cargan desde la pantalla
                Cruceros. NO se tocó producción (29 ni .10) (pedido expreso de la usuaria).
+   21/10/2026  FASE 22 aplicada SOLO en el 93 (CAMBIO 78 a 81): foto propia de cada tarjeta de la Home (multimedia
+               tipo INICIO). Datos: las tarjetas 43 (excursiones) y 92 (traslados) de Punta Cana tenían la foto del
+               destino copiada; vuelven a /imagenes/destinos/puntacana.WebP (la de antes, mismo formato que Samaná).
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

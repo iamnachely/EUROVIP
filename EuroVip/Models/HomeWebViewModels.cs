@@ -30,8 +30,13 @@ namespace EuroVip.Models
         public bool? Vigente { get; set; }
         /// <summary>Portada del circuito (circuito.caratula) cuando la tarjeta es un circuito.</summary>
         public string? Caratula_Circuito { get; set; }
+        /// <summary>Nombre del circuito cuando la tarjeta es un circuito (sus fotos e itinerario).</summary>
+        public string? Nombre_Circuito { get; set; }
         /// <summary>URL de la imagen que se ve en la tarjeta (la calcula el controlador desde las carpetas del proyecto).</summary>
         public string? Imagen { get; set; }
+        /// <summary>De quién es la foto que se cambia desde la tarjeta (Eurovip.multimedia): INICIO (la tarjeta), HOTEL o CIRCUITO.</summary>
+        public string Foto_Tipo { get; set; } = "INICIO";
+        public string Foto_Clave { get; set; } = "";
     }
 
     public class HwContenedor

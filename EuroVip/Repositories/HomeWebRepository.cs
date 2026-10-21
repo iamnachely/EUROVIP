@@ -60,7 +60,9 @@ namespace EuroVip.Repositories
                    END AS Vigente,
                    (SELECT TOP 1 ci.caratula FROM Eurovip.servicio_circuito sc3
                         JOIN Eurovip.circuito ci ON ci.nombre_circuito = sc3.nombre_circuito
-                    WHERE sc3.id_servicio = i.id_servicio AND i.tipo_servicio = 'CIRCUITO') AS Caratula_Circuito
+                    WHERE sc3.id_servicio = i.id_servicio AND i.tipo_servicio = 'CIRCUITO') AS Caratula_Circuito,
+                   (SELECT TOP 1 sc4.nombre_circuito FROM Eurovip.servicio_circuito sc4
+                    WHERE sc4.id_servicio = i.id_servicio AND i.tipo_servicio = 'CIRCUITO') AS Nombre_Circuito
             FROM Eurovip.inicio i
                 LEFT JOIN Eurovip.campanya c ON c.id_campanya = i.id_campanya AND c.id_idioma = i.id_idioma";
 

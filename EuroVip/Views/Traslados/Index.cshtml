@@ -274,6 +274,7 @@
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script>
 (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -373,6 +374,7 @@
     }
 
     const acciones = t => `<button type="button" class="ui-ibtn" data-accion="ver" title="Ver"><i class="bi bi-eye"></i></button>
+        <button type="button" class="ui-ibtn" data-accion="fotos" title="Fotos (se guardan al momento)"><i class="bi bi-images"></i></button>
         <button type="button" class="ui-ibtn" data-accion="editar" title="Editar"><i class="bi bi-pencil"></i></button>
         <button type="button" class="ui-ibtn" data-accion="duplicar" title="Duplicar"><i class="bi bi-copy"></i></button>
         <button type="button" class="ui-ibtn" data-accion="activar" title="${t.activo ? 'Desactivar (quitar de la web)' : 'Activar (mostrar en la web)'}"><i class="bi ${t.activo ? 'bi-pause-circle' : 'bi-play-circle'}"></i></button>
@@ -651,6 +653,7 @@
             else if (acc === 'activar') activar(id);
             else if (acc === 'eliminar') eliminar(id);
             else if (acc === 'ver') ver(id);
+            else if (acc === 'fotos') EVFotos.abrir({ tipo: 'TRASLADO', clave: id, titulo: todos.find(x => x.id_Traslado === id)?.nombre, alCambiar: EV.debounce(cargar, 400) });
         });
         $('#trLista').addEventListener('dragover', e => { const z = e.target.closest('[data-soltar]'); if (z && e.dataTransfer.types.includes('Files')) { e.preventDefault(); z.classList.add('sobre'); } });
         $('#trLista').addEventListener('dragleave', e => e.target.closest('[data-soltar]')?.classList.remove('sobre'));

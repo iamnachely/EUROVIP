@@ -215,6 +215,7 @@
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script>
 const EX = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -382,6 +383,7 @@ const EX = (() => {
     }
 
     const acciones = x => `<button type="button" class="ui-ibtn" data-accion="ver" title="Ver"><i class="bi bi-eye"></i></button>
+        <button type="button" class="ui-ibtn" data-accion="fotos" title="Fotos (se guardan al momento)"><i class="bi bi-images"></i></button>
         <button type="button" class="ui-ibtn" data-accion="editar" title="Editar"><i class="bi bi-pencil"></i></button>
         <button type="button" class="ui-ibtn" data-accion="duplicar" title="Duplicar"><i class="bi bi-copy"></i></button>
         <button type="button" class="ui-ibtn danger" data-accion="eliminar" title="Eliminar"><i class="bi bi-trash3"></i></button>`;
@@ -561,6 +563,7 @@ const EX = (() => {
             else if (acc === 'duplicar') duplicar(id);
             else if (acc === 'eliminar') eliminar(id);
             else if (acc === 'ver') ver(id);
+            else if (acc === 'fotos') EVFotos.abrir({ tipo: 'EXCURSION', clave: id, titulo: todas.find(x => x.id_Excursion === id)?.nombre, alCambiar: EV.debounce(cargar, 400) });
         });
         // Soltar fotos en las tarjetas
         $('#exLista').addEventListener('dragover', e => { const z = e.target.closest('[data-soltar]'); if (z && e.dataTransfer.types.includes('Files')) { e.preventDefault(); z.classList.add('sobre'); } });
