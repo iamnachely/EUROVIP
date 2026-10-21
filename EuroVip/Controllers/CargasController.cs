@@ -43,6 +43,7 @@ namespace EuroVip.Controllers
                 if (todas.Count >= total || !items.Any()) break;
                 f.Pagina++;
             }
+
             var sb = new StringBuilder();
             sb.AppendLine(Csv.Fila("Nº", "Fecha", "Tipo", "Usuario", "Circuito/Destino", "Origen", "Campañas", "Desde", "Hasta", "Código", "Estado", "Salidas creadas", "Mensaje"));
             foreach (var c in todas)

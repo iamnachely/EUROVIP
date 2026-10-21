@@ -15,3 +15,6 @@ EuroVip/wwwroot/multimedia/
 EuroVip/wwwroot/imagenes/**/*
 !EuroVip/wwwroot/imagenes/**/
 !EuroVip/wwwroot/imagenes/**/.gitkeep
+
+# Datos personales de Visual Studio (historial de publicación)
+*.pubxml.user
