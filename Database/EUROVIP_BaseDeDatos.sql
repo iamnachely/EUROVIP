@@ -4236,6 +4236,63 @@ GO
 
 
 /* ##########################################################################################
+   FASE 24 — PAQUETES CON LA FOTO DEL DESTINO  (22/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «Punta Cana, Miches, Samaná, Santo Domingo, La Romana (Hoteles exclusivos) no son
+   hoteles, son destinos: destino\miches.webp»; «los de HOTELES BOOKINGMOTOR son hoteles: hotel\ (se cargan en Hoteles)».
+   Explicado fácil:
+     • La tarjeta de un paquete (oferta) muestra la foto del DESTINO (multimedia tipo DESTINO → destino/{destino}.webp).
+       Cambiarla desde Home de la web cambia la foto del destino y la de todas sus tarjetas de paquetes.
+     • Excursiones y traslados siguen con foto propia por tarjeta (excursion/…, traslado/…).
+     • spActualizaInicio, al rehacer la tarjeta de un paquete, le pone la foto del destino si tiene (CAMBIO 85).
+     • La foto que se subió para Miches pasa a ser la del destino Miches (CAMBIO 86).
+   Probado con ROLLBACK y aplicado.
+   ########################################################################################## */
+
+/* ---------- CAMBIO 85: las tarjetas de PAQUETES (ofertas) usan la foto del DESTINO ----------
+   Pedido de la usuaria: «Punta Cana, Miches, Samaná… (Hoteles exclusivos) no son hoteles: son destinos» →
+   su foto es la del destino (Eurovip.multimedia tipo DESTINO, archivo destino/miches.webp). Al rehacer la tarjeta con la
+   oferta más barata (spActualizaInicio), si el destino tiene foto en multimedia se pone esa en vez de la del hotel.
+   Las tarjetas de excursiones y traslados siguen con su propia foto (tipo INICIO). */
+SET XACT_ABORT ON;
+DECLARE @def nvarchar(max) = OBJECT_DEFINITION(OBJECT_ID('Eurovip.spActualizaInicio')), @nuevo nvarchar(max);
+IF CHARINDEX(N'CAMBIO 85', @def) = 0
+BEGIN
+    SET @nuevo = REPLACE(@def, N'    -- la foto propia de la tarjeta (Eurovip.multimedia tipo INICIO) pasa a la tarjeta nueva (CAMBIO 80)',
+N'    -- paquetes: la foto del DESTINO si tiene portada en multimedia (CAMBIO 85)
+    IF @tipoServicio IN (''OFERTA'', ''COMBINADO'')
+        UPDATE i SET i.caratulaDestino = d.caratula
+          FROM Eurovip.inicio i JOIN Eurovip.destino d ON d.id_destino = i.id_destino
+         WHERE i.tipo_servicio = @tipoServicio AND i.id_campanya = @idCampanya AND i.id_destino = @destino AND i.id_idioma = @idIdioma
+           AND i.id_moneda = @idMoneda AND i.origen = @origen AND i.id_pais_origen = @idPaisOrigen
+           AND ISNULL(d.caratula, '''') <> ''''
+           AND EXISTS (SELECT 1 FROM Eurovip.vMultimedia v WHERE v.tipo = ''DESTINO'' AND v.id_destino = d.id_destino AND v.uso = ''PORTADA'');
+
+    -- la foto propia de la tarjeta (Eurovip.multimedia tipo INICIO) pasa a la tarjeta nueva (CAMBIO 80)');
+    IF @nuevo = @def OR CHARINDEX(N'CREATE   PROCEDURE', @nuevo) = 0 THROW 50085, 'CAMBIO 85: no se encontró el texto a cambiar en spActualizaInicio', 1;
+    SET @nuevo = REPLACE(@nuevo, N'CREATE   PROCEDURE', N'CREATE OR ALTER PROCEDURE');
+    EXEC sp_executesql @nuevo;
+END
+GO
+
+/* ---------- CAMBIO 86: datos — la foto de la tarjeta Miches (inicio 114) pasa a ser la foto del destino Miches ----------
+   Se subió como foto propia de la tarjeta (INICIO). El archivo (hotel/miches*.webp) está en el servidor: allí, Herramientas →
+   Fotos → «Poner nombres a las fotos» lo mueve a destino/miches.webp y actualiza las direcciones. */
+SET XACT_ABORT ON;
+BEGIN TRAN;
+DECLARE @url varchar(300) = (SELECT TOP 1 'https://fotos.eurovip.com.do/eurovip/' + ruta FROM Eurovip.vMultimedia WHERE tipo = 'INICIO' AND id_inicio = 114 AND uso = 'PORTADA');
+IF @url IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Eurovip.multimedia WHERE tipo = 'DESTINO' AND id_destino = 'Miches' AND uso = 'PORTADA')
+BEGIN
+    UPDATE Eurovip.multimedia SET tipo = 'DESTINO', id_inicio = NULL, id_destino = 'Miches'
+     WHERE tipo = 'INICIO' AND id_inicio = 114 AND uso = 'PORTADA';
+    UPDATE Eurovip.destino SET caratula = @url WHERE id_destino = 'Miches';
+    UPDATE Eurovip.inicio SET caratulaDestino = @url WHERE id_destino = 'Miches' AND tipo_servicio IN ('OFERTA', 'COMBINADO');
+END
+COMMIT;
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -4665,6 +4722,10 @@ GO
                https://fotos.eurovip.com.do/eurovip. Dato: inicio 114 caratulaDestino → https://fotos.eurovip.com.do/eurovip/hotel/miches.webp.
                Pendiente en el servidor: pasar lo de <app>\wwwroot\multimedia\ a photosVacacionalparce\eurovip\ (Miches y el
                destino Punta Cana, que también quedó como /multimedia/…).
+   22/10/2026  FASE 24 aplicada SOLO en el 93 (CAMBIO 85-86): paquetes con la foto del destino. La foto de la tarjeta Miches
+               (inicio 114, archivo hotel/miches-2.webp en el servidor) pasó a ser la del destino Miches: destino.caratula e
+               inicio 114 → https://fotos.eurovip.com.do/eurovip/hotel/miches-2.webp. En el servidor, Herramientas → Fotos →
+               «Poner nombres a las fotos» la deja en destino/miches.webp.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

@@ -678,7 +678,7 @@ const HW = (() => {
         // caratulaDestino se conserva tal cual (en hoteles es el destino, no una imagen). Las fotos se cambian arriba y se guardan al momento.
         if (t) EVFotos.montar($('#tdFotos'), { tipo: t.foto_Tipo, clave: t.foto_Clave, alCambiar: items => {
             // La foto propia de la tarjeta se copia en caratulaDestino: que al pulsar Guardar no se pise con la de antes
-            if (t.foto_Tipo === 'INICIO' && items) $('#tImg').value = items.find(x => x.uso === 'PORTADA')?.url || '';
+            if ((t.foto_Tipo === 'INICIO' || t.foto_Tipo === 'DESTINO') && items) $('#tImg').value = items.find(x => x.uso === 'PORTADA')?.url || '';
             cargar();
         } });
         EV.picker($('#tOri'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#tPO').value)}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo' }), onSelect: m => $('#tOri').value = m.valor });
@@ -687,6 +687,7 @@ const HW = (() => {
         if (irAFoto) setTimeout(() => $('#tdSecFoto')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
     }
     const fotoTitulo = t => ({ INICIO: 'Foto de esta tarjeta <small style="font-weight:600;color:var(--ev-muted)">(solo de esta tarjeta)</small>',
+                               DESTINO: 'Foto del destino <small style="font-weight:600;color:var(--ev-muted)">(paquetes: se guarda en destino/)</small>',
                                HOTEL: 'Fotos del hotel', CIRCUITO: 'Fotos del circuito y de su itinerario' })[t.foto_Tipo] || 'Foto';
 
     async function guardarTarjeta() {

@@ -62,8 +62,8 @@ namespace EuroVip.Controllers
         ///    copiada en inicio.caratulaDestino) · si no tiene, la que ya tenía la tarjeta.
         /// Foto_Tipo / Foto_Clave dicen qué fotos se cambian al pulsar la tarjeta.
         /// </summary>
-        private sealed record Fotos(IReadOnlyDictionary<string, string> Hoteles, IReadOnlyDictionary<string, string> Tarjetas);
-        private async Task<Fotos> FotosAsync() => new(await _mm.PortadasAsync("HOTEL"), await _mm.PortadasAsync("INICIO"));
+        private sealed record Fotos(IReadOnlyDictionary<string, string> Hoteles, IReadOnlyDictionary<string, string> Tarjetas, IReadOnlyDictionary<string, string> Destinos);
+        private async Task<Fotos> FotosAsync() => new(await _mm.PortadasAsync("HOTEL"), await _mm.PortadasAsync("INICIO"), await _mm.PortadasAsync("DESTINO"));
 
         private void PonerImagen(HwTarjeta t, Fotos f)
         {
@@ -75,6 +75,13 @@ namespace EuroVip.Controllers
             }
             else if (string.Equals(t.Tipo_Servicio, "CIRCUITO", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(t.Nombre_Circuito))
             { t.Foto_Tipo = "CIRCUITO"; t.Foto_Clave = t.Nombre_Circuito.Trim(); }
+            else if ((string.Equals(t.Tipo_Servicio, "OFERTA", StringComparison.OrdinalIgnoreCase) || string.Equals(t.Tipo_Servicio, "COMBINADO", StringComparison.OrdinalIgnoreCase))
+                     && !string.IsNullOrWhiteSpace(t.Id_Destino))
+            {
+                // Paquetes: la foto es la del DESTINO (destino/miches.webp)
+                t.Foto_Tipo = "DESTINO"; t.Foto_Clave = t.Id_Destino.Trim();
+                if (f.Destinos.TryGetValue(t.Foto_Clave, out var fd)) t.Imagen = fd;
+            }
 
             if (t.Foto_Tipo == "INICIO" && f.Tarjetas.TryGetValue(t.Id.ToString(), out var propia))
                 t.Imagen = propia;
