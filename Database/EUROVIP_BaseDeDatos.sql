@@ -4650,6 +4650,11 @@ GO
                barco, 6 categorías y sus tarjetas de la Home) y el crucero de ejemplo 1002 (portada, banner, galería,
                26 actividades, 6 cabinas, 6 días). Queda con código destinos/punta-cana (su archivo está en el servidor):
                se renombra allí con Herramientas → Fotos → «Poner nombres a las fotos».
+   22/10/2026  FOTOS SIN SUBCARPETA POR PRODUCTO (pedido de la usuaria: "eurovip\Hotel\Punta-cana.webp; si es un traslado
+               eurovip\traslado\traslado-punta-cana.webp"). Ahora {tipo}\{nombre}.webp (carpetas en singular: hotel,
+               traslado, excursion, destino, pais, circuito, alojamiento, crucero). Las tarjetas de la Home van en la
+               carpeta de lo que muestran (ofertas/hoteles → hotel\punta-cana). Se movieron las 55 fotos de cruceros del
+               93 a crucero\… (archivo + URL en la base, una transacción); la carpeta vieja cruceros\ quedó vacía y se borró.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
