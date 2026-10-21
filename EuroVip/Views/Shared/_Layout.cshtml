@@ -14,6 +14,8 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @* Fotos: si una de la web de fotos no carga, eurovip.js la pide a la copia local (/fotos-locales) *@
+    <meta name="ev-fotos" content="@((Context.RequestServices.GetService(typeof(IConfiguration)) as IConfiguration)?["Multimedia:Url"]?.TrimEnd('/'))" />
     <title>@ViewData["Title"] · Eurovip</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

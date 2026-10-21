@@ -110,13 +110,15 @@ app.UseStaticFiles();
     var carpetaMultimedia = app.Configuration["Multimedia:CarpetaFisica"];
     var urlMultimedia = (app.Configuration["Multimedia:Url"] ?? "/multimedia").TrimEnd('/');
     if (string.IsNullOrWhiteSpace(carpetaMultimedia)) Directory.CreateDirectory(Path.Combine(app.Environment.WebRootPath, "multimedia"));
-    else if (urlMultimedia.StartsWith('/'))
+    else
     {
+        // Con URL web (https://fotos.eurovip.com.do/…) la carpeta se publica TAMBIÉN en /fotos-locales: si el sitio de fotos
+        // aún no tiene el archivo (p. ej. al trabajar en local), la pantalla lo pide aquí (eurovip.js, meta "ev-fotos").
         Directory.CreateDirectory(carpetaMultimedia);
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(carpetaMultimedia),
-            RequestPath = urlMultimedia
+            RequestPath = urlMultimedia.StartsWith('/') ? urlMultimedia : "/fotos-locales"
         });
     }
 }

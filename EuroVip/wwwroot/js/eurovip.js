@@ -107,3 +107,20 @@
     });
     document.addEventListener('click', e => { if (!caja.contains(e.target)) abrir(false); });
 })();
+
+// Fotos de la web de fotos (Multimedia:Url, p. ej. https://fotos.eurovip.com.do/eurovip/…) que todavía no están allí
+// (al trabajar en local el archivo solo está en la carpeta de este equipo): se piden a la copia que sirve la app en
+// /fotos-locales. Se hace en la fase de captura para ganar al onerror de la imagen (que la quitaría).
+(function () {
+    const base = document.querySelector('meta[name="ev-fotos"]')?.content;
+    if (!base || !/^https?:\/\//i.test(base)) return;
+    document.addEventListener('error', e => {
+        const img = e.target;
+        if (!(img instanceof HTMLImageElement) || img.dataset.evLocal) return;
+        const src = img.getAttribute('src') || '';
+        if (!src.startsWith(base + '/')) return;
+        e.stopPropagation();
+        img.dataset.evLocal = '1';
+        img.src = '/fotos-locales/' + src.slice(base.length + 1);
+    }, true);
+})();

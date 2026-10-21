@@ -4108,6 +4108,134 @@ GO
 
 
 /* ##########################################################################################
+   FASE 23 — CRUCEROS MÁS SIMPLES: CASI TODO OPCIONAL Y SALE SOLO EN LA HOME  (21/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: "mejorar la carga de cruceros, algunas cosas no funcionan (poner la hora,
+   cargar imágenes), está muy enredado; que casi todo sea opcional, que antes de guardar le recuerde al usuario
+   lo que ha cargado y que una vez cargado pase a la tabla de inicio".
+   Explicado fácil:
+     • En Eurovip.crucero solo el título es obligatorio: barco, puertos y noches pueden quedar vacíos (CAMBIO 82).
+     • La tarjeta de la Home sale en cuanto la categoría tiene un crucero activo; el precio "desde" se llena cuando
+       haya fechas con precio (CAMBIO 83). La app pone el crucero en la categoría «Cruceros» si no se elige otra.
+     • Las consultas de la web listan también cruceros sin barco o sin precio (CAMBIO 84).
+   Probado con ROLLBACK: un crucero con solo el título creó su tarjeta en inicio (precio vacío, contenedor
+   CRUCEROS) y salió en spPortalListarCruceros / spPortalObtenerCrucero. Después se aplicó.
+   ########################################################################################## */
+
+/* ---------- CAMBIO 82: crucero — casi todo opcional ----------
+   Pedido: "que casi todo sea opcional". Solo el título es obligatorio: barco, puertos y noches pueden quedar vacíos. */
+SET XACT_ABORT ON;
+BEGIN TRAN;
+ALTER TABLE Eurovip.crucero ALTER COLUMN id_barco int NULL;
+ALTER TABLE Eurovip.crucero ALTER COLUMN puerto_salida nvarchar(100) NULL;
+ALTER TABLE Eurovip.crucero ALTER COLUMN puerto_llegada nvarchar(100) NULL;
+ALTER TABLE Eurovip.crucero ALTER COLUMN noches smallint NULL;   -- CK_Eurovip_crucero_noches (1-180) sigue valiendo si se pone
+COMMIT;
+GO
+
+/* ---------- CAMBIO 83: la tarjeta de la Home sale en cuanto la categoría tiene un crucero activo ----------
+   Pedido: "una vez cargado que pase a la tabla de inicio". Antes hacía falta una fecha futura con precio; ahora basta
+   un crucero activo en la categoría (el precio "desde" queda vacío hasta que tenga fechas y precios).
+   La foto de la tarjeta no se toca al actualizar (CAMBIO 79): la nueva nace con la de la categoría. */
+CREATE OR ALTER PROCEDURE Eurovip.spActualizaInicioCrucero
+    @idCategoria int
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRAN;
+    DECLARE @nombre nvarchar(100), @imagen varchar(500), @activa bit, @precio money, @cruceros int, @cont int;
+    SELECT @nombre = nombre, @imagen = imagen, @activa = activo FROM Eurovip.crucero_categoria WHERE id_categoria = @idCategoria;
+    SELECT @cruceros = COUNT(*), @precio = MIN(d.desde_pp)
+      FROM Eurovip.crucero_categoria_crucero cc
+      JOIN Eurovip.crucero c ON c.id_crucero = cc.id_crucero AND c.activo = 1
+      LEFT JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero
+     WHERE cc.id_categoria = @idCategoria;
+
+    IF @nombre IS NULL OR @activa = 0 OR ISNULL(@cruceros, 0) = 0
+    BEGIN
+        DELETE FROM Eurovip.inicio WHERE tipo_servicio = 'CRUCERO' AND id_servicio = @idCategoria AND id_idioma = 'ES';
+        COMMIT; RETURN;
+    END
+    SELECT TOP 1 @cont = id_contenedor FROM Eurovip.contenedores WHERE nombre = 'CRUCEROS' AND UPPER(id_idioma) = 'ES';
+    IF EXISTS (SELECT 1 FROM Eurovip.inicio WHERE tipo_servicio = 'CRUCERO' AND id_servicio = @idCategoria AND id_idioma = 'ES')
+        UPDATE Eurovip.inicio
+           SET id_destino = LEFT(@nombre, 1500), descripcion = N'Cruceros: ' + @nombre, precioWeb = @precio, id_moneda = 'DOP'
+         WHERE tipo_servicio = 'CRUCERO' AND id_servicio = @idCategoria AND id_idioma = 'ES';
+    ELSE
+        INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino,
+                                    id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor,
+                                    posicion_contenedor, posicion_destino, estado, notas, noches)
+        SELECT @idCategoria, 'ES', 'CRUCERO', 99, 'DOP', 'ES', 'Madrid', 'DO',
+               LEFT(@nombre, 1500), @imagen, N'Cruceros: ' + @nombre, NULL, NULL, @precio, @cont, CASE WHEN @cont IS NULL THEN NULL ELSE N'CRUCEROS' END,
+               (SELECT posicion FROM Eurovip.contenedores WHERE id_contenedor = @cont),
+               (SELECT ISNULL(MAX(posicion_destino), 0) + 1 FROM Eurovip.inicio WHERE id_contenedor = @cont), 1, NULL, NULL;
+    COMMIT;
+END
+GO
+
+/* spSincronizaInicio: la misma regla (categoría con cruceros activos, con o sin precio). */
+SET XACT_ABORT ON;
+DECLARE @def nvarchar(max) = OBJECT_DEFINITION(OBJECT_ID('Eurovip.spSincronizaInicio')), @nuevo nvarchar(max);
+IF CHARINDEX(N'LEFT JOIN Eurovip.vCruceroDesde', @def) = 0
+BEGIN
+    SET @nuevo = REPLACE(@def, N'JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero', N'LEFT JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero');
+    IF @nuevo = @def OR CHARINDEX(N'CREATE   PROCEDURE', @nuevo) = 0 THROW 50083, 'CAMBIO 83: no se encontró el texto a cambiar en spSincronizaInicio', 1;
+    SET @nuevo = REPLACE(@nuevo, N'CREATE   PROCEDURE', N'CREATE OR ALTER PROCEDURE');
+    EXEC sp_executesql @nuevo;
+END
+GO
+
+/* ---------- CAMBIO 84: consultas de la web con barco / precio opcionales ----------
+   Un crucero sin barco o sin fechas con precio también se lista (el precio "desde" sale vacío). */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalCrucerosCategorias
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT g.id_categoria, g.nombre, g.descripcion, g.imagen, g.orden,
+           COUNT(DISTINCT c.id_crucero) AS cruceros, MIN(d.desde_pp) AS desde_pp
+      FROM Eurovip.crucero_categoria g
+      JOIN Eurovip.crucero_categoria_crucero cc ON cc.id_categoria = g.id_categoria
+      JOIN Eurovip.crucero c ON c.id_crucero = cc.id_crucero AND c.activo = 1
+      LEFT JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero
+     WHERE g.activo = 1
+     GROUP BY g.id_categoria, g.nombre, g.descripcion, g.imagen, g.orden
+     ORDER BY g.orden, g.nombre;
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarCruceros
+    @IdCategoria int = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT c.id_crucero, c.titulo, c.noches, c.noches + 1 AS dias, b.nombre AS barco, n.nombre AS naviera, n.logo AS naviera_logo,
+           c.puerto_salida, c.puerto_llegada, d.proxima_salida, d.salidas,
+           d.desde_pp, d.interior_pp, d.exterior_pp, d.balcon_pp, d.suite_pp, c.id_moneda,
+           (SELECT STRING_AGG(CAST(i.puerto AS nvarchar(max)), N' / ') WITHIN GROUP (ORDER BY i.dia)
+              FROM Eurovip.crucero_itinerario i WHERE i.id_crucero = c.id_crucero AND i.en_navegacion = 0) AS itinerario,
+           (SELECT TOP 1 v.ruta FROM Eurovip.vMultimedia v WHERE v.tipo = 'CRUCERO' AND v.id_crucero = c.id_crucero AND v.uso = 'PORTADA') AS imagen_ruta
+      FROM Eurovip.crucero c
+      LEFT JOIN Eurovip.crucero_barco b ON b.id_barco = c.id_barco
+      LEFT JOIN Eurovip.crucero_naviera n ON n.id_naviera = b.id_naviera
+      LEFT JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero
+     WHERE c.activo = 1
+       AND (@IdCategoria IS NULL OR EXISTS (SELECT 1 FROM Eurovip.crucero_categoria_crucero cc WHERE cc.id_crucero = c.id_crucero AND cc.id_categoria = @IdCategoria))
+     ORDER BY CASE WHEN d.proxima_salida IS NULL THEN 1 ELSE 0 END, d.proxima_salida, c.titulo;
+END
+GO
+SET XACT_ABORT ON;
+DECLARE @def nvarchar(max) = OBJECT_DEFINITION(OBJECT_ID('Eurovip.spPortalObtenerCrucero')), @nuevo nvarchar(max);
+SET @nuevo = REPLACE(@def, N'      JOIN Eurovip.crucero_barco b ON b.id_barco = c.id_barco', N'      LEFT JOIN Eurovip.crucero_barco b ON b.id_barco = c.id_barco');
+SET @nuevo = REPLACE(@nuevo, N'      JOIN Eurovip.crucero_naviera n ON n.id_naviera = b.id_naviera', N'      LEFT JOIN Eurovip.crucero_naviera n ON n.id_naviera = b.id_naviera');
+SET @nuevo = REPLACE(@nuevo, N'ISNULL(c.titulo_seccion, N''Tu barco - '' + b.nombre)', N'ISNULL(c.titulo_seccion, N''Tu barco'' + ISNULL(N'' - '' + b.nombre, N''''))');
+IF CHARINDEX(N'LEFT JOIN Eurovip.crucero_barco', @nuevo) = 0 OR CHARINDEX(N'CREATE   PROCEDURE', @nuevo) = 0
+    THROW 50084, 'CAMBIO 84: no se encontró el texto a cambiar en spPortalObtenerCrucero', 1;
+SET @nuevo = REPLACE(@nuevo, N'CREATE   PROCEDURE', N'CREATE OR ALTER PROCEDURE');
+EXEC sp_executesql @nuevo;
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -4500,6 +4628,8 @@ GO
                tablas) + DROP SCHEMA. Quedan 0 objetos Eurovip; los 568 de otros esquemas, iguales antes y después.
                Como el .10 es espejo del 29, allí también desapareció (espejo SINCRONIZADO, colas en 0).
                Eurovip queda SOLO en el 93 (desarrollo).
+   21/10/2026  FASE 23 aplicada SOLO en el 93 (CAMBIO 82 a 84): cruceros con casi todo opcional; la tarjeta de la
+               Home sale con un crucero activo aunque aún no tenga precio. No cambió ningún dato (no había cruceros).
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

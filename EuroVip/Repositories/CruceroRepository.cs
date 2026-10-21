@@ -13,7 +13,7 @@ namespace EuroVip.Repositories
         Task<(int Id, List<int> Categorias)> GuardarAsync(CruceroDto d, string usuario);
         Task<List<int>?> EliminarAsync(int id);
         Task<List<int>?> ActivarAsync(int id, bool activo);
-        Task<int?> RepetidoAsync(string titulo, int idBarco, int? excepto);
+        Task<int?> RepetidoAsync(string titulo, int? idBarco, int? excepto);
         Task ActualizarInicioAsync(IEnumerable<int> categorias);
 
         Task<List<CruceroNaviera>> NavierasAsync();
@@ -56,8 +56,8 @@ namespace EuroVip.Repositories
                        (SELECT COUNT(*) FROM Eurovip.crucero_actividad a JOIN Eurovip.crucero_seccion s ON s.id_seccion = a.id_seccion WHERE s.id_crucero = c.id_crucero) AS Actividades,
                        c.usuario AS Usuario, c.fecha_alta AS Fecha_Alta, c.fecha_modificacion AS Fecha_Modificacion
                 FROM Eurovip.crucero c
-                JOIN Eurovip.crucero_barco b ON b.id_barco = c.id_barco
-                JOIN Eurovip.crucero_naviera n ON n.id_naviera = b.id_naviera
+                LEFT JOIN Eurovip.crucero_barco b ON b.id_barco = c.id_barco
+                LEFT JOIN Eurovip.crucero_naviera n ON n.id_naviera = b.id_naviera
                 LEFT JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero
                 ORDER BY ISNULL(d.proxima_salida, '99991231'), c.titulo")).ToList();
         }
@@ -69,11 +69,14 @@ namespace EuroVip.Repositories
         {
             using var cn = _db.Conexion();
             var c = await cn.QueryFirstOrDefaultAsync<CruceroDto>(@"
-                SELECT id_crucero AS Id_Crucero, titulo AS Titulo, subtitulo AS Subtitulo, id_barco AS Id_Barco, puerto_salida AS Puerto_Salida,
-                       puerto_llegada AS Puerto_Llegada, noches AS Noches, codigo AS Codigo, descripcion AS Descripcion, incluye AS Incluye,
-                       no_incluye AS No_Incluye, titulo_seccion AS Titulo_Seccion, activo AS Activo, usuario AS Usuario,
-                       fecha_alta AS Fecha_Alta, fecha_modificacion AS Fecha_Modificacion
-                FROM Eurovip.crucero WHERE id_crucero = @id", new { id });
+                SELECT c.id_crucero AS Id_Crucero, c.titulo AS Titulo, c.subtitulo AS Subtitulo, c.id_barco AS Id_Barco, b.nombre AS Barco_Nombre, n.nombre AS Naviera_Nombre,
+                       c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.noches AS Noches, c.codigo AS Codigo, c.descripcion AS Descripcion,
+                       c.incluye AS Incluye, c.no_incluye AS No_Incluye, c.titulo_seccion AS Titulo_Seccion, c.activo AS Activo, c.usuario AS Usuario,
+                       c.fecha_alta AS Fecha_Alta, c.fecha_modificacion AS Fecha_Modificacion
+                FROM Eurovip.crucero c
+                LEFT JOIN Eurovip.crucero_barco b ON b.id_barco = c.id_barco
+                LEFT JOIN Eurovip.crucero_naviera n ON n.id_naviera = b.id_naviera
+                WHERE c.id_crucero = @id", new { id });
             if (c is null) return null;
             c.Categorias = (await cn.QueryAsync<int>("SELECT id_categoria FROM Eurovip.crucero_categoria_crucero WHERE id_crucero = @id", new { id })).ToList();
             c.Itinerario = (await cn.QueryAsync<(short Dia, string Puerto, bool Nav, TimeSpan? Lleg, TimeSpan? Sal, string? Desc, string? Img)>(
@@ -126,9 +129,28 @@ namespace EuroVip.Repositories
             using var cn = _db.Conexion();
             await cn.OpenAsync();
             using var tx = cn.BeginTransaction();
+            // Naviera, barco y categorías escritos a mano: se buscan por nombre y, si no están, se crean
+            var idBarco = d.Id_Barco;
+            if (d.Barco_Nombre is string barco)
+            {
+                int? idNav = d.Naviera_Nombre is string nav ? await BuscarOCrearAsync(cn, tx, "crucero_naviera", "id_naviera", nav, null) : null;
+                idBarco = await cn.ExecuteScalarAsync<int?>(
+                    "SELECT TOP 1 id_barco FROM Eurovip.crucero_barco WHERE nombre = @barco AND (@idNav IS NULL OR id_naviera = @idNav) ORDER BY id_barco", new { barco, idNav }, tx);
+                if (idBarco is null)
+                {
+                    idNav ??= await BuscarOCrearAsync(cn, tx, "crucero_naviera", "id_naviera", "Otra naviera", null);
+                    idBarco = await BuscarOCrearAsync(cn, tx, "crucero_barco", "id_barco", barco, idNav);
+                }
+            }
+            foreach (var nueva in d.Categorias_Nuevas)
+                d.Categorias.Add(await BuscarOCrearAsync(cn, tx, "crucero_categoria", "id_categoria", nueva, null));
+            // Sin categoría no hay tarjeta en la Home: va a «Cruceros» (se crea si no existe)
+            if (d.Categorias.Count == 0)
+                d.Categorias.Add(await BuscarOCrearAsync(cn, tx, "crucero_categoria", "id_categoria", "Cruceros", null));
+
             var p = new
             {
-                id = d.Id_Crucero, Titulo = d.Titulo.Trim(), Subtitulo = Nulo(d.Subtitulo), d.Id_Barco, Puerto_Salida = d.Puerto_Salida.Trim(), Puerto_Llegada = d.Puerto_Llegada.Trim(),
+                id = d.Id_Crucero, Titulo = d.Titulo.Trim(), Subtitulo = Nulo(d.Subtitulo), Id_Barco = idBarco, Puerto_Salida = Nulo(d.Puerto_Salida), Puerto_Llegada = Nulo(d.Puerto_Llegada),
                 d.Noches, Codigo = Nulo(d.Codigo), Descripcion = Nulo(d.Descripcion), Incluye = Nulo(d.Incluye), No_Incluye = Nulo(d.No_Incluye),
                 Titulo_Seccion = Nulo(d.Titulo_Seccion), d.Activo, usuario
             };
@@ -173,18 +195,18 @@ namespace EuroVip.Repositories
             foreach (var x in d.Itinerario)
                 await cn.ExecuteAsync(@"INSERT INTO Eurovip.crucero_itinerario (id_crucero, dia, puerto, en_navegacion, hora_llegada, hora_salida, descripcion, imagen)
                                         VALUES (@id, @Dia, @Puerto, @Nav, @Lleg, @Sal, @Desc, @Img)",
-                    new { id, x.Dia, Puerto = x.Puerto.Trim(), Nav = x.En_Navegacion, Lleg = x.En_Navegacion ? null : HoraDe(x.Hora_Llegada),
+                    new { id, x.Dia, Puerto = (x.Puerto ?? "").Trim(), Nav = x.En_Navegacion, Lleg = x.En_Navegacion ? null : HoraDe(x.Hora_Llegada),
                           Sal = x.En_Navegacion ? null : HoraDe(x.Hora_Salida), Desc = Nulo(x.Descripcion), Img = Nulo(x.Imagen) }, tx);
 
             short ordenSec = 0;
             foreach (var s in d.Secciones)
             {
                 var sid = await cn.ExecuteScalarAsync<int>("INSERT INTO Eurovip.crucero_seccion (id_crucero, titulo, orden) VALUES (@id, @t, @o); SELECT CAST(SCOPE_IDENTITY() AS int);",
-                    new { id, t = s.Titulo.Trim(), o = ++ordenSec }, tx);
+                    new { id, t = (s.Titulo ?? "A bordo").Trim(), o = ++ordenSec }, tx);
                 short ordenAct = 0;
                 foreach (var a in s.Actividades)
                     await cn.ExecuteAsync("INSERT INTO Eurovip.crucero_actividad (id_seccion, titulo, descripcion, imagen, orden) VALUES (@sid, @t, @dsc, @img, @o)",
-                        new { sid, t = a.Titulo.Trim(), dsc = Nulo(a.Descripcion), img = Nulo(a.Imagen), o = ++ordenAct }, tx);
+                        new { sid, t = (a.Titulo ?? "Actividad").Trim(), dsc = Nulo(a.Descripcion), img = Nulo(a.Imagen), o = ++ordenAct }, tx);
             }
 
             var cubiertas = new Dictionary<short, int>();
@@ -200,12 +222,12 @@ namespace EuroVip.Repositories
                     INSERT INTO Eurovip.crucero_cabina_tipo (id_crucero, categoria, codigo, nombre, descripcion, capacidad_min, capacidad_max, metros, imagen, permite_garantizada, orden)
                     VALUES (@id, @Categoria, @Codigo, @Nombre, @Descripcion, @Capacidad_Min, @Capacidad_Max, @Metros, @Imagen, @Permite_Garantizada, @o);
                     SELECT CAST(SCOPE_IDENTITY() AS int);",
-                    new { id, t.Categoria, Codigo = Nulo(t.Codigo), Nombre = t.Nombre.Trim(), Descripcion = Nulo(t.Descripcion), t.Capacidad_Min, t.Capacidad_Max, t.Metros,
+                    new { id, t.Categoria, Codigo = Nulo(t.Codigo), Nombre = (t.Nombre ?? "Cabina").Trim(), Descripcion = Nulo(t.Descripcion), t.Capacidad_Min, t.Capacidad_Max, t.Metros,
                           Imagen = Nulo(t.Imagen), t.Permite_Garantizada, o = ++ordenTipo }, tx);
                 tipos[t.Clave] = tid;
                 foreach (var k in t.Cabinas)
                     await cn.ExecuteAsync("INSERT INTO Eurovip.crucero_cabina (id_cabina_tipo, id_cubierta, numero, disponible) VALUES (@tid, @cub, @num, @disp)",
-                        new { tid, cub = k.Cubierta is short cn2 && cubiertas.TryGetValue(cn2, out var cu) ? cu : (int?)null, num = k.Numero.Trim(), disp = k.Disponible }, tx);
+                        new { tid, cub = k.Cubierta is short cn2 && cubiertas.TryGetValue(cn2, out var cu) ? cu : (int?)null, num = (k.Numero ?? "").Trim(), disp = k.Disponible }, tx);
             }
 
             var salidas = new Dictionary<string, int>();
@@ -217,7 +239,7 @@ namespace EuroVip.Repositories
             short ordenTar = 0;
             foreach (var f in d.Tarifas)
                 tarifas[f.Clave] = await cn.ExecuteScalarAsync<int>("INSERT INTO Eurovip.crucero_tarifa (id_crucero, codigo, nombre, descripcion, orden) VALUES (@id, @c, @n, @dsc, @o); SELECT CAST(SCOPE_IDENTITY() AS int);",
-                    new { id, c = f.Codigo.Trim(), n = f.Nombre.Trim(), dsc = Nulo(f.Descripcion), o = ++ordenTar }, tx);
+                    new { id, c = (f.Codigo ?? "BEST_PRICE").Trim(), n = (f.Nombre ?? f.Codigo ?? "BEST_PRICE").Trim(), dsc = Nulo(f.Descripcion), o = ++ordenTar }, tx);
 
             foreach (var pr in d.Precios.Where(x => x.Precio_Pp > 0))
                 if (salidas.TryGetValue(pr.Salida, out var sa) && tarifas.TryGetValue(pr.Tarifa, out var ta) && tipos.TryGetValue(pr.Cabina, out var ti))
@@ -226,6 +248,21 @@ namespace EuroVip.Repositories
 
             tx.Commit();
             return (id, antes.Union(d.Categorias).Distinct().ToList());
+        }
+
+        /// <summary>Busca por nombre en un catálogo (naviera, barco o categoría) y lo crea si no está. Devuelve su número.</summary>
+        private static async Task<int> BuscarOCrearAsync(IDbConnection cn, IDbTransaction tx, string tabla, string columnaId, string nombre, int? idNaviera)
+        {
+            var filtroNav = tabla == "crucero_barco" ? " AND id_naviera = @idNaviera" : "";
+            var id = await cn.ExecuteScalarAsync<int?>($"SELECT TOP 1 {columnaId} FROM Eurovip.{tabla} WHERE nombre = @nombre{filtroNav} ORDER BY {columnaId}", new { nombre, idNaviera }, tx);
+            if (id is int ya) return ya;
+            var insert = tabla switch
+            {
+                "crucero_barco" => "INSERT INTO Eurovip.crucero_barco (id_naviera, nombre, activo) VALUES (@idNaviera, @nombre, 1)",
+                "crucero_categoria" => "INSERT INTO Eurovip.crucero_categoria (nombre, orden, activo) VALUES (@nombre, ISNULL((SELECT MAX(orden) FROM Eurovip.crucero_categoria), 0) + 1, 1)",
+                _ => "INSERT INTO Eurovip.crucero_naviera (nombre, activo) VALUES (@nombre, 1)"
+            };
+            return await cn.ExecuteScalarAsync<int>(insert + "; SELECT CAST(SCOPE_IDENTITY() AS int);", new { nombre, idNaviera }, tx);
         }
 
         public async Task<List<int>?> EliminarAsync(int id)
@@ -245,10 +282,11 @@ namespace EuroVip.Repositories
             return n == 0 ? null : (await cn.QueryAsync<int>("SELECT id_categoria FROM Eurovip.crucero_categoria_crucero WHERE id_crucero = @id", new { id })).ToList();
         }
 
-        public async Task<int?> RepetidoAsync(string titulo, int idBarco, int? excepto)
+        public async Task<int?> RepetidoAsync(string titulo, int? idBarco, int? excepto)
         {
             using var cn = _db.Conexion();
-            return await cn.ExecuteScalarAsync<int?>("SELECT TOP 1 id_crucero FROM Eurovip.crucero WHERE titulo = @titulo AND id_barco = @idBarco AND (@excepto IS NULL OR id_crucero <> @excepto)",
+            return await cn.ExecuteScalarAsync<int?>(@"SELECT TOP 1 id_crucero FROM Eurovip.crucero
+                WHERE titulo = @titulo AND (id_barco = @idBarco OR (@idBarco IS NULL AND id_barco IS NULL)) AND (@excepto IS NULL OR id_crucero <> @excepto)",
                 new { titulo = titulo.Trim(), idBarco, excepto });
         }
 

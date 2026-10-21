@@ -53,44 +53,80 @@ namespace EuroVip.Controllers
         private BadRequestObjectResult Mal(string mensaje, string? campo = null) =>
             BadRequest(new { mensaje, errores = campo is null ? new Dictionary<string, string>() : new Dictionary<string, string> { [campo] = mensaje } });
 
-        /// <summary>Revisa que el crucero esté completo y bien antes de guardar (null = todo bien).</summary>
+        private static string? Texto(string? s) => string.IsNullOrWhiteSpace(s) ? null : ReglasDatos.Limpiar(s);
+
+        /// <summary>
+        /// Casi todo es opcional: lo que viene vacío se quita o se completa solo (un día sin puerto, una actividad sin
+        /// título, una tarifa sin código…) en vez de dar error. Las horas valen "7:30", "07:30" o "07:30:00".
+        /// </summary>
+        private static void Normalizar(CruceroDto d)
+        {
+            d.Titulo = ReglasDatos.Limpiar(d.Titulo);
+            d.Naviera_Nombre = Texto(d.Naviera_Nombre); d.Barco_Nombre = Texto(d.Barco_Nombre);
+            d.Puerto_Salida = Texto(d.Puerto_Salida); d.Puerto_Llegada = Texto(d.Puerto_Llegada) ?? d.Puerto_Salida;
+            d.Categorias_Nuevas = d.Categorias_Nuevas.Select(Texto).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+            d.Itinerario = d.Itinerario
+                .Where(x => x.En_Navegacion || Texto(x.Puerto) is not null || Texto(x.Hora_Llegada) is not null || Texto(x.Hora_Salida) is not null || Texto(x.Descripcion) is not null || Texto(x.Imagen) is not null)
+                .ToList();
+            foreach (var x in d.Itinerario)
+            {
+                x.Puerto = x.En_Navegacion ? Texto(x.Puerto) ?? "En navegación" : Texto(x.Puerto) ?? "Por definir";
+                x.Hora_Llegada = x.En_Navegacion ? null : HoraTexto(x.Hora_Llegada);
+                x.Hora_Salida = x.En_Navegacion ? null : HoraTexto(x.Hora_Salida);
+            }
+
+            foreach (var s in d.Secciones)
+                s.Actividades = s.Actividades.Where(a => Texto(a.Titulo) is not null || Texto(a.Descripcion) is not null || Texto(a.Imagen) is not null)
+                                             .Select(a => { a.Titulo = Texto(a.Titulo) ?? "Actividad"; return a; }).ToList();
+            d.Secciones = d.Secciones.Where(s => Texto(s.Titulo) is not null || s.Actividades.Count > 0)
+                                     .Select(s => { s.Titulo = Texto(s.Titulo) ?? "A bordo"; return s; }).ToList();
+
+            foreach (var c in d.Cabinas)
+            {
+                if (!CruceroValores.CategoriasCabina.ContainsKey(c.Categoria ?? "")) c.Categoria = "INTERIOR";
+                c.Nombre = Texto(c.Nombre) ?? CruceroValores.CategoriasCabina[c.Categoria];
+                c.Cabinas = c.Cabinas.Where(k => Texto(k.Numero) is not null).ToList();
+            }
+            foreach (var f in d.Tarifas)
+            {
+                f.Codigo = Texto(f.Codigo) ?? Texto(f.Nombre) ?? "BEST_PRICE";
+                f.Nombre = Texto(f.Nombre) ?? f.Codigo;
+            }
+            if (d.Noches is null && d.Itinerario.Count > 1) d.Noches = (short)Math.Min(180, d.Itinerario.Max(x => x.Dia) - 1);
+        }
+
+        /// <summary>Lo único que de verdad impide guardar (null = todo bien).</summary>
         private static string? Revisar(CruceroDto d, out string? campo)
         {
             campo = null;
-            if (ReglasDatos.Nombre("título del crucero", ReglasDatos.Limpiar(d.Titulo), 3) is string malTitulo) { campo = "Titulo"; return malTitulo; }
+            if (ReglasDatos.Nombre("título del crucero", d.Titulo, 3) is string malTitulo) { campo = "Titulo"; return malTitulo; }
+            if (d.Id_Barco is null && d.Barco_Nombre is null && d.Naviera_Nombre is not null) return "Escribiste la naviera: escribe también el barco (o borra la naviera).";
             foreach (var x in d.Itinerario)
-            {
-                if (string.IsNullOrWhiteSpace(x.Puerto)) return $"Itinerario: el día {x.Dia} no tiene puerto (o márcalo «En navegación»).";
-                if (!x.En_Navegacion && ((!string.IsNullOrWhiteSpace(x.Hora_Llegada) && !EsHora(x.Hora_Llegada)) || (!string.IsNullOrWhiteSpace(x.Hora_Salida) && !EsHora(x.Hora_Salida))))
-                    return $"Itinerario: la hora del día {x.Dia} tiene que ser HH:mm (ej. 07:30).";
-            }
-            if (d.Itinerario.GroupBy(x => x.Dia).FirstOrDefault(g => g.Count() > 1) is { } rep) return $"Itinerario: el día {rep.Key} está repetido.";
-            if (d.Itinerario.Any(x => x.Dia < 1 || x.Dia > d.Noches + 1)) return $"Itinerario: los días van del 1 al {d.Noches + 1} (noches + 1).";
-            foreach (var s in d.Secciones)
-            {
-                if (string.IsNullOrWhiteSpace(s.Titulo)) return "A bordo: hay una sección sin título.";
-                if (s.Actividades.Any(a => string.IsNullOrWhiteSpace(a.Titulo))) return $"A bordo: en «{s.Titulo}» hay una actividad sin título.";
-            }
-            if (d.Cubiertas.GroupBy(x => x.Numero).FirstOrDefault(g => g.Count() > 1) is { } cu) return $"Cubiertas: la cubierta {cu.Key} está repetida.";
+                if (x.Hora_Llegada == "?" || x.Hora_Salida == "?") return $"Itinerario: la hora del día {x.Dia} no se entiende. Escríbela así: 07:30.";
+            if (d.Itinerario.GroupBy(x => x.Dia).FirstOrDefault(g => g.Count() > 1) is { } rep) return $"Itinerario: el día {rep.Key} está dos veces.";
+            if (d.Itinerario.Any(x => x.Dia < 1 || x.Dia > 200)) return "Itinerario: el número de día tiene que ser de 1 a 200.";
+            if (d.Cubiertas.GroupBy(x => x.Numero).FirstOrDefault(g => g.Count() > 1) is { } cu) return $"Cubiertas: la cubierta {cu.Key} está dos veces.";
             foreach (var t in d.Cabinas)
             {
-                if (!CruceroValores.CategoriasCabina.ContainsKey(t.Categoria)) return "Cabinas: categoría desconocida.";
-                if (string.IsNullOrWhiteSpace(t.Nombre)) return "Cabinas: hay un tipo de cabina sin nombre.";
                 if (t.Capacidad_Min > t.Capacidad_Max) return $"Cabinas: en «{t.Nombre}» la capacidad mínima es mayor que la máxima.";
-                if (t.Cabinas.Any(k => string.IsNullOrWhiteSpace(k.Numero))) return $"Cabinas: en «{t.Nombre}» hay una cabina sin número.";
-                if (t.Cabinas.GroupBy(k => k.Numero.Trim()).FirstOrDefault(g => g.Count() > 1) is { } kr) return $"Cabinas: la cabina {kr.Key} de «{t.Nombre}» está repetida.";
-                if (t.Cabinas.Any(k => k.Cubierta is short n && d.Cubiertas.All(c => c.Numero != n))) return $"Cabinas: en «{t.Nombre}» hay una cabina en una cubierta que no está en la lista de cubiertas.";
+                if (t.Cabinas.GroupBy(k => k.Numero!.Trim()).FirstOrDefault(g => g.Count() > 1) is { } kr) return $"Cabinas: la cabina {kr.Key} de «{t.Nombre}» está dos veces.";
             }
             if (d.Cabinas.GroupBy(x => x.Clave).Any(g => g.Count() > 1)) return "Cabinas: claves repetidas (recarga la página).";
-            if (d.Salidas.GroupBy(x => x.Fecha.Date).FirstOrDefault(g => g.Count() > 1) is { } sr) return $"Fechas: la salida del {sr.Key:dd/MM/yyyy} está repetida.";
-            foreach (var f in d.Tarifas)
-                if (string.IsNullOrWhiteSpace(f.Codigo) || string.IsNullOrWhiteSpace(f.Nombre)) return "Tarifas: cada tarifa necesita código y nombre.";
-            if (d.Tarifas.GroupBy(x => x.Codigo.Trim().ToUpperInvariant()).FirstOrDefault(g => g.Count() > 1) is { } tr) return $"Tarifas: el código «{tr.Key}» está repetido.";
+            if (d.Salidas.GroupBy(x => x.Fecha.Date).FirstOrDefault(g => g.Count() > 1) is { } sr) return $"Fechas: la salida del {sr.Key:dd/MM/yyyy} está dos veces.";
+            if (d.Tarifas.GroupBy(x => x.Codigo!.Trim().ToUpperInvariant()).FirstOrDefault(g => g.Count() > 1) is { } tr) return $"Tarifas: el código «{tr.Key}» está dos veces.";
             if (d.Precios.Any(p => p.Precio_Pp < 0)) return "Precios: no puede haber precios negativos.";
             return null;
         }
 
-        private static bool EsHora(string? h) => TimeSpan.TryParseExact((h ?? "").Trim(), [@"hh\:mm", @"h\:mm"], System.Globalization.CultureInfo.InvariantCulture, out var t) && t < TimeSpan.FromDays(1);
+        /// <summary>"7:30", "07:30" o "07:30:00" → "07:30"; vacío → null; si no se entiende → "?".</summary>
+        private static string? HoraTexto(string? h)
+        {
+            h = (h ?? "").Trim();
+            if (h == "") return null;
+            return TimeSpan.TryParseExact(h, [@"hh\:mm", @"h\:mm", @"hh\:mm\:ss", @"h\:mm\:ss"], System.Globalization.CultureInfo.InvariantCulture, out var t) && t < TimeSpan.FromDays(1)
+                ? t.ToString(@"hh\:mm", System.Globalization.CultureInfo.InvariantCulture) : "?";
+        }
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Guardar([FromBody] CruceroDto dto)
@@ -100,7 +136,7 @@ namespace EuroVip.Controllers
                 var errores = ModelState.Where(x => x.Value?.Errors.Count > 0).ToDictionary(x => x.Key, x => x.Value!.Errors.First().ErrorMessage);
                 return BadRequest(new { mensaje = errores.Values.First(), errores });
             }
-            dto.Titulo = ReglasDatos.Limpiar(dto.Titulo);
+            Normalizar(dto);
             if (Revisar(dto, out var campo) is string mal) return Mal(mal, campo);
             if (await _repo.RepetidoAsync(dto.Titulo, dto.Id_Barco, dto.Id_Crucero) is int otro)
                 return Mal($"Ya existe el crucero «{dto.Titulo}» en ese barco (n.º {otro}).", "Titulo");

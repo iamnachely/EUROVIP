@@ -143,6 +143,63 @@
     .vz-cab > div:last-child { padding: 12px 12px 12px 0; }
     .vz-cab b { font-size: 16px; } .vz-cab .pr { font-size: 22px; font-weight: 800; color: #00337F; }
     @@media (max-width: 760px) { .vz-top { grid-template-columns: 1fr; } .vz-cab { grid-template-columns: 1fr; } }
+
+    /* ===== Editor paso a paso (v2) ===== */
+    .cz-pasos .ui-tabs button .num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ev-surface-2); font-size: 11px; font-weight: 800; margin-right: 2px; }
+    .cz-pasos .ui-tabs button.on .num { background: var(--ev-aqua); color: var(--ev-ink); }
+    .cz-pasos .ui-tabs button.lleno .num { background: #ABEFC6; color: #067647; }
+    .cz-opc { color: var(--ev-muted); font-weight: 600; font-size: 12px; font-style: normal; }
+    .cz-intro { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; font-weight: 600; color: #0E6F68; background: #ECFEFB; border: 1px solid #B3FFF3; border-radius: 14px; padding: 10px 14px; margin-bottom: 14px; }
+    .cz-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .cz-chips label { display: inline-flex; gap: 6px; align-items: center; padding: 7px 12px; border-radius: 12px; border: 1px solid var(--ev-line); cursor: pointer; font-weight: 700; font-size: 13px; }
+    .cz-chips label:has(input:checked) { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
+    .cz-chips .nueva { background: #ECFDF3; border-color: #ABEFC6; color: #067647; cursor: default; }
+    .cz-chips .nueva button { border: 0; background: none; cursor: pointer; color: inherit; }
+    .cz-mas > summary { cursor: pointer; font-weight: 800; font-size: 13.5px; list-style: none; display: flex; gap: 8px; align-items: center; color: var(--ev-deep); padding: 4px 0; }
+    .cz-mas > summary::-webkit-details-marker { display: none; }
+    .cz-mas[open] > summary .bi-chevron-down { transform: rotate(180deg); }
+    .cz-mas > div { margin-top: 12px; }
+    /* Itinerario en tarjetas */
+    .cz-dias { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+    .cz-dia { border: 1px solid var(--ev-line); border-radius: 16px; padding: 12px; background: var(--ev-surface); display: grid; gap: 10px; }
+    .cz-dia.nav { background: linear-gradient(135deg, #F0F9FF, #fff); }
+    .cz-dia-h { display: flex; gap: 8px; align-items: center; }
+    .cz-dia-h { flex-wrap: wrap; } .cz-dia-h b { font-size: 15px; white-space: nowrap; } .cz-dia-h small { color: var(--ev-muted); font-weight: 700; white-space: nowrap; }
+    .cz-dia-h .sp { flex: 1; }
+    .cz-horas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .cz-horas label { font: 800 11.5px var(--ev-font); color: var(--ev-muted); text-transform: uppercase; letter-spacing: .04em; display: grid; gap: 4px; }
+    .cz-horas input { font-size: 16px; font-weight: 700; padding: 9px 10px; }
+    .cz-dia .fila { display: flex; gap: 10px; align-items: flex-start; }
+    .cz-dia .fila textarea { flex: 1; min-height: 54px; }
+    /* Fotos pendientes (crucero nuevo) */
+    .cz-pend { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .cz-pend-slot { border: 2px dashed var(--ev-line); border-radius: 16px; min-height: 150px; position: relative; overflow: hidden; display: grid; place-items: center; text-align: center; cursor: pointer; background: var(--ev-surface-2); color: var(--ev-muted); font-weight: 700; font-size: 13px; }
+    .cz-pend-slot:hover, .cz-pend-slot.sobre { border-color: var(--ev-teal); background: var(--ev-mint); color: var(--ev-deep); }
+    .cz-pend-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .cz-pend-slot .et { position: absolute; left: 8px; top: 8px; z-index: 2; font: 800 11px var(--ev-font); padding: 4px 8px; border-radius: 8px; background: var(--ev-ink); color: var(--ev-aqua); }
+    .cz-pend-slot .x { position: absolute; right: 8px; top: 8px; z-index: 2; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(11,18,21,.75); color: #fff; cursor: pointer; }
+    .cz-pend-gal { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 12px; }
+    .cz-pend-gal .cz-pend-slot { min-height: 90px; }
+    /* Precios: fechas × tipos de cabina */
+    .cz-grid { width: 100%; border-collapse: collapse; }
+    .cz-grid th, .cz-grid td { border-bottom: 1px solid var(--ev-line); padding: 6px; font-size: 13px; text-align: left; white-space: nowrap; }
+    .cz-grid th { font: 800 12px var(--ev-font); background: var(--ev-surface-2); position: sticky; top: 0; }
+    .cz-grid th small { display: block; color: var(--ev-muted); font-weight: 700; text-transform: uppercase; font-size: 10.5px; }
+    .cz-grid td input { width: 110px; text-align: right; }
+    .cz-grid td.f { font-weight: 800; }
+    .cz-grid tr.off td.f { text-decoration: line-through; opacity: .6; }
+    /* Resumen antes de guardar */
+    .cz-res { display: grid; gap: 10px; }
+    .cz-res-it { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--ev-line); background: var(--ev-surface); }
+    .cz-res-it .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 16px; background: #ECFDF3; color: #067647; }
+    .cz-res-it.vacio .ic { background: var(--ev-surface-2); color: var(--ev-muted); }
+    .cz-res-it.aviso .ic { background: #FFFAEB; color: #B54708; }
+    .cz-res-it b { display: block; font-size: 14px; } .cz-res-it span { color: var(--ev-muted); font-size: 12.5px; font-weight: 600; }
+    .cz-res-it button { white-space: nowrap; }
+    .cz-home { border-radius: 16px; padding: 14px 16px; display: flex; gap: 12px; align-items: center; font-weight: 700; margin-bottom: 12px; }
+    .cz-home.ok { background: #ECFDF3; border: 1px solid #ABEFC6; color: #067647; }
+    .cz-home.no { background: #FFFAEB; border: 1px solid #FEDF89; color: #93370D; }
+    .cz-home i { font-size: 22px; }
 </style>
 }
 
@@ -153,7 +210,7 @@
     <div>
         <span class="ev-chip dark"><i class="bi bi-water"></i> Catálogo · Cruceros</span>
         <h1>Cruceros</h1>
-        <p>Carga cruceros como en la web: fotos, itinerario por día con horas, «a bordo» (comida, entretenimiento…), cabinas y cubiertas, fechas de salida, tarifas y precios por persona.</p>
+        <p>Carga un crucero paso a paso. Solo el título es obligatorio: lo demás lo completas cuando lo tengas. Antes de guardar verás un resumen, y al guardar sale solo en la Home.</p>
     </div>
     <div class="ui-hero-acts">
         <button class="ev-btn" type="button" id="czNuevo"><i class="bi bi-plus-lg"></i> Nuevo crucero</button>
@@ -167,13 +224,10 @@
 <details class="cz-ayuda" id="czAyuda">
     <summary><i class="bi bi-lightbulb"></i> ¿Cómo se carga un crucero? <i class="bi bi-chevron-down fl"></i></summary>
     <ol>
-        <li>En <b>Catálogos</b> crea la <b>naviera</b> (Disney Cruise Line, MSC…) con su logo, sus <b>barcos</b> (Disney Treasure…) y las <b>categorías</b> de la web (Desde Rep. Dom., Cruceros Disney…).</li>
-        <li>Con <b>Nuevo crucero</b>: título, barco, puertos, noches y en qué categorías sale. Guarda y ya puedes subir sus <b>fotos</b> (portada, banner y galería).</li>
-        <li><b>Itinerario</b>: un día por fila con el puerto y las horas de llegada y salida (o «En navegación»). La fecha de cada día sale de la fecha de salida.</li>
-        <li><b>A bordo</b>: las pestañas de «Tu barco» (Comida y bebida, Entretenimiento…) con sus actividades: foto, título y descripción.</li>
-        <li><b>Cabinas</b>: los tipos de camarote por categoría (Interior, Exterior, Balcón, Suite) con foto, capacidad y m²; las <b>cubiertas</b> y, si quieres, las cabinas concretas (si no, se vende «Garantizada»).</li>
-        <li><b>Fechas y precios</b>: las fechas de salida, los <b>códigos de tarifa</b> (BEST_PRICE, Florida Resident…) y el precio <b>por persona</b> de cada tipo de cabina en cada fecha y tarifa.</li>
-        <li>Cada categoría con cruceros activos y precio sale sola en la <b>Home</b> (sección CRUCEROS), con el precio «desde».</li>
+        <li>Pulsa <b>Nuevo crucero</b> y escribe el <b>título</b> (es lo único obligatorio). La naviera, el barco y la categoría los escribes ahí mismo: si no existen, se crean solos.</li>
+        <li>Ve con <b>Siguiente</b> por los pasos: fotos, itinerario (puerto y horas de cada día), a bordo, cabinas y fechas con precios. Te puedes saltar lo que no tengas.</li>
+        <li>En el último paso, <b>Revisar y guardar</b>, ves todo lo que cargaste y qué falta. Pulsa <b>Guardar</b>.</li>
+        <li>Al guardar, el crucero sale en la <b>Home</b> (sección CRUCEROS) en la tarjeta de su categoría. Si no eliges categoría, va a «Cruceros». El precio «desde» aparece cuando tenga fechas con precio.</li>
     </ol>
 </details>
 
@@ -203,21 +257,22 @@
     <div class="cz-cats" id="czCats" style="margin-top:16px"></div>
 </section>
 
-<!-- ===================== EDITOR ===================== -->
+<!-- ===================== EDITOR (paso a paso) ===================== -->
 <aside class="ui-drawer" id="czEditor" aria-hidden="true">
     <div class="ui-dh">
         <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-water"></i></div>
-        <div style="min-width:0"><h2 id="edTitulo">Nuevo crucero</h2><small id="edSub">Los campos con * son obligatorios.</small></div>
+        <div style="min-width:0"><h2 id="edTitulo">Nuevo crucero</h2><small id="edSub">Solo el título es obligatorio.</small></div>
         <button class="ui-ibtn x" type="button" id="edCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="cz-pasos">
         <div class="ui-tabs" id="edTabs">
-            <button type="button" data-tab="eDatos" class="on"><i class="bi bi-info-circle"></i> Datos</button>
-            <button type="button" data-tab="eFotos"><i class="bi bi-images"></i> Fotos</button>
-            <button type="button" data-tab="eItin"><i class="bi bi-signpost-2"></i> Itinerario <span class="n" id="nItin">0</span></button>
-            <button type="button" data-tab="eBordo"><i class="bi bi-stars"></i> A bordo <span class="n" id="nBordo">0</span></button>
-            <button type="button" data-tab="eCabinas"><i class="bi bi-door-closed"></i> Cabinas <span class="n" id="nCabinas">0</span></button>
-            <button type="button" data-tab="ePrecios"><i class="bi bi-calendar3"></i> Fechas y precios <span class="n" id="nSalidas">0</span></button>
+            <button type="button" data-tab="eDatos" class="on"><span class="num">1</span> Datos</button>
+            <button type="button" data-tab="eFotos"><span class="num">2</span> Fotos</button>
+            <button type="button" data-tab="eItin"><span class="num">3</span> Itinerario</button>
+            <button type="button" data-tab="eBordo"><span class="num">4</span> A bordo</button>
+            <button type="button" data-tab="eCabinas"><span class="num">5</span> Cabinas</button>
+            <button type="button" data-tab="ePrecios"><span class="num">6</span> Fechas y precios</button>
+            <button type="button" data-tab="eResumen"><span class="num"><i class="bi bi-check2"></i></span> Revisar y guardar</button>
         </div>
     </div>
     <div class="ui-db" id="edCuerpo">
@@ -227,12 +282,14 @@
         <section class="ui-pane" id="eBordo"></section>
         <section class="ui-pane" id="eCabinas"></section>
         <section class="ui-pane" id="ePrecios"></section>
+        <section class="ui-pane" id="eResumen"></section>
     </div>
     <div class="ui-df">
         <button class="ev-btn ghost" type="button" id="edEliminar"><i class="bi bi-trash3"></i> Eliminar</button>
-        <span class="hint">Ctrl + Enter guarda</span>
-        <button class="ev-btn ghost" type="button" id="edCancelar">Cancelar</button>
-        <button class="ev-btn" type="button" id="edGuardar"><i class="bi bi-check2-circle"></i> Guardar</button>
+        <span class="hint">Ctrl + Enter: revisar y guardar</span>
+        <button class="ev-btn ghost" type="button" id="edAnterior"><i class="bi bi-arrow-left"></i> Anterior</button>
+        <button class="ev-btn ghost" type="button" id="edSiguiente">Siguiente <i class="bi bi-arrow-right"></i></button>
+        <button class="ev-btn" type="button" id="edGuardar"><i class="bi bi-clipboard-check"></i> Revisar y guardar</button>
     </div>
 </aside>
 
@@ -278,21 +335,27 @@
     const esc = EV.esc;
     const editor = EV.drawer($('#czEditor')), visor = EV.drawer($('#czVer')), dCat = EV.drawer($('#czCat'));
     const vistas = EV.tabs($('#czVistas'));
-    const edTabs = EV.tabs($('#edTabs'), id => { if (id === 'eFotos') pintarFotos(); });
+    const PASOS = ['eDatos', 'eFotos', 'eItin', 'eBordo', 'eCabinas', 'ePrecios', 'eResumen'];
+    let paso = 'eDatos';
+    const edTabs = EV.tabs($('#edTabs'), id => { paso = id; alCambiarPaso(); });
     let D = { cruceros: [], navieras: [], barcos: [], categorias: [], categoriasCabina: {} };
-    let C = null, verId = null, galeria = null, salidaSel = null, catTipoSel = 'INTERIOR', sec = 0;
+    let C = null, verId = null, sec = 0, tarSel = null;
+    let fotosMontadas = false;          // componente de fotos (crucero ya guardado)
+    let P = { PORTADA: null, INTERMEDIA: null, GALERIA: [] };   // fotos elegidas en un crucero nuevo: se suben al guardar
     const st = { q: '', naviera: '', categoria: '', filtro: '', orden: 'fecha' };
     const CATS = ['INTERIOR', 'EXTERIOR', 'BALCON', 'SUITE'];
     const CAT_CORTO = { INTERIOR: 'Interior', EXTERIOR: 'Exterior', BALCON: 'Balcón', SUITE: 'Suite' };
+    const IMG_OK = /^image\/(jpeg|png|webp)$/;
 
     const dinero = v => v == null ? '—' : `${EV.simbolo()} ${EV.fmt(v, Number(v) % 1 ? 2 : 0)}`;
     const nuevaClave = p => p + 'n' + (++sec);
     const fechaTxt = f => f ? new Date(f.slice(0, 10) + 'T00:00:00').toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
     const fechaCorta = f => new Date(f.slice(0, 10) + 'T00:00:00').toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' });
-    const masDias = (f, n) => { const d = new Date(f.slice(0, 10) + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    const masDias = (f, n) => { const d = new Date(f.slice(0, 10) + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + (n || 0)); return d.toISOString().slice(0, 10); };
     const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+    const noches = () => C.noches || (C.itinerario.length > 1 ? C.itinerario.length - 1 : null);
 
-    // ===================== DATOS =====================
+    // ===================== LISTA =====================
     async function cargar() {
         try { D = await EV.api('/Cruceros/Listar'); }
         catch (e) { $('#czLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar los cruceros</h3><p>${esc(e.message)}</p></div>`; return; }
@@ -329,28 +392,29 @@
         $('#czKpis').innerHTML = k.map(([f, n, tx, i, al]) => `<button type="button" class="cz-kpi ${st.filtro === f ? 'on' : ''} ${al && n ? 'mal' : ''}" data-filtro="${f}"><b>${EV.fmt(n)}</b><small><i class="bi ${i}"></i> ${tx}</small></button>`).join('');
         const l = filtrados();
         $('#czCuenta').textContent = l.length === t.length ? `${EV.fmt(l.length)} cruceros` : `Mostrando ${EV.fmt(l.length)} de ${EV.fmt(t.length)}`;
-        if (!t.length) { $('#czLista').innerHTML = `<div class="ui-empty"><i class="bi bi-water" style="font-size:40px"></i><h3>Todavía no hay cruceros</h3><p>Primero crea en <b>Catálogos</b> la naviera y el barco; luego pulsa «Nuevo crucero».</p></div>`; return; }
+        if (!t.length) { $('#czLista').innerHTML = `<div class="ui-empty"><i class="bi bi-water" style="font-size:40px"></i><h3>Todavía no hay cruceros</h3><p>Pulsa «Nuevo crucero»: solo hace falta el título.</p></div>`; return; }
         if (!l.length) { $('#czLista').innerHTML = `<div class="ui-empty"><i class="bi bi-search" style="font-size:36px"></i><h3>No hay cruceros con ese filtro</h3></div>`; return; }
         $('#czLista').innerHTML = `<div class="cz-lista">${l.map(tarjeta).join('')}</div>`;
     }
 
     function tarjeta(c) {
         const p = (cat, v) => `<div class="${v == null ? 'sin' : ''}"><small>${cat}</small><b>${v == null ? '—' : dinero(v)}</b></div>`;
+        const puertos = [c.puerto_Salida, c.puerto_Llegada !== c.puerto_Salida ? c.puerto_Llegada : null].filter(Boolean).map(esc).join(' / ');
         return `<article class="cz-card ${c.activo ? '' : 'off'}" data-id="${c.id_Crucero}">
             <div class="foto" data-accion="ver">${c.imagen ? `<img src="${esc(c.imagen)}" alt="" loading="lazy">` : '<span class="sin"><i class="bi bi-water"></i>Sin foto</span>'}</div>
             <div style="min-width:0">
                 <h3>${esc(c.titulo)}</h3>
                 <dl class="cz-dl">
                     <dt>Fecha</dt><dd>${c.proxima_Salida ? fechaTxt(c.proxima_Salida) + (c.salidas_Futuras > 1 ? ` <small style="color:var(--ev-muted)">(+${c.salidas_Futuras - 1} fechas)</small>` : '') : '<span style="color:#B54708">Sin fechas a la venta</span>'}</dd>
-                    <dt>Duración</dt><dd>${c.noches + 1} días · ${c.noches} noches</dd>
-                    <dt>Barco</dt><dd>${esc(c.barco)}</dd>
-                    <dt>Desde / Hasta</dt><dd>${esc(c.puerto_Salida)}${c.puerto_Llegada !== c.puerto_Salida ? ' / ' + esc(c.puerto_Llegada) : ''}</dd>
+                    <dt>Duración</dt><dd>${c.noches ? `${c.noches + 1} días · ${c.noches} noches` : '—'}</dd>
+                    <dt>Barco</dt><dd>${esc(c.barco || '—')}</dd>
+                    <dt>Desde / Hasta</dt><dd>${puertos || '—'}</dd>
                     <dt>Itinerario</dt><dd>${esc(c.itinerario || '—')}</dd>
                 </dl>
                 <div class="cz-precios">${p('Interior', c.interior_Pp)}${p('Exterior', c.exterior_Pp)}${p('Balcón', c.balcon_Pp)}${p('Suite', c.suite_Pp)}</div>
             </div>
             <div class="cz-der">
-                ${c.naviera_Logo ? `<img class="logo" src="${esc(c.naviera_Logo)}" alt="${esc(c.naviera)}">` : `<span class="nav">${esc(c.naviera)}</span>`}
+                ${c.naviera_Logo ? `<img class="logo" src="${esc(c.naviera_Logo)}" alt="${esc(c.naviera || '')}">` : `<span class="nav">${esc(c.naviera || '')}</span>`}
                 <div class="chips">${c.activo ? '<span class="cz-chip ok"><i class="bi bi-broadcast"></i> En la web</span>' : '<span class="cz-chip av">Desactivado</span>'}
                     ${c.categorias ? `<span class="cz-chip"><i class="bi bi-tags"></i> ${esc(c.categorias)}</span>` : '<span class="cz-chip av">Sin categoría</span>'}
                     <span class="cz-chip">n.º ${c.id_Crucero}${c.codigo ? ' · ' + esc(c.codigo) : ''}</span></div>
@@ -372,7 +436,7 @@
             <span class="tx"><b>${b}</b><small>${s}</small></span><button type="button" class="ui-ibtn" ${attrs} title="Editar"><i class="bi bi-pencil"></i></button></div>`;
         $('#czCats').innerHTML = `
             <div class="cz-cat"><h3><i class="bi bi-flag"></i> Navieras <span class="sp"></span><button type="button" class="ev-btn sm" data-cat-nuevo="naviera"><i class="bi bi-plus-lg"></i> Nueva</button></h3>
-                ${D.navieras.map(n => it(n.logo, esc(n.nombre), `${n.barcos} barco(s)${n.activo ? '' : ' · inactiva'}`, `data-cat-ed="naviera" data-id="${n.id_Naviera}"`)).join('') || '<p class="ui-help">Ninguna todavía. Ej.: Disney Cruise Line.</p>'}</div>
+                ${D.navieras.map(n => it(n.logo, esc(n.nombre), `${n.barcos} barco(s)${n.activo ? '' : ' · inactiva'}`, `data-cat-ed="naviera" data-id="${n.id_Naviera}"`)).join('') || '<p class="ui-help">Ninguna todavía. También se crean solas al escribirlas en un crucero.</p>'}</div>
             <div class="cz-cat"><h3><i class="bi bi-water"></i> Barcos <span class="sp"></span><button type="button" class="ev-btn sm" data-cat-nuevo="barco" ${D.navieras.length ? '' : 'disabled title="Primero crea una naviera"'}><i class="bi bi-plus-lg"></i> Nuevo</button></h3>
                 ${D.barcos.map(b => it(b.imagen, esc(b.nombre), `${esc(b.naviera)} · ${b.cruceros} crucero(s)${b.activo ? '' : ' · inactivo'}`, `data-cat-ed="barco" data-id="${b.id_Barco}"`)).join('') || '<p class="ui-help">Ninguno todavía. Ej.: Disney Treasure.</p>'}</div>
             <div class="cz-cat"><h3><i class="bi bi-tags"></i> Categorías de la web <span class="sp"></span><button type="button" class="ev-btn sm" data-cat-nuevo="categoria"><i class="bi bi-plus-lg"></i> Nueva</button></h3>
@@ -414,10 +478,10 @@
         catch (e) { EV.toast(e.message, 'err'); }
     }
 
-    // ===================== FOTOS SUELTAS (actividad, cabina, cubierta, día, catálogo) =====================
+    // ===================== FOTOS SUELTAS (actividad, cabina, cubierta, día, catálogo): se suben al momento y se guardan con el crucero =====================
     // ruta: 'cat' | 'dia:i' | 'act:s:a' | 'tipo:clave' | 'cub:i'
     function fotoHtml(ruta, url, grande) {
-        return `<label class="cz-foto ${grande ? 'grande' : ''}" title="Subir foto" data-foto="${ruta}">
+        return `<label class="cz-foto ${grande ? 'grande' : ''}" title="${url ? 'Cambiar foto' : 'Subir foto'}" data-foto="${ruta}">
             ${url ? `<img src="${esc(url)}" alt=""><button type="button" class="x" data-quitar-foto="${ruta}" title="Quitar foto">×</button>` : '<i class="bi bi-camera"></i>'}
             <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-subir-foto="${ruta}"></label>`;
     }
@@ -431,7 +495,7 @@
         else if (p[0] === 'cub') C.cubiertas[+p[1]].plano = url;
     }
     async function subirFoto(ruta, archivo, el) {
-        if (!/^image\/(jpeg|png|webp)$/.test(archivo.type) || archivo.size > 10e6) { EV.toast('Usa una imagen JPG, PNG o WebP de hasta 10 MB.', 'err'); return; }
+        if (!IMG_OK.test(archivo.type) || archivo.size > 10e6) { EV.toast('Usa una imagen JPG, PNG o WebP de hasta 10 MB.', 'err'); return; }
         const fd = new FormData(); fd.append('tipo', tipoFoto(ruta)); if (C?.id_Crucero) fd.append('id', C.id_Crucero); fd.append('archivo', archivo);
         el.classList.add('subiendo');
         try {
@@ -439,103 +503,159 @@
             ponerFoto(ruta, r.url);
             el.outerHTML = fotoHtml(ruta, r.url, el.classList.contains('grande'));
             (ruta === 'cat' ? $('#czCat') : $('#czEditor')).dispatchEvent(new Event('ev-cambio'));
+            EV.toast('Foto subida.');
         } catch (e) { EV.toast(e.message, 'err'); el.classList.remove('subiendo'); }
     }
 
     // ===================== EDITOR =====================
-    const vacio = () => ({ id_Crucero: null, titulo: '', subtitulo: '', id_Barco: D.barcos.find(b => b.activo)?.id_Barco || 0, puerto_Salida: '', puerto_Llegada: '', noches: 7, codigo: '',
-        descripcion: '', incluye: '', no_Incluye: '', titulo_Seccion: '', activo: true, categorias: [], itinerario: [], secciones: [], cubiertas: [], cabinas: [], salidas: [], tarifas: [], precios: [] });
+    const vacio = () => ({ id_Crucero: null, titulo: '', subtitulo: '', id_Barco: null, naviera_Nombre: '', barco_Nombre: '', puerto_Salida: '', puerto_Llegada: '', noches: null, codigo: '',
+        descripcion: '', incluye: '', no_Incluye: '', titulo_Seccion: '', activo: true, categorias: D.categorias.length === 1 ? [D.categorias[0].id_Categoria] : [], categorias_Nuevas: [],
+        itinerario: [], secciones: [], cubiertas: [], cabinas: [], salidas: [], tarifas: [], precios: [] });
 
     async function abrir(id) {
-        if (!D.barcos.length) { EV.toast('Primero crea en Catálogos la naviera y el barco.', 'err'); vistas.ir('pCatalogos'); return; }
         if (id) { try { C = await EV.api('/Cruceros/Obtener?id=' + id); } catch (e) { EV.toast(e.message, 'err'); return; } }
         else C = vacio();
+        C.categorias_Nuevas = [];
         C.salidas.forEach(s => s.fecha = s.fecha.slice(0, 10));
-        salidaSel = C.salidas[0]?.clave || null;
-        galeria = null; $('#eFotos').innerHTML = '';
+        C.itinerario.sort((a, b) => a.dia - b.dia);
+        tarSel = C.tarifas[0]?.clave || null;
+        fotosMontadas = false; P = { PORTADA: null, INTERMEDIA: null, GALERIA: [] }; $('#eFotos').innerHTML = '';
         $('#edTitulo').textContent = id ? C.titulo : 'Nuevo crucero';
-        $('#edSub').textContent = id ? `n.º ${C.id_Crucero} · ${C.usuario ? 'cargado por ' + C.usuario : ''}` : 'Completa las pestañas; las fotos se suben después de guardar la primera vez.';
+        $('#edSub').textContent = id ? `n.º ${C.id_Crucero}${C.usuario ? ' · cargado por ' + C.usuario : ''}` : 'Solo el título es obligatorio. Lo demás, cuando lo tengas.';
         $('#edEliminar').hidden = !id;
-        pintarEditor(); edTabs.ir('eDatos'); editor.abrir();
+        pintarDatos(); pintarItin(); pintarBordo(); pintarCabinas(); pintarPrecios();
+        edTabs.ir('eDatos'); editor.abrir();
         setTimeout(() => $('[data-b="titulo"]')?.focus(), 80);
     }
 
-    function pintarEditor() { pintarDatos(); pintarItin(); pintarBordo(); pintarCabinas(); pintarPrecios(); contadores(); }
-    function contadores() {
-        $('#nItin').textContent = C.itinerario.length; $('#nBordo').textContent = C.secciones.reduce((n, s) => n + s.actividades.length, 0);
-        $('#nCabinas').textContent = C.cabinas.length; $('#nSalidas').textContent = C.salidas.length;
+    function alCambiarPaso() {
+        const i = PASOS.indexOf(paso);
+        $('#edAnterior').disabled = i === 0;
+        $('#edSiguiente').hidden = paso === 'eResumen';
+        $('#edGuardar').innerHTML = paso === 'eResumen' ? '<i class="bi bi-check2-circle"></i> Guardar' : '<i class="bi bi-clipboard-check"></i> Revisar y guardar';
+        if (paso === 'eFotos') pintarFotos();
+        if (paso === 'ePrecios') pintarPrecios();
+        if (paso === 'eResumen') pintarResumen();
+        marcarPasos();
+        $('#edCuerpo').scrollTop = 0;
+    }
+    function marcarPasos() {
+        if (!C) return;
+        const lleno = { eDatos: !!C.titulo?.trim(), eFotos: fotosMontadas || P.PORTADA || P.INTERMEDIA || P.GALERIA.length, eItin: C.itinerario.length, eBordo: C.secciones.length,
+                        eCabinas: C.cabinas.length, ePrecios: C.salidas.length };
+        $$('#edTabs [data-tab]').forEach(b => b.classList.toggle('lleno', !!lleno[b.dataset.tab] && b.dataset.tab !== paso));
     }
 
-    // data-b="ruta.del.dato" + data-t="num|bool|hora" → se guarda en C al escribir
+    // data-b="ruta.del.dato" + data-t="num|bool" → se guarda en C al escribir
     function asignar(ruta, valor) {
         const p = ruta.split('.'); let o = C;
         for (let i = 0; i < p.length - 1; i++) o = o[isNaN(p[i]) ? p[i] : +p[i]];
         o[isNaN(p.at(-1)) ? p.at(-1) : +p.at(-1)] = valor;
     }
-    const val = (r) => r.split('.').reduce((o, k) => o?.[isNaN(k) ? k : +k], C);
+    const val = r => r.split('.').reduce((o, k) => o?.[isNaN(k) ? k : +k], C);
     const inp = (ruta, extra = '', tipo = 'text') => `<input data-b="${ruta}" ${tipo === 'num' ? 'type="number" data-t="num"' : ''} value="${esc(val(ruta) ?? '')}" ${extra}>`;
     const txt = (ruta, extra = '') => `<textarea data-b="${ruta}" ${extra}>${esc(val(ruta) ?? '')}</textarea>`;
+    const opc = '<em class="cz-opc">opcional</em>';
 
+    // ---------- 1. Datos ----------
     function pintarDatos() {
-        const barcoSel = D.barcos.find(b => b.id_Barco === C.id_Barco);
+        if (C.id_Barco && !C.barco_Nombre) { const b = D.barcos.find(x => x.id_Barco === C.id_Barco); if (b) { C.barco_Nombre = b.nombre; C.naviera_Nombre = b.naviera; } }
         $('#eDatos').innerHTML = `
             <div class="cz-blq"><h3><i class="bi bi-info-circle"></i> El crucero</h3>
                 <div class="ui-f"><label>Título * <em>el que sale en la tarjeta y la cabecera</em></label>${inp('titulo', 'maxlength="200" placeholder="Ej. Halloween en Alta Mar del Caribe Oriental"')}</div>
-                <div class="ui-f"><label>Subtítulo <em>si lo dejas vacío: «Saliendo el {fecha} para {noches} noches a bordo del {barco}»</em></label>${inp('subtitulo', 'maxlength="300"')}</div>
                 <div class="ui-row">
-                    <div class="ui-f"><label>Barco *</label><select data-b="id_Barco" data-t="num">${D.navieras.map(n => `<optgroup label="${esc(n.nombre)}">${D.barcos.filter(b => b.id_Naviera === n.id_Naviera).map(b => `<option value="${b.id_Barco}" ${b.id_Barco === C.id_Barco ? 'selected' : ''}>${esc(b.nombre)}</option>`).join('')}</optgroup>`).join('')}</select>
-                        <small class="ui-help" style="margin:4px 0 0">Naviera: <b>${esc(barcoSel?.naviera || '—')}</b>. ¿No está? Créalo en Catálogos.</small></div>
-                    <div class="ui-f"><label>Código / ID del proveedor</label>${inp('codigo', 'maxlength="50" placeholder="Ej. 2256635"')}</div>
+                    <div class="ui-f"><label>Naviera ${opc}</label><input data-b="naviera_Nombre" list="dlNavieras" maxlength="100" value="${esc(C.naviera_Nombre || '')}" placeholder="Ej. Disney Cruise Line">
+                        <datalist id="dlNavieras">${D.navieras.map(n => `<option value="${esc(n.nombre)}">`).join('')}</datalist></div>
+                    <div class="ui-f"><label>Barco ${opc}</label><input data-b="barco_Nombre" list="dlBarcos" maxlength="100" value="${esc(C.barco_Nombre || '')}" placeholder="Ej. Disney Treasure">
+                        <datalist id="dlBarcos">${D.barcos.map(b => `<option value="${esc(b.nombre)}">${esc(b.naviera)}</option>`).join('')}</datalist></div>
                 </div>
+                <p class="ui-help" style="margin:-4px 0 12px"><i class="bi bi-magic"></i> Elige de la lista o escribe uno nuevo: si no existe, se crea al guardar.</p>
                 <div class="ui-row r3">
-                    <div class="ui-f"><label>Puerto de salida *</label>${inp('puerto_Salida', 'maxlength="100" placeholder="Ej. Port Canaveral"')}</div>
-                    <div class="ui-f"><label>Puerto de llegada *</label>${inp('puerto_Llegada', 'maxlength="100" placeholder="Ej. Port Canaveral"')}</div>
-                    <div class="ui-f"><label>Noches *</label>${inp('noches', 'min="1" max="180"', 'num')}</div>
+                    <div class="ui-f"><label>Noches ${opc}</label>${inp('noches', 'min="1" max="180" placeholder="Ej. 7"', 'num')}</div>
+                    <div class="ui-f"><label>Puerto de salida ${opc}</label>${inp('puerto_Salida', 'maxlength="100" placeholder="Ej. Port Canaveral"')}</div>
+                    <div class="ui-f"><label>Puerto de llegada ${opc}</label>${inp('puerto_Llegada', 'maxlength="100" placeholder="Si lo dejas vacío, el mismo de salida"')}</div>
                 </div>
-                <div class="ui-f"><label class="ui-switch"><input type="checkbox" data-b="activo" data-t="bool" ${C.activo ? 'checked' : ''}><span class="tr"></span> Activo (sale en la web si tiene fechas y precios)</label></div>
+                <div class="ui-f"><label class="ui-switch"><input type="checkbox" data-b="activo" data-t="bool" ${C.activo ? 'checked' : ''}><span class="tr"></span> Activo: sale en la web y en la Home</label></div>
             </div>
-            <div class="cz-blq"><h3><i class="bi bi-tags"></i> Categorías de la web <small>en qué tarjetas de la Home y de la web sale</small></h3>
-                <div class="cz-cats-sel">${D.categorias.map(g => `<label><input type="checkbox" data-categoria="${g.id_Categoria}" ${C.categorias.includes(g.id_Categoria) ? 'checked' : ''}> ${esc(g.nombre)}</label>`).join('') || '<span class="ui-help">No hay categorías: créalas en Catálogos.</span>'}</div>
+            <div class="cz-blq"><h3><i class="bi bi-tags"></i> Categoría de la web <small>es la tarjeta de la Home donde sale · si no eliges, va a «Cruceros»</small></h3>
+                <div class="cz-chips">${D.categorias.map(g => `<label><input type="checkbox" data-categoria="${g.id_Categoria}" ${C.categorias.includes(g.id_Categoria) ? 'checked' : ''}> ${esc(g.nombre)}</label>`).join('')}
+                    ${C.categorias_Nuevas.map((n, i) => `<span class="cz-chips nueva" style="display:inline-flex"><label class="nueva"><i class="bi bi-plus-circle"></i> ${esc(n)} <button type="button" data-cat-quitar="${i}" title="Quitar">×</button></label></span>`).join('')}
+                    <span style="display:inline-flex;gap:6px"><input id="edCatNueva" maxlength="100" placeholder="Nueva categoría…" style="width:190px"><button type="button" class="ev-btn ghost sm" data-cat-agregar><i class="bi bi-plus-lg"></i> Agregar</button></span>
+                </div>
             </div>
-            <div class="cz-blq"><h3><i class="bi bi-text-paragraph"></i> Textos</h3>
+            <details class="cz-blq cz-mas" ${C.descripcion || C.subtitulo || C.codigo || C.incluye || C.no_Incluye ? 'open' : ''}><summary><i class="bi bi-text-paragraph"></i> Más textos ${opc} <i class="bi bi-chevron-down"></i></summary><div>
+                <div class="ui-row"><div class="ui-f"><label>Subtítulo <em>si lo dejas vacío: «Saliendo el {fecha} para {noches} noches a bordo del {barco}»</em></label>${inp('subtitulo', 'maxlength="300"')}</div>
+                    <div class="ui-f"><label>Código / ID del proveedor</label>${inp('codigo', 'maxlength="50" placeholder="Ej. 2256635"')}</div></div>
                 <div class="ui-f"><label>Descripción</label>${txt('descripcion', 'rows="4"')}</div>
                 <div class="ui-row"><div class="ui-f"><label>Incluye</label>${txt('incluye', 'rows="3"')}</div><div class="ui-f"><label>No incluye</label>${txt('no_Incluye', 'rows="3"')}</div></div>
-            </div>`;
+            </div></details>`;
     }
 
+    // ---------- 2. Fotos ----------
     function pintarFotos() {
-        if (!C) return;
-        if (!C.id_Crucero) { $('#eFotos').innerHTML = '<div class="ui-empty"><i class="bi bi-images" style="font-size:34px"></i><h3>Guarda primero el crucero</h3><p>Las fotos (portada, banner y galería) se suben al momento y van con el crucero.</p></div>'; galeria = null; return; }
-        if (galeria) return;
-        $('#eFotos').innerHTML = `<p class="ui-help" style="margin:0 0 10px">Portada = tarjeta de la lista · Intermedia = banner de la cabecera (la foto ancha con el título) · Galería = el slider de la ficha.</p><div id="eFotosMm"></div>`;
-        galeria = EVMultimedia.montar($('#eFotosMm'), { tipo: 'CRUCERO', clave: C.id_Crucero, intermedia: true, nombre: 'el crucero' });
+        if (C.id_Crucero) {
+            if (fotosMontadas) return;
+            $('#eFotos').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Portada = la tarjeta de la lista · Intermedia = el banner de la cabecera · Galería = el slider de la ficha. Se guardan al momento.</span></div><div id="eFotosMm"></div>`;
+            EVFotos.montar($('#eFotosMm'), { tipo: 'CRUCERO', clave: C.id_Crucero, alCambiar: () => { fotosMontadas = true; marcarPasos(); } });
+            fotosMontadas = true;
+            return;
+        }
+        const slot = (uso, titulo, f) => `<label class="cz-pend-slot" data-pend="${uso}">
+            <span class="et">${titulo}</span>${f ? `<img src="${URL.createObjectURL(f)}" alt=""><button type="button" class="x" data-pend-quitar="${uso}" title="Quitar">×</button>` : `<span><i class="bi bi-cloud-arrow-up" style="font-size:28px;display:block"></i>Pulsa o arrastra una foto</span>`}
+            <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-pend-subir="${uso}" ${uso === 'GALERIA' ? 'multiple' : ''}></label>`;
+        $('#eFotos').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Elige las fotos ahora: se suben solas al guardar el crucero. ${opc}</span></div>
+            <div class="cz-pend">${slot('PORTADA', 'Portada · tarjeta de la lista', P.PORTADA)}${slot('INTERMEDIA', 'Banner · cabecera de la ficha', P.INTERMEDIA)}</div>
+            <div class="cz-blq" style="margin-top:12px"><h3><i class="bi bi-images"></i> Galería <small>${P.GALERIA.length} foto(s)</small></h3>
+                <div class="cz-pend-gal">${P.GALERIA.map((f, i) => `<div class="cz-pend-slot"><img src="${URL.createObjectURL(f)}" alt=""><button type="button" class="x" data-pend-quitar="GALERIA:${i}" title="Quitar">×</button></div>`).join('')}
+                    ${slot('GALERIA', 'Añadir', null)}</div></div>`;
+    }
+    function ponerPendientes(uso, archivos) {
+        const ok = [...archivos].filter(f => IMG_OK.test(f.type) && f.size <= 10e6);
+        if (ok.length < archivos.length) EV.toast('Algunas no son JPG, PNG o WebP de hasta 10 MB.', 'err');
+        if (!ok.length) return;
+        if (uso === 'GALERIA') P.GALERIA.push(...ok); else P[uso] = ok[0];
+        pintarFotos(); marcarPasos(); $('#czEditor').dispatchEvent(new Event('ev-cambio'));
+    }
+    async function subirPendientes(id) {
+        const tandas = [['PORTADA', P.PORTADA ? [P.PORTADA] : []], ['INTERMEDIA', P.INTERMEDIA ? [P.INTERMEDIA] : []], ['GALERIA', P.GALERIA]].filter(([, l]) => l.length);
+        let mal = 0;
+        for (const [uso, lista] of tandas) {
+            const fd = new FormData(); fd.append('tipo', 'CRUCERO'); fd.append('clave', id); fd.append('uso', uso); lista.forEach(f => fd.append('archivos', f));
+            try { await EVProgreso.subir('/Multimedia/Subir', fd); } catch (e) { mal++; EV.toast('Fotos (' + uso.toLowerCase() + '): ' + e.message, 'err'); }
+        }
+        P = { PORTADA: null, INTERMEDIA: null, GALERIA: [] };
+        return tandas.length - mal;
     }
 
+    // ---------- 3. Itinerario ----------
     function pintarItin() {
-        const it = C.itinerario.sort((a, b) => a.dia - b.dia);
-        $('#eItin').innerHTML = `<div class="cz-blq"><h3><i class="bi bi-signpost-2"></i> Itinerario día a día <small>la fecha de cada día = fecha de salida + (día − 1)</small><span class="sp"></span>
-                <button type="button" class="ev-btn ghost sm" data-it="generar"><i class="bi bi-magic"></i> Crear los ${C.noches + 1} días</button>
-                <button type="button" class="ev-btn sm" data-it="nuevo"><i class="bi bi-plus-lg"></i> Día</button></h3>
-            ${it.length ? `<table class="cz-tab"><thead><tr><th>Día</th><th>Puerto</th><th>En navegación</th><th>Llega</th><th>Sale</th><th>Info</th><th>Foto</th><th></th></tr></thead><tbody>
-            ${it.map((d, i) => `<tr>
-                <td class="num">${inp(`itinerario.${i}.dia`, 'min="1" max="200" class="num"', 'num')}</td>
-                <td>${inp(`itinerario.${i}.puerto`, `maxlength="150" placeholder="${d.en_Navegacion ? 'En navegación' : 'Ej. Tortola'}"`)}</td>
-                <td style="text-align:center"><input type="checkbox" data-b="itinerario.${i}.en_Navegacion" data-t="bool" ${d.en_Navegacion ? 'checked' : ''} title="En navegación (At Sea)"></td>
-                <td class="hora"><input type="time" data-b="itinerario.${i}.hora_Llegada" value="${esc(d.hora_Llegada || '')}" ${d.en_Navegacion ? 'disabled' : ''}></td>
-                <td class="hora"><input type="time" data-b="itinerario.${i}.hora_Salida" value="${esc(d.hora_Salida || '')}" ${d.en_Navegacion ? 'disabled' : ''}></td>
-                <td>${txt(`itinerario.${i}.descripcion`, 'rows="1" placeholder="Opcional"')}</td>
-                <td>${fotoHtml('dia:' + i, d.imagen)}</td>
-                <td><button type="button" class="ui-ibtn danger" data-it="quitar" data-i="${i}" title="Quitar día"><i class="bi bi-x-lg"></i></button></td></tr>`).join('')}
-            </tbody></table>` : '<p class="ui-help" style="margin:0">Sin días. Pulsa «Crear los días» para generarlos según las noches (luego escribe cada puerto).</p>'}</div>`;
+        const sal = C.salidas.filter(s => s.activo).sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
+        const n = noches();
+        $('#eItin').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Un día por tarjeta: el puerto y a qué hora llega y sale el barco (o márcalo «En navegación»). Todo ${opc}.${sal ? ` Las fechas salen de la primera salida (${fechaCorta(sal.fecha)}).` : ''}</span></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+                <button type="button" class="ev-btn sm" data-it="nuevo"><i class="bi bi-plus-lg"></i> Agregar día</button>
+                ${n ? `<button type="button" class="ev-btn ghost sm" data-it="generar"><i class="bi bi-magic"></i> Crear los ${n + 1} días (${n} noches)</button>` : '<span class="ui-help" style="margin:0;align-self:center">Pon las noches en «Datos» para crear todos los días de una vez.</span>'}
+            </div>
+            ${C.itinerario.length ? `<div class="cz-dias">${C.itinerario.map((d, i) => `<div class="cz-dia ${d.en_Navegacion ? 'nav' : ''}">
+                <div class="cz-dia-h"><b>Día ${i + 1}</b>${sal ? `<small>${fechaCorta(masDias(sal.fecha, i))}</small>` : ''}<span class="sp"></span>
+                    <label class="ui-switch" title="En navegación (At Sea)"><input type="checkbox" data-b="itinerario.${i}.en_Navegacion" data-t="bool" ${d.en_Navegacion ? 'checked' : ''}><span class="tr"></span> En navegación</label>
+                    <button type="button" class="ui-ibtn danger" data-it="quitar" data-i="${i}" title="Quitar este día"><i class="bi bi-trash3"></i></button></div>
+                ${d.en_Navegacion ? '<div class="ui-help" style="margin:0"><i class="bi bi-water"></i> Día en el mar: sin puerto ni horas.</div>' : `
+                ${inp(`itinerario.${i}.puerto`, 'maxlength="150" placeholder="Puerto, ej. Tortola"')}
+                <div class="cz-horas"><label>Llega<input type="time" step="60" data-b="itinerario.${i}.hora_Llegada" value="${esc(d.hora_Llegada || '')}"></label>
+                    <label>Sale<input type="time" step="60" data-b="itinerario.${i}.hora_Salida" value="${esc(d.hora_Salida || '')}"></label></div>`}
+                <div class="fila">${txt(`itinerario.${i}.descripcion`, 'rows="2" placeholder="Qué hay en este día (opcional)"')}${fotoHtml('dia:' + i, d.imagen)}</div>
+            </div>`).join('')}</div>` : '<div class="ui-empty" style="padding:24px"><p style="margin:0">Sin días todavía.</p></div>'}`;
     }
 
+    // ---------- 4. A bordo ----------
     function pintarBordo() {
-        $('#eBordo').innerHTML = `<div class="cz-blq"><h3><i class="bi bi-stars"></i> «Tu barco» <small>secciones con sus actividades (comida, entretenimiento…)</small><span class="sp"></span>
+        $('#eBordo').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Las pestañas de «Tu barco» en la web (Comida y bebida, Entretenimiento…) con sus actividades: foto, título y descripción. ${opc}</span></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
                 <button type="button" class="ev-btn ghost sm" data-bo="base"><i class="bi bi-magic"></i> Crear las 4 básicas</button>
-                <button type="button" class="ev-btn sm" data-bo="seccion"><i class="bi bi-plus-lg"></i> Sección</button></h3>
-            <div class="ui-f"><label>Título de esta parte <em>si lo dejas vacío: «Tu barco - {barco}»</em></label>${inp('titulo_Seccion', 'maxlength="150"')}</div>
+                <button type="button" class="ev-btn sm" data-bo="seccion"><i class="bi bi-plus-lg"></i> Sección</button></div>
             ${C.secciones.map((s, i) => `<div class="cz-sec">
-                <div class="cz-sec-h">${inp(`secciones.${i}.titulo`, 'maxlength="100" placeholder="Ej. Entretenimiento"')}
+                <div class="cz-sec-h">${inp(`secciones.${i}.titulo`, 'maxlength="100" placeholder="Nombre de la pestaña, ej. Entretenimiento"')}
                     <button type="button" class="ui-ibtn" data-bo="subir" data-i="${i}" ${i === 0 ? 'disabled' : ''} title="Mover antes"><i class="bi bi-arrow-up"></i></button>
                     <button type="button" class="ui-ibtn danger" data-bo="qsec" data-i="${i}" title="Quitar sección"><i class="bi bi-trash3"></i></button></div>
                 <div class="cz-acts">${s.actividades.map((a, j) => `<div class="cz-act">
@@ -543,99 +663,134 @@
                         <button type="button" class="ev-btn ghost sm" data-bo="qact" data-i="${i}" data-j="${j}"><i class="bi bi-x-lg"></i> Quitar</button></div></div>
                     ${txt(`secciones.${i}.actividades.${j}.descripcion`, 'rows="3" placeholder="Descripción («Leer más»)"')}</div>`).join('')}
                     <button type="button" class="cz-add" data-bo="act" data-i="${i}"><i class="bi bi-plus-circle"></i><br>Actividad</button></div>
-            </div>`).join('') || '<p class="ui-help" style="margin:0">Sin secciones todavía.</p>'}</div>`;
+            </div>`).join('') || '<div class="ui-empty" style="padding:24px"><p style="margin:0">Sin secciones todavía.</p></div>'}
+            ${C.secciones.length ? `<div class="ui-f" style="margin-top:8px"><label>Título de esta parte en la web ${opc} <em>si lo dejas vacío: «Tu barco - {barco}»</em></label>${inp('titulo_Seccion', 'maxlength="150"')}</div>` : ''}`;
     }
 
+    // ---------- 5. Cabinas ----------
     function pintarCabinas() {
-        const tipos = C.cabinas.filter(t => t.categoria === catTipoSel);
-        $('#eCabinas').innerHTML = `
-            <div class="cz-blq"><h3><i class="bi bi-layers"></i> Cubiertas <small>número, nombre y plano</small><span class="sp"></span><button type="button" class="ev-btn sm" data-ca="cubierta"><i class="bi bi-plus-lg"></i> Cubierta</button></h3>
-                ${C.cubiertas.length ? `<table class="cz-tab"><thead><tr><th>N.º</th><th>Nombre</th><th>Plano</th><th></th></tr></thead><tbody>${C.cubiertas.map((u, i) => `<tr>
+        const tipoInp = (t, campo, ph, extra = '') => `<input data-tipo="${t.clave}" data-campo="${campo}" value="${esc(t[campo] ?? '')}" placeholder="${ph}" ${extra}>`;
+        $('#eCabinas').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Los tipos de camarote que se venden (Interior, Exterior, Balcón, Suite). Son los que tendrán precio en el paso 6. ${opc}</span></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+                <button type="button" class="ev-btn ghost sm" data-ca="basicos"><i class="bi bi-magic"></i> Crear los 4 tipos básicos</button>
+                <button type="button" class="ev-btn sm" data-ca="tipo"><i class="bi bi-plus-lg"></i> Tipo de cabina</button></div>
+            ${C.cabinas.map(t => `<div class="cz-tipo">
+                ${fotoHtml('tipo:' + t.clave, t.imagen, true)}
+                <div class="campos">
+                    <div class="g"><select data-tipo="${t.clave}" data-campo="categoria" title="Categoría">${CATS.map(k => `<option value="${k}" ${k === t.categoria ? 'selected' : ''}>${CAT_CORTO[k]}</option>`).join('')}</select>
+                        ${tipoInp(t, 'nombre', 'Nombre, ej. Camarote Interior Estándar', 'maxlength="150"')}
+                        ${tipoInp(t, 'capacidad_Min', 'Pers. mín', 'type="number" min="1" max="20" data-t="num"')}${tipoInp(t, 'capacidad_Max', 'Pers. máx', 'type="number" min="1" max="20" data-t="num"')}${tipoInp(t, 'metros', 'm²', 'type="number" min="1" step="0.1" data-t="num"')}</div>
+                    <textarea data-tipo="${t.clave}" data-campo="descripcion" rows="2" placeholder="Descripción (opcional)">${esc(t.descripcion || '')}</textarea>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${tipoInp(t, 'codigo', 'Código, ej. 11C (opcional)', 'maxlength="20" style="width:190px"')}
+                        <span style="flex:1"></span><button type="button" class="ev-btn ghost sm" data-ca="qtipo" data-k="${t.clave}"><i class="bi bi-trash3"></i> Quitar</button></div>
+                </div></div>`).join('') || '<div class="ui-empty" style="padding:24px"><p style="margin:0">Sin tipos de cabina. Pulsa «Crear los 4 tipos básicos».</p></div>'}
+            <details class="cz-blq cz-mas" style="margin-top:12px" ${C.cubiertas.length || C.cabinas.some(t => t.cabinas.length) ? 'open' : ''}><summary><i class="bi bi-layers"></i> Avanzado: cubiertas y cabinas concretas ${opc} <i class="bi bi-chevron-down"></i></summary><div>
+                <p class="ui-help" style="margin:0 0 10px">Si no pones cabinas concretas, se vende «Garantizada» (la naviera asigna el número).</p>
+                <button type="button" class="ev-btn ghost sm" data-ca="cubierta"><i class="bi bi-plus-lg"></i> Cubierta</button>
+                ${C.cubiertas.length ? `<table class="cz-tab" style="margin-top:8px"><thead><tr><th>N.º</th><th>Nombre</th><th>Plano</th><th></th></tr></thead><tbody>${C.cubiertas.map((u, i) => `<tr>
                     <td class="num">${inp(`cubiertas.${i}.numero`, 'min="1" max="99" class="num"', 'num')}</td><td>${inp(`cubiertas.${i}.nombre`, 'maxlength="100" placeholder="Ej. Cubierta 7"')}</td>
-                    <td>${fotoHtml('cub:' + i, u.plano)}</td><td><button type="button" class="ui-ibtn danger" data-ca="qcub" data-i="${i}"><i class="bi bi-x-lg"></i></button></td></tr>`).join('')}</tbody></table>`
-                  : '<p class="ui-help" style="margin:0">Opcional. Si no hay cubiertas ni cabinas concretas, la cabina se vende «Garantizada».</p>'}</div>
-            <div class="cz-blq"><h3><i class="bi bi-door-closed"></i> Tipos de cabina <span class="sp"></span><button type="button" class="ev-btn sm" data-ca="tipo"><i class="bi bi-plus-lg"></i> Tipo de cabina</button></h3>
-                <div class="ui-tabs" style="margin-bottom:12px">${CATS.map(k => `<button type="button" data-ca="cat" data-k="${k}" class="${k === catTipoSel ? 'on' : ''}">${CAT_CORTO[k]} <span class="n">${C.cabinas.filter(t => t.categoria === k).length}</span></button>`).join('')}</div>
-                ${tipos.map(t => `<div class="cz-tipo">
-                    ${fotoHtml('tipo:' + t.clave, t.imagen, true)}
-                    <div class="campos">
-                        <div class="g">${tipoInp(t, 'codigo', 'Código, ej. 11C', 'maxlength="20"')}${tipoInp(t, 'nombre', 'Ej. Camarote Interior Estándar', 'maxlength="150"')}
-                            ${tipoInp(t, 'capacidad_Min', 'Cap. mín', 'type="number" min="1" max="20" data-t="num"')}${tipoInp(t, 'capacidad_Max', 'Cap. máx', 'type="number" min="1" max="20" data-t="num"')}${tipoInp(t, 'metros', 'm²', 'type="number" min="1" step="0.1" data-t="num"')}</div>
-                        <textarea data-tipo="${t.clave}" data-campo="descripcion" rows="2" placeholder="Descripción">${esc(t.descripcion || '')}</textarea>
-                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                            <label class="ui-switch"><input type="checkbox" data-tipo="${t.clave}" data-campo="permite_Garantizada" data-t="bool" ${t.permite_Garantizada ? 'checked' : ''}><span class="tr"></span> Se puede vender «Garantizada»</label>
-                            <select data-tipo="${t.clave}" data-campo="categoria" title="Mover a otra categoría">${CATS.map(k => `<option value="${k}" ${k === t.categoria ? 'selected' : ''}>${CAT_CORTO[k]}</option>`).join('')}</select>
-                            <span style="flex:1"></span><button type="button" class="ev-btn ghost sm" data-ca="qtipo" data-k="${t.clave}"><i class="bi bi-trash3"></i> Quitar tipo</button></div>
-                        <div class="cz-cabs"><b style="font-size:12.5px">Cabinas:</b>${t.cabinas.map((k, i) => `<span class="cz-cab">
-                            <input value="${esc(k.numero)}" data-cab="${t.clave}" data-i="${i}" data-campo="numero" placeholder="N.º" maxlength="10">
-                            <select data-cab="${t.clave}" data-i="${i}" data-campo="cubierta"><option value="">Cubierta ?</option>${C.cubiertas.map(u => `<option value="${u.numero}" ${k.cubierta === u.numero ? 'selected' : ''}>Cub. ${u.numero}</option>`).join('')}</select>
-                            <button type="button" data-ca="qcab" data-k="${t.clave}" data-i="${i}" title="Quitar">×</button></span>`).join('')}
-                            <button type="button" class="ev-btn ghost sm" data-ca="cab" data-k="${t.clave}"><i class="bi bi-plus-lg"></i> Cabina</button></div>
-                    </div></div>`).join('') || `<p class="ui-help" style="margin:0">Sin cabinas ${CAT_CORTO[catTipoSel].toLowerCase()}. Pulsa «Tipo de cabina».</p>`}
-            </div>`;
+                    <td>${fotoHtml('cub:' + i, u.plano)}</td><td><button type="button" class="ui-ibtn danger" data-ca="qcub" data-i="${i}"><i class="bi bi-x-lg"></i></button></td></tr>`).join('')}</tbody></table>` : ''}
+                ${C.cabinas.map(t => `<div class="cz-cabs" style="margin-top:10px"><b style="font-size:12.5px">${esc(t.nombre || CAT_CORTO[t.categoria])}:</b>${t.cabinas.map((k, i) => `<span class="cz-cab">
+                    <input value="${esc(k.numero || '')}" data-cab="${t.clave}" data-i="${i}" data-campo="numero" placeholder="N.º" maxlength="10">
+                    <select data-cab="${t.clave}" data-i="${i}" data-campo="cubierta"><option value="">Cubierta ?</option>${C.cubiertas.map(u => `<option value="${u.numero}" ${k.cubierta === u.numero ? 'selected' : ''}>Cub. ${u.numero}</option>`).join('')}</select>
+                    <button type="button" data-ca="qcab" data-k="${t.clave}" data-i="${i}" title="Quitar">×</button></span>`).join('')}
+                    <button type="button" class="ev-btn ghost sm" data-ca="cab" data-k="${t.clave}"><i class="bi bi-plus-lg"></i> Cabina</button>
+                    <label class="ui-switch" style="margin-left:6px"><input type="checkbox" data-tipo="${t.clave}" data-campo="permite_Garantizada" data-t="bool" ${t.permite_Garantizada ? 'checked' : ''}><span class="tr"></span> «Garantizada»</label></div>`).join('')}
+            </div></details>`;
     }
-    const tipoInp = (t, campo, ph, extra) => `<input data-tipo="${t.clave}" data-campo="${campo}" value="${esc(t[campo] ?? '')}" placeholder="${ph}" ${extra}>`;
 
+    // ---------- 6. Fechas y precios ----------
     function pintarPrecios() {
         C.salidas.sort((a, b) => a.fecha.localeCompare(b.fecha));
-        if (salidaSel && !C.salidas.some(s => s.clave === salidaSel)) salidaSel = C.salidas[0]?.clave || null;
+        if (tarSel && !C.tarifas.some(f => f.clave === tarSel)) tarSel = C.tarifas[0]?.clave || null;
         const pr = new Map(C.precios.map(p => [`${p.salida}|${p.tarifa}|${p.cabina}`, p.precio_Pp]));
-        $('#ePrecios').innerHTML = `
-            <div class="cz-blq"><h3><i class="bi bi-tag"></i> Códigos de tarifa <small>ej. BEST_PRICE, Florida Resident</small><span class="sp"></span><button type="button" class="ev-btn sm" data-pr="tarifa"><i class="bi bi-plus-lg"></i> Tarifa</button></h3>
-                ${C.tarifas.length ? `<table class="cz-tab"><thead><tr><th>Código *</th><th>Nombre *</th><th>Descripción</th><th></th></tr></thead><tbody>${C.tarifas.map((f, i) => `<tr>
-                    <td>${inp(`tarifas.${i}.codigo`, 'maxlength="50" placeholder="BEST_PRICE"')}</td><td>${inp(`tarifas.${i}.nombre`, 'maxlength="100" placeholder="BEST_PRICE"')}</td>
-                    <td>${inp(`tarifas.${i}.descripcion`, 'maxlength="300"')}</td><td><button type="button" class="ui-ibtn danger" data-pr="qtar" data-i="${i}"><i class="bi bi-x-lg"></i></button></td></tr>`).join('')}</tbody></table>`
-                  : '<p class="ui-help" style="margin:0">Crea al menos una tarifa (ej. BEST_PRICE) para cargar precios.</p>'}</div>
-            <div class="cz-blq"><h3><i class="bi bi-calendar3"></i> Fechas de salida <small>la llegada = salida + ${C.noches} noches</small></h3>
+        const tipos = CATS.flatMap(k => C.cabinas.filter(t => t.categoria === k));
+        const n = noches();
+        const tar = tarSel || 'auto';
+        $('#ePrecios').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Agrega las fechas de salida y escribe el precio <b>por persona</b> de cada tipo de cabina (base 2 personas compartiendo). ${opc}</span></div>
+            <div class="cz-blq"><h3><i class="bi bi-calendar3"></i> Fechas de salida ${n ? `<small>la llegada = salida + ${n} noches</small>` : ''}</h3>
                 <div class="ui-row r4" style="align-items:end">
                     <div class="ui-f"><label>Una fecha</label><input type="date" id="prFecha" min="${hoy}"></div>
                     <div class="ui-f"><button type="button" class="ev-btn ghost" data-pr="fecha"><i class="bi bi-plus-lg"></i> Agregar fecha</button></div>
                     <div class="ui-f"><label>O varias: desde / hasta / cada (días)</label><div style="display:flex;gap:6px"><input type="date" id="prDesde"><input type="date" id="prHasta"><input type="number" id="prCada" value="7" min="1" style="width:70px"></div></div>
                     <div class="ui-f"><button type="button" class="ev-btn ghost" data-pr="serie"><i class="bi bi-calendar-plus"></i> Agregar serie</button></div>
                 </div>
-                <div class="cz-salidas">${C.salidas.map(s => `<span class="cz-sal ${s.clave === salidaSel ? 'on' : ''} ${s.activo ? '' : 'off'}" data-pr="sel" data-k="${s.clave}" title="Ver y cargar sus precios">
-                    ${fechaCorta(s.fecha)} – ${fechaCorta(masDias(s.fecha, C.noches))}${s.fecha <= hoy ? ' <small>(pasada)</small>' : ''}
-                    <button type="button" data-pr="act" data-k="${s.clave}" title="${s.activo ? 'Desactivar' : 'Activar'}"><i class="bi ${s.activo ? 'bi-pause' : 'bi-play'}"></i></button>
-                    <button type="button" data-pr="qsal" data-k="${s.clave}" title="Quitar">×</button></span>`).join('') || '<span class="ui-help">Sin fechas.</span>'}</div>
             </div>
-            <div class="cz-blq"><h3><i class="bi bi-currency-dollar"></i> Precios por persona <small>base 2 personas compartiendo, en ${EV.simbolo()}</small><span class="sp"></span>
-                ${salidaSel && C.salidas.length > 1 ? '<button type="button" class="ev-btn ghost sm" data-pr="copiar"><i class="bi bi-files"></i> Copiar estos precios a todas las fechas</button>' : ''}</h3>
-                ${!C.salidas.length || !C.tarifas.length || !C.cabinas.length
-                    ? `<p class="ui-help" style="margin:0">Para cargar precios hace falta al menos una <b>fecha</b>, una <b>tarifa</b> y un <b>tipo de cabina</b> (pestaña Cabinas).</p>`
-                    : `<p style="margin:0 0 8px;font-weight:700">Salida del ${fechaTxt(C.salidas.find(s => s.clave === salidaSel)?.fecha)}</p>
-                       <div style="overflow-x:auto"><table class="cz-mat"><thead><tr><th>Cabina</th>${C.tarifas.map(f => `<th>${esc(f.codigo || '¿?')}</th>`).join('')}</tr></thead><tbody>
-                       ${CATS.filter(k => C.cabinas.some(t => t.categoria === k)).map(k => `<tr class="grp"><td colspan="${C.tarifas.length + 1}">${CAT_CORTO[k]}</td></tr>` +
-                         C.cabinas.filter(t => t.categoria === k).map(t => `<tr><td>${esc(t.nombre || '¿sin nombre?')}${t.codigo ? ` <small style="color:var(--ev-muted)">${esc(t.codigo)}</small>` : ''}</td>
-                           ${C.tarifas.map(f => `<td><input type="number" min="0" step="0.01" data-precio="${salidaSel}|${f.clave}|${t.clave}" value="${pr.get(`${salidaSel}|${f.clave}|${t.clave}`) ?? ''}" placeholder="—"></td>`).join('')}</tr>`).join('')).join('')}
-                       </tbody></table></div>`}
-            </div>`;
+            <div class="cz-blq"><h3><i class="bi bi-currency-dollar"></i> Precios por persona en ${EV.simbolo()} <span class="sp"></span>
+                ${C.tarifas.length > 1 ? `<select id="prTarifa" title="Tarifa">${C.tarifas.map(f => `<option value="${f.clave}" ${f.clave === tarSel ? 'selected' : ''}>${esc(f.codigo || f.nombre || '¿?')}</option>`).join('')}</select>` : ''}
+                ${C.salidas.length > 1 && tipos.length ? '<button type="button" class="ev-btn ghost sm" data-pr="copiar"><i class="bi bi-files"></i> Copiar la 1.ª fecha a todas</button>' : ''}</h3>
+                ${!C.salidas.length ? '<p class="ui-help" style="margin:0">Agrega una fecha arriba para poner precios.</p>'
+                  : !tipos.length ? '<p class="ui-help" style="margin:0">Primero crea los tipos de cabina (paso 5 · botón «Crear los 4 tipos básicos»).</p>'
+                  : `<div style="overflow-x:auto"><table class="cz-grid"><thead><tr><th>Salida</th>${tipos.map(t => `<th><small>${CAT_CORTO[t.categoria]}</small>${esc(t.nombre || '')}</th>`).join('')}<th></th></tr></thead><tbody>
+                     ${C.salidas.map(s => `<tr class="${s.activo ? '' : 'off'}"><td class="f">${fechaCorta(s.fecha)}${n ? ` <small style="color:var(--ev-muted);font-weight:600">→ ${fechaCorta(masDias(s.fecha, n))}</small>` : ''}${s.fecha <= hoy ? ' <small style="color:#B54708">(pasada)</small>' : ''}</td>
+                        ${tipos.map(t => `<td><input type="number" min="0" step="0.01" data-precio="${s.clave}|${tar}|${t.clave}" value="${pr.get(`${s.clave}|${tarSel}|${t.clave}`) ?? ''}" placeholder="—"></td>`).join('')}
+                        <td><button type="button" class="ui-ibtn" data-pr="act" data-k="${s.clave}" title="${s.activo ? 'Desactivar esta fecha' : 'Activar esta fecha'}"><i class="bi ${s.activo ? 'bi-pause' : 'bi-play'}"></i></button>
+                            <button type="button" class="ui-ibtn danger" data-pr="qsal" data-k="${s.clave}" title="Quitar fecha"><i class="bi bi-x-lg"></i></button></td></tr>`).join('')}
+                     </tbody></table></div>`}
+                ${!C.salidas.length ? '' : `<p style="margin:10px 0 0"><button type="button" class="ev-btn ghost sm" data-pr="limpiar-fechas"><i class="bi bi-trash3"></i> Quitar todas las fechas</button></p>`}
+            </div>
+            <details class="cz-blq cz-mas" ${C.tarifas.length > 1 ? 'open' : ''}><summary><i class="bi bi-tag"></i> Avanzado: varios códigos de tarifa ${opc} <i class="bi bi-chevron-down"></i></summary><div>
+                <p class="ui-help" style="margin:0 0 10px">Si el crucero tiene un solo precio, no hace falta: se usa «BEST_PRICE». Agrega otros (ej. «Florida Resident») si la naviera da precios distintos.</p>
+                ${C.tarifas.map((f, i) => `<div style="display:flex;gap:8px;margin-bottom:6px">${inp(`tarifas.${i}.codigo`, 'maxlength="50" placeholder="Código, ej. FLRES" style="width:180px"')}${inp(`tarifas.${i}.nombre`, 'maxlength="100" placeholder="Nombre, ej. Florida Resident"')}
+                    <button type="button" class="ui-ibtn danger" data-pr="qtar" data-i="${i}" title="Quitar tarifa y sus precios"><i class="bi bi-x-lg"></i></button></div>`).join('')}
+                <button type="button" class="ev-btn ghost sm" data-pr="tarifa"><i class="bi bi-plus-lg"></i> Tarifa</button>
+            </div></details>`;
     }
 
     function ponerPrecio(k, v) {
-        const [s, f, t] = k.split('|');
+        let [s, f, t] = k.split('|');
+        if (f === 'auto') {   // primer precio sin tarifas: se crea BEST_PRICE
+            if (!C.tarifas.length) C.tarifas.push({ clave: nuevaClave('f'), codigo: 'BEST_PRICE', nombre: 'BEST_PRICE', descripcion: '' });
+            tarSel = C.tarifas[0].clave; f = tarSel;
+            $$('[data-precio]').forEach(i => i.dataset.precio = i.dataset.precio.replace('|auto|', `|${f}|`));
+        }
         C.precios = C.precios.filter(p => !(p.salida === s && p.tarifa === f && p.cabina === t));
         if (v > 0) C.precios.push({ salida: s, tarifa: f, cabina: t, precio_Pp: v });
     }
 
+    // ---------- 7. Revisar y guardar ----------
+    async function pintarResumen() {
+        const it = (ok, icono, titulo, detalle, pasoIr, aviso) => `<div class="cz-res-it ${ok ? (aviso ? 'aviso' : '') : 'vacio'}"><span class="ic"><i class="bi ${ok ? (aviso ? 'bi-exclamation-triangle' : icono) : 'bi-dash-circle'}"></i></span>
+            <div><b>${titulo}</b><span>${detalle}</span></div>${pasoIr ? `<button type="button" class="ev-btn ghost sm" data-ir="${pasoIr}">${ok ? 'Cambiar' : 'Agregar'}</button>` : ''}</div>`;
+        const cats = [...D.categorias.filter(g => $$('[data-categoria]').some(c => c.checked && +c.dataset.categoria === g.id_Categoria)).map(g => g.nombre), ...C.categorias_Nuevas];
+        const futuras = C.salidas.filter(s => s.activo && s.fecha > hoy);
+        const precios = C.precios.filter(p => p.precio_Pp > 0);
+        const desde = precios.filter(p => futuras.some(s => s.clave === p.salida)).map(p => p.precio_Pp);
+        let fotos = P.PORTADA ? 1 : 0; fotos += P.INTERMEDIA ? 1 : 0; fotos += P.GALERIA.length;
+        let fotosTxt = fotos ? `${fotos} foto(s) se subirán al guardar` : 'Sin fotos';
+        if (C.id_Crucero) { try { const l = (await EV.api(`/Multimedia/Listar?tipo=CRUCERO&clave=${C.id_Crucero}`)).items; fotos = l.length; fotosTxt = l.length ? `${l.length} foto(s)${l.some(x => x.uso === 'PORTADA') ? ' · con portada' : ' · sin portada'}` : 'Sin fotos'; } catch { } }
+        const nav = C.itinerario.filter(d => d.en_Navegacion).length;
+        const acts = C.secciones.reduce((s, x) => s + x.actividades.length, 0);
+        const n = noches();
+        const home = C.activo
+            ? `<div class="cz-home ok"><i class="bi bi-house-check"></i><div>Al guardar sale en la <b>Home</b> (sección CRUCEROS) en la tarjeta <b>${esc((cats.length ? cats : ['Cruceros']).join('», «'))}</b>${desde.length ? `, con precio desde <b>${dinero(Math.min(...desde))}</b>` : ' (sin precio «desde» hasta que tenga una fecha futura con precio)'}.</div></div>`
+            : `<div class="cz-home no"><i class="bi bi-eye-slash"></i><div>Está <b>desactivado</b>: se guarda pero <b>no sale</b> en la web ni en la Home. Actívalo en «Datos» si quieres que salga.</div></div>`;
+        $('#eResumen').innerHTML = `${home}<div class="cz-res">
+            ${it(!!C.titulo?.trim(), 'bi-type', C.titulo?.trim() ? esc(C.titulo) : 'Falta el título (obligatorio)', [C.naviera_Nombre, C.barco_Nombre].filter(Boolean).map(esc).join(' · ') || 'Sin naviera ni barco', 'eDatos', !C.titulo?.trim())}
+            ${it(n || C.puerto_Salida, 'bi-signpost', n ? `${n} noches · ${n + 1} días` : 'Sin noches', [C.puerto_Salida, C.puerto_Llegada].filter(Boolean).map(esc).join(' → ') || 'Sin puertos', 'eDatos')}
+            ${it(true, 'bi-tags', 'Categoría: ' + esc((cats.length ? cats : ['Cruceros (por defecto)']).join(', ')), C.categorias_Nuevas.length ? 'Las nuevas se crean al guardar' : 'Es la tarjeta de la Home donde sale', 'eDatos')}
+            ${it(fotos, 'bi-images', 'Fotos', fotosTxt, 'eFotos')}
+            ${it(C.itinerario.length, 'bi-signpost-2', `Itinerario: ${C.itinerario.length} día(s)`, C.itinerario.length ? `${C.itinerario.filter(d => !d.en_Navegacion).map(d => esc(d.puerto || '¿?')).join(' · ')}${nav ? ` · ${nav} en navegación` : ''}` : 'Sin itinerario', 'eItin')}
+            ${it(C.secciones.length, 'bi-stars', `A bordo: ${C.secciones.length} sección(es), ${acts} actividad(es)`, C.secciones.map(s => esc(s.titulo || '¿?')).join(' · ') || 'Sin «Tu barco»', 'eBordo')}
+            ${it(C.cabinas.length, 'bi-door-closed', `Cabinas: ${C.cabinas.length} tipo(s)`, C.cabinas.map(t => esc(t.nombre || CAT_CORTO[t.categoria])).join(' · ') || 'Sin tipos de cabina', 'eCabinas')}
+            ${it(C.salidas.length, 'bi-calendar3', `Fechas: ${C.salidas.length} (${futuras.length} a la venta)`, C.salidas.length ? C.salidas.slice(0, 6).map(s => fechaCorta(s.fecha)).join(' · ') + (C.salidas.length > 6 ? ' …' : '') : 'Sin fechas', 'ePrecios', C.salidas.length && !futuras.length)}
+            ${it(precios.length, 'bi-currency-dollar', `Precios: ${precios.length}`, precios.length ? `desde ${dinero(Math.min(...precios.map(p => p.precio_Pp)))} por persona${C.tarifas.length > 1 ? ` · ${C.tarifas.length} tarifas` : ''}` : 'Sin precios', 'ePrecios')}
+        </div><p class="ui-help" style="margin:14px 0 0">Revisa y pulsa <b>Guardar</b>. Lo que está en gris es opcional: lo puedes completar después.</p>`;
+    }
+
     async function guardar() {
-        // categorías
         C.categorias = $$('[data-categoria]').filter(c => c.checked).map(c => +c.dataset.categoria);
-        const faltan = [];
-        if (!C.titulo?.trim()) faltan.push('el título');
-        if (!C.id_Barco) faltan.push('el barco');
-        if (!C.puerto_Salida?.trim()) faltan.push('el puerto de salida');
-        if (!C.puerto_Llegada?.trim()) faltan.push('el puerto de llegada');
-        if (!(C.noches >= 1)) faltan.push('las noches');
-        if (faltan.length) { EV.toast('Falta ' + faltan.join(', ') + '.', 'err'); edTabs.ir('eDatos'); return; }
-        const dto = { ...C, itinerario: C.itinerario.map(d => ({ ...d, puerto: d.en_Navegacion && !d.puerto?.trim() ? 'En navegación' : d.puerto })) };
+        if (!C.titulo?.trim()) { EV.toast('Escribe el título del crucero (es lo único obligatorio).', 'err'); edTabs.ir('eDatos'); setTimeout(() => $('[data-b="titulo"]')?.focus(), 50); return; }
+        if (paso !== 'eResumen') { edTabs.ir('eResumen'); return; }   // antes de guardar, siempre el resumen
+        const usadas = new Set(C.precios.map(p => p.tarifa));
+        const dto = { ...C, id_Barco: null, itinerario: C.itinerario.map((d, i) => ({ ...d, dia: i + 1 })), tarifas: C.tarifas.filter(f => usadas.has(f.clave) || f.codigo?.trim()) };
         const b = $('#edGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
         try {
             const r = await EV.post('/Cruceros/Guardar', dto);
-            EV.toast(r.mensaje);
-            const eraNuevo = !C.id_Crucero;
+            const subidas = await subirPendientes(r.id);
+            editor.cerrar(true);
             await cargar();
-            if (eraNuevo) { await abrir(r.id); edTabs.ir('eFotos'); EV.toast('Ahora sube sus fotos (portada, banner y galería).', 'info'); }
-            else editor.cerrar(true);
+            EV.toast(r.mensaje + (subidas ? ' Fotos subidas.' : '') + (C.activo ? ' Ya está en la Home.' : ''));
             EV.resaltar(document.querySelector(`.cz-card[data-id="${r.id}"]`));
         } catch (e) { EV.toast(e.message, 'err'); }
         finally { b.disabled = false; b.innerHTML = html; }
@@ -660,13 +815,13 @@
         let c, fotos = [];
         try { c = await EV.api('/Cruceros/Obtener?id=' + id); fotos = (await EV.api(`/Multimedia/Listar?tipo=CRUCERO&clave=${id}`)).items; } catch (e) { EV.toast(e.message, 'err'); return; }
         verId = id;
-        const l = D.cruceros.find(x => x.id_Crucero === id) || {};
-        const barco = D.barcos.find(b => b.id_Barco === c.id_Barco) || {}, nav = D.navieras.find(n => n.id_Naviera === barco.id_Naviera) || {};
+        const barco = D.barcos.find(b => b.id_Barco === c.id_Barco) || { nombre: c.barco_Nombre }, nav = D.navieras.find(n => n.id_Naviera === barco.id_Naviera) || { nombre: c.naviera_Nombre };
+        const nch = c.noches || 0;
         const salidas = c.salidas.map(s => ({ ...s, fecha: s.fecha.slice(0, 10) })).filter(s => s.activo && s.fecha > hoy).sort((a, b) => a.fecha.localeCompare(b.fecha));
-        let sel = salidas[0]?.clave, tarSel = c.tarifas[0]?.clave, catSel = CATS.find(k => c.cabinas.some(t => t.categoria === k));
+        let sel = salidas[0]?.clave, tarSelV = c.tarifas[0]?.clave, catSel = CATS.find(k => c.cabinas.some(t => t.categoria === k));
         const banner = fotos.find(f => f.uso === 'INTERMEDIA'), gal = fotos.filter(f => f.uso !== 'INTERMEDIA').sort((a, b) => (a.uso === 'PORTADA' ? -1 : 1) - (b.uso === 'PORTADA' ? -1 : 1) || a.orden - b.orden);
         let gi = 0;
-        const minPor = (s, k, f) => { const v = c.precios.filter(p => p.salida === s && (!f || p.tarifa === f) && c.cabinas.find(t => t.clave === p.cabina)?.categoria === k).map(p => p.precio_Pp); return v.length ? Math.min(...v) : null; };
+        const minPor = (s, k) => { const v = c.precios.filter(p => p.salida === s && c.cabinas.find(t => t.clave === p.cabina)?.categoria === k).map(p => p.precio_Pp); return v.length ? Math.min(...v) : null; };
         const desde = s => { const v = c.precios.filter(p => p.salida === s).map(p => p.precio_Pp); return v.length ? Math.min(...v) : null; };
         $('#verTitulo').textContent = c.titulo;
         $('#verSub').textContent = `n.º ${c.id_Crucero}${c.activo ? '' : ' · desactivado'}`;
@@ -674,13 +829,14 @@
             const s = salidas.find(x => x.clave === sel);
             $('#verCuerpo').innerHTML = `
                 <div class="vz-banner">${banner ? `<img src="${esc(banner.url)}" alt="">` : ''}<h2>${esc(c.titulo)}</h2></div>
-                <p class="vz-sub">${esc(c.subtitulo || (s ? `Saliendo el ${fechaTxt(s.fecha)} para ${c.noches} noches a bordo del ${barco.nombre || ''}` : `${c.noches} noches a bordo del ${barco.nombre || ''}`))}</p>
+                <p class="vz-sub">${esc(c.subtitulo || [s ? `Saliendo el ${fechaTxt(s.fecha)}` : '', nch ? `para ${nch} noches` : '', barco.nombre ? `a bordo del ${barco.nombre}` : ''].filter(Boolean).join(' '))}</p>
                 <div class="vz-top">
                     <div class="vz-gal">${gal.length ? `<img src="${esc(gal[gi % gal.length].url)}" alt="">${gal.length > 1 ? '<button type="button" class="a" data-v="ant"><i class="bi bi-chevron-left"></i></button><button type="button" class="s" data-v="sig"><i class="bi bi-chevron-right"></i></button>' : ''}` : '<div class="ui-empty" style="margin:0;height:100%;display:grid;place-items:center">Sin fotos</div>'}</div>
                     <div><div class="vz-info">
-                        <span><i class="bi bi-life-preserver"></i> ${s ? `${fechaCorta(s.fecha)} al ${fechaCorta(masDias(s.fecha, c.noches))}` : 'Sin fechas'} (${c.noches} noches)</span>
-                        <span><i class="bi bi-life-preserver"></i> ${esc(nav.nombre || '')}</span><span><i class="bi bi-life-preserver"></i> 2 Adultos</span>
-                        <span><i class="bi bi-life-preserver"></i> ${esc(barco.nombre || '')}</span><span><i class="bi bi-life-preserver"></i> ${esc(c.puerto_Salida)} / ${esc(c.puerto_Llegada)}</span>
+                        <span><i class="bi bi-life-preserver"></i> ${s ? `${fechaCorta(s.fecha)}${nch ? ` al ${fechaCorta(masDias(s.fecha, nch))}` : ''}` : 'Sin fechas'}${nch ? ` (${nch} noches)` : ''}</span>
+                        ${nav.nombre ? `<span><i class="bi bi-life-preserver"></i> ${esc(nav.nombre)}</span>` : ''}<span><i class="bi bi-life-preserver"></i> 2 Adultos</span>
+                        ${barco.nombre ? `<span><i class="bi bi-life-preserver"></i> ${esc(barco.nombre)}</span>` : ''}
+                        ${c.puerto_Salida ? `<span><i class="bi bi-life-preserver"></i> ${esc(c.puerto_Salida)} / ${esc(c.puerto_Llegada || c.puerto_Salida)}</span>` : ''}
                         ${c.codigo ? `<span><i class="bi bi-life-preserver"></i> ID de crucero: ${esc(c.codigo)}</span>` : ''}</div>
                         ${s && desde(s.clave) != null ? `<div class="vz-desde"><small>Desde</small><b>${dinero(desde(s.clave) * 2)}</b><small>${dinero(desde(s.clave))} por persona · basado en 2 personas compartiendo</small></div>` : ''}
                         ${nav.logo ? `<img src="${esc(nav.logo)}" alt="" style="max-width:180px;margin-top:10px">` : ''}</div>
@@ -690,22 +846,22 @@
                 ${c.itinerario.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Fecha</th><th>Puerto</th><th>Llega</th><th>Sale</th></tr></thead><tbody>${c.itinerario.map(d => `<tr>
                     <td>${d.dia}</td><td>${s ? fechaCorta(masDias(s.fecha, d.dia - 1)) : '—'}</td><td><b>${esc(d.en_Navegacion ? 'En navegación' : d.puerto)}</b>${d.descripcion ? `<br><small style="color:var(--ev-muted)">${esc(d.descripcion)}</small>` : ''}</td>
                     <td>${d.hora_Llegada || '–'}</td><td>${d.hora_Salida || '–'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="ui-help">Sin itinerario.</p>'}
-                ${c.secciones.length ? `<div class="vz-h">${esc(c.titulo_Seccion || 'Tu barco - ' + (barco.nombre || ''))}</div>
+                ${c.secciones.length ? `<div class="vz-h">${esc(c.titulo_Seccion || 'Tu barco' + (barco.nombre ? ' - ' + barco.nombre : ''))}</div>
                     ${barco.descripcion ? `<p style="white-space:pre-line;color:var(--ev-muted)">${esc(barco.descripcion)}</p>` : ''}
                     <div class="vz-tabs">${c.secciones.map((x, i) => `<button type="button" data-vsec="${i}" class="${i === 0 ? 'on' : ''}">${esc(x.titulo)}</button>`).join('')}</div>
                     <div id="vzActs"></div>` : ''}
                 <div class="vz-h">Elige tus fechas de viaje</div>
-                ${salidas.length ? `<div class="vz-fechas">${salidas.map(x => `<div class="vz-fecha ${x.clave === sel ? 'on' : ''}" data-vsal="${x.clave}"><b>${fechaCorta(x.fecha)}</b>a<b>${fechaCorta(masDias(x.fecha, c.noches))}</b>
+                ${salidas.length ? `<div class="vz-fechas">${salidas.map(x => `<div class="vz-fecha ${x.clave === sel ? 'on' : ''}" data-vsal="${x.clave}"><b>${fechaCorta(x.fecha)}</b>${nch ? `a<b>${fechaCorta(masDias(x.fecha, nch))}</b>` : ''}
                     <table>${CATS.map(k => minPor(x.clave, k) != null ? `<tr><td>${CAT_CORTO[k]}</td><td>${dinero(minPor(x.clave, k))}</td></tr>` : '').join('')}</table></div>`).join('')}</div>` : '<p class="ui-help">Sin fechas futuras activas.</p>'}
                 ${s && c.tarifas.length ? `<div class="vz-h">Elige el código de tarifa</div>
-                    <div class="vz-tabs">${c.tarifas.map(f => `<button type="button" data-vtar="${f.clave}" class="${f.clave === tarSel ? 'on' : ''}">${esc(f.nombre)}</button>`).join('')}</div>
+                    <div class="vz-tabs">${c.tarifas.map(f => `<button type="button" data-vtar="${f.clave}" class="${f.clave === tarSelV ? 'on' : ''}">${esc(f.nombre)}</button>`).join('')}</div>
                     <div class="vz-tabs">${CATS.filter(k => c.cabinas.some(t => t.categoria === k)).map(k => `<button type="button" data-vcat="${k}" class="${k === catSel ? 'on' : ''}">${CAT_CORTO[k]}</button>`).join('')}</div>
-                    ${c.cabinas.filter(t => t.categoria === catSel).map(t => { const p = c.precios.find(x => x.salida === sel && x.tarifa === tarSel && x.cabina === t.clave);
+                    ${c.cabinas.filter(t => t.categoria === catSel).map(t => { const p = c.precios.find(x => x.salida === sel && x.tarifa === tarSelV && x.cabina === t.clave);
                         return `<div class="vz-cab">${t.imagen ? `<img src="${esc(t.imagen)}" alt="">` : '<div class="sin"></div>'}<div><b>${esc(t.nombre)}${t.codigo ? ' - ' + esc(t.codigo) : ''}</b>
                         <div style="color:var(--ev-muted);font-size:13px">${t.capacidad_Min || t.capacidad_Max ? `Capacidad: ${[t.capacidad_Min, t.capacidad_Max].filter(Boolean).join(' o ')}` : ''}${t.metros ? ` · Tamaño: ${t.metros} m²` : ''}</div>
                         ${t.descripcion ? `<div style="font-size:13px;margin-top:4px">${esc(t.descripcion)}</div>` : ''}
                         <div style="margin-top:6px"><small>Desde</small> <span class="pr">${p ? dinero(p.precio_Pp) + ' pp' : '—'}</span></div>
-                        <small style="color:var(--ev-muted)">Cabinas: ${t.cabinas.length ? t.cabinas.map(k => `${esc(k.numero)}${k.cubierta ? ' (cub. ' + k.cubierta + ')' : ''}`).join(', ') : ''}${t.permite_Garantizada ? (t.cabinas.length ? ' · ' : '') + 'Garantizada' : ''}</small></div></div>`; }).join('')}` : ''}`;
+                        <small style="color:var(--ev-muted)">${t.cabinas.length ? 'Cabinas: ' + t.cabinas.map(k => `${esc(k.numero)}${k.cubierta ? ' (cub. ' + k.cubierta + ')' : ''}`).join(', ') : ''}${t.permite_Garantizada ? (t.cabinas.length ? ' · ' : '') + 'Garantizada' : ''}</small></div></div>`; }).join('')}` : ''}`;
             const pintarActs = i => { const x = c.secciones[i]; if (!x || !$('#vzActs')) return; $('#vzActs').innerHTML = `<div class="vz-acts">${x.actividades.map(a => `<div class="vz-act">${a.imagen ? `<img src="${esc(a.imagen)}" alt="">` : '<div class="sin"></div>'}<b>${esc(a.titulo)}</b>${a.descripcion ? `<small title="${esc(a.descripcion)}">Leer más..</small>` : ''}</div>`).join('') || '<p class="ui-help">Sin actividades.</p>'}</div>`; };
             pintarActs(0);
             $('#verCuerpo').onclick = e => {
@@ -713,7 +869,7 @@
                 if (v) { gi = (gi + (v.dataset.v === 'sig' ? 1 : gal.length - 1)) % gal.length; pintarV(); }
                 else if (vs) { $$('[data-vsec]').forEach(b => b.classList.toggle('on', b === vs)); pintarActs(+vs.dataset.vsec); }
                 else if (vsal) { sel = vsal.dataset.vsal; pintarV(); }
-                else if (vt) { tarSel = vt.dataset.vtar; pintarV(); }
+                else if (vt) { tarSelV = vt.dataset.vtar; pintarV(); }
                 else if (vc) { catSel = vc.dataset.vcat; pintarV(); }
             };
         };
@@ -741,13 +897,13 @@
 
         // ---- editor: escribir en los campos ----
         const ed = $('#edCuerpo');
-        ed.addEventListener('input', e => {
-            const t = e.target;
+        const leer = t => {
             if (t.dataset.b) {
                 let v = t.type === 'checkbox' ? t.checked : t.value;
                 if (t.dataset.t === 'num') v = t.value === '' ? null : Number(t.value);
                 asignar(t.dataset.b, v);
                 if (t.dataset.b === 'titulo') $('#edTitulo').textContent = v || 'Nuevo crucero';
+                if (t.dataset.b === 'barco_Nombre') { const b = D.barcos.find(x => x.nombre.toLowerCase() === String(v).trim().toLowerCase()); if (b && !C.naviera_Nombre?.trim()) { C.naviera_Nombre = b.naviera; const n = $('[data-b="naviera_Nombre"]'); if (n) n.value = b.naviera; } }
             } else if (t.dataset.tipo) {
                 const x = C.cabinas.find(k => k.clave === t.dataset.tipo);
                 x[t.dataset.campo] = t.type === 'checkbox' ? t.checked : t.dataset.t === 'num' ? (t.value === '' ? null : Number(t.value)) : t.value;
@@ -755,75 +911,104 @@
                 const k = C.cabinas.find(x => x.clave === t.dataset.cab).cabinas[+t.dataset.i];
                 k[t.dataset.campo] = t.dataset.campo === 'cubierta' ? (t.value === '' ? null : Number(t.value)) : t.value;
             } else if (t.dataset.precio) ponerPrecio(t.dataset.precio, t.value === '' ? 0 : Number(t.value));
-        });
+        };
+        // input + change: las horas (type=time) avisan con uno u otro según el navegador
+        ed.addEventListener('input', e => leer(e.target));
         ed.addEventListener('change', e => {
             const t = e.target;
-            if (t.dataset.subirFoto && t.files[0]) { subirFoto(t.dataset.subirFoto, t.files[0], t.closest('.cz-foto')); return; }
+            if (t.dataset.subirFoto && t.files[0]) { subirFoto(t.dataset.subirFoto, t.files[0], t.closest('.cz-foto')); t.value = ''; return; }
+            if (t.dataset.pendSubir && t.files.length) { ponerPendientes(t.dataset.pendSubir, t.files); return; }
+            if (t.id === 'prTarifa') { tarSel = t.value; pintarPrecios(); return; }
+            leer(t);
             if (t.dataset.b?.endsWith('en_Navegacion')) pintarItin();
-            if (t.dataset.b === 'noches') { pintarItin(); pintarPrecios(); }
-            if (t.dataset.b === 'id_Barco') pintarDatos();
-            if (t.dataset.tipo && t.dataset.campo === 'categoria') { catTipoSel = t.value; pintarCabinas(); pintarPrecios(); }
-            if (t.dataset.tipo && t.dataset.campo === 'nombre') pintarPrecios();
-            if (t.dataset.b?.startsWith('tarifas.')) pintarPrecios();
+            if (t.dataset.b === 'noches') { pintarItin(); }
+            if (t.dataset.tipo && t.dataset.campo === 'categoria') pintarCabinas();
             if (t.dataset.b?.startsWith('cubiertas.')) pintarCabinas();
-            contadores();
+            marcarPasos();
         });
+        ed.addEventListener('keydown', e => { if (e.target.id === 'edCatNueva' && e.key === 'Enter') { e.preventDefault(); ed.querySelector('[data-cat-agregar]').click(); } });
+        // arrastrar fotos a los recuadros de un crucero nuevo
+        ed.addEventListener('dragover', e => { const z = e.target.closest('[data-pend]'); if (z) { e.preventDefault(); z.classList.add('sobre'); } });
+        ed.addEventListener('dragleave', e => e.target.closest('[data-pend]')?.classList.remove('sobre'));
+        ed.addEventListener('drop', e => { const z = e.target.closest('[data-pend]'); if (!z) return; e.preventDefault(); z.classList.remove('sobre'); ponerPendientes(z.dataset.pend, e.dataTransfer.files); });
         ed.addEventListener('click', e => {
+            const cambio = () => $('#czEditor').dispatchEvent(new Event('ev-cambio'));
             const q = e.target.closest('[data-quitar-foto]');
-            if (q) { e.preventDefault(); ponerFoto(q.dataset.quitarFoto, null); q.closest('.cz-foto').outerHTML = fotoHtml(q.dataset.quitarFoto, null, q.closest('.cz-foto').classList.contains('grande')); $('#czEditor').dispatchEvent(new Event('ev-cambio')); return; }
+            if (q) { e.preventDefault(); ponerFoto(q.dataset.quitarFoto, null); q.closest('.cz-foto').outerHTML = fotoHtml(q.dataset.quitarFoto, null, q.closest('.cz-foto').classList.contains('grande')); cambio(); return; }
+            const pq = e.target.closest('[data-pend-quitar]');
+            if (pq) { e.preventDefault(); const [u, i] = pq.dataset.pendQuitar.split(':'); if (u === 'GALERIA') P.GALERIA.splice(+i, 1); else P[u] = null; pintarFotos(); marcarPasos(); return; }
+            const ir = e.target.closest('[data-ir]'); if (ir) { edTabs.ir(ir.dataset.ir); return; }
+            if (e.target.closest('[data-cat-agregar]')) {
+                const v = $('#edCatNueva').value.trim(); if (!v) { $('#edCatNueva').focus(); return; }
+                const ya = D.categorias.find(g => g.nombre.toLowerCase() === v.toLowerCase());
+                if (ya) { C.categorias = [...new Set([...$$('[data-categoria]').filter(c => c.checked).map(c => +c.dataset.categoria), ya.id_Categoria])]; }
+                else if (!C.categorias_Nuevas.some(n => n.toLowerCase() === v.toLowerCase())) C.categorias_Nuevas.push(v);
+                C.categorias = [...new Set([...C.categorias, ...$$('[data-categoria]').filter(c => c.checked).map(c => +c.dataset.categoria)])];
+                pintarDatos(); cambio(); return;
+            }
+            const cq = e.target.closest('[data-cat-quitar]'); if (cq) { C.categorias = $$('[data-categoria]').filter(c => c.checked).map(c => +c.dataset.categoria); C.categorias_Nuevas.splice(+cq.dataset.catQuitar, 1); pintarDatos(); cambio(); return; }
             const b = e.target.closest('[data-it],[data-bo],[data-ca],[data-pr]'); if (!b) return;
-            const i = +b.dataset.i, j = +b.dataset.j, k = b.dataset.k, cambio = () => $('#czEditor').dispatchEvent(new Event('ev-cambio'));
+            const i = +b.dataset.i, j = +b.dataset.j, k = b.dataset.k;
+            const dia = d => ({ dia: d, puerto: '', en_Navegacion: false, hora_Llegada: '', hora_Salida: '', descripcion: '', imagen: null });
             // itinerario
-            if (b.dataset.it === 'nuevo') { const d = Math.max(0, ...C.itinerario.map(x => x.dia)) + 1; C.itinerario.push({ dia: d, puerto: '', en_Navegacion: false, hora_Llegada: '', hora_Salida: '', descripcion: '', imagen: null }); pintarItin(); }
-            else if (b.dataset.it === 'generar') { for (let d = 1; d <= C.noches + 1; d++) if (!C.itinerario.some(x => x.dia === d)) C.itinerario.push({ dia: d, puerto: d === 1 ? C.puerto_Salida : d === C.noches + 1 ? C.puerto_Llegada : '', en_Navegacion: false, hora_Llegada: '', hora_Salida: '', descripcion: '', imagen: null }); pintarItin(); }
+            if (b.dataset.it === 'nuevo') { C.itinerario.push(dia(C.itinerario.length + 1)); pintarItin(); setTimeout(() => $$('#eItin .cz-dia').at(-1)?.querySelector('input:not([type=checkbox])')?.focus(), 50); }
+            else if (b.dataset.it === 'generar') { const n = noches(); while (C.itinerario.length < n + 1) C.itinerario.push(dia(C.itinerario.length + 1)); if (C.puerto_Salida && !C.itinerario[0].puerto) C.itinerario[0].puerto = C.puerto_Salida; const u = C.itinerario[n]; if (u && !u.puerto) u.puerto = C.puerto_Llegada || C.puerto_Salida || ''; pintarItin(); }
             else if (b.dataset.it === 'quitar') { C.itinerario.splice(i, 1); pintarItin(); }
             // a bordo
             else if (b.dataset.bo === 'seccion') { C.secciones.push({ titulo: '', actividades: [] }); pintarBordo(); }
-            else if (b.dataset.bo === 'base') { ['Comida y bebida', 'Entretenimiento', 'Relajación', 'Otro'].forEach(t => { if (!C.secciones.some(s => s.titulo.toLowerCase() === t.toLowerCase())) C.secciones.push({ titulo: t, actividades: [] }); }); pintarBordo(); }
+            else if (b.dataset.bo === 'base') { ['Comida y bebida', 'Entretenimiento', 'Relajación', 'Otro'].forEach(t => { if (!C.secciones.some(s => (s.titulo || '').toLowerCase() === t.toLowerCase())) C.secciones.push({ titulo: t, actividades: [] }); }); pintarBordo(); }
             else if (b.dataset.bo === 'qsec') { C.secciones.splice(i, 1); pintarBordo(); }
             else if (b.dataset.bo === 'subir') { [C.secciones[i - 1], C.secciones[i]] = [C.secciones[i], C.secciones[i - 1]]; pintarBordo(); }
             else if (b.dataset.bo === 'act') { C.secciones[i].actividades.push({ titulo: '', descripcion: '', imagen: null }); pintarBordo(); }
             else if (b.dataset.bo === 'qact') { C.secciones[i].actividades.splice(j, 1); pintarBordo(); }
             // cabinas
-            else if (b.dataset.ca === 'cubierta') { C.cubiertas.push({ numero: Math.max(0, ...C.cubiertas.map(u => u.numero)) + 1, nombre: '', plano: null }); pintarCabinas(); }
+            else if (b.dataset.ca === 'basicos') { CATS.forEach(c => { if (!C.cabinas.some(t => t.categoria === c)) C.cabinas.push(tipoNuevo(c, CAT_CORTO[c])); }); pintarCabinas(); }
+            else if (b.dataset.ca === 'tipo') { C.cabinas.push(tipoNuevo('INTERIOR', '')); pintarCabinas(); }
+            else if (b.dataset.ca === 'qtipo') { C.cabinas = C.cabinas.filter(t => t.clave !== k); C.precios = C.precios.filter(p => p.cabina !== k); pintarCabinas(); }
+            else if (b.dataset.ca === 'cubierta') { C.cubiertas.push({ numero: Math.max(0, ...C.cubiertas.map(u => u.numero || 0)) + 1, nombre: '', plano: null }); pintarCabinas(); }
             else if (b.dataset.ca === 'qcub') { const n = C.cubiertas[i].numero; C.cubiertas.splice(i, 1); C.cabinas.forEach(t => t.cabinas.forEach(x => { if (x.cubierta === n) x.cubierta = null; })); pintarCabinas(); }
-            else if (b.dataset.ca === 'cat') { catTipoSel = k; pintarCabinas(); return; }
-            else if (b.dataset.ca === 'tipo') { C.cabinas.push({ clave: nuevaClave('t'), categoria: catTipoSel, codigo: '', nombre: '', descripcion: '', capacidad_Min: null, capacidad_Max: null, metros: null, imagen: null, permite_Garantizada: true, cabinas: [] }); pintarCabinas(); pintarPrecios(); }
-            else if (b.dataset.ca === 'qtipo') { C.cabinas = C.cabinas.filter(t => t.clave !== k); C.precios = C.precios.filter(p => p.cabina !== k); pintarCabinas(); pintarPrecios(); }
             else if (b.dataset.ca === 'cab') { C.cabinas.find(t => t.clave === k).cabinas.push({ numero: '', cubierta: null, disponible: true }); pintarCabinas(); }
             else if (b.dataset.ca === 'qcab') { C.cabinas.find(t => t.clave === k).cabinas.splice(i, 1); pintarCabinas(); }
             // fechas, tarifas y precios
-            else if (b.dataset.pr === 'tarifa') { C.tarifas.push({ clave: nuevaClave('f'), codigo: C.tarifas.length ? '' : 'BEST_PRICE', nombre: C.tarifas.length ? '' : 'BEST_PRICE', descripcion: '' }); pintarPrecios(); }
-            else if (b.dataset.pr === 'qtar') { const kk = C.tarifas[i].clave; C.tarifas.splice(i, 1); C.precios = C.precios.filter(p => p.tarifa !== kk); pintarPrecios(); }
             else if (b.dataset.pr === 'fecha') {
-                const f = $('#prFecha').value; if (!f) { EV.toast('Elige la fecha.', 'err'); return; }
+                const f = $('#prFecha').value; if (!f) { EV.toast('Elige la fecha.', 'err'); $('#prFecha').focus(); return; }
                 if (C.salidas.some(s => s.fecha === f)) { EV.toast('Esa fecha ya está.', 'err'); return; }
-                const s = { clave: nuevaClave('s'), fecha: f, activo: true }; C.salidas.push(s); salidaSel = s.clave; pintarPrecios();
+                C.salidas.push({ clave: nuevaClave('s'), fecha: f, activo: true }); pintarPrecios(); pintarItin();
             }
             else if (b.dataset.pr === 'serie') {
                 const d = $('#prDesde').value, h = $('#prHasta').value, cada = +$('#prCada').value || 7;
                 if (!d || !h || h < d) { EV.toast('Elige desde y hasta (hasta ≥ desde).', 'err'); return; }
                 let n = 0; for (let f = d; f <= h && n < 200; f = masDias(f, cada)) if (!C.salidas.some(s => s.fecha === f)) { C.salidas.push({ clave: nuevaClave('s'), fecha: f, activo: true }); n++; }
-                EV.toast(`${n} fecha(s) agregadas.`); salidaSel ??= C.salidas[0]?.clave; pintarPrecios();
+                EV.toast(`${n} fecha(s) agregadas.`); pintarPrecios(); pintarItin();
             }
-            else if (b.dataset.pr === 'qsal') { e.stopPropagation(); C.salidas = C.salidas.filter(s => s.clave !== k); C.precios = C.precios.filter(p => p.salida !== k); pintarPrecios(); }
-            else if (b.dataset.pr === 'act') { e.stopPropagation(); const s = C.salidas.find(x => x.clave === k); s.activo = !s.activo; pintarPrecios(); }
-            else if (b.dataset.pr === 'sel') { salidaSel = k; pintarPrecios(); return; }
+            else if (b.dataset.pr === 'qsal') { C.salidas = C.salidas.filter(s => s.clave !== k); C.precios = C.precios.filter(p => p.salida !== k); pintarPrecios(); }
+            else if (b.dataset.pr === 'act') { const s = C.salidas.find(x => x.clave === k); s.activo = !s.activo; pintarPrecios(); }
+            else if (b.dataset.pr === 'limpiar-fechas') {
+                EV.confirmar({ titulo: '¿Quitar todas las fechas?', peligro: true, si: 'Sí, quitar', texto: 'Se quitan las fechas y sus precios (no se guarda hasta pulsar Guardar).' })
+                    .then(ok => { if (ok) { C.salidas = []; C.precios = []; pintarPrecios(); cambio(); } });
+                return;
+            }
+            else if (b.dataset.pr === 'tarifa') { C.tarifas.push({ clave: nuevaClave('f'), codigo: C.tarifas.length ? '' : 'BEST_PRICE', nombre: C.tarifas.length ? '' : 'BEST_PRICE', descripcion: '' }); tarSel ??= C.tarifas[0].clave; pintarPrecios(); }
+            else if (b.dataset.pr === 'qtar') { const kk = C.tarifas[i].clave; C.tarifas.splice(i, 1); C.precios = C.precios.filter(p => p.tarifa !== kk); pintarPrecios(); }
             else if (b.dataset.pr === 'copiar') {
-                const base = C.precios.filter(p => p.salida === salidaSel);
-                if (!base.length) { EV.toast('Esta fecha no tiene precios: escribe primero sus precios y luego cópialos.', 'err'); return; }
-                EV.confirmar({ titulo: '¿Copiar precios?', si: 'Sí, copiar', texto: `Los precios de las otras ${C.salidas.length - 1} fecha(s) se reemplazan por los de esta.` }).then(ok => {
+                const s0 = C.salidas[0].clave, f = tarSel;
+                const base = C.precios.filter(p => p.salida === s0 && p.tarifa === f);
+                if (!base.length) { EV.toast('La primera fecha no tiene precios: escríbelos primero.', 'err'); return; }
+                EV.confirmar({ titulo: '¿Copiar precios?', si: 'Sí, copiar', texto: `Los precios de las otras ${C.salidas.length - 1} fecha(s) se reemplazan por los de la primera.` }).then(ok => {
                     if (!ok) return;
-                    C.salidas.filter(s => s.clave !== salidaSel).forEach(s => { C.precios = C.precios.filter(p => p.salida !== s.clave).concat(base.map(p => ({ ...p, salida: s.clave }))); });
-                    EV.toast('Precios copiados a todas las fechas.'); cambio();
+                    C.salidas.slice(1).forEach(s => { C.precios = C.precios.filter(p => !(p.salida === s.clave && p.tarifa === f)).concat(base.map(p => ({ ...p, salida: s.clave }))); });
+                    pintarPrecios(); cambio(); EV.toast('Precios copiados a todas las fechas.');
                 });
                 return;
             }
-            cambio(); contadores();
+            cambio(); marcarPasos();
         });
+        const tipoNuevo = (categoria, nombre) => ({ clave: nuevaClave('t'), categoria, codigo: '', nombre, descripcion: '', capacidad_Min: null, capacidad_Max: null, metros: null, imagen: null, permite_Garantizada: true, cabinas: [] });
 
         $('#edGuardar').onclick = guardar;
-        $('#edCancelar').onclick = $('#edCerrar').onclick = () => editor.cerrar();
+        $('#edSiguiente').onclick = () => edTabs.ir(PASOS[Math.min(PASOS.length - 1, PASOS.indexOf(paso) + 1)]);
+        $('#edAnterior').onclick = () => edTabs.ir(PASOS[Math.max(0, PASOS.indexOf(paso) - 1)]);
+        $('#edCerrar').onclick = () => editor.cerrar();
         $('#edEliminar').onclick = () => C?.id_Crucero && eliminar(C.id_Crucero);
         $('#verCerrar').onclick = () => visor.cerrar();
         $('#verEditar').onclick = () => { visor.cerrar(true); abrir(verId); };

@@ -79,8 +79,8 @@ Al borrar un crucero se borran en cascada todas sus partes. Sus fotos de `multim
   - Contenedor **CRUCEROS**.
   - Precio = el «desde» más barato de sus cruceros activos.
   - Imagen = la de la categoría.
-- `spActualizaInicioCrucero @idCategoria` crea, actualiza o quita la tarjeta. La quita si la categoría está
-  oculta o si no hay ningún crucero activo con fecha futura y precio.
+- `spActualizaInicioCrucero @idCategoria` crea, actualiza o quita la tarjeta. Sale con un crucero activo en la categoría (desde FASE 23,
+  aunque todavía no tenga precio); se quita si la categoría está oculta o sin cruceros activos.
 - La app llama a ese SP en estos casos: al guardar, activar, duplicar o eliminar un crucero, y al guardar o
   eliminar una categoría.
 - `spSincronizaInicio` también revisa estas tarjetas.
@@ -97,47 +97,23 @@ Al borrar un crucero se borran en cascada todas sus partes. Sus fotos de `multim
 | `spPortalListarCruceros @IdCategoria` | tarjetas de la lista (con portada, naviera, logo, itinerario resumido y precios por categoría) |
 | `spPortalObtenerCrucero @IdCrucero` | 11 resultados: cabecera, fotos, itinerario, secciones, actividades, salidas, tarifas, tipos de cabina, precios, cubiertas, cabinas |
 
-## 6. Pantalla (EurovipBack → Cruceros)
+## 6. Pantalla (EurovipBack → Cruceros) — versión simple (FASE 23)
 
-**Pestaña «Cruceros»**
-- Indicadores clicables: total, a la venta, desactivados, sin fechas/precios y sin foto.
-- Buscador y filtros por naviera y categoría.
-- Se puede ordenar por próxima salida, precio, título o más recientes.
-- Cada crucero se muestra en una tarjeta como la de la web. Acciones de la tarjeta:
-  - Ver como la web.
-  - Editar.
-  - Duplicar (la copia queda desactivada).
-  - Activar o desactivar.
-  - Eliminar.
+- **Solo el título es obligatorio.** Lo demás se completa cuando se tenga; lo vacío se limpia al guardar (un día sin puerto queda «Por definir», una tarifa sin código es «BEST_PRICE»…).
+- **Naviera, barco y categoría se escriben en el mismo editor**: si no existen, se crean al guardar (no hace falta ir antes a Catálogos). Sin categoría, el crucero va a «Cruceros».
+- **Paso a paso** con «Anterior / Siguiente»: 1 Datos · 2 Fotos · 3 Itinerario · 4 A bordo · 5 Cabinas · 6 Fechas y precios · 7 **Revisar y guardar**.
+- **Fotos de un crucero nuevo**: se eligen antes de guardar y se suben solas al guardar (portada, banner, galería). En uno ya guardado se suben al momento.
+- **Itinerario**: una tarjeta por día con puerto y horas «Llega / Sale» (acepta 7:30, 07:30 o 07:30:00) o «En navegación».
+- **Cabinas**: botón «Crear los 4 tipos básicos». Cubiertas y cabinas concretas, en «Avanzado».
+- **Precios**: tabla fechas × tipos de cabina; la tarifa «BEST_PRICE» se crea sola con el primer precio. Varias tarifas, en «Avanzado».
+- **Antes de guardar** siempre se muestra el resumen de lo cargado (y lo que falta) y en qué tarjeta de la Home va a salir.
+- **Home**: al guardar sale en la tarjeta de su categoría si está activo (el precio «desde» aparece cuando haya una fecha futura con precio).
+- **Fotos al trabajar en local**: si `https://fotos.eurovip.com.do/…` todavía no tiene el archivo, la app lo muestra desde su copia en `/fotos-locales` (la carpeta `Multimedia:CarpetaFisica`).
 
-**Pestaña «Catálogos»**
-- Navieras (con logo), barcos (con foto y descripción) y categorías (con foto, orden y visible).
-- No se puede borrar una naviera que tiene barcos, ni un barco que tiene cruceros.
-
-**Editor (6 pestañas)**
-1. **Datos**: título, subtítulo, barco, código, puertos, noches, activo, categorías y textos.
-2. **Fotos**: portada, banner y galería. Se activa después de guardar por primera vez.
-3. **Itinerario**:
-   - Un día por fila, con «En navegación» y las horas.
-   - «Crear los N días» genera las filas según las noches.
-4. **A bordo**: secciones con actividades (foto, título, descripción) y el botón «Crear las 4 básicas».
-5. **Cabinas**:
-   - Cubiertas con su plano.
-   - Tipos de cabina por categoría, con su foto, capacidad y m².
-   - Cabinas concretas, cada una con su cubierta.
-6. **Fechas y precios**:
-   - Tarifas.
-   - Fechas, de una en una o en serie (desde, hasta y cada N días).
-   - Matriz de precios por fecha: tipos de cabina × tarifas.
-   - «Copiar estos precios a todas las fechas».
-
-Al guardar, el crucero completo se envía en un solo JSON. El repositorio reemplaza todas las filas hijas en
-**una transacción** y las enlaza por las claves que pone la pantalla (`t…`, `s…`, `f…`). Después actualiza
-las tarjetas de la Home de sus categorías, las de antes y las de ahora.
+Botón «Fotos» en cada tarjeta de la lista: cambia portada, banner y galería sin abrir el editor.
 
 Archivos: `Controllers/CrucerosController.cs`, `Repositories/CruceroRepository.cs`,
-`Models/CruceroModels.cs`, `Views/Cruceros/Index.cshtml`, `Services/Multimedia.cs` (tipo CRUCERO y
-`GuardarArchivoAsync`).
+`Models/CruceroModels.cs`, `Views/Cruceros/Index.cshtml`, `Services/Multimedia.cs`.
 
 ## 7. Para pasar a producción (cuando se pida)
 
