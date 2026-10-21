@@ -42,11 +42,11 @@ Si la base está en el mismo servidor, la cadena de conexión puede usar `localh
 El despliegue conserva estos archivos (no los pisa).
 
 ### 3b. Fotos (carpeta de fotos de Eurovip)
-Todas las fotos se guardan en la carpeta del sitio de fotos y se ven desde `fotos.eurovip.com`:
+Todas las fotos se guardan en la carpeta del sitio de fotos y se ven desde `fotos.eurovip.com.do`:
 
 | Qué | Carpeta (en el servidor) | Se ve en |
 |---|---|---|
-| Base | `C:\inetpub\wwwroot\photosVacacionalparce\eurovip\` | `https://fotos.eurovip.com/eurovip/` |
+| Base | `C:\inetpub\wwwroot\photosVacacionalparce\eurovip\` | `https://fotos.eurovip.com.do/eurovip/` |
 | Destinos, países, hoteles, alojamientos, excursiones, traslados | `…\eurovip\destinos\{destino}\`, `paises\{código}\`, `hoteles\{n.º}\`, `alojamientos\{id}\`, `excursiones\{id}\`, `traslados\{id}\` | `…/eurovip/destinos/punta-cana/{código}.webp` |
 | Circuitos (portada, intermedia, galería) | `…\eurovip\circuitos\{circuito}\` | |
 | Itinerario de circuito | `…\eurovip\circuitos\itinerario\{circuito}\` | |
