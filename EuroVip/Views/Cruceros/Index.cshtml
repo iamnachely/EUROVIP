@@ -213,6 +213,75 @@
     .cz-home.ok { background: #ECFDF3; border: 1px solid #ABEFC6; color: #067647; }
     .cz-home.no { background: #FFFAEB; border: 1px solid #FEDF89; color: #93370D; }
     .cz-home i { font-size: 22px; }
+    /* ===== v3: editor grande, etiquetas visibles, colores y sugerencias ===== */
+    #czEditor.ui-drawer { width: calc(100vw - 24px); max-width: 1480px; }
+    #czEditor .ui-db { padding-left: 32px; padding-right: 32px; }
+    #czEditor input:not([type=checkbox]):not([type=file]), #czEditor select, #czEditor textarea { font-size: 15px; padding: 10px 12px; border-radius: 12px; }
+    #czEditor .cz-pasos .ui-tabs button { padding: 10px 16px; font-size: 14px; }
+    .cz-c { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+    .cz-c > span { font: 800 12px var(--ev-font); color: var(--ev-text); text-transform: uppercase; letter-spacing: .04em; }
+    .cz-c > span .cz-opc { text-transform: none; letter-spacing: 0; }
+    .cz-c > small { color: var(--ev-muted); font-weight: 600; font-size: 11.5px; min-height: 14px; }
+    .cz-c.ancho { flex: 1; }
+    .cz-barra { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    .cz-cuenta-chip { font: 800 12px var(--ev-font); padding: 6px 10px; border-radius: 999px; background: var(--ev-surface-2); color: var(--ev-muted); white-space: nowrap; }
+    .cz-g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .cz-g4 { display: grid; grid-template-columns: 180px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+    /* itinerario: una fila por día, como una ruta */
+    .cz-ruta { display: grid; gap: 12px; }
+    .cz-paso { display: grid; grid-template-columns: 86px minmax(0, 1fr) 200px 44px; gap: 16px; align-items: start; padding: 16px; border-radius: 18px; border: 1px solid var(--ev-line); background: var(--ev-surface); border-left: 6px solid #0E8F86; }
+    .cz-paso.mar { border-left-color: #0284C7; background: linear-gradient(90deg, #F0F9FF, var(--ev-surface) 40%); }
+    .cz-paso-n { display: grid; justify-items: center; text-align: center; gap: 2px; }
+    .cz-paso-n b { width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; font-size: 22px; background: #0E8F86; color: #fff; }
+    .cz-paso.mar .cz-paso-n b { background: #0284C7; }
+    .cz-paso-n small { font: 800 10.5px var(--ev-font); letter-spacing: .1em; color: var(--ev-muted); }
+    .cz-paso-n em { font-style: normal; font-weight: 700; font-size: 12px; color: var(--ev-text); }
+    .cz-paso-c { display: grid; gap: 12px; }
+    .cz-paso-g { display: grid; grid-template-columns: minmax(0, 2fr) 150px 150px; gap: 12px; }
+    .cz-paso-f { display: grid; gap: 5px; } .cz-paso-f .cz-foto.grande { height: 120px; }
+    .cz-paso-a { display: grid; gap: 6px; }
+    .cz-seg { display: inline-flex; border: 1px solid var(--ev-line); border-radius: 12px; overflow: hidden; width: max-content; }
+    .cz-seg button { border: 0; background: var(--ev-surface); padding: 8px 14px; font: 700 13px var(--ev-font); cursor: pointer; color: var(--ev-muted); }
+    .cz-seg button.on { background: #0E8F86; color: #fff; }
+    .cz-paso.mar .cz-seg button.on { background: #0284C7; }
+    .cz-mar { padding: 14px; border-radius: 12px; background: #E0F2FE; color: #075985; font-weight: 700; font-size: 13.5px; }
+    /* sugerencias (pestañas, actividades, cabinas) */
+    .cz-sugs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .cz-sugs.chica { margin: 0 0 12px; } .cz-sugs.chica small { color: var(--ev-muted); font-weight: 800; font-size: 12px; }
+    .cz-sug { --c: #0E8F86; display: inline-flex; gap: 6px; align-items: center; border: 1.5px solid color-mix(in srgb, var(--c) 45%, transparent); background: color-mix(in srgb, var(--c) 9%, var(--ev-surface)); color: var(--c); padding: 8px 14px; border-radius: 999px; font: 800 13px var(--ev-font); cursor: pointer; transition: transform .15s, background .15s; }
+    .cz-sug:hover:not(:disabled) { transform: translateY(-1px); background: color-mix(in srgb, var(--c) 18%, var(--ev-surface)); }
+    .cz-sug.ya, .cz-sug:disabled { opacity: .55; cursor: default; }
+    .cz-cat-et { --c: #0E8F86; display: inline-flex; gap: 5px; align-items: center; font: 800 12px var(--ev-font); color: #fff; background: var(--c); padding: 5px 10px; border-radius: 8px; min-width: 96px; }
+    /* a bordo: pestañas con color y actividades grandes */
+    .cz-secc { --c: #0E8F86; border-radius: 20px; border: 1px solid color-mix(in srgb, var(--c) 30%, var(--ev-line)); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 7%, var(--ev-surface)), var(--ev-surface) 120px); padding: 16px; margin-bottom: 16px; }
+    .cz-secc-h { display: flex; gap: 12px; align-items: end; margin-bottom: 12px; }
+    .cz-secc-h .ic { width: 46px; height: 46px; border-radius: 14px; background: var(--c); color: #fff; display: grid; place-items: center; font-size: 22px; flex-shrink: 0; }
+    .cz-acts2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 14px; }
+    .cz-act2 { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; padding: 14px; border-radius: 16px; background: var(--ev-surface); border: 1px solid var(--ev-line); box-shadow: 0 2px 10px rgba(11,18,21,.04); }
+    .cz-act2 .cz-foto.grande { height: 100%; min-height: 150px; }
+    .cz-act2-c { display: grid; gap: 10px; }
+    .cz-act2-a { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .cz-add2 { border: 2px dashed color-mix(in srgb, var(--c, #0E8F86) 45%, var(--ev-line)); border-radius: 16px; background: transparent; cursor: pointer; min-height: 180px; display: grid; place-content: center; justify-items: center; gap: 4px; color: var(--c, #0E8F86); font-family: var(--ev-font); }
+    .cz-add2 i { font-size: 30px; } .cz-add2 small { color: var(--ev-muted); font-weight: 600; }
+    .cz-add2:hover { background: color-mix(in srgb, var(--c, #0E8F86) 8%, transparent); }
+    /* cabinas */
+    .cz-tipo2 { --c: #0E8F86; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; padding: 16px; border-radius: 18px; border: 1px solid var(--ev-line); border-top: 5px solid var(--c); background: var(--ev-surface); margin-bottom: 14px; }
+    .cz-tipo2-f { display: grid; gap: 6px; text-align: center; align-content: start; } .cz-tipo2-f small { color: var(--ev-muted); font-weight: 700; font-size: 12px; }
+    .cz-tipo2-f .cz-foto.grande { height: 160px; }
+    .cz-tipo2-c { display: grid; gap: 12px; }
+    .cz-chk .ui-switch { margin-top: 6px; }
+    /* fechas y precios */
+    .cz-fechas2 { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr); gap: 16px; }
+    .cz-fcaja { display: grid; gap: 12px; align-content: start; padding: 16px; border-radius: 16px; background: var(--ev-surface-2); }
+    .cz-fcaja > b { font-size: 14px; display: flex; gap: 8px; align-items: center; }
+    .cz-grid th { --c: #0E8F86; border-top: 3px solid var(--c); min-width: 150px; }
+    .cz-grid th small { color: var(--c); }
+    .cz-dinero { display: flex; align-items: center; gap: 6px; border: 1px solid var(--ev-line); border-radius: 12px; padding: 0 8px; background: var(--ev-surface); }
+    .cz-dinero b { color: var(--ev-muted); font-size: 12px; }
+    .cz-dinero input { border: 0 !important; width: 110px; text-align: right; padding: 9px 4px !important; background: transparent; }
+    .cz-home .ev-btn { flex-shrink: 0; }
+    @@media (max-width: 1000px) { .cz-paso { grid-template-columns: 70px minmax(0, 1fr); } .cz-paso-f, .cz-paso-a { grid-column: 2; } .cz-paso-a { display: flex; }
+        .cz-paso-g, .cz-g4, .cz-g3, .cz-fechas2 { grid-template-columns: 1fr; } .cz-tipo2, .cz-act2 { grid-template-columns: 1fr; } .cz-acts2 { grid-template-columns: 1fr; } }
 </style>
 }
 
@@ -653,62 +722,123 @@
     }
 
     // ---------- 3. Itinerario ----------
+    // Puertos que se sugieren al escribir (los del crucero + los más comunes del Caribe)
+    const PUERTOS = ['Port Canaveral, Florida', 'Miami, Florida', 'Fort Lauderdale (Port Everglades)', 'San Juan, Puerto Rico', 'La Romana, Rep. Dom.', 'Santo Domingo, Rep. Dom.',
+        'Samaná (Amber Cove), Rep. Dom.', 'Puerto Plata (Taíno Bay), Rep. Dom.', 'Nassau, Bahamas', 'Disney Castaway Cay, Bahamas', 'Cozumel, México', 'Costa Maya, México',
+        'Saint Thomas, USVI', 'Tortola, BVI', 'Saint Maarten', 'Antigua', 'Barbados', 'Aruba', 'Curazao', 'Bonaire', 'Grand Cayman', 'Ocho Ríos, Jamaica', 'Roatán, Honduras', 'Cartagena, Colombia'];
     function pintarItin() {
         const sal = C.salidas.filter(s => s.activo).sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
         const n = noches();
-        $('#eItin').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Un día por tarjeta: el puerto y a qué hora llega y sale el barco (o márcalo «En navegación»). Todo ${opc}.${sal ? ` Las fechas salen de la primera salida (${fechaCorta(sal.fecha)}).` : ''}</span></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-                <button type="button" class="ev-btn sm" data-it="nuevo"><i class="bi bi-plus-lg"></i> Agregar día</button>
-                ${n ? `<button type="button" class="ev-btn ghost sm" data-it="generar"><i class="bi bi-magic"></i> Crear los ${n + 1} días (${n} noches)</button>` : '<span class="ui-help" style="margin:0;align-self:center">Pon las noches en «Datos» para crear todos los días de una vez.</span>'}
+        const sugeridos = [...new Set([C.puerto_Salida, C.puerto_Llegada, ...C.itinerario.map(d => d.puerto), ...PUERTOS].filter(p => p && !/^en navegaci/i.test(p)))];
+        $('#eItin').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Un día por fila, como la tabla «Itinerario» de la web: <b>puerto</b>, hora a la que <b>llega</b> y a la que <b>sale</b> el barco. Si ese día no hay puerto, pulsa «En el mar». ${sal ? `Las fechas salen de la primera salida (${fechaCorta(sal.fecha)}).` : 'Las fechas aparecen cuando agregues una fecha de salida (paso 6).'} ${opc}</span></div>
+            <div class="cz-barra">
+                ${n ? `<button type="button" class="ev-btn" data-it="generar"><i class="bi bi-magic"></i> Crear los ${n + 1} días (${n} noches)</button>` : '<span class="ui-help" style="margin:0">Pon las <b>noches</b> en el paso 1 para crear todos los días de una vez.</span>'}
+                <button type="button" class="ev-btn ghost" data-it="nuevo"><i class="bi bi-plus-lg"></i> Agregar un día</button>
+                ${C.itinerario.length ? `<span class="cz-cuenta-chip">${C.itinerario.length} días · ${C.itinerario.filter(d => d.en_Navegacion).length} en el mar</span>` : ''}
             </div>
-            ${C.itinerario.length ? `<div class="cz-dias">${C.itinerario.map((d, i) => `<div class="cz-dia ${d.en_Navegacion ? 'nav' : ''}">
-                <div class="cz-dia-h"><b>Día ${i + 1}</b>${sal ? `<small>${fechaCorta(masDias(sal.fecha, i))}</small>` : ''}<span class="sp"></span>
-                    <label class="ui-switch" title="En navegación (At Sea)"><input type="checkbox" data-b="itinerario.${i}.en_Navegacion" data-t="bool" ${d.en_Navegacion ? 'checked' : ''}><span class="tr"></span> En navegación</label>
-                    <button type="button" class="ui-ibtn danger" data-it="quitar" data-i="${i}" title="Quitar este día"><i class="bi bi-trash3"></i></button></div>
-                ${d.en_Navegacion ? '<div class="ui-help" style="margin:0"><i class="bi bi-water"></i> Día en el mar: sin puerto ni horas.</div>' : `
-                ${inp(`itinerario.${i}.puerto`, 'maxlength="150" placeholder="Puerto, ej. Tortola"')}
-                <div class="cz-horas"><label>Llega<input type="time" step="60" data-b="itinerario.${i}.hora_Llegada" value="${esc(d.hora_Llegada || '')}"></label>
-                    <label>Sale<input type="time" step="60" data-b="itinerario.${i}.hora_Salida" value="${esc(d.hora_Salida || '')}"></label></div>`}
-                <div class="fila">${txt(`itinerario.${i}.descripcion`, 'rows="2" placeholder="Qué hay en este día (opcional)"')}${fotoHtml('dia:' + i, d.imagen)}</div>
-            </div>`).join('')}</div>` : '<div class="ui-empty" style="padding:24px"><p style="margin:0">Sin días todavía.</p></div>'}`;
+            <datalist id="dlPuertos">${sugeridos.map(p => `<option value="${esc(p)}">`).join('')}</datalist>
+            ${C.itinerario.length ? `<div class="cz-ruta">${C.itinerario.map((d, i) => `<div class="cz-paso ${d.en_Navegacion ? 'mar' : ''}">
+                <div class="cz-paso-n"><b>${i + 1}</b><small>DÍA</small>${sal ? `<em>${fechaCorta(masDias(sal.fecha, i))}</em>` : ''}</div>
+                <div class="cz-paso-c">
+                    <div class="cz-seg" role="group" aria-label="Tipo de día">
+                        <button type="button" data-it="puerto" data-i="${i}" class="${d.en_Navegacion ? '' : 'on'}"><i class="bi bi-geo-alt"></i> En puerto</button>
+                        <button type="button" data-it="mar" data-i="${i}" class="${d.en_Navegacion ? 'on' : ''}"><i class="bi bi-water"></i> En el mar</button>
+                    </div>
+                    ${d.en_Navegacion ? `<div class="cz-mar"><i class="bi bi-water"></i> Día de navegación: el barco no para en ningún puerto (en la web sale «En navegación»).</div>` : `
+                    <div class="cz-paso-g">
+                        <label class="cz-c ancho"><span>Puerto</span><input data-b="itinerario.${i}.puerto" list="dlPuertos" maxlength="150" value="${esc(d.puerto || '')}" placeholder="Escribe o elige, ej. Tortola, BVI"></label>
+                        <label class="cz-c"><span>Llega a las</span><input type="time" step="60" data-b="itinerario.${i}.hora_Llegada" value="${esc(d.hora_Llegada || '')}"><small>${i === 0 ? 'vacío en el día de embarque' : ''}</small></label>
+                        <label class="cz-c"><span>Sale a las</span><input type="time" step="60" data-b="itinerario.${i}.hora_Salida" value="${esc(d.hora_Salida || '')}"><small>${i === C.itinerario.length - 1 ? 'vacío en el desembarque' : ''}</small></label>
+                    </div>`}
+                    <label class="cz-c"><span>Qué hay este día ${opc}</span><textarea data-b="itinerario.${i}.descripcion" rows="2" placeholder="Ej. Excursión a The Baths en Virgin Gorda y snorkel en Cane Garden Bay.">${esc(d.descripcion || '')}</textarea></label>
+                </div>
+                <div class="cz-paso-f"><span class="cz-c"><span>Foto ${opc}</span></span>${fotoHtml('dia:' + i, d.imagen, true)}</div>
+                <div class="cz-paso-a">
+                    <button type="button" class="ui-ibtn" data-it="arriba" data-i="${i}" ${i === 0 ? 'disabled' : ''} title="Subir"><i class="bi bi-arrow-up"></i></button>
+                    <button type="button" class="ui-ibtn" data-it="abajo" data-i="${i}" ${i === C.itinerario.length - 1 ? 'disabled' : ''} title="Bajar"><i class="bi bi-arrow-down"></i></button>
+                    <button type="button" class="ui-ibtn" data-it="insertar" data-i="${i}" title="Insertar un día después"><i class="bi bi-plus-lg"></i></button>
+                    <button type="button" class="ui-ibtn danger" data-it="quitar" data-i="${i}" title="Quitar este día"><i class="bi bi-trash3"></i></button>
+                </div>
+            </div>`).join('')}</div>` : '<div class="ui-empty" style="padding:28px"><i class="bi bi-signpost-2" style="font-size:32px"></i><p style="margin:6px 0 0">Sin días todavía. Pulsa «Crear los días» o «Agregar un día».</p></div>'}`;
     }
 
     // ---------- 4. A bordo ----------
+    // Pestañas que se ven en la web de las navieras (como en la captura de la usuaria) con color, icono y actividades sugeridas
+    const SECCIONES = [
+        { t: 'Descripción', i: 'bi-info-circle', c: '#2563EB', a: ['El barco', 'Datos del barco', 'Cubiertas'] },
+        { t: 'Comida y bebida', i: 'bi-cup-hot', c: '#EA580C', a: ['Restaurante principal', 'Bufé', 'Restaurante de especialidad', 'Cafetería', 'Bar de la piscina', 'Heladería'] },
+        { t: 'Entretenimiento', i: 'bi-stars', c: '#9333EA', a: ['Teatro / espectáculos', 'Cine', 'Casino', 'Fiesta en cubierta', 'Música en vivo', 'Discoteca'] },
+        { t: 'Tecnología', i: 'bi-wifi', c: '#0891B2', a: ['Wifi a bordo', 'App del barco', 'Sala de videojuegos', 'Realidad virtual'] },
+        { t: 'Recreativo', i: 'bi-balloon', c: '#16A34A', a: ['Toboganes de agua', 'Piscinas', 'Club infantil', 'Club de adolescentes', 'Minigolf', 'Pared de escalada'] },
+        { t: 'Fitness', i: 'bi-heart-pulse', c: '#DC2626', a: ['Gimnasio', 'Pista para correr', 'Clases de yoga', 'Cancha deportiva'] },
+        { t: 'Relajación', i: 'bi-flower1', c: '#0D9488', a: ['Spa', 'Sauna', 'Piscina solo adultos', 'Solárium', 'Salón de belleza'] },
+        { t: 'Otro', i: 'bi-three-dots', c: '#64748B', a: ['Tiendas', 'Galería de arte', 'Fotografía'] }
+    ];
+    const estiloSec = t => SECCIONES.find(s => s.t.toLowerCase() === (t || '').trim().toLowerCase()) || { i: 'bi-bookmark-star', c: '#0E8F86', a: [] };
     function pintarBordo() {
-        $('#eBordo').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Las pestañas de «Tu barco» en la web (Comida y bebida, Entretenimiento…) con sus actividades: foto, título y descripción. ${opc}</span></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-                <button type="button" class="ev-btn ghost sm" data-bo="base"><i class="bi bi-magic"></i> Crear las 4 básicas</button>
-                <button type="button" class="ev-btn sm" data-bo="seccion"><i class="bi bi-plus-lg"></i> Sección</button></div>
-            ${C.secciones.map((s, i) => `<div class="cz-sec">
-                <div class="cz-sec-h">${inp(`secciones.${i}.titulo`, 'maxlength="100" placeholder="Nombre de la pestaña, ej. Entretenimiento"')}
+        const usadas = new Set(C.secciones.map(s => (s.titulo || '').trim().toLowerCase()));
+        $('#eBordo').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Las pestañas de «Tu barco» en la web y sus actividades. Cada actividad lleva <b>foto</b>, <b>título</b> y <b>descripción</b> (lo que se lee al pulsar «Leer más»). ${opc}</span></div>
+            <div class="cz-blq"><h3><i class="bi bi-lightbulb"></i> Pestañas recomendadas <small>pulsa para agregar</small></h3>
+                <div class="cz-sugs">${SECCIONES.map(s => `<button type="button" class="cz-sug ${usadas.has(s.t.toLowerCase()) ? 'ya' : ''}" style="--c:${s.c}" data-bo="sug" data-t="${esc(s.t)}" ${usadas.has(s.t.toLowerCase()) ? 'disabled' : ''}><i class="bi ${s.i}"></i> ${esc(s.t)}${usadas.has(s.t.toLowerCase()) ? ' <i class="bi bi-check2"></i>' : ''}</button>`).join('')}
+                    <button type="button" class="cz-sug" style="--c:#0B1215" data-bo="seccion"><i class="bi bi-plus-lg"></i> Otra pestaña</button></div>
+            </div>
+            ${C.secciones.map((s, i) => { const e = estiloSec(s.titulo); return `<section class="cz-secc" style="--c:${e.c}">
+                <div class="cz-secc-h"><span class="ic"><i class="bi ${e.i}"></i></span>
+                    <label class="cz-c ancho"><span>Nombre de la pestaña</span><input data-b="secciones.${i}.titulo" maxlength="100" value="${esc(s.titulo || '')}" placeholder="Ej. Entretenimiento"></label>
+                    <span class="cz-cuenta-chip">${s.actividades.length} actividad(es)</span>
                     <button type="button" class="ui-ibtn" data-bo="subir" data-i="${i}" ${i === 0 ? 'disabled' : ''} title="Mover antes"><i class="bi bi-arrow-up"></i></button>
-                    <button type="button" class="ui-ibtn danger" data-bo="qsec" data-i="${i}" title="Quitar sección"><i class="bi bi-trash3"></i></button></div>
-                <div class="cz-acts">${s.actividades.map((a, j) => `<div class="cz-act">
-                    <div class="fila">${fotoHtml(`act:${i}:${j}`, a.imagen)}<div style="flex:1;display:grid;gap:4px">${inp(`secciones.${i}.actividades.${j}.titulo`, 'maxlength="150" placeholder="Título"')}
-                        <button type="button" class="ev-btn ghost sm" data-bo="qact" data-i="${i}" data-j="${j}"><i class="bi bi-x-lg"></i> Quitar</button></div></div>
-                    ${txt(`secciones.${i}.actividades.${j}.descripcion`, 'rows="3" placeholder="Descripción («Leer más»)"')}</div>`).join('')}
-                    <button type="button" class="cz-add" data-bo="act" data-i="${i}"><i class="bi bi-plus-circle"></i><br>Actividad</button></div>
-            </div>`).join('') || '<div class="ui-empty" style="padding:24px"><p style="margin:0">Sin secciones todavía.</p></div>'}
-            ${C.secciones.length ? `<div class="ui-f" style="margin-top:8px"><label>Título de esta parte en la web ${opc} <em>si lo dejas vacío: «Tu barco - {barco}»</em></label>${inp('titulo_Seccion', 'maxlength="150"')}</div>` : ''}`;
+                    <button type="button" class="ui-ibtn danger" data-bo="qsec" data-i="${i}" title="Quitar pestaña"><i class="bi bi-trash3"></i></button></div>
+                ${e.a.length ? `<div class="cz-sugs chica"><small>Sugeridas:</small>${e.a.filter(x => !s.actividades.some(a => (a.titulo || '').toLowerCase() === x.toLowerCase())).map(x => `<button type="button" class="cz-sug" style="--c:${e.c}" data-bo="sugact" data-i="${i}" data-t="${esc(x)}"><i class="bi bi-plus"></i> ${esc(x)}</button>`).join('')}</div>` : ''}
+                <div class="cz-acts2">${s.actividades.map((a, j) => `<article class="cz-act2">
+                    ${fotoHtml(`act:${i}:${j}`, a.imagen, true)}
+                    <div class="cz-act2-c">
+                        <label class="cz-c"><span>Título</span><input data-b="secciones.${i}.actividades.${j}.titulo" maxlength="150" value="${esc(a.titulo || '')}" placeholder="Ej. Plaza de Coco"></label>
+                        <label class="cz-c"><span>Descripción («Leer más»)</span><textarea data-b="secciones.${i}.actividades.${j}.descripcion" rows="4" placeholder="Ej. Cena-espectáculo con música en vivo inspirada en la película «Coco».">${esc(a.descripcion || '')}</textarea></label>
+                        <div class="cz-act2-a"><span class="ui-help" style="margin:0">${a.imagen ? '<i class="bi bi-check2-circle"></i> Con foto' : '<i class="bi bi-camera"></i> Pulsa el recuadro para poner la foto'}</span>
+                            <button type="button" class="ev-btn ghost sm" data-bo="qact" data-i="${i}" data-j="${j}"><i class="bi bi-trash3"></i> Quitar</button></div>
+                    </div></article>`).join('')}
+                    <button type="button" class="cz-add2" data-bo="act" data-i="${i}"><i class="bi bi-plus-circle"></i><b>Agregar actividad</b><small>foto, título y descripción</small></button></div>
+            </section>`; }).join('') || '<div class="ui-empty" style="padding:28px"><i class="bi bi-stars" style="font-size:32px"></i><p style="margin:6px 0 0">Sin pestañas todavía. Pulsa una de las recomendadas.</p></div>'}
+            ${C.secciones.length ? `<div class="cz-blq"><label class="cz-c"><span>Título de esta parte en la web ${opc}</span><input data-b="titulo_Seccion" maxlength="150" value="${esc(C.titulo_Seccion || '')}" placeholder="Si lo dejas vacío: «Tu barco - ${esc(C.barco_Nombre || '{barco}')}»"></label></div>` : ''}`;
     }
 
     // ---------- 5. Cabinas ----------
+    // Tipos de camarote habituales en las navieras (se agregan con un clic y se pueden cambiar)
+    const CABINAS_SUG = [
+        { k: 'INTERIOR', n: 'Interior estándar', min: 2, max: 4, m: 15 }, { k: 'INTERIOR', n: 'Interior con ventana virtual', min: 2, max: 4, m: 17 },
+        { k: 'EXTERIOR', n: 'Exterior vista al mar', min: 2, max: 4, m: 18 }, { k: 'EXTERIOR', n: 'Exterior vista obstruida', min: 2, max: 4, m: 17 },
+        { k: 'BALCON', n: 'Balcón', min: 2, max: 4, m: 21 }, { k: 'BALCON', n: 'Balcón deluxe', min: 2, max: 5, m: 24 }, { k: 'BALCON', n: 'Mini suite', min: 2, max: 4, m: 28 },
+        { k: 'SUITE', n: 'Suite', min: 2, max: 4, m: 35 }, { k: 'SUITE', n: 'Suite familiar', min: 4, max: 6, m: 45 }, { k: 'SUITE', n: 'Suite Concierge / Yacht Club', min: 2, max: 4, m: 40 }
+    ];
+    const COLOR_CAT = { INTERIOR: '#64748B', EXTERIOR: '#0284C7', BALCON: '#0D9488', SUITE: '#B45309' };
+    const ICONO_CAT = { INTERIOR: 'bi-door-closed', EXTERIOR: 'bi-window', BALCON: 'bi-brightness-high', SUITE: 'bi-gem' };
     function pintarCabinas() {
         const tipoInp = (t, campo, ph, extra = '') => `<input data-tipo="${t.clave}" data-campo="${campo}" value="${esc(t[campo] ?? '')}" placeholder="${ph}" ${extra}>`;
-        $('#eCabinas').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Los tipos de camarote que se venden (Interior, Exterior, Balcón, Suite). Son los que tendrán precio en el paso 6. ${opc}</span></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-                <button type="button" class="ev-btn ghost sm" data-ca="basicos"><i class="bi bi-magic"></i> Crear los 4 tipos básicos</button>
-                <button type="button" class="ev-btn sm" data-ca="tipo"><i class="bi bi-plus-lg"></i> Tipo de cabina</button></div>
-            ${C.cabinas.map(t => `<div class="cz-tipo">
-                ${fotoHtml('tipo:' + t.clave, t.imagen, true)}
-                <div class="campos">
-                    <div class="g"><select data-tipo="${t.clave}" data-campo="categoria" title="Categoría">${CATS.map(k => `<option value="${k}" ${k === t.categoria ? 'selected' : ''}>${CAT_CORTO[k]}</option>`).join('')}</select>
-                        ${tipoInp(t, 'nombre', 'Nombre, ej. Camarote Interior Estándar', 'maxlength="150"')}
-                        ${tipoInp(t, 'capacidad_Min', 'Pers. mín', 'type="number" min="1" max="20" data-t="num"')}${tipoInp(t, 'capacidad_Max', 'Pers. máx', 'type="number" min="1" max="20" data-t="num"')}${tipoInp(t, 'metros', 'm²', 'type="number" min="1" step="0.1" data-t="num"')}</div>
-                    <textarea data-tipo="${t.clave}" data-campo="descripcion" rows="2" placeholder="Descripción (opcional)">${esc(t.descripcion || '')}</textarea>
-                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${tipoInp(t, 'codigo', 'Código, ej. 11C (opcional)', 'maxlength="20" style="width:190px"')}
-                        <span style="flex:1"></span><button type="button" class="ev-btn ghost sm" data-ca="qtipo" data-k="${t.clave}"><i class="bi bi-trash3"></i> Quitar</button></div>
-                </div></div>`).join('') || '<div class="ui-empty" style="padding:24px"><p style="margin:0">Sin tipos de cabina. Pulsa «Crear los 4 tipos básicos».</p></div>'}
+        const ya = new Set(C.cabinas.map(t => (t.nombre || '').trim().toLowerCase()));
+        $('#eCabinas').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Los tipos de camarote que se venden. Cada tipo será una <b>columna de precios</b> en el paso 6. El <b>grupo</b> (Interior, Exterior, Balcón o Suite) es el que se ve en la tarjeta de la web («desde» de cada grupo). ${opc}</span></div>
+            <div class="cz-blq"><h3><i class="bi bi-lightbulb"></i> Tipos recomendados <small>pulsa para agregar · luego puedes cambiar todo</small></h3>
+                ${CATS.map(k => `<div class="cz-sugs" style="margin-bottom:6px"><small style="--c:${COLOR_CAT[k]}" class="cz-cat-et"><i class="bi ${ICONO_CAT[k]}"></i> ${CAT_CORTO[k]}</small>
+                    ${CABINAS_SUG.filter(s => s.k === k).map(s => `<button type="button" class="cz-sug ${ya.has(s.n.toLowerCase()) ? 'ya' : ''}" style="--c:${COLOR_CAT[k]}" data-ca="sug" data-n="${esc(s.n)}" ${ya.has(s.n.toLowerCase()) ? 'disabled' : ''}>${ya.has(s.n.toLowerCase()) ? '<i class="bi bi-check2"></i>' : '<i class="bi bi-plus"></i>'} ${esc(s.n)}</button>`).join('')}</div>`).join('')}
+                <button type="button" class="ev-btn ghost sm" data-ca="tipo" style="margin-top:6px"><i class="bi bi-plus-lg"></i> Otro tipo de cabina</button>
+            </div>
+            ${C.cabinas.map(t => `<article class="cz-tipo2" style="--c:${COLOR_CAT[t.categoria] || '#0E8F86'}">
+                <div class="cz-tipo2-f">${fotoHtml('tipo:' + t.clave, t.imagen, true)}<small>Foto del camarote</small></div>
+                <div class="cz-tipo2-c">
+                    <div class="cz-g4">
+                        <label class="cz-c"><span>Grupo en la web</span><select data-tipo="${t.clave}" data-campo="categoria">${CATS.map(k => `<option value="${k}" ${k === t.categoria ? 'selected' : ''}>${CAT_CORTO[k]}</option>`).join('')}</select></label>
+                        <label class="cz-c ancho"><span>Nombre del tipo de cabina</span>${tipoInp(t, 'nombre', 'Ej. Camarote Interior Estándar', 'maxlength="150"')}</label>
+                        <label class="cz-c"><span>Código ${opc}</span>${tipoInp(t, 'codigo', 'Ej. 11C', 'maxlength="20"')}</label>
+                    </div>
+                    <div class="cz-g4">
+                        <label class="cz-c"><span>Personas (mín.)</span>${tipoInp(t, 'capacidad_Min', 'Ej. 2', 'type="number" min="1" max="20" data-t="num"')}</label>
+                        <label class="cz-c"><span>Personas (máx.)</span>${tipoInp(t, 'capacidad_Max', 'Ej. 4', 'type="number" min="1" max="20" data-t="num"')}</label>
+                        <label class="cz-c"><span>Tamaño (m²)</span>${tipoInp(t, 'metros', 'Ej. 17', 'type="number" min="1" step="0.1" data-t="num"')}</label>
+                        <label class="cz-c cz-chk"><span>Venta «Garantizada»</span><label class="ui-switch"><input type="checkbox" data-tipo="${t.clave}" data-campo="permite_Garantizada" data-t="bool" ${t.permite_Garantizada ? 'checked' : ''}><span class="tr"></span> ${t.permite_Garantizada ? 'Sí' : 'No'}</label></label>
+                    </div>
+                    <label class="cz-c"><span>Descripción ${opc}</span><textarea data-tipo="${t.clave}" data-campo="descripcion" rows="2" placeholder="Ej. Cama queen y sofá cama, baño privado, decoración inspirada en los cuentos Disney.">${esc(t.descripcion || '')}</textarea></label>
+                    <div class="cz-act2-a"><span class="cz-cat-et" style="--c:${COLOR_CAT[t.categoria]}"><i class="bi ${ICONO_CAT[t.categoria]}"></i> ${CAT_CORTO[t.categoria]}</span>
+                        <button type="button" class="ev-btn ghost sm" data-ca="qtipo" data-k="${t.clave}"><i class="bi bi-trash3"></i> Quitar tipo</button></div>
+                </div></article>`).join('') || '<div class="ui-empty" style="padding:28px"><i class="bi bi-door-closed" style="font-size:32px"></i><p style="margin:6px 0 0">Sin tipos de cabina. Pulsa los recomendados de arriba.</p></div>'}
             <details class="cz-blq cz-mas" style="margin-top:12px" ${C.cubiertas.length || C.cabinas.some(t => t.cabinas.length) ? 'open' : ''}><summary><i class="bi bi-layers"></i> Avanzado: cubiertas y cabinas concretas ${opc} <i class="bi bi-chevron-down"></i></summary><div>
                 <p class="ui-help" style="margin:0 0 10px">Si no pones cabinas concretas, se vende «Garantizada» (la naviera asigna el número).</p>
                 <button type="button" class="ev-btn ghost sm" data-ca="cubierta"><i class="bi bi-plus-lg"></i> Cubierta</button>
@@ -719,8 +849,7 @@
                     <input value="${esc(k.numero || '')}" data-cab="${t.clave}" data-i="${i}" data-campo="numero" placeholder="N.º" maxlength="10">
                     <select data-cab="${t.clave}" data-i="${i}" data-campo="cubierta"><option value="">Cubierta ?</option>${C.cubiertas.map(u => `<option value="${u.numero}" ${k.cubierta === u.numero ? 'selected' : ''}>Cub. ${u.numero}</option>`).join('')}</select>
                     <button type="button" data-ca="qcab" data-k="${t.clave}" data-i="${i}" title="Quitar">×</button></span>`).join('')}
-                    <button type="button" class="ev-btn ghost sm" data-ca="cab" data-k="${t.clave}"><i class="bi bi-plus-lg"></i> Cabina</button>
-                    <label class="ui-switch" style="margin-left:6px"><input type="checkbox" data-tipo="${t.clave}" data-campo="permite_Garantizada" data-t="bool" ${t.permite_Garantizada ? 'checked' : ''}><span class="tr"></span> «Garantizada»</label></div>`).join('')}
+                    <button type="button" class="ev-btn ghost sm" data-ca="cab" data-k="${t.clave}"><i class="bi bi-plus-lg"></i> Cabina</button></div>`).join('')}
             </div></details>`;
     }
 
@@ -732,32 +861,43 @@
         const tipos = CATS.flatMap(k => C.cabinas.filter(t => t.categoria === k));
         const n = noches();
         const tar = tarSel || 'auto';
+        const libres = CABINAS_SUG.filter(s => !C.cabinas.some(t => (t.nombre || '').trim().toLowerCase() === s.n.toLowerCase()));
         $('#ePrecios').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Agrega las fechas de salida y escribe el precio <b>por persona</b> de cada tipo de cabina (base 2 personas compartiendo). ${opc}</span></div>
             <div class="cz-blq"><h3><i class="bi bi-calendar3"></i> Fechas de salida ${n ? `<small>la llegada = salida + ${n} noches</small>` : ''}</h3>
-                <div class="ui-row r4" style="align-items:end">
-                    <div class="ui-f"><label>Una fecha</label><input type="date" id="prFecha" min="${hoy}"></div>
-                    <div class="ui-f"><button type="button" class="ev-btn ghost" data-pr="fecha"><i class="bi bi-plus-lg"></i> Agregar fecha</button></div>
-                    <div class="ui-f"><label>O varias: desde / hasta / cada (días)</label><div style="display:flex;gap:6px"><input type="date" id="prDesde"><input type="date" id="prHasta"><input type="number" id="prCada" value="7" min="1" style="width:70px"></div></div>
-                    <div class="ui-f"><button type="button" class="ev-btn ghost" data-pr="serie"><i class="bi bi-calendar-plus"></i> Agregar serie</button></div>
+                <div class="cz-fechas2">
+                    <div class="cz-fcaja"><b><i class="bi bi-calendar-plus"></i> Una fecha</b>
+                        <label class="cz-c"><span>Fecha de salida</span><input type="date" id="prFecha" min="${hoy}"></label>
+                        <button type="button" class="ev-btn" data-pr="fecha"><i class="bi bi-plus-lg"></i> Agregar fecha</button></div>
+                    <div class="cz-fcaja"><b><i class="bi bi-calendar-range"></i> Varias fechas de una vez</b>
+                        <div class="cz-g3">
+                            <label class="cz-c"><span>Desde</span><input type="date" id="prDesde" min="${hoy}"></label>
+                            <label class="cz-c"><span>Hasta</span><input type="date" id="prHasta" min="${hoy}"></label>
+                            <label class="cz-c"><span>Cada cuántos días</span><input type="number" id="prCada" value="7" min="1"></label>
+                        </div>
+                        <small class="ui-help" style="margin:0">Ej. desde 01/11 hasta 31/12 cada 7 días = una salida por semana.</small>
+                        <button type="button" class="ev-btn ghost" data-pr="serie"><i class="bi bi-calendar-plus"></i> Agregar todas</button></div>
                 </div>
             </div>
             <div class="cz-blq"><h3><i class="bi bi-currency-dollar"></i> Precios por persona en ${EV.simbolo()} <span class="sp"></span>
-                ${C.tarifas.length > 1 ? `<select id="prTarifa" title="Tarifa">${C.tarifas.map(f => `<option value="${f.clave}" ${f.clave === tarSel ? 'selected' : ''}>${esc(f.codigo || f.nombre || '¿?')}</option>`).join('')}</select>` : ''}
+                ${C.tarifas.length > 1 ? `<label class="cz-c" style="flex-direction:row;align-items:center;gap:6px"><span>Tarifa</span><select id="prTarifa">${C.tarifas.map(f => `<option value="${f.clave}" ${f.clave === tarSel ? 'selected' : ''}>${esc(f.codigo || f.nombre || '¿?')}</option>`).join('')}</select></label>` : ''}
                 ${C.salidas.length > 1 && tipos.length ? '<button type="button" class="ev-btn ghost sm" data-pr="copiar"><i class="bi bi-files"></i> Copiar la 1.ª fecha a todas</button>' : ''}</h3>
+                <div class="cz-barra" style="margin-bottom:10px"><span class="cz-c" style="flex-direction:row;align-items:center;gap:8px"><span>Agregar otra columna (tipo de cabina)</span>
+                    <select id="prNuevaCol"><option value="">Elige…</option>${libres.map(s => `<option value="${esc(s.n)}">${CAT_CORTO[s.k]} · ${esc(s.n)}</option>`).join('')}<option value="__otro">Otro (escribir nombre)…</option></select></span>
+                    <button type="button" class="ev-btn ghost sm" data-pr="col"><i class="bi bi-plus-lg"></i> Agregar columna</button></div>
                 ${!C.salidas.length ? '<p class="ui-help" style="margin:0">Agrega una fecha arriba para poner precios.</p>'
-                  : !tipos.length ? '<p class="ui-help" style="margin:0">Primero crea los tipos de cabina (paso 5 · botón «Crear los 4 tipos básicos»).</p>'
-                  : `<div style="overflow-x:auto"><table class="cz-grid"><thead><tr><th>Salida</th>${tipos.map(t => `<th><small>${CAT_CORTO[t.categoria]}</small>${esc(t.nombre || '')}</th>`).join('')}<th></th></tr></thead><tbody>
+                  : !tipos.length ? '<p class="ui-help" style="margin:0">Agrega tipos de cabina: aquí arriba («Agregar otra columna») o en el paso 5.</p>'
+                  : `<div style="overflow-x:auto"><table class="cz-grid"><thead><tr><th>Salida</th>${tipos.map(t => `<th style="--c:${COLOR_CAT[t.categoria]}"><small><i class="bi ${ICONO_CAT[t.categoria]}"></i> ${CAT_CORTO[t.categoria]}</small>${(t.nombre || '').trim().toLowerCase() === CAT_CORTO[t.categoria].toLowerCase() ? '' : esc(t.nombre || '')}</th>`).join('')}<th></th></tr></thead><tbody>
                      ${C.salidas.map(s => `<tr class="${s.activo ? '' : 'off'}"><td class="f">${fechaCorta(s.fecha)}${n ? ` <small style="color:var(--ev-muted);font-weight:600">→ ${fechaCorta(masDias(s.fecha, n))}</small>` : ''}${s.fecha <= hoy ? ' <small style="color:#B54708">(pasada)</small>' : ''}</td>
-                        ${tipos.map(t => `<td><input type="number" min="0" step="0.01" data-precio="${s.clave}|${tar}|${t.clave}" value="${pr.get(`${s.clave}|${tarSel}|${t.clave}`) ?? ''}" placeholder="—"></td>`).join('')}
-                        <td><button type="button" class="ui-ibtn" data-pr="act" data-k="${s.clave}" title="${s.activo ? 'Desactivar esta fecha' : 'Activar esta fecha'}"><i class="bi ${s.activo ? 'bi-pause' : 'bi-play'}"></i></button>
+                        ${tipos.map(t => `<td><div class="cz-dinero"><b>${EV.simbolo()}</b><input type="number" min="0" step="0.01" data-precio="${s.clave}|${tar}|${t.clave}" value="${pr.get(`${s.clave}|${tarSel}|${t.clave}`) ?? ''}" placeholder="0"></div></td>`).join('')}
+                        <td style="white-space:nowrap"><button type="button" class="ui-ibtn" data-pr="act" data-k="${s.clave}" title="${s.activo ? 'Desactivar esta fecha' : 'Activar esta fecha'}"><i class="bi ${s.activo ? 'bi-pause' : 'bi-play'}"></i></button>
                             <button type="button" class="ui-ibtn danger" data-pr="qsal" data-k="${s.clave}" title="Quitar fecha"><i class="bi bi-x-lg"></i></button></td></tr>`).join('')}
                      </tbody></table></div>`}
                 ${!C.salidas.length ? '' : `<p style="margin:10px 0 0"><button type="button" class="ev-btn ghost sm" data-pr="limpiar-fechas"><i class="bi bi-trash3"></i> Quitar todas las fechas</button></p>`}
             </div>
             <details class="cz-blq cz-mas" ${C.tarifas.length > 1 ? 'open' : ''}><summary><i class="bi bi-tag"></i> Avanzado: varios códigos de tarifa ${opc} <i class="bi bi-chevron-down"></i></summary><div>
                 <p class="ui-help" style="margin:0 0 10px">Si el crucero tiene un solo precio, no hace falta: se usa «BEST_PRICE». Agrega otros (ej. «Florida Resident») si la naviera da precios distintos.</p>
-                ${C.tarifas.map((f, i) => `<div style="display:flex;gap:8px;margin-bottom:6px">${inp(`tarifas.${i}.codigo`, 'maxlength="50" placeholder="Código, ej. FLRES" style="width:180px"')}${inp(`tarifas.${i}.nombre`, 'maxlength="100" placeholder="Nombre, ej. Florida Resident"')}
-                    <button type="button" class="ui-ibtn danger" data-pr="qtar" data-i="${i}" title="Quitar tarifa y sus precios"><i class="bi bi-x-lg"></i></button></div>`).join('')}
+                ${C.tarifas.map((f, i) => `<div class="cz-g3" style="margin-bottom:6px;grid-template-columns:200px 1fr auto"><label class="cz-c"><span>Código</span>${inp(`tarifas.${i}.codigo`, 'maxlength="50" placeholder="Ej. FLRES"')}</label><label class="cz-c"><span>Nombre que se ve</span>${inp(`tarifas.${i}.nombre`, 'maxlength="100" placeholder="Ej. Florida Resident"')}</label>
+                    <button type="button" class="ui-ibtn danger" data-pr="qtar" data-i="${i}" title="Quitar tarifa y sus precios" style="align-self:end"><i class="bi bi-x-lg"></i></button></div>`).join('')}
                 <button type="button" class="ev-btn ghost sm" data-pr="tarifa"><i class="bi bi-plus-lg"></i> Tarifa</button>
             </div></details>`;
     }
@@ -787,7 +927,15 @@
         const nav = C.itinerario.filter(d => d.en_Navegacion).length;
         const acts = C.secciones.reduce((s, x) => s + x.actividades.length, 0);
         const n = noches();
-        const home = C.activo
+        // Crucero NUEVO muy incompleto → se guarda Desactivado (pedido de la usuaria); con el botón se puede activar igual
+        const faltan = [!desde.length && 'fechas futuras con precio', !fotos && 'fotos', !C.itinerario.length && 'itinerario', !(C.barco_Nombre || '').trim() && 'barco', !C.cabinas.length && 'cabinas'].filter(Boolean);
+        const incompleto = !desde.length || faltan.length >= 3;
+        if (!C.id_Crucero && incompleto && C.activo && !C._activoElegido) { C.activo = false; C._autoDesactivado = true; }
+        if (!incompleto && C._autoDesactivado && !C._activoElegido) { C.activo = true; C._autoDesactivado = false; }
+        const aviso = C._autoDesactivado && !C.activo
+            ? `<div class="cz-home no"><i class="bi bi-pause-circle"></i><div style="flex:1">Se guardará <b>Desactivado</b> porque todavía falta: <b>${faltan.join(', ')}</b>. Así no sale a medias en la web; cuando lo completes, actívalo (paso 1 o el botón ▶ de la lista).</div>
+                <button type="button" class="ev-btn sm" data-res="activar"><i class="bi bi-broadcast"></i> Activarlo igualmente</button></div>` : '';
+        const home = aviso ? aviso : C.activo
             ? `<div class="cz-home ok"><i class="bi bi-house-check"></i><div>Al guardar sale en la <b>Home</b> (sección CRUCEROS) en la tarjeta <b>${esc((cats.length ? cats : ['Cruceros']).join('», «'))}</b>${desde.length ? `, con precio desde <b>${dinero(Math.min(...desde))}</b>` : ' (sin precio «desde» hasta que tenga una fecha futura con precio)'}.</div></div>`
             : `<div class="cz-home no"><i class="bi bi-eye-slash"></i><div>Está <b>desactivado</b>: se guarda pero <b>no sale</b> en la web ni en la Home. Actívalo en «Datos» si quieres que salga.</div></div>`;
         $('#eResumen').innerHTML = `${home}<div class="cz-res">
@@ -946,6 +1094,7 @@
                 if (t.dataset.t === 'num') v = t.value === '' ? null : Number(t.value);
                 asignar(t.dataset.b, v);
                 if (t.dataset.b === 'titulo') $('#edTitulo').textContent = v || 'Nuevo crucero';
+                if (t.dataset.b === 'activo') C._activoElegido = true;   // la usuaria eligió: ya no se cambia solo
                 if (t.dataset.b === 'barco_Nombre') { const b = D.barcos.find(x => x.nombre.toLowerCase() === String(v).trim().toLowerCase()); if (b && !C.naviera_Nombre?.trim()) { C.naviera_Nombre = b.naviera; const n = $('[data-b="naviera_Nombre"]'); if (n) n.value = b.naviera; } }
             } else if (t.dataset.tipo) {
                 const x = C.cabinas.find(k => k.clave === t.dataset.tipo);
@@ -965,7 +1114,7 @@
             leer(t);
             if (t.dataset.b?.endsWith('en_Navegacion')) pintarItin();
             if (t.dataset.b === 'noches') { pintarItin(); }
-            if (t.dataset.tipo && t.dataset.campo === 'categoria') pintarCabinas();
+            if (t.dataset.tipo && (t.dataset.campo === 'categoria' || t.dataset.campo === 'permite_Garantizada')) { pintarCabinas(); pintarPrecios(); }
             if (t.dataset.b?.startsWith('cubiertas.')) pintarCabinas();
             marcarPasos();
         });
@@ -981,6 +1130,7 @@
             const pq = e.target.closest('[data-pend-quitar]');
             if (pq) { e.preventDefault(); const [u, i] = pq.dataset.pendQuitar.split(':'); if (u === 'GALERIA') P.GALERIA.splice(+i, 1); else P[u] = null; pintarFotos(); marcarPasos(); return; }
             const ir = e.target.closest('[data-ir]'); if (ir) { edTabs.ir(ir.dataset.ir); return; }
+            if (e.target.closest('[data-res="activar"]')) { C.activo = true; C._activoElegido = true; C._autoDesactivado = false; pintarResumen(); pintarDatos(); return; }
             if (e.target.closest('[data-cat-agregar]')) {
                 const v = $('#edCatNueva').value.trim(); if (!v) { $('#edCatNueva').focus(); return; }
                 const ya = D.categorias.find(g => g.nombre.toLowerCase() === v.toLowerCase());
@@ -997,6 +1147,9 @@
             if (b.dataset.it === 'nuevo') { C.itinerario.push(dia(C.itinerario.length + 1)); pintarItin(); setTimeout(() => $$('#eItin .cz-dia').at(-1)?.querySelector('input:not([type=checkbox])')?.focus(), 50); }
             else if (b.dataset.it === 'generar') { const n = noches(); while (C.itinerario.length < n + 1) C.itinerario.push(dia(C.itinerario.length + 1)); if (C.puerto_Salida && !C.itinerario[0].puerto) C.itinerario[0].puerto = C.puerto_Salida; const u = C.itinerario[n]; if (u && !u.puerto) u.puerto = C.puerto_Llegada || C.puerto_Salida || ''; pintarItin(); }
             else if (b.dataset.it === 'quitar') { C.itinerario.splice(i, 1); pintarItin(); }
+            else if (b.dataset.it === 'mar' || b.dataset.it === 'puerto') { C.itinerario[i].en_Navegacion = b.dataset.it === 'mar'; pintarItin(); }
+            else if (b.dataset.it === 'arriba' || b.dataset.it === 'abajo') { const j2 = b.dataset.it === 'arriba' ? i - 1 : i + 1; [C.itinerario[i], C.itinerario[j2]] = [C.itinerario[j2], C.itinerario[i]]; pintarItin(); }
+            else if (b.dataset.it === 'insertar') { C.itinerario.splice(i + 1, 0, dia(i + 2)); pintarItin(); }
             // a bordo
             else if (b.dataset.bo === 'seccion') { C.secciones.push({ titulo: '', actividades: [] }); pintarBordo(); }
             else if (b.dataset.bo === 'base') { ['Comida y bebida', 'Entretenimiento', 'Relajación', 'Otro'].forEach(t => { if (!C.secciones.some(s => (s.titulo || '').toLowerCase() === t.toLowerCase())) C.secciones.push({ titulo: t, actividades: [] }); }); pintarBordo(); }
@@ -1004,7 +1157,10 @@
             else if (b.dataset.bo === 'subir') { [C.secciones[i - 1], C.secciones[i]] = [C.secciones[i], C.secciones[i - 1]]; pintarBordo(); }
             else if (b.dataset.bo === 'act') { C.secciones[i].actividades.push({ titulo: '', descripcion: '', imagen: null }); pintarBordo(); }
             else if (b.dataset.bo === 'qact') { C.secciones[i].actividades.splice(j, 1); pintarBordo(); }
+            else if (b.dataset.bo === 'sug') { C.secciones.push({ titulo: b.dataset.t, actividades: [] }); pintarBordo(); }
+            else if (b.dataset.bo === 'sugact') { C.secciones[i].actividades.push({ titulo: b.dataset.t, descripcion: '', imagen: null }); pintarBordo(); }
             // cabinas
+            else if (b.dataset.ca === 'sug') { const s = CABINAS_SUG.find(x => x.n === b.dataset.n); if (s) C.cabinas.push({ ...tipoNuevo(s.k, s.n), capacidad_Min: s.min, capacidad_Max: s.max, metros: s.m }); pintarCabinas(); pintarPrecios(); }
             else if (b.dataset.ca === 'basicos') { CATS.forEach(c => { if (!C.cabinas.some(t => t.categoria === c)) C.cabinas.push(tipoNuevo(c, CAT_CORTO[c])); }); pintarCabinas(); }
             else if (b.dataset.ca === 'tipo') { C.cabinas.push(tipoNuevo('INTERIOR', '')); pintarCabinas(); }
             else if (b.dataset.ca === 'qtipo') { C.cabinas = C.cabinas.filter(t => t.clave !== k); C.precios = C.precios.filter(p => p.cabina !== k); pintarCabinas(); }
@@ -1013,6 +1169,20 @@
             else if (b.dataset.ca === 'cab') { C.cabinas.find(t => t.clave === k).cabinas.push({ numero: '', cubierta: null, disponible: true }); pintarCabinas(); }
             else if (b.dataset.ca === 'qcab') { C.cabinas.find(t => t.clave === k).cabinas.splice(i, 1); pintarCabinas(); }
             // fechas, tarifas y precios
+            else if (b.dataset.pr === 'col') {
+                const v = $('#prNuevaCol').value;
+                if (!v) { EV.toast('Elige qué tipo de cabina agregar.', 'err'); return; }
+                if (v === '__otro') {
+                    EV.pedir({ titulo: 'Otro tipo de cabina', etiqueta: 'Nombre (ej. Yacht Club, Haven, Spa Suite…)', maxlength: 150, si: 'Agregar' }).then(nom => {
+                        if (!nom?.trim()) return;
+                        C.cabinas.push(tipoNuevo('SUITE', nom.trim())); pintarCabinas(); pintarPrecios(); cambio();
+                        EV.toast('Columna agregada. En el paso 5 puedes cambiar su grupo (Interior, Exterior, Balcón o Suite) y sus datos.');
+                    });
+                    return;
+                }
+                const s = CABINAS_SUG.find(x => x.n === v);
+                C.cabinas.push({ ...tipoNuevo(s.k, s.n), capacidad_Min: s.min, capacidad_Max: s.max, metros: s.m }); pintarCabinas(); pintarPrecios();
+            }
             else if (b.dataset.pr === 'fecha') {
                 const f = $('#prFecha').value; if (!f) { EV.toast('Elige la fecha.', 'err'); $('#prFecha').focus(); return; }
                 if (C.salidas.some(s => s.fecha === f)) { EV.toast('Esa fecha ya está.', 'err'); return; }
