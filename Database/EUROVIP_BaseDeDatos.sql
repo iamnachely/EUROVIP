@@ -4658,6 +4658,13 @@ GO
    22/10/2026  CARPETAS DE FOTOS DEFINITIVAS (pedido de la usuaria): destino, pais, traslado, excursion, circuito,
                circuito_itinerario, slider, crucero, hotel (paquetes = ofertas), bookingmotor (pantalla Hoteles) y
                hoteles/{id_alojamiento} (alojamientos). Sin cambios de datos: no había fotos de esos tipos en este equipo.
+   22/10/2026  RUTA DE FOTOS FIJA (pedido de la usuaria: "usa esta ruta C:\inetpub\wwwroot\photosVacacionalparce\eurovip\hotel\
+               miches.webp"). La foto de la tarjeta Miches (inicio 114) se subió con una app sin la sección Multimedia en su
+               appsettings: el archivo quedó en el wwwroot\multimedia de esa app y la URL como /multimedia/hotel/miches.webp.
+               Ahora, si falta la sección, la app usa igualmente C:\inetpub\wwwroot\photosVacacionalparce\eurovip y
+               https://fotos.eurovip.com.do/eurovip. Dato: inicio 114 caratulaDestino → https://fotos.eurovip.com.do/eurovip/hotel/miches.webp.
+               Pendiente en el servidor: pasar lo de <app>\wwwroot\multimedia\ a photosVacacionalparce\eurovip\ (Miches y el
+               destino Punta Cana, que también quedó como /multimedia/…).
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

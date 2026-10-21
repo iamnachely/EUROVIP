@@ -110,7 +110,7 @@ namespace EuroVip.Services
     ///    hotel/punta-cana.webp, traslado/traslado-punta-cana.webp, destino/punta-cana-banner.webp, galería -1, -2… — nunca se sobrescribe.
     ///    Carpetas: destino, pais, traslado, excursion, circuito, circuito_itinerario, slider, crucero, hotel (paquetes),
     ///    bookingmotor (pantalla Hoteles) y hoteles/{id_alojamiento} (alojamientos).
-    ///    URL: {Multimedia:Url}/ + la misma ruta. Por defecto wwwroot/multimedia y "/multimedia".
+    ///    URL: {Multimedia:Url}/ + la misma ruta. Por defecto C:\inetpub\wwwroot\photosVacacionalparce\eurovip y https://fotos.eurovip.com.do/eurovip.
     ///  • Tipos del documento (ALOJAMIENTO, CIRCUITO, EXCURSION, TRASLADO) + DESTINO, PAIS y HOTEL (tarjetas de la pantalla Hoteles).
     ///  • NO van aquí las fotos del itinerario de circuito ni las del slider: siguen como estaban.
     ///  • Para que lo viejo siga funcionando, al cambiar la PORTADA se copia la URL en la columna de antes
@@ -144,10 +144,16 @@ namespace EuroVip.Services
         public Multimedia(ICircuitoRepository db, IWebHostEnvironment env, IConfiguration cfg, ILogger<Multimedia> log)
         {
             _db = db; _env = env; _log = log; _cfg = cfg;
-            var c = cfg["Multimedia:CarpetaFisica"];
-            CarpetaBase = string.IsNullOrWhiteSpace(c) ? Path.Combine(env.WebRootPath, "multimedia") : c.Trim();
-            UrlBase = (string.IsNullOrWhiteSpace(cfg["Multimedia:Url"]) ? "/multimedia" : cfg["Multimedia:Url"]!.Trim()).TrimEnd('/');
+            CarpetaBase = CarpetaDe(cfg);
+            UrlBase = UrlDe(cfg);
         }
+
+        // Carpeta y URL de las fotos (pedido de la usuaria). Si appsettings.json no trae la sección Multimedia, se usan ESTAS
+        // (antes caía en wwwroot\multimedia del proyecto y la URL quedaba "/multimedia/…", que la web no puede ver).
+        public const string CarpetaPorDefecto = @"C:\inetpub\wwwroot\photosVacacionalparce\eurovip";
+        public const string UrlPorDefecto = "https://fotos.eurovip.com.do/eurovip";
+        public static string CarpetaDe(IConfiguration cfg) => string.IsNullOrWhiteSpace(cfg["Multimedia:CarpetaFisica"]) ? CarpetaPorDefecto : cfg["Multimedia:CarpetaFisica"]!.Trim();
+        public static string UrlDe(IConfiguration cfg) => (string.IsNullOrWhiteSpace(cfg["Multimedia:Url"]) ? UrlPorDefecto : cfg["Multimedia:Url"]!.Trim()).TrimEnd('/');
 
         public string Url(string ruta) => $"{UrlBase}/{ruta}";
         public TipoMultimedia? Tipo(string? tipo) => tipo is not null && Tipos.TryGetValue(tipo.Trim(), out var t) ? t : null;

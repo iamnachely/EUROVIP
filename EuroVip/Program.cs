@@ -104,13 +104,10 @@ app.UseSerilogRequestLogging();
 // /health sin redirección a https: el despliegue lo consulta por http en el propio servidor
 app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/health"), b => b.UseHttpsRedirection());
 app.UseStaticFiles();
-// Base de las fotos de productos (Multimedia:CarpetaFisica). Por defecto wwwrootmultimedia (ya la sirve UseStaticFiles);
-// si se configura otra carpeta (p. ej. D:EuroVIPImagenesmultimedia) se publica en la ruta de Multimedia:Url.
+// Base de las fotos de productos (Multimedia:CarpetaFisica; si falta, C:\inetpub\wwwroot\photosVacacionalparce\eurovip).
 {
-    var carpetaMultimedia = app.Configuration["Multimedia:CarpetaFisica"];
-    var urlMultimedia = (app.Configuration["Multimedia:Url"] ?? "/multimedia").TrimEnd('/');
-    if (string.IsNullOrWhiteSpace(carpetaMultimedia)) Directory.CreateDirectory(Path.Combine(app.Environment.WebRootPath, "multimedia"));
-    else
+    var carpetaMultimedia = EuroVip.Services.Multimedia.CarpetaDe(app.Configuration);
+    var urlMultimedia = EuroVip.Services.Multimedia.UrlDe(app.Configuration);
     {
         // Con URL web (https://fotos.eurovip.com.do/…) la carpeta se publica TAMBIÉN en /fotos-locales: si el sitio de fotos
         // aún no tiene el archivo (p. ej. al trabajar en local), la pantalla lo pide aquí (eurovip.js, meta "ev-fotos").
