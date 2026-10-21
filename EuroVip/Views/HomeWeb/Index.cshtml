@@ -81,7 +81,7 @@
     .hw-sec { margin-top: 18px; border-radius: 22px; border: 1.5px solid transparent; padding: 12px; transition: border-color .2s, background .2s, opacity .2s; }
     .hw-sec:hover { border-color: var(--ev-line); }
     .hw-sec.oculta { opacity: .55; }
-    .hw-sec.arrastrando { opacity: .4; }
+    .hw-sec.arrastrando { opacity: .55; border: 2.5px dashed var(--ev-teal) !important; background: color-mix(in srgb, var(--ev-aqua) 14%, var(--ev-surface)); }
     .hw-sec.sobre { border-color: var(--ev-teal); background: var(--ev-grad-soft); }
     .hw-sec-h { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
     .hw-sec-h .asa { cursor: grab; color: var(--ev-muted); font-size: 18px; padding: 4px; border-radius: 8px; }
@@ -96,7 +96,22 @@
     .hw-cards.sobre { background: color-mix(in srgb, var(--ev-aqua) 18%, transparent); outline: 2px dashed var(--ev-teal); outline-offset: 4px; }
     .hw-card { position: relative; border-radius: 18px; overflow: hidden; background: var(--ev-surface); border: 1px solid var(--ev-line); cursor: grab; transition: transform .25s var(--ev-ease), box-shadow .25s, opacity .2s; user-select: none; }
     .hw-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
-    .hw-card.arrastrando { opacity: .35; transform: scale(.97); }
+    .hw-card.arrastrando { opacity: 1; transform: none; border: 2.5px dashed var(--ev-teal); background: color-mix(in srgb, var(--ev-aqua) 22%, var(--ev-surface)); box-shadow: 0 0 0 6px rgba(43,212,196,.18); }
+    .hw-card.arrastrando > * { opacity: 0; }
+    .hw-card.arrastrando::after { content: "Va aquí"; position: absolute; inset: 0; display: grid; place-items: center; font: 800 14px var(--ev-font); color: var(--ev-deep); letter-spacing: .02em; }
+    /* Mientras se arrastra: número de posición en cada tarjeta y la sección donde caerá resaltada */
+    .hw-ordenando .hw-cards { counter-reset: pos; }
+    .hw-ordenando .hw-card { counter-increment: pos; }
+    .hw-ordenando .hw-card::before { content: counter(pos); position: absolute; left: 10px; top: 42px; z-index: 6; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 99px; background: #0B1215; color: #74F2E6; font: 800 12px var(--ev-font); display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+    .hw-ordenando .hw-card:hover { transform: none; box-shadow: none; }
+    .hw-sec.destino { border-color: var(--ev-teal) !important; box-shadow: 0 0 0 4px rgba(43,212,196,.22); }
+    .hw-sec.destino .hw-sec-h::after { content: "⬇ Suéltala aquí"; order: 99; font: 800 12px var(--ev-font); padding: 5px 10px; border-radius: 99px; background: var(--ev-teal); color: #0B1215; animation: hwLatido 1s ease-in-out infinite; }
+    @@keyframes hwLatido { 50% { transform: scale(1.06); } }
+    .hw-guia { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 140%); z-index: 400; display: flex; gap: 10px; align-items: center; padding: 12px 18px; border-radius: 16px; background: #0B1215; color: #fff; font: 700 14px var(--ev-font); box-shadow: 0 12px 40px rgba(0,0,0,.35); transition: transform .25s var(--ev-ease); pointer-events: none; max-width: calc(100vw - 32px); }
+    .hw-guia.on { transform: translate(-50%, 0); }
+    .hw-guia i { color: #74F2E6; font-size: 18px; }
+    .hw-guia b { color: #74F2E6; }
+    .hw-guia .pos { padding: 3px 9px; border-radius: 99px; background: #74F2E6; color: #0B1215; font-weight: 800; white-space: nowrap; }
     .hw-card.oculta .img, .hw-card.oculta .tx { opacity: .45; filter: grayscale(.8); }
     .hw-card .img { aspect-ratio: 4 / 3; background: var(--ev-grad); position: relative; display: grid; place-items: center; font-size: 26px; font-weight: 800; color: rgba(11,18,21,.45); }
     .hw-card .img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -413,6 +428,28 @@ const HW = (() => {
         const items = $$(sel, cont).filter(e => !e.classList.contains('arrastrando'));
         return items.find(e => { const r = e.getBoundingClientRect(); return y < r.top + r.height / 2 && (x < r.left + r.width / 2 || y < r.top); });
     }
+    // Guía mientras se arrastra: barra abajo con «qué, a dónde y en qué posición»
+    const guia = document.body.appendChild(Object.assign(document.createElement('div'), { className: 'hw-guia', role: 'status' }));
+    const nombreSec = cont => cont?.dataset.cards === '' ? 'Sin sección' : (D.contenedores.find(c => String(c.id_Contenedor) === cont?.dataset.cards)?.nombre || '');
+    const tituloCard = el => el.querySelector('.tx b')?.textContent.trim() || 'la tarjeta';
+    function pintarGuia() {
+        if (!arrastre) return;
+        if (arrastre.tipo === 'card') {
+            const cont = arrastre.el.parentElement, cards = $$('.hw-card', cont), pos = cards.indexOf(arrastre.el) + 1;
+            $$('.hw-sec.destino').forEach(s => s.classList.remove('destino')); cont.closest('.hw-sec')?.classList.add('destino');
+            const cambia = cont !== arrastre.origen;
+            guia.innerHTML = `<i class="bi bi-arrows-move"></i> Moviendo <b>«${esc(tituloCard(arrastre.el))}»</b> ${cambia ? `de <b>${esc(nombreSec(arrastre.origen))}</b> ` : ''}→ <b>${esc(nombreSec(cont))}</b> <span class="pos">posición ${pos} de ${cards.length}</span>`;
+        } else if (arrastre.tipo === 'sec') {
+            const secs = $$('#hwSecciones .hw-sec'), pos = secs.indexOf(arrastre.el) + 1;
+            guia.innerHTML = `<i class="bi bi-arrows-move"></i> Moviendo la sección <b>${esc(arrastre.el.querySelector('.hw-sec-h h3, .hw-sec-h b, .hw-sec-h')?.textContent.trim().split('\n')[0] || '')}</b> <span class="pos">posición ${pos} de ${secs.length}</span>`;
+        } else return;
+        guia.classList.add('on');
+    }
+    // Si se acerca al borde de la ventana mientras arrastra, la página se desplaza sola
+    let autoScroll = 0;
+    const desplazar = y => { autoScroll = y < 90 ? -18 : y > innerHeight - 90 ? 18 : 0; };
+    setInterval(() => { if (arrastre && autoScroll) scrollBy(0, autoScroll); }, 16);
+
     document.addEventListener('dragstart', e => {
         const card = e.target.closest?.('.hw-card'), asa = e.target.closest?.('[data-asa]'), sl = e.target.closest?.('.cr-card[draggable="true"]');
         if (asa) { arrastre = { tipo: 'sec', el: asa.closest('.hw-sec') }; }
@@ -420,10 +457,14 @@ const HW = (() => {
         else if (sl) arrastre = { tipo: 'slide', el: sl };
         else return;
         arrastre.el.classList.add('arrastrando');
+        if (arrastre.tipo === 'card') document.body.classList.add('hw-ordenando');
         e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', '');
+        requestAnimationFrame(pintarGuia);
     });
     document.addEventListener('dragover', e => {
         if (!arrastre) return;
+        desplazar(e.clientY);
+        requestAnimationFrame(pintarGuia);
         if (arrastre.tipo === 'card') {
             const cont = e.target.closest('.hw-cards'); if (!cont) return;
             e.preventDefault();
@@ -445,15 +486,20 @@ const HW = (() => {
     document.addEventListener('drop', e => { if (arrastre) e.preventDefault(); });
     document.addEventListener('dragend', async () => {
         if (!arrastre) return;
-        const a = arrastre; arrastre = null;
+        const a = arrastre; arrastre = null; autoScroll = 0;
         a.el.classList.remove('arrastrando'); $$('.sobre').forEach(x => x.classList.remove('sobre'));
+        document.body.classList.remove('hw-ordenando'); $$('.hw-sec.destino').forEach(s => s.classList.remove('destino'));
+        setTimeout(() => guia.classList.remove('on'), 300);
         try {
             if (a.tipo === 'card') {
                 const cont = a.el.parentElement, sec = cont.dataset.cards;
-                const ids = $$('.hw-card', cont).map(c => +c.dataset.t);
+                const ids = $$('.hw-card', cont).map(c => +c.dataset.t), id = +a.el.dataset.t, pos = ids.indexOf(id) + 1;
                 await EV.post('/HomeWeb/OrdenTarjetas', { Id_Contenedor: sec === '' ? null : +sec, Ids: ids });
-                if (a.origen !== cont) EV.toast(sec === '' ? 'Tarjeta sacada de la sección.' : `Tarjeta movida a ${D.contenedores.find(c => c.id_Contenedor === +sec)?.nombre}.`);
+                EV.toast(`«${tituloCard(a.el)}» quedó en la posición ${pos} de ${ids.length} en ${nombreSec(cont)}.`);
                 await cargar();
+                // se ve dónde quedó: se lleva a la vista y se ilumina
+                const nueva = document.querySelector(`.hw-card[data-t="${id}"]`);
+                nueva?.scrollIntoView({ behavior: 'smooth', block: 'center' }); EV.resaltar(nueva);
             } else if (a.tipo === 'sec') {
                 await EV.post('/HomeWeb/OrdenSecciones', $$('#hwSecciones .hw-sec').map(s => +s.dataset.sec));
                 EV.toast('Orden de secciones guardado.'); await cargar();
