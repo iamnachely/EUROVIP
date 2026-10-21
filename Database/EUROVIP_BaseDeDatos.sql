@@ -4493,6 +4493,13 @@ GO
    21/10/2026  FASE 22 aplicada SOLO en el 93 (CAMBIO 78 a 81): foto propia de cada tarjeta de la Home (multimedia
                tipo INICIO). Datos: las tarjetas 43 (excursiones) y 92 (traslados) de Punta Cana tenían la foto del
                destino copiada; vuelven a /imagenes/destinos/puntacana.WebP (la de antes, mismo formato que Samaná).
+   21/10/2026  QUITADO OTRA VEZ DEL 29 (TropitoursVDT) todo el esquema Eurovip de la segunda subida (pedido de la
+               usuaria: "nada del esquema Eurovip puede estar en TropitoursVDT del 29; quitar tablas, datos y
+               consultas"). Antes se comprobó que todo era de esa subida (creado 18:50-18:53) y que nadie había
+               escrito después. Una transacción: 148 órdenes (FK, trigger, procedimientos, vista, funciones, 59
+               tablas) + DROP SCHEMA. Quedan 0 objetos Eurovip; los 568 de otros esquemas, iguales antes y después.
+               Como el .10 es espejo del 29, allí también desapareció (espejo SINCRONIZADO, colas en 0).
+               Eurovip queda SOLO en el 93 (desarrollo).
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
