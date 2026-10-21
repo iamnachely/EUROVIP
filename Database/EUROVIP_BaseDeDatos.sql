@@ -3857,6 +3857,17 @@ GO
                en la app del servidor (es donde están los archivos). Nota: spPortalListarPublico y
                spPortalObtenerCircuito (borradores del portal) leen columnas que no existen en multimedia.
 
+   22/10/2026  SUBIDA A PRODUCCIÓN (10.10.10.29, TropitoursVDT, esquema Eurovip). Autorizado por la usuaria
+               SOLO por ese día y SOLO para TropitoursVDT esquema Eurovip del 29 ("sube todo lo que se ha hecho a
+               producción: las tablas, consultas y esquema Eurovip"). El 29 no tenía esquema Eurovip.
+               • Copiado del 93 (desarrollo) tal cual, en UNA transacción: esquema + 59 tablas (con sus PK,
+                 índices, valores por defecto y CHECK) + 92.998 filas con los mismos id + 44 FK + 45 objetos
+                 (32 procedimientos, 11 funciones, la vista vMultimedia y el trigger trInicioSinSeccion).
+               • Primero se ensayó con ROLLBACK; luego se aplicó. Comprobado: mismas tablas, filas, FK, CHECK,
+                 índices y objetos que el 93, FK/CHECK confiables y las 59 tablas con la misma suma de control.
+               • No se tocó nada fuera del esquema Eurovip (0 objetos nuevos en otros esquemas) ni ViajeVDT.
+               • Desde ese día el 29 tiene una COPIA: lo que se cambie después en el 93 no pasa solo al 29.
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
