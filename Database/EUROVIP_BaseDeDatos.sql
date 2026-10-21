@@ -3875,6 +3875,14 @@ GO
                • El 29 quedó sin esquema Eurovip; los 568 objetos de otros esquemas, iguales antes y después.
                • NUNCA MÁS se escribe en el 10.10.10.29. Producción de Eurovip = 10.10.10.10.
 
+   21/10/2026  PRODUCCIÓN = 10.10.10.10, pero su TropitoursVDT es un ESPEJO (database mirroring FULL) del
+               10.10.10.29, que es el PRINCIPAL: en el .10 no se puede escribir. A pedido de la usuaria ("si es
+               espejo súbelo al .29 y revisa que se vea en el .10; solo lo de EurovipBack y los datos") se volvió
+               a subir el esquema Eurovip del 93 al 29: ensayo con ROLLBACK y luego aplicado. 59 tablas, 92.998
+               filas, 44 FK, 45 objetos; mismas cantidades y suma de control que el 93; los 568 objetos de otros
+               esquemas del 29, iguales. Espejo comprobado: PRINCIPAL/MIRROR SINCRONIZADO, mismo LSN en los dos
+               servidores y colas de envío y de rehacer en 0 (el .10 recibió todo).
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
