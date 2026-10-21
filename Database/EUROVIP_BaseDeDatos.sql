@@ -3868,6 +3868,13 @@ GO
                • No se tocó nada fuera del esquema Eurovip (0 objetos nuevos en otros esquemas) ni ViajeVDT.
                • Desde ese día el 29 tiene una COPIA: lo que se cambie después en el 93 no pasa solo al 29.
 
+   21/10/2026  QUITADO DEL 10.10.10.29 todo el esquema Eurovip subido ese mismo día (pedido de la usuaria: "no volver
+               a tocar el 29 nunca más; quitar lo que se agregó de Eurovip en el 29; pasar del 93 al 10.10.10.10").
+               • Antes se comprobó que todo lo del esquema Eurovip del 29 era de esa subida (creado 17:53-17:56).
+               • Una transacción: 44 FK, trigger, 32 procedimientos, vista, 11 funciones, 59 tablas y el esquema.
+               • El 29 quedó sin esquema Eurovip; los 568 objetos de otros esquemas, iguales antes y después.
+               • NUNCA MÁS se escribe en el 10.10.10.29. Producción de Eurovip = 10.10.10.10.
+
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
