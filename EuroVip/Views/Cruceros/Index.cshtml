@@ -131,7 +131,20 @@
     .vz-acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
     .vz-act img, .vz-act .sin { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 8px; background: var(--ev-surface-2); display: block; }
     .vz-act b { display: block; margin-top: 6px; font-size: 14px; }
+    .vz-act { cursor: pointer; border-radius: 10px; padding: 4px; transition: background .2s; }
+    .vz-act:hover { background: var(--ev-surface-2); }
     .vz-act small { color: #00337F; font-weight: 800; }
+    .vz-act:hover small { text-decoration: underline; }
+    /* Ventana de una actividad (como el «Leer más..» de la web) */
+    .vz-modal { position: fixed; inset: 0; z-index: 300; background: rgba(11,18,21,.55); display: grid; place-items: center; padding: 20px; animation: vzIn .2s ease; }
+    .vz-modal > div { position: relative; background: var(--ev-surface); border-radius: 18px; overflow: hidden; width: min(760px, 100%); max-height: 90vh; overflow-y: auto; box-shadow: var(--ev-shadow-lg); }
+    .vz-modal img { width: 100%; max-height: 420px; object-fit: cover; display: block; }
+    .vz-modal .tx { padding: 18px 24px 24px; }
+    .vz-modal h3 { margin: 0 0 10px; font-size: 24px; font-weight: 800; }
+    .vz-modal p { margin: 0; white-space: pre-line; line-height: 1.6; color: var(--ev-text); }
+    .vz-modal .x { position: absolute; right: 12px; top: 12px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: #fff; box-shadow: var(--ev-shadow); cursor: pointer; font-size: 16px; }
+    .vz-modal .nav { display: flex; justify-content: space-between; gap: 8px; padding: 0 24px 18px; }
+    @@keyframes vzIn { from { opacity: 0; } }
     .vz-fechas { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
     .vz-fecha { border: 1px solid var(--ev-line); border-radius: 12px; padding: 12px; text-align: center; font-size: 13px; cursor: pointer; }
     .vz-fecha.on { border-color: #00337F; background: #E0F4FE; }
@@ -862,9 +875,10 @@
                         ${t.descripcion ? `<div style="font-size:13px;margin-top:4px">${esc(t.descripcion)}</div>` : ''}
                         <div style="margin-top:6px"><small>Desde</small> <span class="pr">${p ? dinero(p.precio_Pp) + ' pp' : '—'}</span></div>
                         <small style="color:var(--ev-muted)">${t.cabinas.length ? 'Cabinas: ' + t.cabinas.map(k => `${esc(k.numero)}${k.cubierta ? ' (cub. ' + k.cubierta + ')' : ''}`).join(', ') : ''}${t.permite_Garantizada ? (t.cabinas.length ? ' · ' : '') + 'Garantizada' : ''}</small></div></div>`; }).join('')}` : ''}`;
-            const pintarActs = i => { const x = c.secciones[i]; if (!x || !$('#vzActs')) return; $('#vzActs').innerHTML = `<div class="vz-acts">${x.actividades.map(a => `<div class="vz-act">${a.imagen ? `<img src="${esc(a.imagen)}" alt="">` : '<div class="sin"></div>'}<b>${esc(a.titulo)}</b>${a.descripcion ? `<small title="${esc(a.descripcion)}">Leer más..</small>` : ''}</div>`).join('') || '<p class="ui-help">Sin actividades.</p>'}</div>`; };
+            const pintarActs = i => { const x = c.secciones[i]; if (!x || !$('#vzActs')) return; $('#vzActs').innerHTML = `<div class="vz-acts">${x.actividades.map((a, j) => `<div class="vz-act" data-vact="${i}:${j}" title="Ver la descripción">${a.imagen ? `<img src="${esc(a.imagen)}" alt="">` : '<div class="sin"></div>'}<b>${esc(a.titulo)}</b><small>Leer más..</small></div>`).join('') || '<p class="ui-help">Sin actividades.</p>'}</div>`; };
             pintarActs(0);
             $('#verCuerpo').onclick = e => {
+                const va = e.target.closest('[data-vact]'); if (va) { const [si, ai] = va.dataset.vact.split(':').map(Number); verActividad(c.secciones[si], ai); return; }
                 const v = e.target.closest('[data-v]'), vs = e.target.closest('[data-vsec]'), vsal = e.target.closest('[data-vsal]'), vt = e.target.closest('[data-vtar]'), vc = e.target.closest('[data-vcat]');
                 if (v) { gi = (gi + (v.dataset.v === 'sig' ? 1 : gal.length - 1)) % gal.length; pintarV(); }
                 else if (vs) { $$('[data-vsec]').forEach(b => b.classList.toggle('on', b === vs)); pintarActs(+vs.dataset.vsec); }
@@ -875,6 +889,23 @@
         };
         pintarV();
         visor.abrir();
+    }
+
+    /** Ventana con la foto grande, el título y la descripción de una actividad (con flechas para ver las demás de la sección). */
+    function verActividad(sec, j) {
+        document.querySelector('.vz-modal')?.remove();
+        const a = sec.actividades[j], n = sec.actividades.length;
+        const m = document.createElement('div'); m.className = 'vz-modal';
+        m.innerHTML = `<div role="dialog" aria-modal="true" aria-label="${esc(a.titulo)}">${a.imagen ? `<img src="${esc(a.imagen)}" alt="">` : ''}
+            <button type="button" class="x" data-cerrar aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+            <div class="tx"><small style="color:var(--ev-muted);font-weight:700">${esc(sec.titulo)} · ${j + 1} de ${n}</small><h3>${esc(a.titulo)}</h3>
+                <p>${a.descripcion ? esc(a.descripcion) : '<span style="color:var(--ev-muted)">Esta actividad todavía no tiene descripción. Ponla en Editar → A bordo.</span>'}</p></div>
+            ${n > 1 ? `<div class="nav"><button type="button" class="ev-btn ghost sm" data-paso="-1"><i class="bi bi-arrow-left"></i> Anterior</button><button type="button" class="ev-btn ghost sm" data-paso="1">Siguiente <i class="bi bi-arrow-right"></i></button></div>` : ''}</div>`;
+        const cerrar = () => { m.remove(); document.removeEventListener('keydown', tecla, true); };
+        const tecla = e => { if (e.key === 'Escape') { e.stopImmediatePropagation(); cerrar(); } else if (e.key === 'ArrowRight' && n > 1) { cerrar(); verActividad(sec, (j + 1) % n); } else if (e.key === 'ArrowLeft' && n > 1) { cerrar(); verActividad(sec, (j + n - 1) % n); } };
+        m.addEventListener('click', e => { const p = e.target.closest('[data-paso]'); if (p) { cerrar(); verActividad(sec, (j + n + +p.dataset.paso) % n); } else if (e.target === m || e.target.closest('[data-cerrar]')) cerrar(); });
+        document.addEventListener('keydown', tecla, true);
+        document.body.appendChild(m);
     }
 
     // ===================== EVENTOS =====================
