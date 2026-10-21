@@ -96,14 +96,20 @@
     .hw-cards.sobre { background: color-mix(in srgb, var(--ev-aqua) 18%, transparent); outline: 2px dashed var(--ev-teal); outline-offset: 4px; }
     .hw-card { position: relative; border-radius: 18px; overflow: hidden; background: var(--ev-surface); border: 1px solid var(--ev-line); cursor: grab; transition: transform .25s var(--ev-ease), box-shadow .25s, opacity .2s; user-select: none; }
     .hw-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
-    .hw-card.arrastrando { opacity: 1; transform: none; border: 2.5px dashed var(--ev-teal); background: color-mix(in srgb, var(--ev-aqua) 22%, var(--ev-surface)); box-shadow: 0 0 0 6px rgba(43,212,196,.18); }
-    .hw-card.arrastrando > * { opacity: 0; }
-    .hw-card.arrastrando::after { content: "Va aquí"; position: absolute; inset: 0; display: grid; place-items: center; font: 800 14px var(--ev-font); color: var(--ev-deep); letter-spacing: .02em; }
+    .hw-card.hw-hueco { opacity: 1; transform: none; border: 2.5px dashed var(--ev-teal); background: color-mix(in srgb, var(--ev-aqua) 22%, var(--ev-surface)); box-shadow: 0 0 0 6px rgba(43,212,196,.18); }
+    .hw-card.hw-hueco > * { opacity: 0; }
+    .hw-card.hw-hueco::after { content: "Va aquí"; position: absolute; inset: 0; display: grid; place-items: center; font: 800 14px var(--ev-font); color: var(--ev-deep); letter-spacing: .02em; }
     /* Mientras se arrastra: número de posición en cada tarjeta y la sección donde caerá resaltada */
     .hw-ordenando .hw-cards { counter-reset: pos; }
     .hw-ordenando .hw-card { counter-increment: pos; }
     .hw-ordenando .hw-card::before { content: counter(pos); position: absolute; left: 10px; top: 42px; z-index: 6; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 99px; background: #0B1215; color: #74F2E6; font: 800 12px var(--ev-font); display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
     .hw-ordenando .hw-card:hover { transform: none; box-shadow: none; }
+    .hw-volando { opacity: .96 !important; transform: rotate(2deg) scale(1.03); box-shadow: 0 24px 50px rgba(11,18,21,.28) !important; cursor: grabbing !important; }
+    .hw-volando::before, .hw-volando::after { display: none !important; }
+    .hw-elegida { cursor: grabbing; }
+    .hw-sec.hw-sec-hueco { border: 2.5px dashed var(--ev-teal) !important; background: color-mix(in srgb, var(--ev-aqua) 14%, var(--ev-surface)); }
+    .hw-sec.hw-sec-hueco > * { opacity: .35; }
+    #hwSin.destino { outline: 3px solid var(--ev-teal); outline-offset: 6px; border-radius: 18px; }
     .hw-sec.destino { border-color: var(--ev-teal) !important; box-shadow: 0 0 0 4px rgba(43,212,196,.22); }
     .hw-sec.destino .hw-sec-h::after { content: "⬇ Suéltala aquí"; order: 99; font: 800 12px var(--ev-font); padding: 5px 10px; border-radius: 99px; background: var(--ev-teal); color: #0B1215; animation: hwLatido 1s ease-in-out infinite; }
     @@keyframes hwLatido { 50% { transform: scale(1.06); } }
@@ -290,6 +296,7 @@
 </aside>
 
 @section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
@@ -357,7 +364,7 @@ const HW = (() => {
         ].map(([n, t, c]) => `<div class="hw-kpi ${c || ''}"><b>${EV.fmt(n)}</b><small>${t}</small></div>`).join('');
         $('#nSlides').textContent = D.slides.length; $('#nTarjetas').textContent = ts.length;
         $('#tSec').innerHTML = '<option value="">Todas las secciones</option><option value="-1">Sin sección</option>' + D.contenedores.map(c => `<option value="${c.id_Contenedor}">${esc(c.nombre)}</option>`).join('');
-        pintarSlider(); pintarSecciones(); pintarCarrusel(); pintarTabla();
+        pintarSlider(); pintarSecciones(); activarOrden(); pintarCarrusel(); pintarTabla();
     }
 
     // ===================== VISTA: slider =====================
@@ -394,7 +401,7 @@ const HW = (() => {
     const sinSeccion = t => !D.contenedores.some(c => c.id_Contenedor === t.id_Contenedor);
     const cardHtml = t => {
         const c = carat(t), sin = sinSeccion(t);
-        return `<div class="hw-card ${t.estado ? '' : 'oculta'}" draggable="true" data-t="${t.id}" title="Clic para editar · arrastra para mover">
+        return `<div class="hw-card ${t.estado ? '' : 'oculta'}" data-t="${t.id}" title="Clic para editar · arrastra para mover">
             <div class="img">${c ? `<img src="${esc(c)}" alt="" loading="lazy" onerror="this.remove()">` : esc(EV.iniciales(t.id_Destino))}
                 <div class="chips"><span>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</span>${t.vigente === false ? '<span class="mal">Ya no se vende</span>' : ''}${t.estado ? '' : `<span class="oc">${sin ? 'Oculta · sin sección' : 'Oculta'}</span>`}</div>
                 <div class="acc"><button type="button" class="edt" data-foto="${t.id}" title="Cambiar la foto" aria-label="Cambiar la foto"><i class="bi bi-camera"></i></button>
@@ -408,7 +415,7 @@ const HW = (() => {
         $('#hwSecciones').innerHTML = D.contenedores.map(c => `
             <section class="hw-sec ${c.estado ? '' : 'oculta'}" data-sec="${c.id_Contenedor}">
                 <div class="hw-sec-h">
-                    <span class="asa" draggable="true" data-asa="${c.id_Contenedor}" title="Arrastra para mover la sección"><i class="bi bi-grip-vertical"></i></span>
+                    <span class="asa" data-asa="${c.id_Contenedor}" title="Arrastra para mover la sección"><i class="bi bi-grip-vertical"></i></span>
                     <h3>${esc(c.nombre)}</h3><span class="n">${c.tarjetas.length}</span>${c.estado ? '' : '<span class="ui-chip ghost" style="padding:2px 9px">Oculta</span>'}
                     <span class="sp"></span>
                     <button type="button" class="ui-ibtn" data-secojo="${c.id_Contenedor}" title="${c.estado ? 'Ocultar sección' : 'Mostrar sección'}"><i class="bi ${c.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button>
@@ -423,91 +430,84 @@ const HW = (() => {
     }
 
     // ---------- arrastrar y soltar ----------
-    let arrastre = null;   // { tipo: 'card'|'sec'|'slide', id, el }
-    function destinoAntes(cont, y, x, sel) {
-        const items = $$(sel, cont).filter(e => !e.classList.contains('arrastrando'));
-        return items.find(e => { const r = e.getBoundingClientRect(); return y < r.top + r.height / 2 && (x < r.left + r.width / 2 || y < r.top); });
-    }
-    // Guía mientras se arrastra: barra abajo con «qué, a dónde y en qué posición»
+    // Tarjetas y secciones: SortableJS (las demás se apartan con animación y la tarjeta sigue al ratón con suavidad).
+    // Slides del carrusel: arrastre nativo (abajo). Guía: hueco «Va aquí», números, sección destino y barra con la posición.
     const guia = document.body.appendChild(Object.assign(document.createElement('div'), { className: 'hw-guia', role: 'status' }));
     const nombreSec = cont => cont?.dataset.cards === '' ? 'Sin sección' : (D.contenedores.find(c => String(c.id_Contenedor) === cont?.dataset.cards)?.nombre || '');
     const tituloCard = el => el.querySelector('.tx b')?.textContent.trim() || 'la tarjeta';
-    function pintarGuia() {
-        if (!arrastre) return;
-        if (arrastre.tipo === 'card') {
-            const cont = arrastre.el.parentElement, cards = $$('.hw-card', cont), pos = cards.indexOf(arrastre.el) + 1;
-            $$('.hw-sec.destino').forEach(s => s.classList.remove('destino')); cont.closest('.hw-sec')?.classList.add('destino');
-            const cambia = cont !== arrastre.origen;
-            guia.innerHTML = `<i class="bi bi-arrows-move"></i> Moviendo <b>«${esc(tituloCard(arrastre.el))}»</b> ${cambia ? `de <b>${esc(nombreSec(arrastre.origen))}</b> ` : ''}→ <b>${esc(nombreSec(cont))}</b> <span class="pos">posición ${pos} de ${cards.length}</span>`;
-        } else if (arrastre.tipo === 'sec') {
-            const secs = $$('#hwSecciones .hw-sec'), pos = secs.indexOf(arrastre.el) + 1;
-            guia.innerHTML = `<i class="bi bi-arrows-move"></i> Moviendo la sección <b>${esc(arrastre.el.querySelector('.hw-sec-h h3, .hw-sec-h b, .hw-sec-h')?.textContent.trim().split('\n')[0] || '')}</b> <span class="pos">posición ${pos} de ${secs.length}</span>`;
-        } else return;
+    let moviendo = null;   // { el, origen } de la tarjeta que se arrastra
+    function guiaTarjeta() {
+        if (!moviendo) return;
+        const cont = moviendo.el.parentElement; if (!cont) return;
+        const cards = $$('.hw-card', cont), pos = cards.indexOf(moviendo.el) + 1;
+        $$('.hw-sec.destino').forEach(s => s.classList.toggle('destino', s.contains(cont)));
+        $('#hwSin')?.classList.toggle('destino', $('#hwSin').contains(cont));
+        guia.innerHTML = `<i class="bi bi-arrows-move"></i> Moviendo <b>«${esc(tituloCard(moviendo.el))}»</b> ${cont !== moviendo.origen ? `de <b>${esc(nombreSec(moviendo.origen))}</b> ` : ''}→ <b>${esc(nombreSec(cont))}</b> <span class="pos">posición ${pos} de ${cards.length}</span>`;
         guia.classList.add('on');
     }
-    // Si se acerca al borde de la ventana mientras arrastra, la página se desplaza sola
-    let autoScroll = 0;
-    const desplazar = y => { autoScroll = y < 90 ? -18 : y > innerHeight - 90 ? 18 : 0; };
-    setInterval(() => { if (arrastre && autoScroll) scrollBy(0, autoScroll); }, 16);
+    const finGuia = () => { document.body.classList.remove('hw-ordenando'); $$('.destino').forEach(s => s.classList.remove('destino')); setTimeout(() => guia.classList.remove('on'), 250); };
+    const ANIM = { animation: 230, easing: 'cubic-bezier(.2, .8, .2, 1)', forceFallback: true, fallbackOnBody: true, fallbackTolerance: 4,
+                   scroll: true, scrollSensitivity: 120, scrollSpeed: 20, bubbleScroll: true };
+    let ordenadores = [];
+    function activarOrden() {
+        if (!window.Sortable) return;
+        ordenadores.forEach(s => s.destroy()); ordenadores = [];
+        $$('.hw-cards').forEach(cont => ordenadores.push(new Sortable(cont, { ...ANIM,
+            group: 'tarjetas', draggable: '.hw-card', filter: 'button, .ui-ibtn', preventOnFilter: false,
+            ghostClass: 'hw-hueco', chosenClass: 'hw-elegida', dragClass: 'hw-volando',
+            // el recuadro «Agregar tarjeta» siempre queda al final
+            onMove: e => !(e.related?.classList.contains('hw-add') && e.willInsertAfter),
+            onStart: e => { moviendo = { el: e.item, origen: e.from }; document.body.classList.add('hw-ordenando'); guiaTarjeta(); },
+            onChange: () => guiaTarjeta(),
+            onEnd: async e => {
+                const el = e.item, cont = e.to; moviendo = null; finGuia();
+                const add = $('.hw-add', cont); if (add) cont.appendChild(add);
+                if (e.from === e.to && e.oldDraggableIndex === e.newDraggableIndex) return;   // no se movió
+                const ids = $$('.hw-card', cont).map(c => +c.dataset.t), id = +el.dataset.t, pos = ids.indexOf(id) + 1, sec = cont.dataset.cards;
+                try {
+                    await EV.post('/HomeWeb/OrdenTarjetas', { Id_Contenedor: sec === '' ? null : +sec, Ids: ids });
+                    EV.toast(`«${tituloCard(el)}» quedó en la posición ${pos} de ${ids.length} en ${nombreSec(cont)}.`);
+                    await cargar();
+                    const nueva = document.querySelector(`.hw-card[data-t="${id}"]`);
+                    nueva?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); EV.resaltar(nueva);
+                } catch (err) { EV.toast(err.message, 'err'); cargar(); }
+            }
+        })));
+        const secs = $('#hwSecciones');
+        if (secs) ordenadores.push(new Sortable(secs, { ...ANIM, animation: 260,
+            draggable: '.hw-sec', handle: '.asa', ghostClass: 'hw-sec-hueco', dragClass: 'hw-volando',
+            onStart: e => { guia.innerHTML = `<i class="bi bi-arrows-move"></i> Moviendo la sección <b>${esc(e.item.querySelector('h3')?.textContent || '')}</b>`; guia.classList.add('on'); },
+            onChange: e => { const l = $$('#hwSecciones .hw-sec'); guia.innerHTML = `<i class="bi bi-arrows-move"></i> Moviendo la sección <b>${esc(e.item.querySelector('h3')?.textContent || '')}</b> <span class="pos">posición ${l.indexOf(e.item) + 1} de ${l.length}</span>`; },
+            onEnd: async e => {
+                finGuia();
+                if (e.oldIndex === e.newIndex) return;
+                try { await EV.post('/HomeWeb/OrdenSecciones', $$('#hwSecciones .hw-sec').map(s => +s.dataset.sec)); EV.toast('Orden de secciones guardado.'); await cargar(); }
+                catch (err) { EV.toast(err.message, 'err'); cargar(); }
+            }
+        }));
+    }
 
+    // Slides del carrusel (arrastre nativo)
+    let arrastre = null;
     document.addEventListener('dragstart', e => {
-        const card = e.target.closest?.('.hw-card'), asa = e.target.closest?.('[data-asa]'), sl = e.target.closest?.('.cr-card[draggable="true"]');
-        if (asa) { arrastre = { tipo: 'sec', el: asa.closest('.hw-sec') }; }
-        else if (card) arrastre = { tipo: 'card', el: card, origen: card.parentElement };
-        else if (sl) arrastre = { tipo: 'slide', el: sl };
-        else return;
-        arrastre.el.classList.add('arrastrando');
-        if (arrastre.tipo === 'card') document.body.classList.add('hw-ordenando');
+        const sl = e.target.closest?.('.cr-card[draggable="true"]'); if (!sl) return;
+        arrastre = { el: sl }; sl.classList.add('arrastrando');
         e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', '');
-        requestAnimationFrame(pintarGuia);
     });
     document.addEventListener('dragover', e => {
         if (!arrastre) return;
-        desplazar(e.clientY);
-        requestAnimationFrame(pintarGuia);
-        if (arrastre.tipo === 'card') {
-            const cont = e.target.closest('.hw-cards'); if (!cont) return;
-            e.preventDefault();
-            $$('.hw-cards.sobre').forEach(c => c !== cont && c.classList.remove('sobre')); cont.classList.add('sobre');
-            const antes = destinoAntes(cont, e.clientY, e.clientX, '.hw-card') || $('.hw-add', cont);
-            antes ? cont.insertBefore(arrastre.el, antes) : cont.appendChild(arrastre.el);
-        } else if (arrastre.tipo === 'sec') {
-            const cont = $('#hwSecciones'); if (!e.target.closest('#hwSecciones')) return;
-            e.preventDefault();
-            const antes = $$('.hw-sec', cont).filter(s => s !== arrastre.el).find(s => e.clientY < s.getBoundingClientRect().top + s.getBoundingClientRect().height / 2);
-            antes ? cont.insertBefore(arrastre.el, antes) : cont.appendChild(arrastre.el);
-        } else if (arrastre.tipo === 'slide') {
-            const cont = $('#crGrid'), sobre = e.target.closest('.cr-card[draggable="true"]'); if (!sobre || sobre === arrastre.el) { if (e.target.closest('#crGrid')) e.preventDefault(); return; }
-            e.preventDefault();
-            const r = sobre.getBoundingClientRect();
-            cont.insertBefore(arrastre.el, e.clientX < r.left + r.width / 2 ? sobre : sobre.nextSibling);
-        }
+        const cont = $('#crGrid'), sobre = e.target.closest('.cr-card[draggable="true"]'); if (!sobre || sobre === arrastre.el) { if (e.target.closest('#crGrid')) e.preventDefault(); return; }
+        e.preventDefault();
+        const r = sobre.getBoundingClientRect();
+        cont.insertBefore(arrastre.el, e.clientX < r.left + r.width / 2 ? sobre : sobre.nextSibling);
     });
     document.addEventListener('drop', e => { if (arrastre) e.preventDefault(); });
     document.addEventListener('dragend', async () => {
         if (!arrastre) return;
-        const a = arrastre; arrastre = null; autoScroll = 0;
+        const a = arrastre; arrastre = null;
         a.el.classList.remove('arrastrando'); $$('.sobre').forEach(x => x.classList.remove('sobre'));
-        document.body.classList.remove('hw-ordenando'); $$('.hw-sec.destino').forEach(s => s.classList.remove('destino'));
-        setTimeout(() => guia.classList.remove('on'), 300);
-        try {
-            if (a.tipo === 'card') {
-                const cont = a.el.parentElement, sec = cont.dataset.cards;
-                const ids = $$('.hw-card', cont).map(c => +c.dataset.t), id = +a.el.dataset.t, pos = ids.indexOf(id) + 1;
-                await EV.post('/HomeWeb/OrdenTarjetas', { Id_Contenedor: sec === '' ? null : +sec, Ids: ids });
-                EV.toast(`«${tituloCard(a.el)}» quedó en la posición ${pos} de ${ids.length} en ${nombreSec(cont)}.`);
-                await cargar();
-                // se ve dónde quedó: se lleva a la vista y se ilumina
-                const nueva = document.querySelector(`.hw-card[data-t="${id}"]`);
-                nueva?.scrollIntoView({ behavior: 'smooth', block: 'center' }); EV.resaltar(nueva);
-            } else if (a.tipo === 'sec') {
-                await EV.post('/HomeWeb/OrdenSecciones', $$('#hwSecciones .hw-sec').map(s => +s.dataset.sec));
-                EV.toast('Orden de secciones guardado.'); await cargar();
-            } else if (a.tipo === 'slide') {
-                await EV.post('/HomeWeb/OrdenSlides', $$('#crGrid .cr-card[draggable="true"]').map(s => +s.dataset.s));
-                EV.toast('Orden del carrusel guardado.'); await cargar();
-            }
-        } catch (err) { EV.toast(err.message, 'err'); cargar(); }
+        try { await EV.post('/HomeWeb/OrdenSlides', $$('#crGrid .cr-card[draggable="true"]').map(s => +s.dataset.s)); EV.toast('Orden del carrusel guardado.'); await cargar(); }
+        catch (err) { EV.toast(err.message, 'err'); cargar(); }
     });
 
     // ===================== CARRUSEL =====================
