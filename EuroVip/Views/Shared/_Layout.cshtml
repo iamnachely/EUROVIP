@@ -50,6 +50,7 @@
                         @if (Ve("circuitos")) { <li><a asp-controller="Circuitos" asp-action="Index" class="@(Activo("Circuitos") != "" || Activo("CargaCircuitos") != "" ? "active" : "")"><i class="bi bi-signpost-split"></i> Circuitos</a></li> }
                         @if (Ve("excursiones")) { <li><a asp-controller="Excursiones" asp-action="Index" class="@Activo("Excursiones")"><i class="bi bi-compass"></i> Excursiones</a></li> }
                         @if (Ve("traslados")) { <li><a asp-controller="Traslados" asp-action="Index" class="@Activo("Traslados")"><i class="bi bi-bus-front"></i> Traslados</a></li> }
+                        @if (Ve("cruceros")) { <li><a asp-controller="Cruceros" asp-action="Index" class="@Activo("Cruceros")"><i class="bi bi-water"></i> Cruceros</a></li> }
                     </ul>
                 </div>
 

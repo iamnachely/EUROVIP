@@ -61,6 +61,9 @@ namespace EuroVip.Services
         /// <summary>Foto de un día del itinerario de circuito: NO va en Eurovip.multimedia (se guarda en circuito_itinerario.caratula),
         /// pero el archivo va en la misma base: {base}/circuitos/itinerario/{slug del circuito}/{GUID}.webp. Devuelve su URL.</summary>
         Task<string> GuardarItinerarioAsync(string circuito, Stream origen);
+        /// <summary>Guarda una foto suelta (no va en Eurovip.multimedia) en {base}/{carpeta}/{GUID}.webp y devuelve su URL.
+        /// carpeta: solo minúsculas, números, "-", "_" y "/" (ej. "cruceros/12/actividades").</summary>
+        Task<string> GuardarArchivoAsync(string carpeta, Stream origen);
     }
 
     public class ResumenMigracion
@@ -96,6 +99,7 @@ namespace EuroVip.Services
             ["DESTINO"] = new("DESTINO", "id_destino", false, "destinos", "herramientas", "destino"),
             ["PAIS"] = new("PAIS", "id_pais", false, "paises", "herramientas", "país"),
             ["HOTEL"] = new("HOTEL", "id_hotel", true, "hoteles", "hoteles", "hotel"),
+            ["CRUCERO"] = new("CRUCERO", "id_crucero", true, "cruceros", "cruceros", "crucero"),
         };
         public static readonly string[] Usos = { "PORTADA", "INTERMEDIA", "GALERIA" };
 
@@ -182,6 +186,7 @@ namespace EuroVip.Services
                 "DESTINO" => "SELECT COUNT(*) FROM Eurovip.destino WHERE id_destino = @v",
                 "PAIS" => "SELECT COUNT(*) FROM Eurovip.pais WHERE id_pais = @v",
                 "HOTEL" => "SELECT COUNT(*) FROM Eurovip.inicio WHERE id_servicio = @v AND tipo_servicio = 'HOTEL'",
+                "CRUCERO" => "SELECT COUNT(*) FROM Eurovip.crucero WHERE id_crucero = @v",
                 _ => throw new InvalidOperationException("Tipo de producto desconocido.")
             };
             return await cn.ExecuteScalarAsync<int>(sql, new { v = Valor(t, clave) }) > 0;
@@ -226,7 +231,7 @@ namespace EuroVip.Services
             var t = Validar(tipo, clave);
             uso = (uso ?? "").Trim().ToUpperInvariant();
             if (!Usos.Contains(uso)) throw new InvalidOperationException("Uso de la foto desconocido.");
-            if (uso == "INTERMEDIA" && t.Tipo != "CIRCUITO") throw new InvalidOperationException("La foto intermedia es solo para circuitos.");
+            if (uso == "INTERMEDIA" && t.Tipo is not ("CIRCUITO" or "CRUCERO")) throw new InvalidOperationException("La foto intermedia es solo para circuitos y cruceros.");
             var v = Valor(t, clave);
             var carpeta = Carpeta(t, clave);
 
@@ -460,6 +465,18 @@ namespace EuroVip.Services
             if (slug == "") throw new InvalidOperationException("Primero escribe el nombre del circuito.");
             var (datos, _, _) = await ImagenesLocales.ConvertirWebpAsync(origen);
             var ruta = $"circuitos/itinerario/{slug}/{Guid.NewGuid():N}.webp";
+            var fisica = Fisica(ruta);
+            Directory.CreateDirectory(Path.GetDirectoryName(fisica)!);
+            await File.WriteAllBytesAsync(fisica, datos);
+            return Url(ruta);
+        }
+
+        public async Task<string> GuardarArchivoAsync(string carpeta, Stream origen)
+        {
+            carpeta = (carpeta ?? "").Trim().Trim('/');
+            if (carpeta == "" || !Regex.IsMatch(carpeta, "^[a-z0-9_-]+(/[a-z0-9_-]+)*$")) throw new InvalidOperationException("Carpeta no válida.");
+            var (datos, _, _) = await ImagenesLocales.ConvertirWebpAsync(origen);
+            var ruta = $"{carpeta}/{Guid.NewGuid():N}.webp";
             var fisica = Fisica(ruta);
             Directory.CreateDirectory(Path.GetDirectoryName(fisica)!);
             await File.WriteAllBytesAsync(fisica, datos);

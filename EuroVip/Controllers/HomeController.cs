@@ -35,6 +35,7 @@ namespace EuroVip.Controllers
             ("Nuevo paquete con Excel (Clásica)", "cargar paquete oferta excel clasica", "/CargaManual/Clasica", "carga_manual", "bi-file-earmark-excel"),
             ("Excursiones", "excursiones excursion tour actividad buscar cargar editar foto", "/Excursiones/Index", "excursiones", "bi-compass"),
             ("Traslados", "traslados traslado transfer aeropuerto hotel shuttle compartido privado van", "/Traslados/Index", "traslados", "bi-bus-front"),
+            ("Cruceros", "cruceros crucero barco naviera cabina cubierta itinerario puerto disney msc royal", "/Cruceros/Index", "cruceros", "bi-water"),
             ("Paquetes cargados", "lista paquetes ofertas editar desactivar", "/Ofertas/Index", "carga_manual", "bi-pencil-square"),
             ("Nuevo hotel", "crear hotel vitrina", "/Hoteles/Index?nuevo=1", "hoteles", "bi-building-add"),
             ("Hoteles", "hotel fotos vitrina", "/Hoteles/Index", "hoteles", "bi-building"),
@@ -232,6 +233,7 @@ namespace EuroVip.Controllers
             new() { Titulo = "Paquetes",         Descripcion = "Ofertas de hotel: Express o Clásica (con Excel). Vuelo opcional.", Icono = "bi-box-seam", Etiqueta = "Disponible", Url = "/Ofertas/Index", Disponible = true, Modulo = "carga_manual" },
             new() { Titulo = "Excursiones",      Descripcion = "Excursiones por destino: precio, cancelación, descripción y foto.", Icono = "bi-compass", Etiqueta = "Disponible", Url = "/Excursiones/Index", Disponible = true, Modulo = "excursiones" },
             new() { Titulo = "Traslados",        Descripcion = "Traslados aeropuerto → hotel: compartido o privado, vehículo, precio y foto.", Icono = "bi-bus-front", Etiqueta = "Disponible", Url = "/Traslados/Index", Disponible = true, Modulo = "traslados" },
+            new() { Titulo = "Cruceros",         Descripcion = "Itinerario, a bordo, cabinas y cubiertas, fechas, tarifas y precios.", Icono = "bi-water", Etiqueta = "Nuevo", Url = "/Cruceros/Index", Disponible = true, Modulo = "cruceros" },
             new() { Titulo = "Carga Circuito",   Descripcion = "Catálogo, itinerario, hoteles y salidas. Vuelo opcional.", Icono = "bi-signpost-split", Etiqueta = "Disponible", Url = "/Circuitos/Index", Disponible = true, Modulo = "circuitos" },
         };
 

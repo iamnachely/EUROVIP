@@ -48,6 +48,7 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<EuroVip.Repositories.IHotelRepository, EuroVip.Repositories.HotelRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.IExcursionRepository, EuroVip.Repositories.ExcursionRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.ITrasladoRepository, EuroVip.Repositories.TrasladoRepository>();
+builder.Services.AddScoped<EuroVip.Repositories.ICruceroRepository, EuroVip.Repositories.CruceroRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.ICircuitoRepository, EuroVip.Repositories.CircuitoRepository>();
 builder.Services.AddScoped<EuroVip.Repositories.ICargaCircuitoService, EuroVip.Repositories.CargaCircuitoService>();
 builder.Services.AddScoped<EuroVip.Repositories.IExcelCircuitoParser, EuroVip.Repositories.ExcelCircuitoParser>();

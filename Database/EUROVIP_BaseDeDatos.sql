@@ -3504,6 +3504,483 @@ END
 GO
 
 /* ##########################################################################################
+   FASE 21 — CRUCEROS  (21/10/2026, SOLO en el 93 de desarrollo)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria con el PDF «Resumen de Cruceros» y la captura «Cubiertas y Cabinas»:
+   "hacer una vista en el EurovipBack para guardar cruceros y las tablas en la base .93 (NO tocar la .10
+   ni la .29): cargar, guardar, editar, eliminar, buscar y visualizar todo de un crucero con imágenes,
+   y que pase a la tabla de inicio".
+   Explicado fácil (detalle completo en Database/esquema-cruceros.md):
+     • Catálogos: naviera (Disney Cruise Line…) → barco (Disney Treasure…); categorías de la web
+       (Desde Rep. Dom., Cruceros Disney…) = la pantalla intermedia y las tarjetas de la Home.
+     • crucero = el viaje (título, barco, puertos, noches, textos) y en qué categorías sale.
+     • crucero_itinerario = un día por fila (puerto, en navegación, hora de llegada y de salida).
+     • crucero_seccion / crucero_actividad = «Tu barco»: pestañas (Comida y bebida, Entretenimiento…)
+       con tarjetas de actividad (foto, título, descripción).
+     • crucero_cabina_tipo (INTERIOR/EXTERIOR/BALCON/SUITE, capacidad, m², foto) → crucero_cabina
+       (número concreto y en qué crucero_cubierta está). Sin cabina concreta = «Garantizada».
+     • crucero_salida (fechas) × crucero_tarifa (BEST_PRICE, Florida Resident…) × tipo de cabina =
+       crucero_precio (precio POR PERSONA, base 2 compartiendo).
+     • Fotos del crucero (portada, intermedia = banner, galería) en Eurovip.multimedia tipo CRUCERO.
+     • Home: una tarjeta por CATEGORÍA (tipo CRUCERO, contenedor CRUCEROS) con el precio «desde»
+       (spActualizaInicioCrucero; spSincronizaInicio también la arregla).
+     • Web: spPortalCrucerosCategorias, spPortalListarCruceros, spPortalObtenerCrucero.
+   Probado con ROLLBACK: se creó un crucero completo, salió su tarjeta en inicio con el precio correcto,
+   los 3 SP de la web devolvieron sus datos y 3 inserciones inválidas fueron rechazadas (noches 0, precio 0,
+   categoría de cabina inventada). Después: 0 filas en las 14 tablas nuevas.
+   ########################################################################################## */
+
+/* ---------- CAMBIO 67: catálogos de cruceros ----------
+   crucero_naviera   = línea de cruceros (Disney Cruise Line, MSC, Royal Caribbean…) con su logo.
+   crucero_barco     = barco de una naviera (Disney Treasure, Disney Wish…) con su foto y descripción ("Tu barco").
+   crucero_categoria = categorías de la web ("Desde Rep. Dom.", "Cruceros Disney", "Mediterráneo"…): la pantalla
+                       intermedia; cada una tiene su tarjeta en la Home y lleva a sus cruceros.
+   Las fotos/logos son URL (archivo en la carpeta de fotos: {Multimedia:CarpetaFisica}/cruceros/…). */
+IF OBJECT_ID('Eurovip.crucero_naviera') IS NULL
+CREATE TABLE Eurovip.crucero_naviera (
+    id_naviera  int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_naviera PRIMARY KEY,
+    nombre      nvarchar(100) NOT NULL CONSTRAINT UQ_Eurovip_crucero_naviera_nombre UNIQUE,
+    logo        varchar(500)  NULL,
+    activo      bit           NOT NULL CONSTRAINT DF_Eurovip_crucero_naviera_activo DEFAULT (1)
+);
+GO
+IF OBJECT_ID('Eurovip.crucero_barco') IS NULL
+CREATE TABLE Eurovip.crucero_barco (
+    id_barco     int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_barco PRIMARY KEY,
+    id_naviera   int           NOT NULL CONSTRAINT FK_Eurovip_crucero_barco_naviera REFERENCES Eurovip.crucero_naviera (id_naviera),
+    nombre       nvarchar(100) NOT NULL,
+    descripcion  nvarchar(max) NULL,
+    imagen       varchar(500)  NULL,
+    activo       bit           NOT NULL CONSTRAINT DF_Eurovip_crucero_barco_activo DEFAULT (1),
+    CONSTRAINT UQ_Eurovip_crucero_barco_nombre UNIQUE (id_naviera, nombre)
+);
+GO
+IF OBJECT_ID('Eurovip.crucero_categoria') IS NULL
+CREATE TABLE Eurovip.crucero_categoria (
+    id_categoria  int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_categoria PRIMARY KEY,
+    nombre        nvarchar(100) NOT NULL CONSTRAINT UQ_Eurovip_crucero_categoria_nombre UNIQUE,
+    descripcion   nvarchar(300) NULL,
+    imagen        varchar(500)  NULL,
+    orden         smallint      NOT NULL CONSTRAINT DF_Eurovip_crucero_categoria_orden DEFAULT (1),
+    activo        bit           NOT NULL CONSTRAINT DF_Eurovip_crucero_categoria_activo DEFAULT (1)
+);
+GO
+
+/* ---------- CAMBIO 68: Eurovip.crucero — un crucero ----------
+   titulo   = título externo (tarjeta y cabecera: "Halloween en Alta Mar del Caribe Oriental").
+   subtitulo= título interno opcional; si está vacío la web arma "Saliendo el {fecha} para {noches} noches a bordo del {barco}".
+   codigo   = ID del crucero del proveedor (ej. 2256635). Moneda DOP como todo Eurovip.
+   Fotos: Eurovip.multimedia tipo CRUCERO (PORTADA = tarjeta, INTERMEDIA = banner de la cabecera, GALERIA = slider). */
+IF OBJECT_ID('Eurovip.crucero') IS NULL
+CREATE TABLE Eurovip.crucero (
+    id_crucero          int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero PRIMARY KEY,
+    titulo              nvarchar(200) NOT NULL,
+    subtitulo           nvarchar(300) NULL,
+    id_barco            int           NOT NULL CONSTRAINT FK_Eurovip_crucero_barco REFERENCES Eurovip.crucero_barco (id_barco),
+    puerto_salida       nvarchar(100) NOT NULL,
+    puerto_llegada      nvarchar(100) NOT NULL,
+    noches              smallint      NOT NULL CONSTRAINT CK_Eurovip_crucero_noches CHECK (noches BETWEEN 1 AND 180),
+    codigo              varchar(50)   NULL,
+    descripcion         nvarchar(max) NULL,
+    incluye             nvarchar(max) NULL,
+    no_incluye          nvarchar(max) NULL,
+    titulo_seccion      nvarchar(150) NULL,      -- título de la sección "a bordo" (por defecto "Tu barco - {barco}")
+    id_moneda           char(3)       NOT NULL CONSTRAINT DF_Eurovip_crucero_moneda DEFAULT ('DOP'),
+    activo              bit           NOT NULL CONSTRAINT DF_Eurovip_crucero_activo DEFAULT (1),
+    usuario             varchar(50)   NULL,
+    fecha_alta          datetime2(0)  NOT NULL CONSTRAINT DF_Eurovip_crucero_alta DEFAULT (SYSDATETIME()),
+    fecha_modificacion  datetime2(0)  NULL
+);
+GO
+IF OBJECT_ID('Eurovip.crucero_categoria_crucero') IS NULL
+CREATE TABLE Eurovip.crucero_categoria_crucero (       -- tabla intermedia: un crucero puede estar en varias categorías
+    id_categoria  int NOT NULL CONSTRAINT FK_Eurovip_ccc_categoria REFERENCES Eurovip.crucero_categoria (id_categoria) ON DELETE CASCADE,
+    id_crucero    int NOT NULL CONSTRAINT FK_Eurovip_ccc_crucero REFERENCES Eurovip.crucero (id_crucero) ON DELETE CASCADE,
+    CONSTRAINT PK_Eurovip_crucero_categoria_crucero PRIMARY KEY (id_categoria, id_crucero)
+);
+GO
+
+/* ---------- CAMBIO 69: itinerario y "a bordo" ----------
+   crucero_itinerario: un día por fila, como circuito_itinerario, con puerto y horas (sin fecha: la fecha sale de la salida + día-1).
+     en_navegacion = 1 -> "En navegación / At Sea" (sin horas).
+   crucero_seccion + crucero_actividad: las pestañas de "Tu barco" (Comida y bebida, Entretenimiento, Relajación…), las que
+     el usuario quiera, y en cada una las actividades con título, foto y descripción ("Leer más"). */
+IF OBJECT_ID('Eurovip.crucero_itinerario') IS NULL
+CREATE TABLE Eurovip.crucero_itinerario (
+    id_crucero     int           NOT NULL CONSTRAINT FK_Eurovip_crucero_itinerario_crucero REFERENCES Eurovip.crucero (id_crucero) ON DELETE CASCADE,
+    dia            smallint      NOT NULL CONSTRAINT CK_Eurovip_crucero_itinerario_dia CHECK (dia BETWEEN 1 AND 200),
+    puerto         nvarchar(150) NOT NULL,
+    en_navegacion  bit           NOT NULL CONSTRAINT DF_Eurovip_crucero_itinerario_nav DEFAULT (0),
+    hora_llegada   time(0)       NULL,
+    hora_salida    time(0)       NULL,
+    descripcion    nvarchar(max) NULL,
+    imagen         varchar(500)  NULL,
+    CONSTRAINT PK_Eurovip_crucero_itinerario PRIMARY KEY (id_crucero, dia)
+);
+GO
+IF OBJECT_ID('Eurovip.crucero_seccion') IS NULL
+CREATE TABLE Eurovip.crucero_seccion (
+    id_seccion  int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_seccion PRIMARY KEY,
+    id_crucero  int           NOT NULL CONSTRAINT FK_Eurovip_crucero_seccion_crucero REFERENCES Eurovip.crucero (id_crucero) ON DELETE CASCADE,
+    titulo      nvarchar(100) NOT NULL,
+    orden       smallint      NOT NULL CONSTRAINT DF_Eurovip_crucero_seccion_orden DEFAULT (1)
+);
+GO
+IF OBJECT_ID('Eurovip.crucero_actividad') IS NULL
+CREATE TABLE Eurovip.crucero_actividad (
+    id_actividad  int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_actividad PRIMARY KEY,
+    id_seccion    int           NOT NULL CONSTRAINT FK_Eurovip_crucero_actividad_seccion REFERENCES Eurovip.crucero_seccion (id_seccion) ON DELETE CASCADE,
+    titulo        nvarchar(150) NOT NULL,
+    descripcion   nvarchar(max) NULL,
+    imagen        varchar(500)  NULL,
+    orden         smallint      NOT NULL CONSTRAINT DF_Eurovip_crucero_actividad_orden DEFAULT (1)
+);
+GO
+
+/* ---------- CAMBIO 70: cabinas, cubiertas y cabinas concretas ----------
+   crucero_cabina_tipo: tipos de camarote por categoría (INTERIOR, EXTERIOR, BALCON, SUITE): "Camarote Interior Estándar - 11C",
+     capacidad 3 o 4, 17 m², foto. permite_garantizada = se puede reservar sin cabina concreta ("Guaranteed").
+   crucero_cubierta: cubiertas del barco en este crucero (número, nombre, plano).
+   crucero_cabina: cabinas concretas de un tipo en una cubierta (número de cabina). */
+IF OBJECT_ID('Eurovip.crucero_cabina_tipo') IS NULL
+CREATE TABLE Eurovip.crucero_cabina_tipo (
+    id_cabina_tipo       int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_cabina_tipo PRIMARY KEY,
+    id_crucero           int           NOT NULL CONSTRAINT FK_Eurovip_crucero_cabina_tipo_crucero REFERENCES Eurovip.crucero (id_crucero) ON DELETE CASCADE,
+    categoria            varchar(10)   NOT NULL CONSTRAINT CK_Eurovip_crucero_cabina_tipo_categoria CHECK (categoria IN ('INTERIOR', 'EXTERIOR', 'BALCON', 'SUITE')),
+    codigo               varchar(20)   NULL,
+    nombre               nvarchar(150) NOT NULL,
+    descripcion          nvarchar(max) NULL,
+    capacidad_min        tinyint       NULL,
+    capacidad_max        tinyint       NULL,
+    metros               decimal(6,1)  NULL,
+    imagen               varchar(500)  NULL,
+    permite_garantizada  bit           NOT NULL CONSTRAINT DF_Eurovip_crucero_cabina_tipo_gar DEFAULT (1),
+    orden                smallint      NOT NULL CONSTRAINT DF_Eurovip_crucero_cabina_tipo_orden DEFAULT (1),
+    CONSTRAINT CK_Eurovip_crucero_cabina_tipo_capacidad CHECK (capacidad_min IS NULL OR capacidad_max IS NULL OR capacidad_max >= capacidad_min)
+);
+GO
+IF OBJECT_ID('Eurovip.crucero_cubierta') IS NULL
+CREATE TABLE Eurovip.crucero_cubierta (
+    id_cubierta  int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_cubierta PRIMARY KEY,
+    id_crucero   int           NOT NULL CONSTRAINT FK_Eurovip_crucero_cubierta_crucero REFERENCES Eurovip.crucero (id_crucero) ON DELETE CASCADE,
+    numero       smallint      NOT NULL,
+    nombre       nvarchar(100) NULL,
+    plano        varchar(500)  NULL,
+    CONSTRAINT UQ_Eurovip_crucero_cubierta_numero UNIQUE (id_crucero, numero)
+);
+GO
+IF OBJECT_ID('Eurovip.crucero_cabina') IS NULL
+CREATE TABLE Eurovip.crucero_cabina (
+    id_cabina       int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_cabina PRIMARY KEY,
+    id_cabina_tipo  int          NOT NULL CONSTRAINT FK_Eurovip_crucero_cabina_tipo REFERENCES Eurovip.crucero_cabina_tipo (id_cabina_tipo) ON DELETE CASCADE,
+    id_cubierta     int          NULL CONSTRAINT FK_Eurovip_crucero_cabina_cubierta REFERENCES Eurovip.crucero_cubierta (id_cubierta),
+    numero          varchar(10)  NOT NULL,
+    disponible      bit          NOT NULL CONSTRAINT DF_Eurovip_crucero_cabina_disponible DEFAULT (1),
+    CONSTRAINT UQ_Eurovip_crucero_cabina_numero UNIQUE (id_cabina_tipo, numero)
+);
+GO
+
+/* ---------- CAMBIO 71: salidas, tarifas y precios ----------
+   crucero_salida: fechas de salida (como las salidas de circuito); la llegada = salida + noches.
+   crucero_tarifa: códigos de tarifa / paquetes del crucero ("Florida Resident", "BEST_PRICE").
+   crucero_precio: precio POR PERSONA (base 2 personas compartiendo) de cada tipo de cabina, en cada salida y tarifa. */
+IF OBJECT_ID('Eurovip.crucero_salida') IS NULL
+CREATE TABLE Eurovip.crucero_salida (
+    id_salida     int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_salida PRIMARY KEY,
+    id_crucero    int   NOT NULL CONSTRAINT FK_Eurovip_crucero_salida_crucero REFERENCES Eurovip.crucero (id_crucero) ON DELETE CASCADE,
+    fecha_salida  date  NOT NULL,
+    activo        bit   NOT NULL CONSTRAINT DF_Eurovip_crucero_salida_activo DEFAULT (1),
+    CONSTRAINT UQ_Eurovip_crucero_salida_fecha UNIQUE (id_crucero, fecha_salida)
+);
+GO
+IF OBJECT_ID('Eurovip.crucero_tarifa') IS NULL
+CREATE TABLE Eurovip.crucero_tarifa (
+    id_tarifa    int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_tarifa PRIMARY KEY,
+    id_crucero   int           NOT NULL CONSTRAINT FK_Eurovip_crucero_tarifa_crucero REFERENCES Eurovip.crucero (id_crucero) ON DELETE CASCADE,
+    codigo       varchar(50)   NOT NULL,
+    nombre       nvarchar(100) NOT NULL,
+    descripcion  nvarchar(300) NULL,
+    orden        smallint      NOT NULL CONSTRAINT DF_Eurovip_crucero_tarifa_orden DEFAULT (1),
+    CONSTRAINT UQ_Eurovip_crucero_tarifa_codigo UNIQUE (id_crucero, codigo)
+);
+GO
+IF OBJECT_ID('Eurovip.crucero_precio') IS NULL
+CREATE TABLE Eurovip.crucero_precio (
+    id_salida       int   NOT NULL CONSTRAINT FK_Eurovip_crucero_precio_salida REFERENCES Eurovip.crucero_salida (id_salida) ON DELETE CASCADE,
+    id_tarifa       int   NOT NULL CONSTRAINT FK_Eurovip_crucero_precio_tarifa REFERENCES Eurovip.crucero_tarifa (id_tarifa),
+    id_cabina_tipo  int   NOT NULL CONSTRAINT FK_Eurovip_crucero_precio_cabina REFERENCES Eurovip.crucero_cabina_tipo (id_cabina_tipo),
+    precio_pp       money NOT NULL CONSTRAINT CK_Eurovip_crucero_precio CHECK (precio_pp > 0),
+    CONSTRAINT PK_Eurovip_crucero_precio PRIMARY KEY (id_salida, id_tarifa, id_cabina_tipo)
+);
+GO
+
+/* ---------- CAMBIO 72: fotos del crucero en Eurovip.multimedia (tipo CRUCERO, carpeta cruceros/{id}/) ----------
+   Como indica esquema-multimedia.md §5.4: columna id_crucero + tipo en CK_tipo + caso en CK_referencia + columna en UQ_orden.
+   INTERMEDIA (banner de la cabecera) se permite también en cruceros. */
+SET XACT_ABORT ON;
+BEGIN TRAN;
+IF COL_LENGTH('Eurovip.multimedia', 'id_crucero') IS NULL ALTER TABLE Eurovip.multimedia ADD id_crucero int NULL;
+COMMIT;
+GO
+SET XACT_ABORT ON;
+BEGIN TRAN;
+ALTER TABLE Eurovip.multimedia DROP CONSTRAINT CK_Eurovip_multimedia_tipo;
+ALTER TABLE Eurovip.multimedia DROP CONSTRAINT CK_Eurovip_multimedia_referencia;
+ALTER TABLE Eurovip.multimedia DROP CONSTRAINT CK_Eurovip_multimedia_intermedia;
+ALTER TABLE Eurovip.multimedia ADD CONSTRAINT CK_Eurovip_multimedia_tipo
+    CHECK (tipo IN ('ALOJAMIENTO', 'CIRCUITO', 'EXCURSION', 'TRASLADO', 'DESTINO', 'PAIS', 'HOTEL', 'CRUCERO'));
+ALTER TABLE Eurovip.multimedia ADD CONSTRAINT CK_Eurovip_multimedia_referencia CHECK (
+       (tipo = 'ALOJAMIENTO' AND id_alojamiento IS NOT NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL)
+    OR (tipo = 'CIRCUITO'    AND id_alojamiento IS NULL AND nombre_circuito IS NOT NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL)
+    OR (tipo = 'EXCURSION'   AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NOT NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL)
+    OR (tipo = 'TRASLADO'    AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NOT NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL)
+    OR (tipo = 'DESTINO'     AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NOT NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NULL)
+    OR (tipo = 'PAIS'        AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NOT NULL AND id_hotel IS NULL AND id_crucero IS NULL)
+    OR (tipo = 'HOTEL'       AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NOT NULL AND id_crucero IS NULL)
+    OR (tipo = 'CRUCERO'     AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL AND id_crucero IS NOT NULL));
+ALTER TABLE Eurovip.multimedia ADD CONSTRAINT CK_Eurovip_multimedia_intermedia CHECK (uso <> 'INTERMEDIA' OR tipo IN ('CIRCUITO', 'CRUCERO'));
+ALTER TABLE Eurovip.multimedia DROP CONSTRAINT UQ_Eurovip_multimedia_orden;
+ALTER TABLE Eurovip.multimedia ADD CONSTRAINT UQ_Eurovip_multimedia_orden UNIQUE
+    (tipo, id_alojamiento, nombre_circuito, id_excursion, id_traslado, id_destino, id_pais, id_hotel, id_crucero, uso, orden);
+COMMIT;
+GO
+CREATE OR ALTER VIEW Eurovip.vMultimedia
+AS
+SELECT m.id, m.id_imagen, m.tipo, m.uso, m.orden, m.texto_alternativo,
+       m.id_alojamiento, m.nombre_circuito, m.id_excursion, m.id_traslado, m.id_destino, m.id_pais, m.id_hotel, m.id_crucero,
+       COALESCE(CAST(m.id_alojamiento AS varchar(50)), m.nombre_circuito, CAST(m.id_excursion AS varchar(50)), CAST(m.id_traslado AS varchar(50)),
+                m.id_destino, m.id_pais, CAST(m.id_hotel AS varchar(50)), CAST(m.id_crucero AS varchar(50))) AS clave,
+       i.ruta_relativa + i.nombre_archivo + '.' + i.extension AS ruta,
+       i.nombre_original, i.tamano_bytes, i.ancho, i.alto, i.creado_utc
+  FROM Eurovip.multimedia m
+  JOIN Eurovip.imagen i ON i.id = m.id_imagen;
+GO
+
+/* ---------- CAMBIO 73: módulo «cruceros» y sección CRUCEROS de la Home ---------- */
+IF NOT EXISTS (SELECT 1 FROM Eurovip.UsuarioAcceso WHERE clave = 'cruceros')
+    INSERT INTO Eurovip.UsuarioAcceso (nombre_modulo, Categoria, clave, controladores, icono, descripcion, orden)
+    VALUES (N'Cruceros', N'Cargas', 'cruceros', 'Cruceros', 'bi-water', N'Cargar, editar, eliminar y ver cruceros: itinerario, a bordo, cabinas, cubiertas, fechas y precios.', 37);
+IF NOT EXISTS (SELECT 1 FROM Eurovip.contenedores WHERE nombre = 'CRUCEROS' AND UPPER(id_idioma) = 'ES')
+    INSERT INTO Eurovip.contenedores (nombre, posicion, estado, id_idioma) VALUES ('CRUCEROS', 6, 1, 'es');
+GO
+
+/* ---------- CAMBIO 74: precio "desde" de un crucero (la tarifa más barata por persona en salidas futuras activas) ---------- */
+CREATE OR ALTER VIEW Eurovip.vCruceroDesde
+AS
+SELECT c.id_crucero,
+       MIN(p.precio_pp) AS desde_pp,
+       MIN(CASE WHEN t.categoria = 'INTERIOR' THEN p.precio_pp END) AS interior_pp,
+       MIN(CASE WHEN t.categoria = 'EXTERIOR' THEN p.precio_pp END) AS exterior_pp,
+       MIN(CASE WHEN t.categoria = 'BALCON'   THEN p.precio_pp END) AS balcon_pp,
+       MIN(CASE WHEN t.categoria = 'SUITE'    THEN p.precio_pp END) AS suite_pp,
+       MIN(s.fecha_salida) AS proxima_salida,
+       COUNT(DISTINCT s.id_salida) AS salidas
+  FROM Eurovip.crucero c
+  JOIN Eurovip.crucero_salida s ON s.id_crucero = c.id_crucero AND s.activo = 1 AND s.fecha_salida > CAST(GETDATE() AS date)
+  JOIN Eurovip.crucero_precio p ON p.id_salida = s.id_salida
+  JOIN Eurovip.crucero_cabina_tipo t ON t.id_cabina_tipo = p.id_cabina_tipo
+ GROUP BY c.id_crucero;
+GO
+
+/* ---------- CAMBIO 75: tarjeta de la Home por CATEGORÍA de crucero (como excursiones y traslados) ----------
+   Eurovip.inicio: una tarjeta 'CRUCERO' por categoría activa con cruceros activos y precio (id_destino = nombre de la categoría,
+   id_servicio = id_categoria, precioWeb = el "desde" por persona más barato, caratulaDestino = imagen de la categoría).
+   La tabla intermedia es crucero_categoria_crucero: al pulsar la tarjeta la web lista los cruceros de esa categoría.
+   Se crea / actualiza / borra sola al guardar un crucero o una categoría (y spSincronizaInicio la revisa). */
+CREATE OR ALTER PROCEDURE Eurovip.spActualizaInicioCrucero
+    @idCategoria int
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRAN;
+    DECLARE @nombre nvarchar(100), @imagen varchar(500), @activa bit, @precio money, @cont int;
+    SELECT @nombre = nombre, @imagen = imagen, @activa = activo FROM Eurovip.crucero_categoria WHERE id_categoria = @idCategoria;
+    SELECT @precio = MIN(d.desde_pp)
+      FROM Eurovip.crucero_categoria_crucero cc
+      JOIN Eurovip.crucero c ON c.id_crucero = cc.id_crucero AND c.activo = 1
+      JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero
+     WHERE cc.id_categoria = @idCategoria;
+
+    IF @nombre IS NULL OR @activa = 0 OR @precio IS NULL
+    BEGIN
+        DELETE FROM Eurovip.inicio WHERE tipo_servicio = 'CRUCERO' AND id_servicio = @idCategoria AND id_idioma = 'ES';
+        COMMIT; RETURN;
+    END
+    SELECT TOP 1 @cont = id_contenedor FROM Eurovip.contenedores WHERE nombre = 'CRUCEROS' AND UPPER(id_idioma) = 'ES';
+    IF EXISTS (SELECT 1 FROM Eurovip.inicio WHERE tipo_servicio = 'CRUCERO' AND id_servicio = @idCategoria AND id_idioma = 'ES')
+        UPDATE Eurovip.inicio
+           SET id_destino = LEFT(@nombre, 1500), descripcion = N'Cruceros: ' + @nombre, precioWeb = @precio, id_moneda = 'DOP',
+               caratulaDestino = ISNULL(@imagen, caratulaDestino)
+         WHERE tipo_servicio = 'CRUCERO' AND id_servicio = @idCategoria AND id_idioma = 'ES';
+    ELSE
+        INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino,
+                                    id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor,
+                                    posicion_contenedor, posicion_destino, estado, notas, noches)
+        SELECT @idCategoria, 'ES', 'CRUCERO', 99, 'DOP', 'ES', 'Madrid', 'DO',
+               LEFT(@nombre, 1500), @imagen, N'Cruceros: ' + @nombre, NULL, NULL, @precio, @cont, CASE WHEN @cont IS NULL THEN NULL ELSE N'CRUCEROS' END,
+               (SELECT posicion FROM Eurovip.contenedores WHERE id_contenedor = @cont),
+               (SELECT ISNULL(MAX(posicion_destino), 0) + 1 FROM Eurovip.inicio WHERE id_contenedor = @cont), 1, NULL, NULL;
+    COMMIT;
+END
+GO
+
+/* ---------- CAMBIO 76: consultas para la WEB ----------
+   spPortalCrucerosCategorias           -> la pantalla de categorías (con cuántos cruceros y el "desde").
+   spPortalListarCruceros @IdCategoria  -> la lista de cruceros (tarjeta: foto, título, fecha, noches, barco, puertos,
+                                           itinerario resumido y precios desde Interior / Exterior / Balcón / Suite).
+   spPortalObtenerCrucero @IdCrucero    -> la ficha completa (varios resultados, en este orden):
+       1 cabecera · 2 fotos (portada, banner, galería) · 3 itinerario · 4 secciones "a bordo" · 5 actividades
+       6 salidas · 7 tarifas · 8 tipos de cabina · 9 precios (salida × tarifa × cabina) · 10 cubiertas · 11 cabinas
+   La ruta de las fotos de multimedia es relativa: URL = Multimedia:Url (o Catalogo:UrlMultimedia) + "/" + ruta. */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalCrucerosCategorias
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT g.id_categoria, g.nombre, g.descripcion, g.imagen, g.orden,
+           COUNT(DISTINCT c.id_crucero) AS cruceros, MIN(d.desde_pp) AS desde_pp
+      FROM Eurovip.crucero_categoria g
+      JOIN Eurovip.crucero_categoria_crucero cc ON cc.id_categoria = g.id_categoria
+      JOIN Eurovip.crucero c ON c.id_crucero = cc.id_crucero AND c.activo = 1
+      JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero
+     WHERE g.activo = 1
+     GROUP BY g.id_categoria, g.nombre, g.descripcion, g.imagen, g.orden
+     ORDER BY g.orden, g.nombre;
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarCruceros
+    @IdCategoria int = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT c.id_crucero, c.titulo, c.noches, c.noches + 1 AS dias, b.nombre AS barco, n.nombre AS naviera, n.logo AS naviera_logo,
+           c.puerto_salida, c.puerto_llegada, d.proxima_salida, d.salidas,
+           d.desde_pp, d.interior_pp, d.exterior_pp, d.balcon_pp, d.suite_pp, c.id_moneda,
+           (SELECT STRING_AGG(CAST(i.puerto AS nvarchar(max)), N' / ') WITHIN GROUP (ORDER BY i.dia)
+              FROM Eurovip.crucero_itinerario i WHERE i.id_crucero = c.id_crucero AND i.en_navegacion = 0) AS itinerario,
+           (SELECT TOP 1 v.ruta FROM Eurovip.vMultimedia v WHERE v.tipo = 'CRUCERO' AND v.id_crucero = c.id_crucero AND v.uso = 'PORTADA') AS imagen_ruta
+      FROM Eurovip.crucero c
+      JOIN Eurovip.crucero_barco b ON b.id_barco = c.id_barco
+      JOIN Eurovip.crucero_naviera n ON n.id_naviera = b.id_naviera
+      JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero
+     WHERE c.activo = 1
+       AND (@IdCategoria IS NULL OR EXISTS (SELECT 1 FROM Eurovip.crucero_categoria_crucero cc WHERE cc.id_crucero = c.id_crucero AND cc.id_categoria = @IdCategoria))
+     ORDER BY d.proxima_salida, c.titulo;
+END
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spPortalObtenerCrucero
+    @IdCrucero int
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- 1. Cabecera
+    SELECT c.id_crucero, c.titulo, c.subtitulo, c.noches, c.codigo, c.descripcion, c.incluye, c.no_incluye,
+           ISNULL(c.titulo_seccion, N'Tu barco - ' + b.nombre) AS titulo_seccion,
+           b.nombre AS barco, b.descripcion AS barco_descripcion, b.imagen AS barco_imagen, n.nombre AS naviera, n.logo AS naviera_logo,
+           c.puerto_salida, c.puerto_llegada, c.id_moneda, d.desde_pp, d.proxima_salida
+      FROM Eurovip.crucero c
+      JOIN Eurovip.crucero_barco b ON b.id_barco = c.id_barco
+      JOIN Eurovip.crucero_naviera n ON n.id_naviera = b.id_naviera
+      LEFT JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero
+     WHERE c.id_crucero = @IdCrucero AND c.activo = 1;
+    IF @@ROWCOUNT = 0 RETURN;
+    -- 2. Fotos
+    SELECT v.uso, v.orden, v.ruta, v.texto_alternativo, v.ancho, v.alto FROM Eurovip.vMultimedia v
+     WHERE v.tipo = 'CRUCERO' AND v.id_crucero = @IdCrucero
+     ORDER BY CASE v.uso WHEN 'PORTADA' THEN 0 WHEN 'INTERMEDIA' THEN 1 ELSE 2 END, v.orden;
+    -- 3. Itinerario
+    SELECT dia, puerto, en_navegacion, hora_llegada, hora_salida, descripcion, imagen FROM Eurovip.crucero_itinerario WHERE id_crucero = @IdCrucero ORDER BY dia;
+    -- 4. Secciones "a bordo" y 5. actividades
+    SELECT id_seccion, titulo, orden FROM Eurovip.crucero_seccion WHERE id_crucero = @IdCrucero ORDER BY orden, id_seccion;
+    SELECT a.id_actividad, a.id_seccion, a.titulo, a.descripcion, a.imagen, a.orden FROM Eurovip.crucero_actividad a
+      JOIN Eurovip.crucero_seccion s ON s.id_seccion = a.id_seccion WHERE s.id_crucero = @IdCrucero ORDER BY s.orden, a.orden, a.id_actividad;
+    -- 6. Salidas (futuras y activas) con su llegada
+    SELECT s.id_salida, s.fecha_salida, DATEADD(day, c.noches, s.fecha_salida) AS fecha_llegada
+      FROM Eurovip.crucero_salida s JOIN Eurovip.crucero c ON c.id_crucero = s.id_crucero
+     WHERE s.id_crucero = @IdCrucero AND s.activo = 1 AND s.fecha_salida > CAST(GETDATE() AS date) ORDER BY s.fecha_salida;
+    -- 7. Tarifas, 8. tipos de cabina y 9. precios por persona
+    SELECT id_tarifa, codigo, nombre, descripcion, orden FROM Eurovip.crucero_tarifa WHERE id_crucero = @IdCrucero ORDER BY orden, nombre;
+    SELECT id_cabina_tipo, categoria, codigo, nombre, descripcion, capacidad_min, capacidad_max, metros, imagen, permite_garantizada, orden
+      FROM Eurovip.crucero_cabina_tipo WHERE id_crucero = @IdCrucero
+     ORDER BY CASE categoria WHEN 'INTERIOR' THEN 1 WHEN 'EXTERIOR' THEN 2 WHEN 'BALCON' THEN 3 ELSE 4 END, orden, nombre;
+    SELECT p.id_salida, p.id_tarifa, p.id_cabina_tipo, p.precio_pp
+      FROM Eurovip.crucero_precio p JOIN Eurovip.crucero_salida s ON s.id_salida = p.id_salida
+     WHERE s.id_crucero = @IdCrucero AND s.activo = 1 AND s.fecha_salida > CAST(GETDATE() AS date);
+    -- 10. Cubiertas y 11. cabinas concretas
+    SELECT id_cubierta, numero, nombre, plano FROM Eurovip.crucero_cubierta WHERE id_crucero = @IdCrucero ORDER BY numero;
+    SELECT k.id_cabina, k.id_cabina_tipo, k.id_cubierta, k.numero, k.disponible
+      FROM Eurovip.crucero_cabina k JOIN Eurovip.crucero_cabina_tipo t ON t.id_cabina_tipo = k.id_cabina_tipo
+     WHERE t.id_crucero = @IdCrucero ORDER BY k.id_cabina_tipo, k.numero;
+END
+GO
+
+/* ---------- CAMBIO 77: spSincronizaInicio también revisa las tarjetas CRUCERO (una por categoría) ---------- */
+CREATE OR ALTER PROCEDURE Eurovip.spSincronizaInicio
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @pend TABLE (tipo varchar(20), destino varchar(50));
+
+    -- Tarjetas sin sección -> ocultas (CAMBIO 61)
+    UPDATE i SET estado = 0 FROM Eurovip.inicio i
+    WHERE ISNULL(i.estado, 1) = 1
+      AND (i.id_contenedor IS NULL OR NOT EXISTS (SELECT 1 FROM Eurovip.contenedores c WHERE c.id_contenedor = i.id_contenedor));
+
+    -- Excursiones: lo que debería haber (una por destino, la más barata) contra lo que hay
+    ;WITH deberia AS (
+        SELECT d, id, precio FROM (
+            SELECT LTRIM(RTRIM(id_destino)) d, id_Excursion id, NULLIF(precio, 0) precio,
+                   ROW_NUMBER() OVER (PARTITION BY LTRIM(RTRIM(id_destino)) ORDER BY CASE WHEN ISNULL(precio, 0) > 0 THEN 0 ELSE 1 END, precio, id_Excursion) n
+            FROM Eurovip.servicio_excursion WHERE ISNULL(id_destino, '') <> '') x WHERE n = 1
+    ), hay AS (SELECT id_destino d, id_servicio id, precioWeb precio FROM Eurovip.inicio WHERE tipo_servicio = 'EXCURSION' AND id_idioma = 'ES')
+    INSERT @pend
+    SELECT 'EXCURSION', ISNULL(a.d, b.d) FROM deberia a FULL JOIN hay b ON b.d = a.d
+    WHERE a.d IS NULL OR b.d IS NULL OR a.id <> b.id OR ISNULL(a.precio, -1) <> ISNULL(b.precio, -1);
+
+    -- Traslados: solo los activos
+    ;WITH base AS (
+        SELECT id_destino d, id_traslado id,
+               CASE WHEN precio_ida_vuelta IS NULL THEN precio_ida
+                    WHEN precio_ida IS NULL OR precio_ida_vuelta <= precio_ida THEN precio_ida_vuelta ELSE precio_ida END precio
+        FROM Eurovip.traslado WHERE activo = 1
+    ), deberia AS (
+        SELECT d, id, precio FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY d ORDER BY precio, id) n FROM base) x WHERE n = 1
+    ), hay AS (SELECT id_destino d, id_servicio id, precioWeb precio FROM Eurovip.inicio WHERE tipo_servicio = 'TRASLADO' AND id_idioma = 'ES')
+    INSERT @pend
+    SELECT 'TRASLADO', ISNULL(a.d, b.d) FROM deberia a FULL JOIN hay b ON b.d = a.d
+    WHERE a.d IS NULL OR b.d IS NULL OR a.id <> b.id OR ISNULL(a.precio, -1) <> ISNULL(b.precio, -1);
+
+    -- Cruceros: una tarjeta por categoría activa con cruceros activos con precio (CAMBIO 77)
+    ;WITH deberia AS (
+        SELECT cc.id_categoria id, MIN(d.desde_pp) precio
+          FROM Eurovip.crucero_categoria g
+          JOIN Eurovip.crucero_categoria_crucero cc ON cc.id_categoria = g.id_categoria
+          JOIN Eurovip.crucero c ON c.id_crucero = cc.id_crucero AND c.activo = 1
+          JOIN Eurovip.vCruceroDesde d ON d.id_crucero = c.id_crucero
+         WHERE g.activo = 1 GROUP BY cc.id_categoria
+    ), hay AS (SELECT id_servicio id, precioWeb precio FROM Eurovip.inicio WHERE tipo_servicio = 'CRUCERO' AND id_idioma = 'ES')
+    INSERT @pend
+    SELECT 'CRUCERO', CAST(ISNULL(a.id, b.id) AS varchar(50)) FROM deberia a FULL JOIN hay b ON b.id = a.id
+    WHERE a.id IS NULL OR b.id IS NULL OR ISNULL(a.precio, -1) <> ISNULL(b.precio, -1);
+
+    DECLARE @t varchar(20), @d varchar(50);
+    DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT DISTINCT tipo, destino FROM @pend;
+    OPEN c; FETCH NEXT FROM c INTO @t, @d;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        IF @t = 'EXCURSION' EXEC Eurovip.spActualizaInicioExcursion @d;
+        ELSE IF @t = 'CRUCERO' BEGIN DECLARE @idc int = CAST(@d AS int); EXEC Eurovip.spActualizaInicioCrucero @idc; END
+        ELSE EXEC Eurovip.spActualizaInicioTraslado @d;
+        FETCH NEXT FROM c INTO @t, @d;
+    END
+    CLOSE c; DEALLOCATE c;
+
+    SELECT tipo, destino FROM @pend;   -- lo que se arregló (vacío si todo estaba bien)
+END
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -3882,6 +4359,10 @@ GO
                filas, 44 FK, 45 objetos; mismas cantidades y suma de control que el 93; los 568 objetos de otros
                esquemas del 29, iguales. Espejo comprobado: PRINCIPAL/MIRROR SINCRONIZADO, mismo LSN en los dos
                servidores y colas de envío y de rehacer en 0 (el .10 recibió todo).
+   21/10/2026  FASE 21 aplicada SOLO en el 93 (CAMBIO 67 a 77): módulo de CRUCEROS (14 tablas crucero_*,
+               vista vCruceroDesde, SP de inicio y de la web, multimedia tipo CRUCERO, módulo «cruceros» con
+               su contenedor CRUCEROS en la Home). Tablas vacías: los cruceros se cargan desde la pantalla
+               Cruceros. NO se tocó producción (29 ni .10) (pedido expreso de la usuaria).
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
