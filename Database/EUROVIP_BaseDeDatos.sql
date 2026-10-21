@@ -4643,6 +4643,13 @@ GO
                • Home: 3 tarjetas CRUCERO (una por categoría) con precio desde 1.696,70 por persona.
                • Se completó la descripción del barco Disney Treasure.
                Para quitarlo: pantalla Cruceros → Eliminar (borra todo lo suyo y sus fotos).
+   22/10/2026  FOTOS CON NOMBRE LEGIBLE (pedido de la usuaria: "no guardes el nombre de los archivos como código; si es
+               un destino de Punta Cana que sea punta cana"). La app nombra cada foto como su producto
+               (destinos/punta-cana/punta-cana.webp, galería -1, -2…). En el 93 se renombraron las 55 fotos de
+               cruceros que estaban en este equipo (archivo + URL en la base, en una transacción): catálogos (naviera,
+               barco, 6 categorías y sus tarjetas de la Home) y el crucero de ejemplo 1002 (portada, banner, galería,
+               26 actividades, 6 cabinas, 6 días). Queda con código destinos/punta-cana (su archivo está en el servidor):
+               se renombra allí con Herramientas → Fotos → «Poner nombres a las fotos».
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

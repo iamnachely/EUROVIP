@@ -498,6 +498,15 @@
             ${url ? `<img src="${esc(url)}" alt=""><button type="button" class="x" data-quitar-foto="${ruta}" title="Quitar foto">×</button>` : '<i class="bi bi-camera"></i>'}
             <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-subir-foto="${ruta}"></label>`;
     }
+    const nombreFoto = r => {
+        const p = r.split(':');
+        if (p[0] === 'cat') return $('#catNombre')?.value || catActual.que;
+        if (p[0] === 'dia') return `dia-${+p[1] + 1}`;
+        if (p[0] === 'act') return C.secciones[+p[1]].actividades[+p[2]].titulo || 'actividad';
+        if (p[0] === 'tipo') { const t = C.cabinas.find(x => x.clave === p[1]); return [t?.nombre || CAT_CORTO[t?.categoria], t?.codigo].filter(Boolean).join(' ') || 'cabina'; }
+        if (p[0] === 'cub') return 'cubierta-' + (C.cubiertas[+p[1]].numero ?? +p[1] + 1);
+        return 'foto';
+    };
     const tipoFoto = r => r === 'cat' ? catActual.que : { dia: 'itinerario', act: 'actividad', tipo: 'cabina', cub: 'cubierta' }[r.split(':')[0]];
     function ponerFoto(ruta, url) {
         const p = ruta.split(':');
@@ -510,6 +519,9 @@
     async function subirFoto(ruta, archivo, el) {
         if (!IMG_OK.test(archivo.type) || archivo.size > 10e6) { EV.toast('Usa una imagen JPG, PNG o WebP de hasta 10 MB.', 'err'); return; }
         const fd = new FormData(); fd.append('tipo', tipoFoto(ruta)); if (C?.id_Crucero) fd.append('id', C.id_Crucero); fd.append('archivo', archivo);
+        // nombre legible del archivo: el del crucero (carpeta) y el de la actividad, cabina, día… (archivo)
+        if (C?.titulo) fd.append('crucero', C.titulo);
+        fd.append('nombre', nombreFoto(ruta));
         el.classList.add('subiendo');
         try {
             const r = await EVProgreso.subir('/Cruceros/SubirImagen', fd);

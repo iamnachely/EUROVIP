@@ -166,7 +166,7 @@ namespace EuroVip.Controllers
         // ------------------------------------------------------------ imágenes (carpetas del proyecto, como BackTiTan)
         // Portada:  Eurovip.multimedia (CIRCUITO, PORTADA) → multimedia/circuitos/{slug}/{GUID}.webp; circuito.caratula = su URL.
         //           La intermedia y la galería se cargan con el componente de fotos (/Multimedia).
-        // Día:      {base de fotos}/circuitos/itinerario/{slug}/{GUID}.webp → circuito_itinerario.caratula = su URL (no va en multimedia)
+        // Día:      {base de fotos}/circuitos/itinerario/{circuito}/{circuito}-dia-{n}.webp → circuito_itinerario.caratula = su URL (no va en multimedia)
         // La ruta se guarda en el circuito al pulsar "Guardar circuito".
 
         [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(12_000_000)]
@@ -199,7 +199,7 @@ namespace EuroVip.Controllers
                 // No va en Eurovip.multimedia (sigue en circuito_itinerario.caratula), pero el archivo va en la base de fotos:
                 // {Multimedia:CarpetaFisica}/circuitos/itinerario/{slug}/{GUID}.webp; caratula = su URL completa.
                 await using var st = archivo!.OpenReadStream();
-                var url = await _mm.GuardarItinerarioAsync(nombre!.Trim(), st);
+                var url = await _mm.GuardarItinerarioAsync(nombre!.Trim(), dia, st);
                 await Auditar("Circuito_ImagenDia", new { nombre, dia, url });
                 return Json(new { ok = true, caratula = url, url, mensaje = $"Imagen del día {dia} cargada. Se guarda al pulsar Guardar." });
             }

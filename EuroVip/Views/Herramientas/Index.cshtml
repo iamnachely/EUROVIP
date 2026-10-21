@@ -208,10 +208,12 @@
         <div class="ht-panel">
             <h3><i class="bi bi-images"></i> Fotos (multimedia)</h3>
             <p style="margin:0 0 8px;color:var(--ev-muted);font-size:13px;font-weight:600">Todas las fotos van a la carpeta de fotos (<code>photosVacacionalparce\eurovip</code>, fotos.eurovip.com.do/eurovip): destinos, países, hoteles, alojamientos, circuitos (portada, intermedia, galería e itinerario), excursiones, traslados y slider.</p>
+            <div id="mmCarpeta" style="font-size:12.5px;font-weight:600;margin-bottom:8px"></div>
             <div id="mmResumen" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
             @if ((Context.Items[EuroVip.Helpers.AccesoModuloFilter.ClavePermisos] as PermisosUsuario)?.EsSuper == true)
             {
                 <button type="button" class="ev-btn ghost sm" id="mmMigrar"><i class="bi bi-arrow-left-right"></i> Pasar las fotos de antes</button>
+                <button type="button" class="ev-btn ghost sm" id="mmRenombrar" hidden><i class="bi bi-input-cursor-text"></i> Poner nombres a las fotos</button>
                 <div id="mmInforme" style="margin-top:8px;font-size:12.5px"></div>
             }
         </div>
@@ -253,14 +255,35 @@
     })).catch(() => {});
 
     // fotos en multimedia
-    const NOMBRE_TIPO = { ALOJAMIENTO: 'alojamientos', CIRCUITO: 'circuitos', EXCURSION: 'excursiones', TRASLADO: 'traslados', DESTINO: 'destinos', PAIS: 'países', HOTEL: 'hoteles' };
-    const resumenFotos = () => EV.api('/Herramientas/MultimediaResumen').then(r => {
+    const NOMBRE_TIPO = { ALOJAMIENTO: 'alojamientos', CIRCUITO: 'circuitos', EXCURSION: 'excursiones', TRASLADO: 'traslados', DESTINO: 'destinos', PAIS: 'países', HOTEL: 'hoteles', CRUCERO: 'cruceros', INICIO: 'tarjetas de la Home' };
+    const resumenFotos = () => EV.api('/Herramientas/MultimediaResumen').then(res => {
+        const r = res.fotos, c = res.carpeta;
+        // Dónde guarda las fotos ESTE servidor y si puede escribir ahí
+        $('#mmCarpeta').innerHTML = `<div style="padding:8px 10px;border-radius:10px;background:${c.sePuedeEscribir ? '#ECFDF3' : '#FEF3F2'};color:${c.sePuedeEscribir ? '#067647' : '#B42318'}">
+            <i class="bi ${c.sePuedeEscribir ? 'bi-check-circle' : 'bi-exclamation-octagon'}"></i> Este servidor guarda en <code>${esc(c.carpeta)}</code>
+            ${c.sePuedeEscribir ? `(${EV.fmt(c.archivos)} archivos)` : `<br><b>No puede escribir ahí:</b> ${esc(c.error || 'la carpeta no existe')}. Revisa Multimedia:CarpetaFisica en appsettings.json y los permisos del grupo de aplicaciones del IIS.`}
+            <br>Se ven con <code>${esc(c.url)}</code></div>`;
+        const rb = $('#mmRenombrar'); if (rb) { rb.hidden = !res.conCodigo; rb.innerHTML = `<i class="bi bi-input-cursor-text"></i> Poner nombres a ${res.conCodigo} foto(s) con código`; }
         const porTipo = {}; r.forEach(x => porTipo[x.tipo] = (porTipo[x.tipo] || 0) + x.n);
         $('#mmResumen').innerHTML = Object.keys(porTipo).length
             ? Object.entries(porTipo).map(([t, n]) => `<span class="ui-chip">${EV.fmt(n)} ${NOMBRE_TIPO[t] || t}</span>`).join('')
             : '<span style="color:var(--ev-muted);font-size:12.5px;font-weight:600">Todavía no hay fotos en multimedia.</span>';
     }).catch(() => {});
     resumenFotos();
+    $('#mmRenombrar')?.addEventListener('click', async e => {
+        if (!await EV.confirmar({ titulo: '¿Poner nombres a las fotos?', si: 'Sí, renombrar',
+            texto: 'Las fotos que tienen un código por nombre pasan a llamarse como su producto (ej. <code>destinos/punta-cana/punta-cana.webp</code>). Se cambia el archivo y su dirección en la base. Hazlo en el servidor donde están los archivos.' })) return;
+        const b = e.currentTarget, html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Renombrando…';
+        try {
+            const r = await EV.post('/Herramientas/RenombrarFotos');
+            EV.toast(r.mensaje);
+            $('#mmInforme').innerHTML = `<div><b>Renombradas:</b> ${EV.fmt(r.renombradas)} · <b>Ya estaban bien:</b> ${EV.fmt(r.yaBien)}</div>` +
+                (r.sinArchivo.length ? `<details><summary>${r.sinArchivo.length} sin archivo en este servidor</summary><div style="max-height:160px;overflow:auto">${r.sinArchivo.map(esc).join('<br>')}</div></details>` : '') +
+                (r.errores.length ? `<div style="color:#B42318"><b>Errores:</b><br>${r.errores.map(esc).join('<br>')}</div>` : '');
+            resumenFotos();
+        } catch (er) { EV.toast(er.message, 'err'); }
+        finally { b.disabled = false; b.innerHTML = html; }
+    });
     $('#mmMigrar')?.addEventListener('click', async e => {
         if (!await EV.confirmar({ titulo: '¿Pasar las fotos de antes?', si: 'Sí, pasarlas',
             texto: 'Copia a la carpeta de fotos (fotos.eurovip.com.do/eurovip) las portadas de excursiones, traslados, circuitos, destinos, alojamientos y hoteles, las fotos del itinerario de circuito y los archivos del slider. No borra nada y lo que ya está se salta. Hazlo en la app del servidor (allí están las fotos).' })) return;

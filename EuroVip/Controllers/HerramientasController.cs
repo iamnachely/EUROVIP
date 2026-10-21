@@ -172,7 +172,21 @@ namespace EuroVip.Controllers
         {
             using var cn = _aud.Conexion();
             var filas = await Dapper.SqlMapper.QueryAsync<(string Tipo, string Uso, int N)>(cn, "SELECT tipo, uso, COUNT(*) FROM Eurovip.multimedia GROUP BY tipo, uso");
-            return Json(filas.Select(f => new { f.Tipo, f.Uso, f.N }));
+            var sinNombre = await Dapper.SqlMapper.ExecuteScalarAsync<int>(cn,
+                "SELECT COUNT(*) FROM Eurovip.imagen WHERE LEN(nombre_archivo) = 32 AND nombre_archivo NOT LIKE '%[^0-9a-f]%'");
+            return Json(new { fotos = filas.Select(f => new { f.Tipo, f.Uso, f.N }), carpeta = _mm.Estado(), conCodigo = sinNombre });
+        }
+
+        /// <summary>Pone nombre legible a las fotos que aún tienen código (destinos/punta-cana/punta-cana.webp). Solo Superadministrador.</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> RenombrarFotos()
+        {
+            if ((HttpContext.Items[AccesoModuloFilter.ClavePermisos] as PermisosUsuario)?.EsSuper != true)
+                return StatusCode(403, new { mensaje = "Solo un Superadministrador puede renombrar las fotos." });
+            var r = await _mm.RenombrarArchivosAsync();
+            await Auditar("Herramienta_RenombrarFotos", new { r.Renombradas, r.YaBien, sinArchivo = r.SinArchivo.Count, r.Errores });
+            return Json(new { ok = true, renombradas = r.Renombradas, yaBien = r.YaBien, sinArchivo = r.SinArchivo, errores = r.Errores,
+                              mensaje = r.Renombradas == 0 ? "No había fotos que renombrar en este servidor." : $"Se renombraron {r.Renombradas} fotos." });
         }
 
         /// <summary>

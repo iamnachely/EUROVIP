@@ -193,13 +193,20 @@ namespace EuroVip.Controllers
             return Json(new { ok = true, mensaje = $"Se eliminó «{c.Titulo}»." });
         }
 
-        /// <summary>Foto suelta (actividad, cabina, cubierta, día del itinerario, logo de naviera, barco o categoría) → URL.</summary>
+        /// <summary>
+        /// Foto suelta (actividad, cabina, cubierta, día del itinerario, logo de naviera, barco o categoría) → URL.
+        /// Nombre legible: cruceros/{crucero}/actividades/{actividad}.webp, cruceros/navieras/{naviera}.webp…
+        /// </summary>
         [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(12_000_000)]
-        public async Task<IActionResult> SubirImagen([FromForm] string tipo, [FromForm] int? id, IFormFile? archivo)
+        public async Task<IActionResult> SubirImagen([FromForm] string tipo, [FromForm] int? id, [FromForm] string? crucero, [FromForm] string? nombre, IFormFile? archivo)
         {
+            var delCrucero = Multimedia.NombreArchivo(crucero, id is > 0 ? "crucero-" + id : "crucero-nuevo");
             var carpeta = tipo switch
             {
-                "actividad" or "cabina" or "cubierta" or "itinerario" => $"cruceros/{(id is > 0 ? id.ToString() : "nuevos")}/{tipo}",
+                "actividad" => $"cruceros/{delCrucero}/actividades",
+                "cabina" => $"cruceros/{delCrucero}/cabinas",
+                "cubierta" => $"cruceros/{delCrucero}/cubiertas",
+                "itinerario" => $"cruceros/{delCrucero}/itinerario",
                 "naviera" => "cruceros/navieras",
                 "barco" => "cruceros/barcos",
                 "categoria" => "cruceros/categorias",
@@ -212,7 +219,7 @@ namespace EuroVip.Controllers
             try
             {
                 await using var st = archivo.OpenReadStream();
-                var url = await _mm.GuardarArchivoAsync(carpeta, st);
+                var url = await _mm.GuardarArchivoAsync(carpeta, nombre ?? Path.GetFileNameWithoutExtension(archivo.FileName), st);
                 await Auditar("Crucero_Imagen", id ?? 0, new { tipo, url });
                 return Json(new { ok = true, url, mensaje = "Foto subida. Se guarda en el crucero al pulsar Guardar." });
             }

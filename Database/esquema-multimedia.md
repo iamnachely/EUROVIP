@@ -128,7 +128,7 @@ https://<servidor>/multimedia/alojamientos/322/3f2a9c1e5b7d4e0a9c8b1a2d3e4f5a6b.
 ### 5.3 Reglas
 
 - **Solo minúsculas, números, `-` y `_`** en carpetas y nombres (lo exige `CK_Eurovip_imagen_ruta`). Slug: «Ruta Colonial» → `ruta-colonial`, «Costa Rica Essencial» → `costa-rica-essencial`.
-- **Nombre de archivo aleatorio** (32 caracteres hexadecimales, un GUID sin guiones), nunca el nombre original: no hay choques y el navegador o el CDN no sirven una foto vieja en caché.
+- **Nombre de archivo legible** (pedido de la usuaria, 22/10/2026): el del producto, en minúsculas y con guiones. Ejemplos: `destinos/punta-cana/punta-cana.webp` (portada), `…/punta-cana-banner.webp` (intermedia), `…/punta-cana-1.webp`, `-2`… (galería), `circuitos/itinerario/ruta-colonial/ruta-colonial-dia-3.webp`, `cruceros/{crucero}/actividades/{actividad}.webp`, `inicio/oferta-punta-cana/oferta-punta-cana.webp` (tarjeta de la Home). Si el nombre ya existe se añade `-1`, `-2`… (nunca se pisa un archivo). El slider ya usaba el nombre que se escribe. Herramientas → Fotos → «Poner nombres a las fotos» renombra las que aún tienen código.
 - **Nunca se sobrescribe un archivo.** Para cambiar una foto se sube un archivo nuevo y se cambia la fila de `multimedia`.
 - **El uso no va en la ruta** (nada de `…/portada/`): está en `multimedia.uso`. Así, cambiar la portada es cambiar una fila, sin mover archivos.
 - **Sin carpeta por idioma**: la foto vale para todos los idiomas.

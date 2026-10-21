@@ -59,16 +59,30 @@ namespace EuroVip.Services
         Task<int> CambiarClaveAsync(string tipo, string vieja, string nueva, IDbConnection cn, IDbTransaction tx);
         Task<ResumenMigracion> MigrarImagenesViejasAsync();
         /// <summary>Foto de un día del itinerario de circuito: NO va en Eurovip.multimedia (se guarda en circuito_itinerario.caratula),
-        /// pero el archivo va en la misma base: {base}/circuitos/itinerario/{slug del circuito}/{GUID}.webp. Devuelve su URL.</summary>
-        Task<string> GuardarItinerarioAsync(string circuito, Stream origen);
-        /// <summary>Guarda una foto suelta (no va en Eurovip.multimedia) en {base}/{carpeta}/{GUID}.webp y devuelve su URL.
-        /// carpeta: solo minúsculas, números, "-", "_" y "/" (ej. "cruceros/12/actividades").</summary>
-        Task<string> GuardarArchivoAsync(string carpeta, Stream origen);
+        /// pero el archivo va en la misma base: {base}/circuitos/itinerario/{circuito}/{circuito}-dia-{n}.webp. Devuelve su URL.</summary>
+        Task<string> GuardarItinerarioAsync(string circuito, int dia, Stream origen);
+        /// <summary>Guarda una foto suelta (no va en Eurovip.multimedia) en {base}/{carpeta}/{nombre}.webp y devuelve su URL.
+        /// carpeta: solo minúsculas, números, "-", "_" y "/" (ej. "cruceros/halloween-en-alta-mar/actividades").</summary>
+        Task<string> GuardarArchivoAsync(string carpeta, string? nombre, Stream origen);
+        /// <summary>Pone nombre legible a las fotos de multimedia que aún tienen código (destinos/punta-cana/punta-cana.webp).</summary>
+        Task<ResumenRenombrar> RenombrarArchivosAsync();
+        /// <summary>Dónde guarda las fotos este servidor y si puede escribir ahí (panel Fotos de Herramientas).</summary>
+        EstadoCarpeta Estado();
         /// <summary>Días del itinerario de un circuito con su foto (circuito_itinerario.caratula).</summary>
         Task<List<DiaFoto>> DiasCircuitoAsync(string circuito);
         /// <summary>Cambia (origen con la imagen) o quita (origen null) la foto de un día y la guarda al momento. Devuelve la URL nueva.</summary>
         Task<string?> FotoDiaAsync(string circuito, short dia, Stream? origen);
     }
+
+    public sealed class ResumenRenombrar
+    {
+        public int Renombradas { get; set; }
+        public int YaBien { get; set; }
+        public List<string> SinArchivo { get; } = new();
+        public List<string> Errores { get; } = new();
+    }
+
+    public sealed record EstadoCarpeta(string Carpeta, string Url, bool Existe, bool SePuedeEscribir, int Archivos, string? Error);
 
     public sealed class DiaFoto
     {
@@ -92,7 +106,7 @@ namespace EuroVip.Services
     /// <summary>
     /// Fotos de los productos según el documento esquema-multimedia.md (SPEC-013):
     ///  • Eurovip.imagen = el archivo; Eurovip.multimedia = qué producto lo usa, para qué (PORTADA, INTERMEDIA, GALERIA) y en qué orden.
-    ///  • Archivo: {Multimedia:CarpetaFisica}/{carpeta del tipo}/{id o slug}/{GUID sin guiones}.webp — nunca se sobrescribe.
+    ///  • Archivo: {Multimedia:CarpetaFisica}/{carpeta del tipo}/{id o slug}/{nombre del producto}.webp (galería -1, -2…) — nunca se sobrescribe.
     ///    URL: {Multimedia:Url}/ + la misma ruta. Por defecto wwwroot/multimedia y "/multimedia".
     ///  • Tipos del documento (ALOJAMIENTO, CIRCUITO, EXCURSION, TRASLADO) + DESTINO, PAIS y HOTEL (tarjetas de la pantalla Hoteles).
     ///  • NO van aquí las fotos del itinerario de circuito ni las del slider: siguen como estaban.
@@ -147,11 +161,51 @@ namespace EuroVip.Services
             return Regex.Replace(sb.ToString(), "-{2,}", "-").Trim('-');
         }
 
-        private static string Carpeta(TipoMultimedia t, string clave)
+        /// <summary>Texto → nombre de archivo: «Punta Cana» → "punta-cana" (máx. 60 letras; si queda vacío, "otro").</summary>
+        public static string NombreArchivo(string? texto, string otro = "foto")
         {
-            var parte = t.Entero ? int.Parse(clave, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture) : Slug(clave);
-            if (parte == "") throw new InvalidOperationException($"La referencia del {t.Nombre} no sirve para la carpeta: escribe letras o números.");
-            return $"{t.Carpeta}/{parte}/";
+            var s = Slug(texto);
+            if (s.Length > 60) s = s[..60].Trim('-');
+            return s == "" ? otro : s;
+        }
+
+        /// <summary>Nombre del producto para su carpeta y sus archivos (pedido de la usuaria: «si es Punta Cana, que sea punta-cana»).</summary>
+        private async Task<string> NombreProductoAsync(TipoMultimedia t, object v)
+        {
+            var sql = t.Tipo switch
+            {
+                "ALOJAMIENTO" => "SELECT TOP 1 nombre FROM Eurovip.alojamiento WHERE id_alojamiento = @v",
+                "EXCURSION" => "SELECT TOP 1 nombre FROM Eurovip.servicio_excursion WHERE id_Excursion = @v",
+                "TRASLADO" => "SELECT TOP 1 nombre FROM Eurovip.traslado WHERE id_traslado = @v",
+                "PAIS" => "SELECT TOP 1 nombre FROM Eurovip.pais WHERE id_pais = @v",
+                "HOTEL" => "SELECT TOP 1 id_destino FROM Eurovip.inicio WHERE id_servicio = @v AND tipo_servicio = 'HOTEL'",
+                "CRUCERO" => "SELECT TOP 1 titulo FROM Eurovip.crucero WHERE id_crucero = @v",
+                "INICIO" => "SELECT TOP 1 LOWER(tipo_servicio) + ' ' + id_destino FROM Eurovip.inicio WHERE id = @v",
+                _ => null   // CIRCUITO y DESTINO: la clave ya es el nombre
+            };
+            string? n = null;
+            if (sql is not null) { using var cn = _db.Conexion(); n = await cn.ExecuteScalarAsync<string?>(sql, new { v }); }
+            return NombreArchivo(string.IsNullOrWhiteSpace(n) ? Convert.ToString(v, CultureInfo.InvariantCulture) : n, t.Carpeta.TrimEnd('s'));
+        }
+
+        /// <summary>
+        /// Escribe el archivo con el primer nombre libre: "punta-cana", "punta-cana-1", "punta-cana-2"… (con numerar, desde "-1").
+        /// Nunca pisa un archivo que ya existe (CreateNew) ni repite uno que esté en Eurovip.imagen.
+        /// </summary>
+        private async Task<string> EscribirNuevoAsync(string carpeta, string nombreBase, bool numerar, byte[] datos)
+        {
+            for (var n = numerar ? 1 : 0; n < 5000; n++)
+            {
+                var nombre = n == 0 ? nombreBase : $"{nombreBase}-{n}";
+                var fisica = Fisica(carpeta + nombre + ".webp");
+                if (File.Exists(fisica)) continue;
+                using (var cn = _db.Conexion())
+                    if (await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.imagen WHERE ruta_relativa = @carpeta AND nombre_archivo = @nombre AND extension = 'webp'", new { carpeta, nombre }) > 0) continue;
+                Directory.CreateDirectory(Path.GetDirectoryName(fisica)!);
+                try { await using var fs = new FileStream(fisica, FileMode.CreateNew, FileAccess.Write); await fs.WriteAsync(datos); return nombre; }
+                catch (IOException) when (File.Exists(fisica)) { /* otro lo escribió a la vez: siguiente número */ }
+            }
+            throw new InvalidOperationException("No se encontró un nombre libre para la foto.");
         }
 
         private static object Valor(TipoMultimedia t, string clave) =>
@@ -247,13 +301,13 @@ namespace EuroVip.Services
             if (!Usos.Contains(uso)) throw new InvalidOperationException("Uso de la foto desconocido.");
             if (uso == "INTERMEDIA" && t.Tipo is not ("CIRCUITO" or "CRUCERO")) throw new InvalidOperationException("La foto intermedia es solo para circuitos y cruceros.");
             var v = Valor(t, clave);
-            var carpeta = Carpeta(t, clave);
+            // destinos/punta-cana/punta-cana.webp · …/punta-cana-banner.webp · galería …/punta-cana-1.webp, -2…
+            var producto = await NombreProductoAsync(t, v);
+            var carpeta = $"{t.Carpeta}/{producto}/";
 
             var (datos, ancho, alto) = await ImagenesLocales.ConvertirWebpAsync(origen);
-            var nombre = Guid.NewGuid().ToString("N");                       // 32 hexadecimales: sin choques ni caché vieja
-            var fisica = Fisica(carpeta + nombre + ".webp");
-            Directory.CreateDirectory(Path.GetDirectoryName(fisica)!);
-            await File.WriteAllBytesAsync(fisica, datos);                    // archivo nuevo: nunca se sobrescribe
+            var nombre = await EscribirNuevoAsync(carpeta, uso == "INTERMEDIA" ? producto + "-banner" : producto, uso == "GALERIA", datos);
+            var fisica = Fisica(carpeta + nombre + ".webp");                 // archivo nuevo: nunca se sobrescribe
 
             int idMultimedia;
             int? imagenVieja = null;
@@ -477,28 +531,86 @@ namespace EuroVip.Services
         /// de circuito, destinos (destino.caratula), alojamientos (alojamiento.caratula local) y hoteles de la pantalla Hoteles.
         /// No toca el itinerario de circuito ni el slider. No borra los archivos viejos. Se puede repetir: salta lo que ya tiene portada.
         /// </summary>
-        public async Task<string> GuardarItinerarioAsync(string circuito, Stream origen)
+        public async Task<string> GuardarItinerarioAsync(string circuito, int dia, Stream origen)
         {
             var slug = Slug(circuito);
             if (slug == "") throw new InvalidOperationException("Primero escribe el nombre del circuito.");
+            slug = NombreArchivo(slug);
             var (datos, _, _) = await ImagenesLocales.ConvertirWebpAsync(origen);
-            var ruta = $"circuitos/itinerario/{slug}/{Guid.NewGuid():N}.webp";
-            var fisica = Fisica(ruta);
-            Directory.CreateDirectory(Path.GetDirectoryName(fisica)!);
-            await File.WriteAllBytesAsync(fisica, datos);
-            return Url(ruta);
+            var carpeta = $"circuitos/itinerario/{slug}/";
+            return Url(carpeta + await EscribirNuevoAsync(carpeta, $"{slug}-dia-{dia}", false, datos) + ".webp");
         }
 
-        public async Task<string> GuardarArchivoAsync(string carpeta, Stream origen)
+        public async Task<string> GuardarArchivoAsync(string carpeta, string? nombre, Stream origen)
         {
             carpeta = (carpeta ?? "").Trim().Trim('/');
             if (carpeta == "" || !Regex.IsMatch(carpeta, "^[a-z0-9_-]+(/[a-z0-9_-]+)*$")) throw new InvalidOperationException("Carpeta no válida.");
             var (datos, _, _) = await ImagenesLocales.ConvertirWebpAsync(origen);
-            var ruta = $"{carpeta}/{Guid.NewGuid():N}.webp";
-            var fisica = Fisica(ruta);
-            Directory.CreateDirectory(Path.GetDirectoryName(fisica)!);
-            await File.WriteAllBytesAsync(fisica, datos);
-            return Url(ruta);
+            carpeta += "/";
+            return Url(carpeta + await EscribirNuevoAsync(carpeta, NombreArchivo(nombre, carpeta.Split('/', StringSplitOptions.RemoveEmptyEntries).Last()), false, datos) + ".webp");
+        }
+
+        public async Task<ResumenRenombrar> RenombrarArchivosAsync()
+        {
+            var r = new ResumenRenombrar();
+            List<(int IdImg, string Tipo, string Clave, string Uso, short Orden, string Carp, string Nom, string Ext)> filas;
+            using (var cn = _db.Conexion())
+                filas = (await cn.QueryAsync<(int, string, string, string, short, string, string, string)>(@"
+                    SELECT v.id_imagen, v.tipo, v.clave, v.uso, v.orden, i.ruta_relativa, i.nombre_archivo, i.extension
+                      FROM Eurovip.vMultimedia v JOIN Eurovip.imagen i ON i.id = v.id_imagen
+                     ORDER BY v.tipo, v.clave, CASE v.uso WHEN 'PORTADA' THEN 0 WHEN 'INTERMEDIA' THEN 1 ELSE 2 END, v.orden")).ToList();
+            var vacias = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in filas)
+            {
+                try
+                {
+                    var t = Tipo(f.Tipo)!;
+                    var producto = await NombreProductoAsync(t, Valor(t, f.Clave));
+                    var carpeta = $"{t.Carpeta}/{producto}/";
+                    var deseado = f.Uso == "PORTADA" ? producto : f.Uso == "INTERMEDIA" ? producto + "-banner" : $"{producto}-{f.Orden}";
+                    if (f.Carp == carpeta && f.Nom == deseado) { r.YaBien++; continue; }
+                    var vieja = Fisica(f.Carp + f.Nom + "." + f.Ext);
+                    if (!File.Exists(vieja)) { r.SinArchivo.Add($"{t.Nombre} {f.Clave} ({f.Uso.ToLowerInvariant()}): {f.Carp}{f.Nom}.{f.Ext}"); continue; }
+                    var nombre = deseado;
+                    for (var n = 1; File.Exists(Fisica(carpeta + nombre + "." + f.Ext)); n++) nombre = $"{deseado}-{n}";
+                    var nueva = Fisica(carpeta + nombre + "." + f.Ext);
+                    Directory.CreateDirectory(Path.GetDirectoryName(nueva)!);
+                    File.Move(vieja, nueva);
+                    try
+                    {
+                        using var cn = _db.Conexion();
+                        await cn.ExecuteAsync("UPDATE Eurovip.imagen SET ruta_relativa = @carpeta, nombre_archivo = @nombre WHERE id = @IdImg", new { carpeta, nombre, f.IdImg });
+                    }
+                    catch { File.Move(nueva, vieja); throw; }
+                    r.Renombradas++;
+                    vacias.Add(Path.GetDirectoryName(vieja)!);
+                    if (f.Uso == "PORTADA") await SincronizarProductoAsync(t, f.Clave);   // la URL nueva en las columnas de antes (Home, destino…)
+                }
+                catch (Exception ex) { r.Errores.Add($"{f.Tipo} {f.Clave}: {ex.Message}"); }
+            }
+            foreach (var d in vacias)
+                try { if (Directory.Exists(d) && !Directory.EnumerateFileSystemEntries(d).Any()) Directory.Delete(d); } catch { /* no pasa nada */ }
+            return r;
+        }
+
+        public EstadoCarpeta Estado()
+        {
+            try
+            {
+                var existe = Directory.Exists(CarpetaBase);
+                var escribe = false; string? error = null;
+                try
+                {
+                    Directory.CreateDirectory(CarpetaBase);
+                    var prueba = Path.Combine(CarpetaBase, ".prueba-escritura");
+                    File.WriteAllText(prueba, DateTime.Now.ToString("O")); File.Delete(prueba);
+                    escribe = true;
+                }
+                catch (Exception ex) { error = ex.Message; }
+                var archivos = Directory.Exists(CarpetaBase) ? Directory.EnumerateFiles(CarpetaBase, "*", SearchOption.AllDirectories).Take(100000).Count() : 0;
+                return new EstadoCarpeta(CarpetaBase, UrlBase, existe, escribe, archivos, error);
+            }
+            catch (Exception ex) { return new EstadoCarpeta(CarpetaBase, UrlBase, false, false, 0, ex.Message); }
         }
 
         public async Task<List<DiaFoto>> DiasCircuitoAsync(string circuito)
@@ -516,7 +628,7 @@ namespace EuroVip.Services
             var p = new { circuito, dia };
             if (await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.circuito_itinerario WHERE nombre_circuito = @circuito AND id_idioma = 'ES' AND dia = @dia", p) == 0)
                 throw new InvalidOperationException($"El día {dia} no está en el itinerario de ese circuito.");
-            var url = origen is null ? null : await GuardarItinerarioAsync(circuito, origen);
+            var url = origen is null ? null : await GuardarItinerarioAsync(circuito, dia, origen);
             await cn.ExecuteAsync("UPDATE Eurovip.circuito_itinerario SET caratula = @url WHERE nombre_circuito = @circuito AND id_idioma = 'ES' AND dia = @dia",
                 new { circuito, dia, url });
             return url;
@@ -587,7 +699,7 @@ namespace EuroVip.Services
                     var vieja = rel.Contains("..") ? null : Path.Combine(viejas, rel.Replace('/', Path.DirectorySeparatorChar));
                     if (vieja is null || !File.Exists(vieja)) { r.SinArchivo.Add($"Itinerario {nombre} día {dia}: no está el archivo {Path.GetFileName(car)}"); continue; }
                     await using var st = File.OpenRead(vieja);
-                    var url = await GuardarItinerarioAsync(nombre, st);
+                    var url = await GuardarItinerarioAsync(nombre, dia, st);
                     await cn.ExecuteAsync("UPDATE Eurovip.circuito_itinerario SET caratula = @url WHERE nombre_circuito = @nombre AND id_idioma = @idioma AND dia = @dia AND caratula = @car",
                         new { url, nombre, idioma, dia, car });
                     r.Itinerario++;
