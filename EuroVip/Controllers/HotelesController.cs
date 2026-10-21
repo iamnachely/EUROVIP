@@ -9,6 +9,8 @@ namespace EuroVip.Controllers
     /// <summary>
     /// Fase 2 — Carga de Hoteles. Equivale a /Inicio2/Index?tipoServicio=HOTEL + modal "Nueva Oferta" de BackTiTan,
     /// guardando en [Eurovip].[inicio] con tipo_servicio = 'HOTEL'.
+    /// Foto: Eurovip.multimedia tipo HOTEL (id_hotel = id_servicio de la tarjeta) → multimedia/hoteles/{id}/. Va con el hotel,
+    /// no con el nombre. Si un hotel aún no tiene foto nueva se muestra la de antes (wwwroot/imagenes/hoteles/{nombre}.webp).
     /// </summary>
     public class HotelesController : Controller
     {
@@ -16,9 +18,12 @@ namespace EuroVip.Controllers
         private readonly IHotelRepository _repo;
         private readonly IImagenesLocales _img;
         private readonly ILogger<HotelesController> _logger;
+        private readonly IMultimedia _mm;
+        private const string TipoMm = "HOTEL";
 
-        public HotelesController(IHotelRepository repo, IImagenesLocales img, ILogger<HotelesController> logger)
+        public HotelesController(IHotelRepository repo, IImagenesLocales img, ILogger<HotelesController> logger, IMultimedia mm)
         {
+            _mm = mm;
             _repo = repo;
             _img = img;
             _logger = logger;
@@ -39,7 +44,9 @@ namespace EuroVip.Controllers
         public async Task<IActionResult> Listar([FromQuery] HotelFiltro filtro)
         {
             var resultado = await _repo.ListarAsync(filtro);
-            foreach (var h in resultado.Items) h.Imagen = _img.Buscar(TipoImagen, h.Id_Destino)?.Url;
+            var portadas = await _mm.PortadasAsync(TipoMm);
+            foreach (var h in resultado.Items)
+                h.Imagen = portadas.TryGetValue(h.Id_Servicio.ToString(), out var u) ? u : _img.Buscar(TipoImagen, h.Id_Destino)?.Url;
             var stats = await _repo.EstadisticasAsync();
             return Json(new { resultado.Items, resultado.Total, resultado.Pagina, resultado.Tam, resultado.Paginas, stats });
         }
@@ -134,53 +141,74 @@ namespace EuroVip.Controllers
         {
             var eliminado = await _repo.EliminarAsync(id);
             if (eliminado is null) return NotFound(new { mensaje = "No encontramos ese hotel." });
+            await _mm.EliminarProductoAsync(TipoMm, id.ToString());   // su foto (Eurovip.multimedia)
             await Auditar("Hotel_Eliminar", id, eliminado);
             _logger.LogInformation("Hotel {Id} eliminado por {Usuario}", id, User.Identity?.Name);
             return Json(new { ok = true, mensaje = $"\"{eliminado.Id_Destino}\" se eliminó." });
         }
 
-        // ---------------- imágenes (carpeta wwwroot/imagenes/hoteles, por nombre del hotel) ----------------
+        // ---------------- foto (Eurovip.multimedia, tipo HOTEL, por número de hotel) ----------------
+        /// <summary>La foto de un hotel: la de Eurovip.multimedia o, si aún no tiene, la de antes por nombre.</summary>
+        private async Task<object?> FotoAsync(int id, string? nombre)
+        {
+            var mm = (await _mm.ListarAsync(TipoMm, id.ToString())).FirstOrDefault(x => x.Uso == "PORTADA");
+            if (mm is not null) return new { archivo = mm.Ruta, url = mm.Url, bytes = mm.Tamano_Bytes, ancho = mm.Ancho, alto = mm.Alto, nueva = true };
+            var vieja = string.IsNullOrWhiteSpace(nombre) ? null : _img.Buscar(TipoImagen, nombre);
+            return vieja is null ? null : new { archivo = vieja.Archivo, url = vieja.Url, bytes = vieja.Bytes, ancho = vieja.Ancho, alto = vieja.Alto, nueva = false };
+        }
+
         [HttpGet]
-        public IActionResult Imagen(string nombre) =>
-            Json(new { archivo = _img.NombreArchivo(nombre ?? ""), imagen = _img.Buscar(TipoImagen, nombre ?? "") });
+        public async Task<IActionResult> Imagen(int? id, string? nombre) =>
+            Json(new { carpeta = id is int n ? $"multimedia/hoteles/{n}/" : null, imagen = id is int i ? await FotoAsync(i, nombre) : null });
 
         [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(12_000_000)]
-        public async Task<IActionResult> SubirImagen([FromForm] string nombre, IFormFile? archivo)
+        public async Task<IActionResult> SubirImagen([FromForm] int id, IFormFile? archivo)
         {
-            nombre = (nombre ?? "").Trim();
-            if (_img.NombreArchivo(nombre) == "") return BadRequest(new { mensaje = "Primero escribe el nombre del hotel: la foto se guarda con ese nombre." });
+            var h = await _repo.ObtenerAsync(id);
+            if (h is null) return NotFound(new { mensaje = "Guarda primero el hotel: la foto va con él." });
             if (archivo is null || archivo.Length == 0) return BadRequest(new { mensaje = "Elige una imagen." });
             if (archivo.Length > 10_000_000) return BadRequest(new { mensaje = "La imagen pesa más de 10 MB." });
             if (await ImagenSegura.ExtensionAsync(archivo) is null) return BadRequest(new { mensaje = "El archivo no es una imagen JPG, PNG o WebP." });
             try
             {
-                var existia = _img.Buscar(TipoImagen, nombre) is not null;
+                var existia = await FotoAsync(id, h.Id_Destino) is not null;
                 await using var st = archivo.OpenReadStream();
-                var img = await _img.GuardarAsync(TipoImagen, nombre, st);
-                await Auditar(existia ? "Hotel_ImagenCambiar" : "Hotel_ImagenSubir", 0, new { nombre, img.Archivo, img.Bytes, original = archivo.FileName });
-                return Json(new { ok = true, imagen = img, mensaje = existia ? "Foto reemplazada." : "Foto guardada." });
+                var img = await _mm.SubirAsync(TipoMm, id.ToString(), "PORTADA", st, archivo.FileName);
+                await Auditar(existia ? "Hotel_ImagenCambiar" : "Hotel_ImagenSubir", id, new { img.Ruta, img.Tamano_Bytes, original = archivo.FileName });
+                return Json(new { ok = true, imagen = new { archivo = img.Ruta, url = img.Url, bytes = img.Tamano_Bytes, ancho = img.Ancho, alto = img.Alto, nueva = true },
+                                  mensaje = existia ? "Foto reemplazada." : "Foto guardada." });
             }
             catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
         }
 
+        /// <summary>Quita la foto del hotel (la nueva y, si quedaba, la de antes por nombre cuando ningún otro hotel se llama igual).</summary>
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> EliminarImagen(string archivo)
+        public async Task<IActionResult> EliminarImagen(int id)
         {
-            if (!_img.Eliminar(TipoImagen, archivo ?? "")) return NotFound(new { mensaje = "Esa foto ya no existe." });
-            await Auditar("Hotel_ImagenEliminar", 0, new { archivo });
+            var h = await _repo.ObtenerAsync(id);
+            if (h is null) return NotFound(new { mensaje = "No encontramos ese hotel." });
+            var quitada = await _mm.QuitarUsoAsync(TipoMm, id.ToString(), "PORTADA") > 0;
+            var nombre = (h.Id_Destino ?? "").Trim();
+            var mismoNombre = (await _repo.NombresAsync()).Count(n => _img.NombreArchivo(n) == _img.NombreArchivo(nombre));
+            if (mismoNombre <= 1 && _img.Eliminar(TipoImagen, _img.NombreArchivo(nombre))) quitada = true;
+            if (!quitada) return NotFound(new { mensaje = "Ese hotel no tenía foto." });
+            await Auditar("Hotel_ImagenEliminar", id, new { nombre });
             return Json(new { ok = true, mensaje = "Foto eliminada." });
         }
 
-        /// <summary>Galería: todas las fotos de la carpeta, con los hoteles que la usan, y los hoteles que no tienen foto.</summary>
+        /// <summary>Galería: cada hotel con su foto (nueva o la de antes) y los hoteles que no tienen foto.</summary>
         [HttpGet]
         public async Task<IActionResult> Imagenes()
         {
-            var nombres = (await _repo.NombresAsync()).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
-            var porArchivo = nombres.GroupBy(n => _img.NombreArchivo(n)).ToDictionary(g => g.Key, g => g.ToList());
-            var fotos = _img.Listar(TipoImagen).Select(i => new { i.Archivo, i.Url, i.Bytes, i.Fecha, i.Ancho, i.Alto,
-                hoteles = porArchivo.TryGetValue(i.Archivo, out var h) ? h : new List<string>() }).ToList();
-            var conFoto = fotos.Select(f => f.Archivo).ToHashSet();
-            var sinFoto = porArchivo.Where(p => p.Key != "" && !conFoto.Contains(p.Key)).SelectMany(p => p.Value).OrderBy(n => n).ToList();
+            var tarjetas = await _repo.TarjetasAsync();
+            var fotos = new List<object>();
+            var sinFoto = new List<object>();
+            foreach (var (id, nombre) in tarjetas)
+            {
+                var f = await FotoAsync(id, nombre);
+                if (f is null) sinFoto.Add(new { id, nombre });
+                else fotos.Add(new { id, nombre, foto = f });
+            }
             return Json(new { fotos, sinFoto });
         }
 

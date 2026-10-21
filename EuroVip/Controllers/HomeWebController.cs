@@ -22,10 +22,12 @@ namespace EuroVip.Controllers
         private readonly ILogger<HomeWebController> _logger;
 
         private readonly IImagenesLocales _img;
+        private readonly IMultimedia _mm;
 
-        public HomeWebController(IHomeWebRepository repo, ICircuitoRepository db, IConfiguration cfg, IImagenesLocales img, ILogger<HomeWebController> logger)
+        public HomeWebController(IHomeWebRepository repo, ICircuitoRepository db, IConfiguration cfg, IImagenesLocales img, ILogger<HomeWebController> logger, IMultimedia mm)
         {
             _img = img;
+            _mm = mm;
             _repo = repo;
             _db = db;
             _cfg = cfg;
@@ -41,7 +43,8 @@ namespace EuroVip.Controllers
         {
             var d = await _repo.DatosAsync();
             d.Imagenes = new HwImagenes { Web = Slider("Url"), Tablet = Slider("UrlMd"), Movil = Slider("UrlSm") };
-            foreach (var t in d.Contenedores.SelectMany(c => c.Tarjetas).Concat(d.SinContenedor)) PonerImagen(t);
+            var f = await FotosAsync();
+            foreach (var t in d.Contenedores.SelectMany(c => c.Tarjetas).Concat(d.SinContenedor)) PonerImagen(t, f);
             d.Fuera = await _repo.FueraDeHomeAsync();   // qué no sale en la Home y por qué (aviso en la pantalla)
             return Json(d);
         }
@@ -52,18 +55,21 @@ namespace EuroVip.Controllers
             Json((await _repo.FueraDeHomeAsync()).Where(f => string.IsNullOrEmpty(tipo) || string.Equals(f.Tipo, tipo, StringComparison.OrdinalIgnoreCase)));
 
         /// <summary>
-        /// Imagen de la tarjeta desde las carpetas del proyecto (lo que se carga en Hoteles y Circuitos):
-        ///  • HOTEL: /imagenes/hoteles/{nombre del hotel}.webp
-        ///  • CIRCUITO: la portada del circuito (/imagenes/circuitos/{circuito.caratula})
-        ///  • EXCURSION y TRASLADO: la foto del destino (/imagenes/destinos/{destino}.webp)
+        /// Imagen de la tarjeta. Primero la portada de Eurovip.multimedia; si aún no hay, la de antes:
+        ///  • HOTEL: portada HOTEL del hotel (id_servicio) · antes /imagenes/hoteles/{nombre del hotel}.webp
+        ///  • CIRCUITO: la portada del circuito (circuito.caratula: URL de multimedia o /imagenes/circuitos/{archivo})
+        ///  • EXCURSION y TRASLADO: portada DESTINO del destino · antes /imagenes/destinos/{destino}.webp
         ///  • si no hay archivo, la URL que tenga la tarjeta (si es una dirección web o una ruta del sitio).
         /// </summary>
-        private void PonerImagen(HwTarjeta t)
+        private sealed record Fotos(IReadOnlyDictionary<string, string> Hoteles, IReadOnlyDictionary<string, string> Destinos);
+        private async Task<Fotos> FotosAsync() => new(await _mm.PortadasAsync("HOTEL"), await _mm.PortadasAsync("DESTINO"));
+
+        private void PonerImagen(HwTarjeta t, Fotos f)
         {
             if (string.Equals(t.Tipo_Servicio, "HOTEL", StringComparison.OrdinalIgnoreCase))
-                t.Imagen = _img.Buscar("hoteles", t.Id_Destino)?.Url;
+                t.Imagen = f.Hoteles.TryGetValue(t.Id_Servicio.ToString(), out var h) ? h : _img.Buscar("hoteles", t.Id_Destino)?.Url;
             else if (string.Equals(t.Tipo_Servicio, "EXCURSION", StringComparison.OrdinalIgnoreCase) || string.Equals(t.Tipo_Servicio, "TRASLADO", StringComparison.OrdinalIgnoreCase))
-                t.Imagen = _img.Buscar("destinos", t.Id_Destino)?.Url;
+                t.Imagen = f.Destinos.TryGetValue((t.Id_Destino ?? "").Trim(), out var d) ? d : _img.Buscar("destinos", t.Id_Destino)?.Url;
             else if (string.Equals(t.Tipo_Servicio, "CIRCUITO", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(t.Caratula_Circuito))
                 t.Imagen = t.Caratula_Circuito.StartsWith("/") || Uri.IsWellFormedUriString(t.Caratula_Circuito, UriKind.Absolute)
                     ? t.Caratula_Circuito
@@ -125,7 +131,7 @@ namespace EuroVip.Controllers
         public async Task<IActionResult> Tarjeta(int id)
         {
             var t = await _repo.TarjetaAsync(id);
-            if (t is not null) PonerImagen(t);
+            if (t is not null) PonerImagen(t, await FotosAsync());
             return t is null ? NotFound(new { mensaje = "No encontramos esa tarjeta." }) : Json(t);
         }
 

@@ -166,6 +166,8 @@
             </div>
         </div>
 
+        <div class="ui-f"><label>Galería <em>más fotos para la ficha; se guardan al momento</em></label><div id="edGaleria"></div></div>
+
         <div class="ui-f"><label for="edNombre">Nombre de la excursión * <em id="edNombreN">0 / 500</em></label>
             <input id="edNombre" maxlength="500" placeholder="Ej. Excursión Isla Saona"><span class="msg"></span></div>
         <div class="ui-row">
@@ -212,12 +214,14 @@
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script>
 const EX = (() => {
     const $ = (s, el = document) => el.querySelector(s);
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
     const esc = EV.esc;
     const editor = EV.drawer($('#exEditor'));
+    let galeria = null;   // fotos extra (Eurovip.multimedia, uso GALERIA)
     const visor = EV.drawer($('#exVer'));
     let todas = [], infoDest = {}, actual = null, fotoNueva = null, quitarFoto = false, verId = null;
     // Destinos plegados (se recuerda en este navegador)
@@ -417,6 +421,8 @@ const EX = (() => {
         $$('#exEditor .msg').forEach(m => m.textContent = '');
         pintarFoto(x?.imagen);
         contar(); vistaPrevia();
+        galeria ??= EVMultimedia.montar($('#edGaleria'), { tipo: 'EXCURSION', portada: false, nombre: 'la excursión' });
+        galeria.cambiar(x?.id_Excursion ?? null);
         editor.abrir();
         setTimeout(() => $('#edNombre').focus(), 80);
     }

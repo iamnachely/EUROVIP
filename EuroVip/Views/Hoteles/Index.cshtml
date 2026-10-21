@@ -507,7 +507,7 @@
                 <div class="hx-foto-img" id="fotoImg"></div>
                 <div class="hx-foto-info">
                     <b id="fotoEstado">Sin foto</b>
-                    <small class="hx-ayuda" style="margin-top:2px">Se guarda como <code id="fotoArchivo">—</code> en <code>imagenes/hoteles</code></small>
+                    <small class="hx-ayuda" style="margin-top:2px">Se guarda en <code id="fotoArchivo">—</code> · va con el hotel, aunque cambie el nombre</small>
                     <div class="hx-foto-acts">
                         <label class="ev-btn ghost sm"><input type="file" id="fotoInput" accept="image/jpeg,image/png,image/webp" hidden /><i class="bi bi-upload"></i> <span id="fotoBtnTxt">Subir foto</span></label>
                         <button type="button" class="ev-btn ghost sm" id="fotoQuitar" hidden><i class="bi bi-trash3"></i> Quitar foto</button>
@@ -660,7 +660,7 @@
 <aside class="hx-drawer" id="hxFotos" aria-hidden="true">
     <div class="hx-dh">
         <div class="ev-module-icon" style="width:44px;height:44px"><i class="bi bi-images"></i></div>
-        <div style="min-width:0"><h2>Fotos de hoteles</h2><small>Carpeta <code>imagenes/hoteles</code> · cada foto va con el nombre del hotel</small></div>
+        <div style="min-width:0"><h2>Fotos de hoteles</h2><small>Carpeta <code>multimedia/hoteles</code> · cada foto va con su hotel</small></div>
         <button class="hx-ibtn x" type="button" onclick="HX.cerrar()" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="hx-db" id="galBody"></div>
@@ -712,7 +712,6 @@ const HX = (() => {
     const armarDesc = (reg, cod) => reg && cod ? `${reg} -${cod}` : (reg || '');
     const olaSvg = '<svg viewBox="0 0 200 60" preserveAspectRatio="none"><path d="M0 30 Q 25 18 50 30 T 100 30 T 150 30 T 200 30 V60 H0Z" fill="rgba(255,255,255,.55)"/><path d="M0 42 Q 25 32 50 42 T 100 42 T 150 42 T 200 42 V60 H0Z" fill="rgba(14,143,134,.35)"/></svg>';
     // La foto del hotel vive en /imagenes/hoteles/{nombre}.webp (por nombre, como BackTiTan). h.imagen la manda el servidor.
-    const archivoFoto = n => { const b = (n || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); return b ? b + '.webp' : ''; };
     const imagen = (h, alt) => h.imagen
         ? `<img src="${esc(h.imagen)}" alt="${esc(alt)}" data-ini="${esc(iniciales(alt))}" loading="lazy" onerror="HX._sinImagen(this)">`
         : `<div class="hx-ph"><b>${esc(iniciales(alt))}</b>${olaSvg}</div>`;
@@ -770,8 +769,8 @@ const HX = (() => {
     }
     function fotoSrc() { return foto.vista || (!foto.quitar && foto.actual ? foto.actual.url : ''); }
     function pintarFoto() {
-        const nombre = campo('Id_Destino').value.trim(), arch = archivoFoto(nombre), src = fotoSrc();
-        $('#fotoArchivo').textContent = arch || 'escribe el nombre del hotel';
+        const nombre = campo('Id_Destino').value.trim(), src = fotoSrc();
+        $('#fotoArchivo').textContent = editandoId ? `multimedia/hoteles/${editandoId}/` : 'multimedia/hoteles (al crear el hotel)';
         if (src) {
             $('#fotoImg').innerHTML = `<img src="${esc(src)}" alt="">` + (foto.nueva ? '<span class="tag">NUEVA · se guarda al pulsar Guardar</span>' : '');
         } else {
@@ -784,9 +783,8 @@ const HX = (() => {
         $('#fotoEstado').textContent = estadoTxt;
         $('#fotoBtnTxt').textContent = foto.actual || foto.nueva ? 'Cambiar foto' : 'Subir foto';
         $('#fotoQuitar').hidden = !(foto.nueva || (foto.actual && !foto.quitar));
-        const cambiaNombre = !!(editandoId && foto.actual && !foto.quitar && !foto.nueva && arch && archivoFoto(foto.nombreOriginal) !== arch);
-        $('#fotoNota').hidden = !cambiaNombre;
-        if (cambiaNombre) $('#fotoNota').innerHTML = `<i class="bi bi-arrow-right-circle"></i> Cambiaste el nombre: al guardar, la foto pasa a <code>${esc(arch)}</code>.`;
+        $('#fotoNota').hidden = !(foto.actual && foto.actual.nueva === false && !foto.nueva && !foto.quitar);
+        $('#fotoNota').innerHTML = '<i class="bi bi-info-circle"></i> Es la foto de antes (por nombre). Si la cambias, se guarda ya con el hotel.';
     }
     function elegirFoto(file) {
         if (!file) return;
@@ -795,19 +793,19 @@ const HX = (() => {
         Object.assign(foto, { nueva: file, vista: URL.createObjectURL(file), quitar: false });
         preview();
     }
-    async function cargarFotoActual(nombre) {
-        try { const r = await api('/Hoteles/Imagen?nombre=' + encodeURIComponent(nombre)); reiniciarFoto(r.imagen, nombre); }
+    async function cargarFotoActual(id, nombre) {
+        try { const r = await api(`/Hoteles/Imagen?id=${id}&nombre=${encodeURIComponent(nombre)}`); reiniciarFoto(r.imagen, nombre); }
         catch { reiniciarFoto(null, nombre); }
         preview();
     }
-    /** Después de guardar el hotel: sube o quita la foto con el nombre ya guardado. Devuelve un texto para el aviso. */
-    async function aplicarFoto(nombre, alAvanzar) {
+    /** Después de guardar el hotel: sube o quita su foto (va con el número del hotel). Devuelve un texto para el aviso. */
+    async function aplicarFoto(id, alAvanzar) {
         if (foto.nueva) {
-            const fd = new FormData(); fd.append('nombre', nombre); fd.append('archivo', foto.nueva);
+            const fd = new FormData(); fd.append('id', id); fd.append('archivo', foto.nueva);
             return (await subir('/Hoteles/SubirImagen', fd, alAvanzar)).mensaje;
         }
         if (foto.quitar && foto.actual) {
-            const r = await api('/Hoteles/EliminarImagen?archivo=' + encodeURIComponent(archivoFoto(nombre) || foto.actual.archivo), { method: 'POST' });
+            const r = await api('/Hoteles/EliminarImagen?id=' + id, { method: 'POST' });
             return r.mensaje;
         }
         return '';
@@ -824,31 +822,27 @@ const HX = (() => {
     }
     function pintarGaleria() {
         const q = galQ.toLowerCase();
-        const lf = gal.fotos.filter(x => !q || x.archivo.includes(q) || x.hoteles.some(h => h.toLowerCase().includes(q)));
-        const ls = gal.sinFoto.filter(n => !q || n.toLowerCase().includes(q));
-        const huerfanas = gal.fotos.filter(x => !x.hoteles.length).length;
-        const btnSubir = (nombre, texto, titulo) =>
-            `<label class="ev-btn ${texto ? '' : 'ghost'} sm" style="cursor:pointer" title="${esc(titulo)}"><input type="file" accept="image/jpeg,image/png,image/webp" hidden data-subir="${esc(nombre)}" /><i class="bi ${texto ? 'bi-upload' : 'bi-arrow-repeat'}"></i>${texto ? ' ' + texto : ''}</label>`;
+        const lf = gal.fotos.filter(x => !q || x.nombre.toLowerCase().includes(q) || String(x.id) === q);
+        const ls = gal.sinFoto.filter(x => !q || x.nombre.toLowerCase().includes(q) || String(x.id) === q);
+        const viejas = gal.fotos.filter(x => !x.foto.nueva).length;
+        const btnSubir = (id, texto, titulo) =>
+            `<label class="ev-btn ${texto ? '' : 'ghost'} sm" style="cursor:pointer" title="${esc(titulo)}"><input type="file" accept="image/jpeg,image/png,image/webp" hidden data-subir="${id}" /><i class="bi ${texto ? 'bi-upload' : 'bi-arrow-repeat'}"></i>${texto ? ' ' + texto : ''}</label>`;
         const sinFotoHtml = !ls.length ? '' :
             `<div class="hx-gal-sec">Hoteles sin foto (${ls.length})</div><div class="hx-sinfoto">` +
-            ls.map(n => `<div><i class="bi bi-image" style="color:var(--ev-muted)"></i><span>${esc(n)}<br><small style="color:var(--ev-muted);font-weight:600">${esc(archivoFoto(n))}</small></span>${btnSubir(n, 'Subir', 'Subir foto')}</div>`).join('') +
+            ls.map(x => `<div><i class="bi bi-image" style="color:var(--ev-muted)"></i><span>${esc(x.nombre)}<br><small style="color:var(--ev-muted);font-weight:600">#${x.id}</small></span>${btnSubir(x.id, 'Subir', 'Subir foto')}</div>`).join('') +
             '</div>';
         const fotosHtml = !lf.length ? '<div class="hx-empty"><p>No hay fotos con ese filtro.</p></div>' :
-            '<div class="hx-gal">' + lf.map(x => {
-                const usan = x.hoteles.length
-                    ? x.hoteles.map(h => `<small><i class="bi bi-building"></i> ${esc(h)}</small>`).join('')
-                    : '<span class="hx-chipw"><i class="bi bi-exclamation-triangle"></i> Ningún hotel con ese nombre</span>';
-                return `<div class="hx-gal-it">
-                    <a class="im" href="${esc(x.url)}" target="_blank" rel="noopener" title="Ver grande"><img src="${esc(x.url)}" alt="" loading="lazy" /></a>
-                    <div class="tx"><b>${esc(x.archivo)}</b><small>${fmt(x.ancho)}×${fmt(x.alto)} px · ${kb(x.bytes)}</small>${usan}</div>
-                    <div class="ac">${btnSubir(x.hoteles[0] || x.archivo.replace(/\.webp$/, ''), '', 'Reemplazar')}<button class="ev-btn ghost sm" type="button" data-borrar="${esc(x.archivo)}" title="Eliminar"><i class="bi bi-trash3"></i></button></div>
-                </div>`;
-            }).join('') + '</div>';
+            '<div class="hx-gal">' + lf.map(x => `<div class="hx-gal-it">
+                    <a class="im" href="${esc(x.foto.url)}" target="_blank" rel="noopener" title="Ver grande"><img src="${esc(x.foto.url)}" alt="" loading="lazy" /></a>
+                    <div class="tx"><b>${esc(x.nombre)}</b><small>#${x.id} · ${fmt(x.foto.ancho)}×${fmt(x.foto.alto)} px · ${kb(x.foto.bytes)}</small>
+                        ${x.foto.nueva ? '' : '<span class="hx-chipw"><i class="bi bi-clock-history"></i> Foto de antes (por nombre)</span>'}</div>
+                    <div class="ac">${btnSubir(x.id, '', 'Reemplazar')}<button class="ev-btn ghost sm" type="button" data-borrar="${x.id}" title="Eliminar"><i class="bi bi-trash3"></i></button></div>
+                </div>`).join('') + '</div>';
         $('#galBody').innerHTML =
-            `<div class="hx-gal-kpis"><span><b>${gal.fotos.length}</b> fotos</span><span><b>${gal.sinFoto.length}</b> hoteles sin foto</span>` +
-            (huerfanas ? `<span><b>${huerfanas}</b> fotos sin hotel</span>` : '') + '</div>' +
-            `<label class="hx-search" style="margin-bottom:6px"><i class="bi bi-search"></i><input id="galQ" type="search" placeholder="Buscar hotel o archivo…" value="${esc(galQ)}" /></label>` +
-            sinFotoHtml + `<div class="hx-gal-sec">Fotos en la carpeta (${lf.length})</div>` + fotosHtml;
+            `<div class="hx-gal-kpis"><span><b>${gal.fotos.length}</b> hoteles con foto</span><span><b>${gal.sinFoto.length}</b> sin foto</span>` +
+            (viejas ? `<span><b>${viejas}</b> con la foto de antes</span>` : '') + '</div>' +
+            `<label class="hx-search" style="margin-bottom:6px"><i class="bi bi-search"></i><input id="galQ" type="search" placeholder="Buscar hotel o número…" value="${esc(galQ)}" /></label>` +
+            sinFotoHtml + `<div class="hx-gal-sec">Hoteles con foto (${lf.length})</div>` + fotosHtml;
         const inp = $('#galQ');
         inp.oninput = () => { galQ = inp.value; const pos = inp.selectionStart; pintarGaleria(); const n = $('#galQ'); n.focus(); n.setSelectionRange(pos, pos); };
     }
@@ -858,17 +852,16 @@ const HX = (() => {
         if (sub && e.type === 'change' && sub.files[0]) {
             const file = sub.files[0];
             if (!tipoOk(file)) { toast('Elige una imagen JPG, PNG o WebP de hasta 10 MB.', 'err'); return; }
-            const fd = new FormData(); fd.append('nombre', sub.dataset.subir); fd.append('archivo', file);
+            const fd = new FormData(); fd.append('id', sub.dataset.subir); fd.append('archivo', file);
             try { const r = await subir('/Hoteles/SubirImagen', fd); toast(r.mensaje, 'ok'); await refrescarGaleria(); }
             catch (er) { toast(er.message, 'err'); }
             return;
         }
         const del = e.target.closest('[data-borrar]');
         if (del && e.type === 'click') {
-            const x = gal.fotos.find(f => f.archivo === del.dataset.borrar);
-            const usan = x?.hoteles.length ? `<br>La usan: <b>${x.hoteles.map(esc).join(', ')}</b> (se quedarán sin foto).` : '';
-            if (!await preguntar('¿Eliminar esta foto?', `Se borra <b>${esc(del.dataset.borrar)}</b> de la carpeta.${usan}`, 'Sí, eliminar foto')) return;
-            try { const r = await api('/Hoteles/EliminarImagen?archivo=' + encodeURIComponent(del.dataset.borrar), { method: 'POST' }); toast(r.mensaje, 'ok'); await refrescarGaleria(); }
+            const x = gal.fotos.find(f => String(f.id) === del.dataset.borrar);
+            if (!await preguntar('¿Eliminar esta foto?', `<b>${esc(x?.nombre || '')}</b> se quedará sin foto.`, 'Sí, eliminar foto')) return;
+            try { const r = await api('/Hoteles/EliminarImagen?id=' + encodeURIComponent(del.dataset.borrar), { method: 'POST' }); toast(r.mensaje, 'ok'); await refrescarGaleria(); }
             catch (er) { toast(er.message, 'err'); }
         }
     }
@@ -1137,7 +1130,7 @@ const HX = (() => {
             reiniciarFoto(null, (h.id_Destino || '').trim());
             abrir('hxForm');
             await cargarCombos(h.id_Campanya, h.id_Contenedor ?? '');
-            await cargarFotoActual((h.id_Destino || '').trim());
+            await cargarFotoActual(id, (h.id_Destino || '').trim());
         } catch (e) { toast(e.message, 'err'); }
     }
 
@@ -1197,7 +1190,7 @@ const HX = (() => {
             const r = await api('/Hoteles/Guardar', { method: 'POST', body: JSON.stringify(dto) });
             avance(foto.nueva ? 40 : 85, foto.nueva ? 'Subiendo la foto…' : 'Datos guardados');
             let msgFoto = '';
-            try { msgFoto = await aplicarFoto(dto.Id_Destino, p => avance(40 + p * 0.5, `Subiendo la foto… ${Math.round(p)}%`)); }
+            try { msgFoto = await aplicarFoto(r.id ?? editandoId, p => avance(40 + p * 0.5, `Subiendo la foto… ${Math.round(p)}%`)); }
             catch (ef) { toast('El hotel se guardó, pero la foto no: ' + ef.message, 'err'); }
             avance(95, 'Actualizando la lista…');
             cerrar(true);
@@ -1220,7 +1213,7 @@ const HX = (() => {
     async function ver(id) {
         try {
             const h = await api('/Hoteles/Obtener?id=' + id);
-            h.imagen = (await api('/Hoteles/Imagen?nombre=' + encodeURIComponent((h.id_Destino || '').trim())).catch(() => null))?.imagen?.url;
+            h.imagen = (await api(`/Hoteles/Imagen?id=${id}&nombre=${encodeURIComponent((h.id_Destino || '').trim())}`).catch(() => null))?.imagen?.url;
             $('#detTitulo').textContent = h.id_Destino;
             $('#detSub').textContent = `#${h.id_Servicio} · ${h.estado === false ? 'Oculto' : 'Visible en la web'}`;
             const fila = (t, v, w) => `<div class="${w ? 'w' : ''}"><dt>${t}</dt><dd>${v == null || v === '' ? '<span style="color:var(--ev-muted)">—</span>' : esc(v)}</dd></div>`;

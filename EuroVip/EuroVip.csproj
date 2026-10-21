@@ -15,11 +15,12 @@
   </ItemGroup>
 
   <!-- Al publicar NO se lleva lo subido desde la pantalla (vive en el servidor; Deploy.ps1 conserva wwwroot\imagenes,
-       wwwroot\uploads y Logs). appsettings.Local.json SÍ se publica: la usuaria publica en carpeta (FolderProfile) y la
+       wwwroot\multimedia, wwwroot\uploads y Logs). appsettings.Local.json SÍ se publica: la usuaria publica en carpeta (FolderProfile) y la
        copia al servidor; ese archivo nunca está en git, así que el pipeline de Azure no lo trae. -->
   <ItemGroup>
     <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
     <Content Update="wwwroot\uploads\**" CopyToPublishDirectory="Never" />
+    <Content Update="wwwroot\multimedia\**" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -17,10 +17,12 @@ namespace EuroVip.Controllers
         private readonly IHerramientasRepository _repo;
         private readonly ICircuitoRepository _aud;
         private readonly IImagenesLocales _img;
+        private readonly IMultimedia _mm;
         private readonly ILogger<HerramientasController> _logger;
 
-        public HerramientasController(IHerramientasRepository repo, ICircuitoRepository aud, IImagenesLocales img, ILogger<HerramientasController> logger)
+        public HerramientasController(IHerramientasRepository repo, ICircuitoRepository aud, IImagenesLocales img, ILogger<HerramientasController> logger, IMultimedia mm)
         {
+            _mm = mm;
             _repo = repo;
             _aud = aud;
             _img = img;
@@ -46,6 +48,13 @@ namespace EuroVip.Controllers
             try
             {
                 await using var st = archivo.OpenReadStream();
+                // Destinos y Alojamientos: la portada va en Eurovip.multimedia (multimedia/destinos/{slug}/, multimedia/alojamientos/{id}/)
+                if (HrCatalogos.Fotos(c) is { } mmc)
+                {
+                    var mm = await _mm.SubirAsync(mmc.Tipo, ReglasDatos.Limpiar(nombre), "PORTADA", st, archivo.FileName);
+                    await Auditar($"Herramienta_{c.Clave}_Imagen", new { campo = f.Col, nombre, mm.Ruta, mm.Tamano_Bytes });
+                    return Json(new { ok = true, ruta = mm.Url, url = mm.Url, archivo = mm.Ruta, mensaje = "Imagen guardada." });
+                }
                 var img = await _img.GuardarComoAsync(f.Carpeta, null, archivoNombre, st);
                 await Auditar($"Herramienta_{c.Clave}_Imagen", new { campo = f.Col, nombre, img.Archivo, img.Bytes });
                 return Json(new { ok = true, ruta = $"/imagenes/{f.Carpeta}/{img.Archivo}", url = img.Url, archivo = img.Archivo,
@@ -150,8 +159,36 @@ namespace EuroVip.Controllers
             var antes = await _repo.ObtenerAsync(c, dto.Clave);
             var error = await _repo.EliminarAsync(c, dto.Clave);
             if (error is not null) return BadRequest(new { mensaje = error });
+            // Sus fotos de Eurovip.multimedia también se van (portada y galería)
+            if (HrCatalogos.Fotos(c) is { } mmc && dto.Clave.TryGetValue(mmc.Col, out var k) && k.ToString() is { Length: > 0 } valor)
+                await _mm.EliminarProductoAsync(mmc.Tipo, valor);
             await Auditar($"Herramienta_{c.Clave}_Eliminar", new { antes });
             return Json(new { ok = true, mensaje = $"Se eliminó {c.El} {c.Singular}." });
+        }
+
+        /// <summary>Cuántas fotos hay en Eurovip.multimedia por tipo y uso (panel "Fotos" de Herramientas).</summary>
+        [HttpGet]
+        public async Task<IActionResult> MultimediaResumen()
+        {
+            using var cn = _aud.Conexion();
+            var filas = await Dapper.SqlMapper.QueryAsync<(string Tipo, string Uso, int N)>(cn, "SELECT tipo, uso, COUNT(*) FROM Eurovip.multimedia GROUP BY tipo, uso");
+            return Json(filas.Select(f => new { f.Tipo, f.Uso, f.N }));
+        }
+
+        /// <summary>
+        /// Pasa a Eurovip.multimedia las fotos de antes (wwwroot/imagenes): excursiones, traslados, portadas de circuito, destinos,
+        /// alojamientos y hoteles. No toca el itinerario ni el slider, no borra nada y se puede repetir. Solo Superadministrador.
+        /// </summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> MigrarImagenes()
+        {
+            if ((HttpContext.Items[AccesoModuloFilter.ClavePermisos] as PermisosUsuario)?.EsSuper != true)
+                return StatusCode(403, new { mensaje = "Solo un Superadministrador puede pasar las fotos." });
+            var r = await _mm.MigrarImagenesViejasAsync();
+            await Auditar("Herramienta_MigrarImagenes", new { r.Pasadas, r.YaEstaban, sinArchivo = r.SinArchivo.Count, r.Errores });
+            var total = r.Pasadas.Values.Sum();
+            return Json(new { ok = true, pasadas = r.Pasadas, yaEstaban = r.YaEstaban, sinArchivo = r.SinArchivo, errores = r.Errores,
+                              mensaje = total == 0 ? "No había fotos nuevas que pasar." : $"Se pasaron {total} fotos a multimedia." });
         }
 
         private Task Auditar(string tipo, object cambios) =>

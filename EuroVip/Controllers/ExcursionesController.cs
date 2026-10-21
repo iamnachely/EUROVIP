@@ -8,8 +8,9 @@ namespace EuroVip.Controllers
 {
     /// <summary>
     /// Mantenimiento de excursiones (Eurovip.servicio_excursion, copia de ViajeVDT): buscar, ver, cargar, editar,
-    /// duplicar, eliminar y cambiar la foto. La foto no va en la base: como BackTiTan se relaciona por el nombre
-    /// de la excursión sin espacios ni acentos → wwwroot/imagenes/excursiones/{Nombre}.webp.
+    /// duplicar, eliminar y cambiar la foto. Las fotos van en Eurovip.multimedia (tipo EXCURSION, carpeta excursiones/{id}/):
+    /// portada aquí y galería con el componente de fotos. Si una excursión aún no tiene portada nueva se muestra la de antes
+    /// (wwwroot/imagenes/excursiones/{Nombre}.webp, por nombre como BackTiTan).
     /// </summary>
     public class ExcursionesController : Controller
     {
@@ -19,9 +20,12 @@ namespace EuroVip.Controllers
         private readonly IImagenesLocales _img;
         private readonly ILogger<ExcursionesController> _logger;
         private readonly IWebHostEnvironment _env;
+        private readonly IMultimedia _mm;
+        private const string TipoMm = "EXCURSION";
 
-        public ExcursionesController(IExcursionRepository repo, ICircuitoRepository aud, IImagenesLocales img, ILogger<ExcursionesController> logger, IWebHostEnvironment env)
+        public ExcursionesController(IExcursionRepository repo, ICircuitoRepository aud, IImagenesLocales img, ILogger<ExcursionesController> logger, IWebHostEnvironment env, IMultimedia mm)
         {
+            _mm = mm;
             _repo = repo;
             _aud = aud;
             _img = img;
@@ -39,18 +43,24 @@ namespace EuroVip.Controllers
             return b == "" ? "" : b + ".webp";
         }
 
-        private Excursion ConImagen(Excursion e)
+        /// <summary>Portada: la de Eurovip.multimedia; si todavía no tiene, la foto vieja por nombre.</summary>
+        private Excursion ConImagen(Excursion e, IReadOnlyDictionary<string, string>? portadas = null)
         {
-            e.Imagen = _img.BuscarArchivo(TipoImagen, Archivo(e.Nombre))?.Url;
+            e.Imagen = (portadas ?? new Dictionary<string, string>()).TryGetValue(e.Id_Excursion.ToString(), out var u) ? u
+                       : _img.BuscarArchivo(TipoImagen, Archivo(e.Nombre))?.Url;
             return e;
         }
+
+        private async Task<Excursion> ConImagenAsync(Excursion e) =>
+            ConImagen(e, (await _mm.PortadaAsync(TipoMm, e.Id_Excursion.ToString())) is { } u ? new Dictionary<string, string> { [e.Id_Excursion.ToString()] = u } : null);
 
         /// <summary>
         /// Portada de la sección de un destino: 1) su foto en imagenes/destinos (o la de destino.caratula si el archivo está);
         /// 2) el fondo de flyer de ese destino (uploads/flyers/fondos). Si no hay, la pantalla usa la foto de una excursión o un degradado.
         /// </summary>
-        private string? ImagenDestino(ExcursionDestino d)
+        private string? ImagenDestino(ExcursionDestino d, IReadOnlyDictionary<string, string> portadasDestino)
         {
+            if (portadasDestino.TryGetValue(d.Destino, out var mm)) return mm;   // portada del destino en Eurovip.multimedia
             var local = _img.Buscar("destinos", d.Destino)?.Url;
             if (local is not null) return local;
             if (!string.IsNullOrWhiteSpace(d.Caratula))
@@ -71,9 +81,11 @@ namespace EuroVip.Controllers
         [HttpGet]
         public async Task<IActionResult> Listar()
         {
-            var excursiones = (await _repo.ListarAsync()).Select(ConImagen).ToList();
+            var portadas = await _mm.PortadasAsync(TipoMm);
+            var excursiones = (await _repo.ListarAsync()).Select(e => ConImagen(e, portadas)).ToList();
             var destinos = await _repo.DestinosConExcursionesAsync();
-            foreach (var d in destinos) d.Imagen = ImagenDestino(d);
+            var portadasDestino = await _mm.PortadasAsync("DESTINO");
+            foreach (var d in destinos) d.Imagen = ImagenDestino(d, portadasDestino);
             return Json(new { excursiones, destinos });
         }
 
@@ -112,7 +124,7 @@ namespace EuroVip.Controllers
                                  && _img.RenombrarArchivo(TipoImagen, Archivo(antes.Nombre), Archivo(dto.Nombre));
 
                 await Auditar(antes is null ? "Excursion_Crear" : "Excursion_Editar", id, new { antes, despues = dto, fotoMovida });
-                var e = ConImagen((await _repo.ObtenerAsync(id))!);
+                var e = await ConImagenAsync((await _repo.ObtenerAsync(id))!);
                 return Json(new { ok = true, id, excursion = e, mensaje = antes is null ? $"¡Listo! Se creó «{dto.Nombre}»." : "Cambios guardados." });
             }
             catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
@@ -136,7 +148,7 @@ namespace EuroVip.Controllers
                 Nombre = copia, Id_Destino = e.Id_Destino ?? "", Precio = e.Precio, Cancelable = e.Cancelable ?? false, Descripcion = e.Descripcion
             });
             await Auditar("Excursion_Duplicar", nuevo, new { de = id, nombre = copia });
-            return Json(new { ok = true, id = nuevo, excursion = ConImagen((await _repo.ObtenerAsync(nuevo))!), mensaje = $"Se duplicó como «{copia}». Cámbiale lo que haga falta." });
+            return Json(new { ok = true, id = nuevo, excursion = await ConImagenAsync((await _repo.ObtenerAsync(nuevo))!), mensaje = $"Se duplicó como «{copia}». Cámbiale lo que haga falta." });
         }
 
         [HttpPost, ValidateAntiForgeryToken]
@@ -148,7 +160,8 @@ namespace EuroVip.Controllers
             // La foto se borra solo si ninguna otra excursión se llama igual (se relaciona por nombre).
             var otras = (await _repo.ListarAsync()).Any(x => Archivo(x.Nombre) == Archivo(e.Nombre));
             var fotoBorrada = !otras && _img.Eliminar(TipoImagen, Archivo(e.Nombre));
-            await Auditar("Excursion_Eliminar", id, new { antes = e, fotoBorrada });
+            var fotosMultimedia = await _mm.EliminarProductoAsync(TipoMm, id.ToString());   // portada y galería
+            await Auditar("Excursion_Eliminar", id, new { antes = e, fotoBorrada, fotosMultimedia });
             return Json(new { ok = true, mensaje = $"Se eliminó «{e.Nombre}»." });
         }
 
@@ -163,8 +176,8 @@ namespace EuroVip.Controllers
             try
             {
                 await using var st = archivo.OpenReadStream();
-                var img = await _img.GuardarComoAsync(TipoImagen, null, Archivo(e.Nombre), st);
-                await Auditar("Excursion_Imagen", id, new { img.Archivo, img.Bytes });
+                var img = await _mm.SubirAsync(TipoMm, id.ToString(), "PORTADA", st, archivo.FileName);
+                await Auditar("Excursion_Imagen", id, new { img.Ruta, img.Tamano_Bytes });
                 return Json(new { ok = true, imagen = img.Url, mensaje = "Foto guardada." });
             }
             catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
@@ -175,7 +188,8 @@ namespace EuroVip.Controllers
         {
             var e = await _repo.ObtenerAsync(id);
             if (e is null) return NotFound(new { mensaje = "Esa excursión ya no existe." });
-            var borrada = _img.Eliminar(TipoImagen, Archivo(e.Nombre));
+            // Portada nueva (multimedia) y, si quedaba, la foto vieja por nombre (si no, volvería a aparecer)
+            var borrada = await _mm.QuitarUsoAsync(TipoMm, id.ToString(), "PORTADA") > 0 | _img.Eliminar(TipoImagen, Archivo(e.Nombre));
             if (borrada) await Auditar("Excursion_QuitarImagen", id, new { archivo = Archivo(e.Nombre) });
             return Json(new { ok = true, mensaje = borrada ? "Foto quitada." : "No tenía foto." });
         }

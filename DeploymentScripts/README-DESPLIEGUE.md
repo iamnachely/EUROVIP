@@ -3,8 +3,8 @@
 Igual que BackTiTan: **Azure DevOps** compila y un **agente instalado en el servidor** publica en IIS con
 **Blue-Green** (`DeploymentScripts/Deploy.ps1`): copia la versión nueva al slot que no está en uso, cambia
 IIS a ese slot, comprueba `/health` (la app arranca **y** llega a la base de datos) y, si falla, vuelve
-solo a la versión anterior. Las fotos y archivos subidos (`wwwroot\imagenes`, `wwwroot\uploads`) y los
-`Logs` se conservan en cada despliegue.
+solo a la versión anterior. Las fotos y archivos subidos (`wwwroot\imagenes`, `wwwroot\multimedia`,
+`wwwroot\uploads`) y los `Logs` se conservan en cada despliegue.
 
 > El despliegue es **manual**: subir cambios a `main` NO publica nada. Para publicar:
 > **Azure DevOps → Pipelines → EurovipBack → Run pipeline** (y aprobar en el Environment).
@@ -40,6 +40,24 @@ C:\inetpub\wwwroot\eurovip\Green\appsettings.Local.json
 ```
 Si la base está en el mismo servidor, la cadena de conexión puede usar `localhost`.
 El despliegue conserva estos archivos (no los pisa).
+
+### 3b. Fotos de productos (`multimedia`)
+Las fotos de destinos, países, hoteles, alojamientos, circuitos, excursiones y traslados se guardan en
+`Eurovip.imagen` / `Eurovip.multimedia` y el archivo en una carpeta base (documento `Database/esquema-multimedia.md`).
+El itinerario de circuito y el slider siguen como estaban. Se configura en `appsettings.Local.json` (opcional):
+```json
+"Multimedia": {
+  "CarpetaFisica": "D:\\EuroVIP\\Imagenes\\multimedia",
+  "Url": "/multimedia"
+}
+```
+- Sin configurar: `wwwroot\multimedia` y la URL `/multimedia` (el despliegue la conserva).
+- Con `CarpetaFisica` fuera del sitio, la app la publica en la ruta de `Url`; si `Url` es una dirección
+  completa (`https://servidor-de-imagenes/multimedia`), las fotos las sirve ese servidor.
+- **Importante:** la base de datos es la misma para la app del servidor y la de cada computadora. Para que todos
+  vean las mismas fotos, `CarpetaFisica` y `Url` deben apuntar al mismo sitio en todas.
+- Después del primer despliegue con multimedia: **Herramientas → Fotos (multimedia) → Pasar las fotos de antes**
+  (Superadministrador), en la app del servidor (es donde están las fotos viejas).
 
 ### 4. Permisos de escritura
 La identidad del grupo `IIS AppPool\eurovip` necesita **modificar** en `C:\inetpub\wwwroot\eurovip`

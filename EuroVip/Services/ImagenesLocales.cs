@@ -118,6 +118,21 @@ namespace EuroVip.Services
         public async Task<ImagenLocal> GuardarComoAsync(string tipo, string? sub, string archivo, Stream origen)
         {
             var ruta = Ruta(tipo, archivo, sub) ?? throw new InvalidOperationException("El nombre no sirve para el archivo: escribe letras o números.");
+            var (datos, _, _) = await ConvertirWebpAsync(origen);
+
+            // Se escribe en un temporal y se reemplaza: si falla a mitad, la imagen anterior sigue intacta.
+            var tmp = ruta + ".tmp";
+            await File.WriteAllBytesAsync(tmp, datos);
+            File.Move(tmp, ruta, overwrite: true);
+            return Info(tipo, ruta, sub);
+        }
+
+        /// <summary>
+        /// Lee una imagen (JPG, PNG, WebP…), la endereza si viene girada del móvil, la reduce a 1600 px de lado como máximo
+        /// y la devuelve en WebP (calidad 82) con su ancho y alto. La usan estas carpetas y Eurovip.multimedia.
+        /// </summary>
+        public static async Task<(byte[] Datos, int Ancho, int Alto)> ConvertirWebpAsync(Stream origen)
+        {
             using var ms = new MemoryStream();
             await origen.CopyToAsync(ms);
             ms.Position = 0;
@@ -131,12 +146,7 @@ namespace EuroVip.Services
                 : bmp.Copy();
             using var img = SKImage.FromBitmap(final);
             using var datos = img.Encode(SKEncodedImageFormat.Webp, Calidad);
-
-            // Se escribe en un temporal y se reemplaza: si falla a mitad, la imagen anterior sigue intacta.
-            var tmp = ruta + ".tmp";
-            await using (var fs = File.Create(tmp)) datos.SaveTo(fs);
-            File.Move(tmp, ruta, overwrite: true);
-            return Info(tipo, ruta, sub);
+            return (datos.ToArray(), final.Width, final.Height);
         }
 
         private static SKBitmap Enderezar(SKBitmap b, SKEncodedOrigin origen)

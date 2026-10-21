@@ -23,6 +23,8 @@ namespace EuroVip.Repositories
         Task<IEnumerable<CodigoNombre>> MonedasAsync();
         Task<IEnumerable<string>> DestinosAsync();
         Task<List<string>> NombresAsync();
+        /// <summary>Todas las tarjetas HOTEL: número (id_servicio) y nombre.</summary>
+        Task<List<(int Id, string Nombre)>> TarjetasAsync();
         Task<IEnumerable<Campanya>> CampanyasAsync(string idioma);
         Task<IEnumerable<Contenedor>> ContenedoresAsync(string idioma);
         Task AuditarAsync(string tipo, int id, object cambios, string usuario, string? ip, string? navegador);
@@ -201,6 +203,13 @@ namespace EuroVip.Repositories
 
         /// <summary>Destinos (zonas) para el campo "Destino" del hotel: los de Eurovip.destino y los ya usados en hoteles.</summary>
         /// <summary>Nombres (id_destino) de todos los hoteles: la imagen se relaciona por nombre.</summary>
+        public async Task<List<(int Id, string Nombre)>> TarjetasAsync()
+        {
+            using var cn = Conexion();
+            return (await cn.QueryAsync<(int, string)>("SELECT id_servicio, LTRIM(RTRIM(id_destino)) FROM Eurovip.inicio WHERE tipo_servicio = @TipoHotel ORDER BY 2",
+                new { TipoHotel })).ToList();
+        }
+
         public async Task<List<string>> NombresAsync()
         {
             using var cn = Conexion();

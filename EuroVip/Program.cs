@@ -62,6 +62,8 @@ builder.Services.AddScoped<EuroVip.Repositories.IConsultaRepository, EuroVip.Rep
 builder.Services.AddScoped<EuroVip.Repositories.IFlyerRepository, EuroVip.Repositories.FlyerRepository>();
 builder.Services.AddScoped<EuroVip.Services.IFlyerImagenService, EuroVip.Services.FlyerImagenService>();
 builder.Services.AddSingleton<EuroVip.Services.IImagenesLocales, EuroVip.Services.ImagenesLocales>();
+// Fotos de productos en Eurovip.imagen / Eurovip.multimedia (documento esquema-multimedia.md)
+builder.Services.AddScoped<EuroVip.Services.IMultimedia, EuroVip.Services.Multimedia>();
 builder.Services.AddScoped<EuroVip.Services.WhatsAppService>();
 builder.Services.AddSingleton<EuroVip.Services.FlyerEnvioJob>();
 builder.Services.AddSingleton<EuroVip.Services.IProgresoCargas, EuroVip.Services.ProgresoCargas>();   // barra de progreso de las cargas
@@ -101,6 +103,22 @@ app.UseSerilogRequestLogging();
 // /health sin redirección a https: el despliegue lo consulta por http en el propio servidor
 app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/health"), b => b.UseHttpsRedirection());
 app.UseStaticFiles();
+// Base de las fotos de productos (Multimedia:CarpetaFisica). Por defecto wwwrootmultimedia (ya la sirve UseStaticFiles);
+// si se configura otra carpeta (p. ej. D:EuroVIPImagenesmultimedia) se publica en la ruta de Multimedia:Url.
+{
+    var carpetaMultimedia = app.Configuration["Multimedia:CarpetaFisica"];
+    var urlMultimedia = (app.Configuration["Multimedia:Url"] ?? "/multimedia").TrimEnd('/');
+    if (string.IsNullOrWhiteSpace(carpetaMultimedia)) Directory.CreateDirectory(Path.Combine(app.Environment.WebRootPath, "multimedia"));
+    else if (urlMultimedia.StartsWith('/'))
+    {
+        Directory.CreateDirectory(carpetaMultimedia);
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(carpetaMultimedia),
+            RequestPath = urlMultimedia
+        });
+    }
+}
 app.UseRouting();
 app.UseSession();
 app.UseAuthentication();

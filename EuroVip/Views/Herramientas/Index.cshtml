@@ -205,6 +205,16 @@
                 <div><kbd>Esc</kbd> cerrar la búsqueda</div>
             </div>
         </div>
+        <div class="ht-panel">
+            <h3><i class="bi bi-images"></i> Fotos (multimedia)</h3>
+            <p style="margin:0 0 8px;color:var(--ev-muted);font-size:13px;font-weight:600">Las fotos de destinos, países, hoteles, alojamientos, circuitos (portada, intermedia y galería), excursiones y traslados se guardan en <code>multimedia/</code>. El itinerario de circuito y el slider siguen como estaban.</p>
+            <div id="mmResumen" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+            @if ((Context.Items[EuroVip.Helpers.AccesoModuloFilter.ClavePermisos] as PermisosUsuario)?.EsSuper == true)
+            {
+                <button type="button" class="ev-btn ghost sm" id="mmMigrar"><i class="bi bi-arrow-left-right"></i> Pasar las fotos de antes</button>
+                <div id="mmInforme" style="margin-top:8px;font-size:12.5px"></div>
+            }
+        </div>
         <div class="ht-panel ht-db">
             <h3><i class="bi bi-database-check" style="color:var(--ev-aqua)"></i> Dónde viven los datos</h3>
             <p>Servidor 93 · <code>TropitoursVDT.Eurovip</code>. Copiados de ViajeVDT (solo ES). Cada cambio queda en la auditoría.</p>
@@ -241,6 +251,31 @@
         const el = document.querySelector(`[data-rev="${k}"]`); if (!el) return;
         el.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i> ${EV.fmt(n)} a revisar`; el.hidden = false;
     })).catch(() => {});
+
+    // fotos en multimedia
+    const NOMBRE_TIPO = { ALOJAMIENTO: 'alojamientos', CIRCUITO: 'circuitos', EXCURSION: 'excursiones', TRASLADO: 'traslados', DESTINO: 'destinos', PAIS: 'países', HOTEL: 'hoteles' };
+    const resumenFotos = () => EV.api('/Herramientas/MultimediaResumen').then(r => {
+        const porTipo = {}; r.forEach(x => porTipo[x.tipo] = (porTipo[x.tipo] || 0) + x.n);
+        $('#mmResumen').innerHTML = Object.keys(porTipo).length
+            ? Object.entries(porTipo).map(([t, n]) => `<span class="ui-chip">${EV.fmt(n)} ${NOMBRE_TIPO[t] || t}</span>`).join('')
+            : '<span style="color:var(--ev-muted);font-size:12.5px;font-weight:600">Todavía no hay fotos en multimedia.</span>';
+    }).catch(() => {});
+    resumenFotos();
+    $('#mmMigrar')?.addEventListener('click', async e => {
+        if (!await EV.confirmar({ titulo: '¿Pasar las fotos de antes?', si: 'Sí, pasarlas',
+            texto: 'Copia a <code>multimedia/</code> las portadas de excursiones, traslados, circuitos, destinos, alojamientos y hoteles que estaban en <code>imagenes/</code>. No borra nada y lo que ya tiene portada se salta. Hazlo en el servidor donde están las fotos.' })) return;
+        const b = e.currentTarget, html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Pasando…';
+        try {
+            const r = await EV.post('/Herramientas/MigrarImagenes');
+            EV.toast(r.mensaje);
+            const lista = o => Object.entries(o).map(([t, n]) => `${EV.fmt(n)} ${NOMBRE_TIPO[t] || t}`).join(', ') || 'ninguna';
+            $('#mmInforme').innerHTML = `<div><b>Pasadas:</b> ${lista(r.pasadas)}</div><div><b>Ya estaban:</b> ${lista(r.yaEstaban)}</div>` +
+                (r.sinArchivo.length ? `<details><summary>${r.sinArchivo.length} sin archivo en este servidor</summary><div style="max-height:160px;overflow:auto">${r.sinArchivo.map(esc).join('<br>')}</div></details>` : '') +
+                (r.errores.length ? `<div style="color:#B42318"><b>Errores:</b><br>${r.errores.map(esc).join('<br>')}</div>` : '');
+            resumenFotos();
+        } catch (er) { EV.toast(er.message, 'err'); }
+        finally { b.disabled = false; b.innerHTML = html; }
+    });
 
     // actividad reciente
     const verbo = { Crear: ['Creó', 'bi-plus-lg'], Editar: ['Editó', 'bi-pencil'], Eliminar: ['Eliminó', 'bi-trash3'] };

@@ -179,6 +179,8 @@
             </div>
         </div>
 
+        <div class="ui-f"><label>Galería <em>más fotos del vehículo para la ficha; se guardan al momento</em></label><div id="edGaleria"></div></div>
+
         <section class="tr-paso"><h3><span class="n">1</span> Ruta <small>Desde → A</small></h3>
             <div class="ui-row">
                 <div class="ui-f" style="position:relative"><label for="edOrigen">Desde (aeropuerto) *</label>
@@ -271,6 +273,7 @@
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script>
 (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -278,6 +281,7 @@
     const esc = EV.esc;
     const editor = EV.drawer($('#trEditor'));
     const visor = EV.drawer($('#trVer'));
+    let galeria = null;   // fotos extra (Eurovip.multimedia, uso GALERIA)
     let todos = [], V = { tipos: {}, categorias: {}, vehiculos: {}, cobros: {} };
     let actual = null, fotoNueva = null, quitarFoto = false, verId = null, nombreTocado = false;
     let hoteles = [];                  // [{valor, texto}] elegidos en el editor
@@ -515,6 +519,8 @@
         $$('#trEditor .ui-f').forEach(f => f.classList.remove('err'));
         $$('#trEditor .msg').forEach(m => m.textContent = '');
         pintarFoto(t?.imagen); pintarHoteles(); vistaPrevia();
+        galeria ??= EVMultimedia.montar($('#edGaleria'), { tipo: 'TRASLADO', portada: false, nombre: 'el traslado' });
+        galeria.cambiar(t?.id_Traslado ?? null);
         editor.abrir();
         setTimeout(() => (t ? $('#edNombre') : $('#edOrigen')).focus(), 80);
     }

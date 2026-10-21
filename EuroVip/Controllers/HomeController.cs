@@ -16,9 +16,11 @@ namespace EuroVip.Controllers
         private readonly IHomeWebRepository _home;
         private readonly IImagenesLocales _img;
         private readonly IHerramientasRepository _herr;
+        private readonly IMultimedia _mm;
 
-        public HomeController(IConfiguration configuration, ILogger<HomeController> logger, IHomeWebRepository home, IImagenesLocales img, IHerramientasRepository herr)
+        public HomeController(IConfiguration configuration, ILogger<HomeController> logger, IHomeWebRepository home, IImagenesLocales img, IHerramientasRepository herr, IMultimedia mm)
         {
+            _mm = mm;
             _configuration = configuration;
             _logger = logger;
             _home = home;
@@ -163,8 +165,9 @@ namespace EuroVip.Controllers
                 // 3) Hoteles de la Home sin foto
                 if (Puede("hoteles"))
                 {
-                    var hoteles = (await cn.QueryAsync<string>("SELECT DISTINCT LTRIM(RTRIM(id_destino)) FROM Eurovip.inicio WHERE tipo_servicio = 'HOTEL'"))
-                        .Where(n => _img.Buscar("hoteles", n) is null).ToList();
+                    var conFoto = await _mm.PortadasAsync("HOTEL");   // foto nueva (Eurovip.multimedia) o, si no, la de antes por nombre
+                    var hoteles = (await cn.QueryAsync<(int Id, string Nombre)>("SELECT id_servicio, LTRIM(RTRIM(id_destino)) FROM Eurovip.inicio WHERE tipo_servicio = 'HOTEL'"))
+                        .Where(h => !conFoto.ContainsKey(h.Id.ToString()) && _img.Buscar("hoteles", h.Nombre) is null).Select(h => h.Nombre).Distinct().ToList();
                     if (hoteles.Count > 0)
                         Agregar("info", "bi-image", $"{hoteles.Count} hotel{(hoteles.Count == 1 ? "" : "es")} sin foto",
                             string.Join(", ", hoteles.Take(4)) + (hoteles.Count > 4 ? "…" : "") + ". En la web se ven sin imagen.", "Subir fotos", "/Hoteles/Index");

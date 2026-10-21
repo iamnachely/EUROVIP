@@ -189,6 +189,18 @@ namespace EuroVip.Models
         };
 
         public static HrCatalogo? Buscar(string? clave) => Todos.FirstOrDefault(c => c.Clave.Equals(clave, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// Catálogos con fotos en Eurovip.multimedia (documento esquema-multimedia.md): tipo, columna clave y si la portada se
+        /// carga en el componente de fotos (Países, que no tiene columna de imagen) o en su campo "imagen" (Destinos, Alojamientos).
+        /// </summary>
+        public static (string Tipo, string Col, bool Portada)? Fotos(HrCatalogo c) => c.Clave switch
+        {
+            "destinos" => ("DESTINO", "id_destino", false),
+            "alojamientos" => ("ALOJAMIENTO", "id_alojamiento", false),
+            "paises" => ("PAIS", "id_pais", true),
+            _ => null
+        };
     }
 
     // ---------- respuestas ----------

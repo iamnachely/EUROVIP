@@ -2,7 +2,7 @@
 # Deploy.ps1 - Blue-Green Deployment para EUROVIP (BackOffice) en IIS
 #
 # Copiado de BackTiTan (DeploymentScripts/Deploy.ps1) y adaptado a Eurovip:
-#   - se preservan wwwroot\imagenes, wwwroot\uploads y Logs (fotos y archivos subidos)
+#   - se preservan wwwroot\imagenes, wwwroot\multimedia, wwwroot\uploads y Logs (fotos y archivos subidos)
 #   - la configuración real vive en appsettings.Local.json (no está en el repo)
 #
 # Detecta el slot activo directamente desde IIS (sin marker files).
@@ -271,7 +271,8 @@ Write-Step "Preservando uploads del slot activo..."
 
 $activePath = if ($isBlueActive) { $bluePath } else { $greenPath }
 $foldersToPreserve = @(
-    "wwwroot\imagenes",   # fotos subidas desde la pantalla (hoteles, circuitos, destinos, alojamientos, excursiones)
+    "wwwroot\imagenes",   # fotos de antes (itinerario de circuito, slider y las que aún no se pasaron a multimedia)
+    "wwwroot\multimedia", # fotos de productos (Eurovip.imagen / Eurovip.multimedia) si Multimedia:CarpetaFisica está vacío
     "wwwroot\uploads",    # flyers generados, fondos de flyers y fotos de perfil
     "Logs"                # registros de la aplicación (Serilog)
 )

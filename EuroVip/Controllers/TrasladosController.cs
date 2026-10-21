@@ -9,7 +9,8 @@ namespace EuroVip.Controllers
     /// <summary>
     /// Mantenimiento de traslados (Eurovip.traslado): ver, crear, editar, duplicar, activar/desactivar, eliminar y foto.
     /// Igual que la búsqueda del tour operador: Desde (aeropuerto) → A (destino u hoteles), ida y vuelta o solo ida.
-    /// La foto va en wwwroot/imagenes/traslados/traslado{id}.webp y su nombre se guarda en traslado.imagen.
+    /// Fotos en Eurovip.multimedia (tipo TRASLADO, carpeta traslados/{id}/): portada aquí y galería con el componente de fotos.
+    /// Si un traslado aún no tiene portada nueva se muestra la de antes (wwwroot/imagenes/traslados/{traslado.imagen}).
     /// La web busca con Eurovip.spPortalBuscarTraslados.
     /// </summary>
     public class TrasladosController : Controller
@@ -20,8 +21,12 @@ namespace EuroVip.Controllers
         private readonly IImagenesLocales _img;
         private readonly ILogger<TrasladosController> _logger;
 
-        public TrasladosController(ITrasladoRepository repo, ICircuitoRepository aud, IImagenesLocales img, ILogger<TrasladosController> logger)
+        private readonly IMultimedia _mm;
+        private const string TipoMm = "TRASLADO";
+
+        public TrasladosController(ITrasladoRepository repo, ICircuitoRepository aud, IImagenesLocales img, ILogger<TrasladosController> logger, IMultimedia mm)
         {
+            _mm = mm;
             _repo = repo;
             _aud = aud;
             _img = img;
@@ -32,18 +37,23 @@ namespace EuroVip.Controllers
 
         private static string Archivo(int id) => $"traslado{id}.webp";
 
-        private Traslado ConImagen(Traslado t)
+        private Traslado ConImagen(Traslado t, IReadOnlyDictionary<string, string> portadas)
         {
-            t.Imagen = string.IsNullOrWhiteSpace(t.Archivo) ? null : _img.BuscarArchivo(TipoImagen, t.Archivo)?.Url;
+            t.Imagen = portadas.TryGetValue(t.Id_Traslado.ToString(), out var u) ? u
+                       : string.IsNullOrWhiteSpace(t.Archivo) ? null : _img.BuscarArchivo(TipoImagen, t.Archivo)?.Url;
             return t;
         }
 
         [HttpGet]
-        public async Task<IActionResult> Listar() => Json(new
+        public async Task<IActionResult> Listar()
         {
-            traslados = (await _repo.ListarAsync()).Select(ConImagen),
-            valores = new { tipos = TrasladoValores.Tipos, categorias = TrasladoValores.Categorias, vehiculos = TrasladoValores.Vehiculos, cobros = TrasladoValores.Cobros }
-        });
+            var portadas = await _mm.PortadasAsync(TipoMm);
+            return Json(new
+            {
+                traslados = (await _repo.ListarAsync()).Select(t => ConImagen(t, portadas)),
+                valores = new { tipos = TrasladoValores.Tipos, categorias = TrasladoValores.Categorias, vehiculos = TrasladoValores.Vehiculos, cobros = TrasladoValores.Cobros }
+            });
+        }
 
         [HttpGet] public async Task<IActionResult> Destinos(string? q) => Json(await _repo.DestinosAsync(q));
         [HttpGet] public async Task<IActionResult> Aeropuertos(string? q) => Json(await _repo.AeropuertosAsync(q));
@@ -93,7 +103,7 @@ namespace EuroVip.Controllers
                 if (dto.Id_Traslado is not null && antes is null) return NotFound(new { mensaje = "Ese traslado ya no existe. Recarga la página." });
                 var id = await _repo.GuardarAsync(dto, User.Identity?.Name ?? "desconocido");
                 await Auditar(antes is null ? "Traslado_Crear" : "Traslado_Editar", id, new { antes, despues = dto });
-                return Json(new { ok = true, id, traslado = ConImagen((await _repo.ObtenerAsync(id))!), mensaje = antes is null ? $"¡Listo! Se creó «{dto.Nombre}»." : "Cambios guardados." });
+                return Json(new { ok = true, id, traslado = ConImagen((await _repo.ObtenerAsync(id))!, await _mm.PortadasAsync(TipoMm)), mensaje = antes is null ? $"¡Listo! Se creó «{dto.Nombre}»." : "Cambios guardados." });
             }
             catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
             catch (Exception ex)
@@ -139,6 +149,7 @@ namespace EuroVip.Controllers
             if (t is null) return NotFound(new { mensaje = "Ese traslado ya no existe." });
             await _repo.EliminarAsync(id);
             var fotoBorrada = !string.IsNullOrWhiteSpace(t.Archivo) && _img.Eliminar(TipoImagen, t.Archivo);
+            await _mm.EliminarProductoAsync(TipoMm, id.ToString());   // portada y galería
             await Auditar("Traslado_Eliminar", id, new { antes = t, fotoBorrada });
             return Json(new { ok = true, mensaje = $"Se eliminó «{t.Nombre}»." });
         }
@@ -154,9 +165,9 @@ namespace EuroVip.Controllers
             try
             {
                 await using var st = archivo.OpenReadStream();
-                var img = await _img.GuardarComoAsync(TipoImagen, null, Archivo(id), st);
-                await _repo.PonerImagenAsync(id, img.Archivo);
-                await Auditar("Traslado_Imagen", id, new { img.Archivo, img.Bytes });
+                var img = await _mm.SubirAsync(TipoMm, id.ToString(), "PORTADA", st, archivo.FileName);   // también vacía traslado.imagen
+                if (!string.IsNullOrWhiteSpace(t.Archivo)) _img.Eliminar(TipoImagen, t.Archivo);           // la foto vieja ya no se usa
+                await Auditar("Traslado_Imagen", id, new { img.Ruta, img.Tamano_Bytes });
                 return Json(new { ok = true, imagen = img.Url, mensaje = "Foto guardada." });
             }
             catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
@@ -167,7 +178,8 @@ namespace EuroVip.Controllers
         {
             var t = await _repo.ObtenerAsync(id);
             if (t is null) return NotFound(new { mensaje = "Ese traslado ya no existe." });
-            var borrada = !string.IsNullOrWhiteSpace(t.Archivo) && _img.Eliminar(TipoImagen, t.Archivo);
+            var borrada = await _mm.QuitarUsoAsync(TipoMm, id.ToString(), "PORTADA") > 0
+                          | (!string.IsNullOrWhiteSpace(t.Archivo) && _img.Eliminar(TipoImagen, t.Archivo));
             await _repo.PonerImagenAsync(id, null);
             if (borrada) await Auditar("Traslado_QuitarImagen", id, new { t.Archivo });
             return Json(new { ok = true, mensaje = borrada ? "Foto quitada." : "No tenía foto." });

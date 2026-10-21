@@ -134,7 +134,7 @@
                     </div><span class="msg"></span>
                 </div>
             </div>
-            <div class="ui-f"><label>Imagen de portada <em>opcional · se guarda en la carpeta imagenes/circuitos</em></label>
+            <div class="ui-f"><label>Imagen de portada <em>opcional · se guarda en multimedia/circuitos</em></label>
                 <input id="edCaratula" type="hidden">
                 <div class="cx-portada" id="edPortada" title="Arrastra aquí la imagen de portada"></div>
                 <div class="cx-img-acts">
@@ -143,6 +143,7 @@
                     <small id="edPortadaNombre"></small>
                 </div>
             </div>
+            <div class="ui-f"><label>Foto intermedia y galería <em>cabecera de la ficha y más fotos; se guardan al momento</em></label><div id="edGaleria"></div></div>
             <div class="ui-f"><label for="edResumen">Resumen del recorrido <em>opcional</em></label><textarea id="edResumen" placeholder="Ej. 7 noches recorriendo San José, Arenal y Manuel Antonio…"></textarea></div>
         </section>
 
@@ -220,6 +221,7 @@
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script>
 const CX = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -243,6 +245,7 @@ const CX = (() => {
 
     const ed = $('#cxEditor');
     const drawer = EV.drawer(ed);
+    let galeria = null;   // intermedia + galería (Eurovip.multimedia); la portada sigue en su recuadro
     const drawerCat = EV.drawer($('#cxCat'));
     const tabs = EV.tabs($('#edTabs'));
     let lista = [], estado = null, paises = [], categorias = [], regimenes = [];
@@ -320,6 +323,8 @@ const CX = (() => {
         $('#tabSalidas').hidden = !c.codigoOriginal;
         $$('.ui-f.err', ed).forEach(f => { f.classList.remove('err'); const m = $('.msg', f); if (m) m.textContent = ''; });
         portada(); pintarDestinos(); pintarHoteles(); pintarDias(); pintarSalidas();
+        galeria ??= EVMultimedia.montar($('#edGaleria'), { tipo: 'CIRCUITO', portada: false, intermedia: true, nombre: 'el circuito' });
+        galeria.cambiar(c.codigoOriginal ? c.nombre : null);
         tabs.ir('tDatos');
         drawer.abrir();
         setTimeout(() => $('#edCodigo').focus(), 350);

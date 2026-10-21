@@ -4,6 +4,7 @@
     ViewData["Title"] = Model.Titulo + " · Herramientas";
     var opts = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
     var hab = HrCatalogos.Buscar("habitaciones")!;
+    var fotos = HrCatalogos.Fotos(Model);   // catálogos con fotos en Eurovip.multimedia
     object Cliente(HrCatalogo c) => new { c.Clave, c.Titulo, c.Singular, c.El, c.Nuevo, c.Icono, c.Especial, c.Campos, c.Filtros, Extras = (c.Extras ?? Array.Empty<HrExtra>()).Select(x => new { x.Alias, x.Etiqueta }) };
 }
 
@@ -136,6 +137,10 @@
         <div class="ui-pane on" id="ePaneDatos">
             <div id="eUso"></div>
             <div id="eForm"></div>
+            @if (fotos is not null)
+            {
+                <div class="ui-f" style="margin-top:14px"><label>@(fotos.Value.Portada ? "Fotos" : "Galería") <em>se guardan al momento en multimedia</em></label><div id="eFotos"></div></div>
+            }
         </div>
         @if (Model.Especial == "alojamiento")
         {
@@ -159,6 +164,7 @@
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script>
 const HC = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -172,6 +178,8 @@ const HC = (() => {
     const listas = {};
     let actual = null, nuevo = false;
     const drawer = EV.drawer($('#hcEditor'));
+    const FOTOS = @Html.Raw(fotos is null ? "null" : System.Text.Json.JsonSerializer.Serialize(new { tipo = fotos.Value.Tipo, col = fotos.Value.Col, portada = fotos.Value.Portada }));
+    let galeria = null;
     const tabs = $('#eTabs') ? EV.tabs($('#eTabs')) : null;
 
     const lista = async n => listas[n] ??= await EV.api('/Herramientas/Lista?nombre=' + n);
@@ -382,6 +390,10 @@ const HC = (() => {
         if (actual && DEF.campos.some(c => c.tipo === 'tipohab')) { const d = $('[data-c="id_tipo_habitacion"]', $('#eForm')); if (d) d.dataset.valor = actual.id_tipo_habitacion; }
         if (nuevo && st.filtros.id_alojamiento && DEF.campos.some(c => c.tipo === 'hotel')) { const h = $('[data-c="id_alojamiento"]', $('#eForm')); h.dataset.valor = st.filtros.id_alojamiento; h.value = $('#hcFiltros [data-fhotel]').value; }
         activarCampos($('#eForm'), DEF, nuevo);
+        if (FOTOS) {
+            galeria ??= EVMultimedia.montar($('#eFotos'), { tipo: FOTOS.tipo, portada: FOTOS.portada, nombre: `${DEF.el} ${DEF.singular}` });
+            galeria.cambiar(nuevo ? null : actual?.[FOTOS.col]);
+        }
         if (tabs) { tabs.ir('ePaneDatos'); $('#eTabs [data-tab="ePaneHabs"]').disabled = nuevo; $('#eNumHabs').textContent = actual?.habitaciones ?? 0; if (!nuevo) habs(); }
         drawer.abrir();
         setTimeout(() => $('#eForm input:not([readonly]), #eForm select:not([disabled])')?.focus(), 80);

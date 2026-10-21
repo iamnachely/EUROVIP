@@ -3274,6 +3274,236 @@ END
 GO
 
 /* ##########################################################################################
+   FASE 20 — FOTOS DE PRODUCTOS EN MULTIMEDIA  (21/10/2026)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria con el documento esquema-multimedia.md (copia en Database/): "las imágenes de
+   destino, país, hoteles, traslado, excursiones (y circuito: portada, intermedia, galería) se guardan en las
+   nuevas tablas y rutas; las del itinerario de circuito y las del slider se quedan como se guardan".
+   Explicado fácil:
+     • Eurovip.imagen = el archivo (carpeta + nombre aleatorio de 32 caracteres + extensión, tamaño, medidas).
+     • Eurovip.multimedia = qué producto usa ese archivo, para qué (PORTADA, INTERMEDIA, GALERIA) y en qué orden.
+     • Eurovip.multimedia_uso = catálogo de usos.
+     • Archivo en {Multimedia:CarpetaFisica}/{tipo en plural}/{id o slug}/{GUID}.webp (por defecto wwwroot\multimedia),
+       URL {Multimedia:Url}/… (por defecto /multimedia). Nunca se sobrescribe un archivo.
+   Las 3 tablas YA EXISTÍAN (las creó la migración del portal 007_multimedia_imagen.sql el 21/10/2026 15:09,
+   vacías, tal cual el documento): los CREATE de abajo no hacen nada si existen. Se amplió multimedia con
+   DESTINO, PAIS y HOTEL (CAMBIO 64b), igual que el documento indica para cruceros (§5.4).
+   Probado: 10 casos inválidos rechazados (ruta con mayúsculas/../sin "/", nombre con punto, extensión gif,
+   2.ª portada, portada con orden 2, intermedia fuera de circuito, dos referencias, orden repetido) con ROLLBACK;
+   y el servicio de la app contra la base (subir, reemplazar portada, ordenar, hacer portada, texto, quitar,
+   renombrar circuito, borrar producto) dejando todo como estaba.
+   ########################################################################################## */
+/* ---------- CAMBIO 62: Eurovip.imagen — el ARCHIVO (dónde está y cómo es) ----------
+   ruta_relativa = carpeta dentro de la base de imágenes (config Multimedia:CarpetaFisica / Multimedia:Url), termina en "/".
+   nombre_archivo = 32 caracteres hexadecimales (GUID sin guiones), sin extensión. Nunca se sobrescribe un archivo. */
+IF OBJECT_ID('Eurovip.imagen') IS NULL
+CREATE TABLE Eurovip.imagen (
+    id               int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_imagen PRIMARY KEY,
+    ruta_relativa    varchar(500)  NOT NULL,
+    nombre_archivo   varchar(255)  NOT NULL,
+    extension        varchar(5)    NOT NULL,
+    nombre_original  nvarchar(255) NULL,
+    tamano_bytes     bigint        NOT NULL,
+    ancho            int           NULL,
+    alto             int           NULL,
+    creado_utc       datetime2(3)  NOT NULL CONSTRAINT DF_Eurovip_imagen_creado DEFAULT (SYSUTCDATETIME()),
+    CONSTRAINT UQ_Eurovip_imagen_archivo UNIQUE (ruta_relativa, nombre_archivo, extension),
+    -- solo a-z 0-9 - _ /, termina en /, no empieza por / ni tiene // (COLLATE binario: las mayúsculas no pasan)
+    CONSTRAINT CK_Eurovip_imagen_ruta CHECK (ruta_relativa COLLATE Latin1_General_BIN NOT LIKE '%[^a-z0-9_/-]%'
+                                             AND ruta_relativa LIKE '%/' AND ruta_relativa NOT LIKE '/%' AND ruta_relativa NOT LIKE '%//%'),
+    CONSTRAINT CK_Eurovip_imagen_nombre CHECK (nombre_archivo <> '' AND nombre_archivo COLLATE Latin1_General_BIN NOT LIKE '%[^a-z0-9_-]%'),
+    CONSTRAINT CK_Eurovip_imagen_extension CHECK (extension COLLATE Latin1_General_BIN IN ('webp', 'jpg', 'jpeg', 'png', 'avif')),
+    CONSTRAINT CK_Eurovip_imagen_tamano CHECK (tamano_bytes > 0),
+    CONSTRAINT CK_Eurovip_imagen_medidas CHECK ((ancho IS NULL OR ancho > 0) AND (alto IS NULL OR alto > 0))
+);
+GO
+
+/* ---------- CAMBIO 63: Eurovip.multimedia_uso — catálogo de usos ---------- */
+IF OBJECT_ID('Eurovip.multimedia_uso') IS NULL
+CREATE TABLE Eurovip.multimedia_uso (
+    codigo       varchar(10)   NOT NULL CONSTRAINT PK_Eurovip_multimedia_uso PRIMARY KEY,
+    descripcion  nvarchar(100) NOT NULL
+);
+GO
+MERGE Eurovip.multimedia_uso AS t
+USING (VALUES ('PORTADA',    N'Portada: tarjetas y listados; primera foto del carrusel'),
+              ('INTERMEDIA', N'Intermedia: cabecera de la ficha del circuito (solo circuitos)'),
+              ('GALERIA',    N'Galería: carrusel de la ficha, detrás de la portada')) AS s (codigo, descripcion)
+ON t.codigo = s.codigo
+WHEN NOT MATCHED THEN INSERT (codigo, descripcion) VALUES (s.codigo, s.descripcion);
+GO
+
+/* ---------- CAMBIO 64: Eurovip.multimedia — qué archivo usa cada producto, para qué y en qué orden ----------
+   Tal cual el documento esquema-multimedia.md (4 tipos). En CAMBIO 64b se amplía con DESTINO, PAIS y HOTEL.
+   NO van aquí: las fotos del itinerario de circuito (circuito_itinerario.caratula) ni las del slider (carrusel).
+   Sin FK hacia los productos (alojamiento y circuito tienen el idioma en la clave; el backoffice borra/renombra). */
+IF OBJECT_ID('Eurovip.multimedia') IS NULL
+CREATE TABLE Eurovip.multimedia (
+    id                 int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_multimedia PRIMARY KEY,
+    id_imagen          int           NOT NULL CONSTRAINT FK_Eurovip_multimedia_imagen REFERENCES Eurovip.imagen (id),
+    tipo               varchar(15)   NOT NULL,
+    uso                varchar(10)   NOT NULL CONSTRAINT FK_Eurovip_multimedia_uso REFERENCES Eurovip.multimedia_uso (codigo),
+    id_alojamiento     int           NULL,
+    nombre_circuito    varchar(50)   NULL,
+    id_excursion       int           NULL,
+    id_traslado        int           NULL,
+    orden              smallint      NOT NULL CONSTRAINT DF_Eurovip_multimedia_orden DEFAULT (1),
+    texto_alternativo  nvarchar(250) NULL,
+    CONSTRAINT CK_Eurovip_multimedia_tipo CHECK (tipo IN ('ALOJAMIENTO', 'CIRCUITO', 'EXCURSION', 'TRASLADO')),
+    CONSTRAINT CK_Eurovip_multimedia_referencia CHECK (
+           (tipo = 'ALOJAMIENTO' AND id_alojamiento IS NOT NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL)
+        OR (tipo = 'CIRCUITO'    AND nombre_circuito IS NOT NULL AND id_alojamiento IS NULL AND id_excursion IS NULL AND id_traslado IS NULL)
+        OR (tipo = 'EXCURSION'   AND id_excursion IS NOT NULL AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_traslado IS NULL)
+        OR (tipo = 'TRASLADO'    AND id_traslado IS NOT NULL AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL)),
+    CONSTRAINT CK_Eurovip_multimedia_intermedia CHECK (uso <> 'INTERMEDIA' OR tipo = 'CIRCUITO'),
+    CONSTRAINT CK_Eurovip_multimedia_unica CHECK (uso = 'GALERIA' OR orden = 1),
+    CONSTRAINT CK_Eurovip_multimedia_orden CHECK (orden > 0),
+    CONSTRAINT UQ_Eurovip_multimedia_orden UNIQUE (tipo, id_alojamiento, nombre_circuito, id_excursion, id_traslado, uso, orden)
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_multimedia_imagen' AND object_id = OBJECT_ID('Eurovip.multimedia'))
+    CREATE INDEX IX_Eurovip_multimedia_imagen ON Eurovip.multimedia (id_imagen);
+GO
+
+/* ---------- CAMBIO 64b: Eurovip.multimedia — destino, país y hoteles de la Home ----------
+   Las 3 tablas (imagen, multimedia_uso, multimedia) ya las creó el 21/10/2026 15:09 la migración del portal
+   (007_multimedia_imagen.sql, documento esquema-multimedia.md), vacías. La usuaria pidió que también las fotos de
+   DESTINO, PAÍS y hoteles se guarden aquí, así que se amplía igual que el documento indica para cruceros (§5.4):
+   columna nueva + tipo en CK_..._tipo + caso en CK_..._referencia + columna en UQ_..._orden. */
+SET XACT_ABORT ON;
+BEGIN TRAN;
+IF COL_LENGTH('Eurovip.multimedia', 'id_destino') IS NULL ALTER TABLE Eurovip.multimedia ADD id_destino varchar(50) NULL;
+IF COL_LENGTH('Eurovip.multimedia', 'id_pais')    IS NULL ALTER TABLE Eurovip.multimedia ADD id_pais char(2) NULL;
+IF COL_LENGTH('Eurovip.multimedia', 'id_hotel')   IS NULL ALTER TABLE Eurovip.multimedia ADD id_hotel int NULL;   -- inicio.id_servicio de la tarjeta HOTEL
+COMMIT;
+GO
+SET XACT_ABORT ON;
+BEGIN TRAN;
+ALTER TABLE Eurovip.multimedia DROP CONSTRAINT CK_Eurovip_multimedia_tipo;
+ALTER TABLE Eurovip.multimedia DROP CONSTRAINT CK_Eurovip_multimedia_referencia;
+ALTER TABLE Eurovip.multimedia ADD CONSTRAINT CK_Eurovip_multimedia_tipo
+    CHECK (tipo IN ('ALOJAMIENTO', 'CIRCUITO', 'EXCURSION', 'TRASLADO', 'DESTINO', 'PAIS', 'HOTEL'));
+ALTER TABLE Eurovip.multimedia ADD CONSTRAINT CK_Eurovip_multimedia_referencia CHECK (
+       (tipo = 'ALOJAMIENTO' AND id_alojamiento IS NOT NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL)
+    OR (tipo = 'CIRCUITO'    AND id_alojamiento IS NULL AND nombre_circuito IS NOT NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL)
+    OR (tipo = 'EXCURSION'   AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NOT NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL)
+    OR (tipo = 'TRASLADO'    AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NOT NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NULL)
+    OR (tipo = 'DESTINO'     AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NOT NULL AND id_pais IS NULL AND id_hotel IS NULL)
+    OR (tipo = 'PAIS'        AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NOT NULL AND id_hotel IS NULL)
+    OR (tipo = 'HOTEL'       AND id_alojamiento IS NULL AND nombre_circuito IS NULL AND id_excursion IS NULL AND id_traslado IS NULL AND id_destino IS NULL AND id_pais IS NULL AND id_hotel IS NOT NULL));
+ALTER TABLE Eurovip.multimedia DROP CONSTRAINT UQ_Eurovip_multimedia_orden;
+ALTER TABLE Eurovip.multimedia ADD CONSTRAINT UQ_Eurovip_multimedia_orden UNIQUE
+    (tipo, id_alojamiento, nombre_circuito, id_excursion, id_traslado, id_destino, id_pais, id_hotel, uso, orden);
+COMMIT;
+GO
+
+/* ---------- CAMBIO 65: Eurovip.vMultimedia — lectura fácil para la web y el backoffice ----------
+   clave  = la referencia del producto en texto (id, nombre del circuito, destino o país).
+   ruta   = ruta dentro de la base de imágenes: la URL completa es  Multimedia:Url (o Catalogo:UrlMultimedia) + "/" + ruta. */
+CREATE OR ALTER VIEW Eurovip.vMultimedia
+AS
+SELECT m.id, m.id_imagen, m.tipo, m.uso, m.orden, m.texto_alternativo,
+       m.id_alojamiento, m.nombre_circuito, m.id_excursion, m.id_traslado, m.id_destino, m.id_pais, m.id_hotel,
+       COALESCE(CAST(m.id_alojamiento AS varchar(50)), m.nombre_circuito, CAST(m.id_excursion AS varchar(50)), CAST(m.id_traslado AS varchar(50)),
+                m.id_destino, m.id_pais, CAST(m.id_hotel AS varchar(50))) AS clave,
+       i.ruta_relativa + i.nombre_archivo + '.' + i.extension AS ruta,
+       i.nombre_original, i.tamano_bytes, i.ancho, i.alto, i.creado_utc
+  FROM Eurovip.multimedia m
+  JOIN Eurovip.imagen i ON i.id = m.id_imagen;
+GO
+
+/* ---------- CAMBIO 66: consultas de la web con la foto nueva ----------
+   Las consultas de excursiones y traslados devuelven además imagen_ruta (portada en multimedia, ruta dentro de la
+   base de imágenes). Si el producto no tiene portada en multimedia, imagen_ruta es NULL y "imagen" sigue siendo la de antes. */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarExcursiones
+    @Destino varchar(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT e.id_Excursion AS id_excursion, LTRIM(RTRIM(e.id_destino)) AS destino, d.id_pais, e.nombre, e.descripcion,
+           e.cancelable, CAST(e.precio AS decimal(19,4)) AS precio, 'DOP' AS id_moneda,
+           '/imagenes/excursiones/' + Eurovip.fnNombreImagen(e.nombre) + '.webp' AS imagen,
+           (SELECT TOP 1 v.ruta FROM Eurovip.vMultimedia v WHERE v.tipo = 'EXCURSION' AND v.id_excursion = e.id_Excursion AND v.uso = 'PORTADA') AS imagen_ruta
+      FROM Eurovip.servicio_excursion e
+      OUTER APPLY (SELECT TOP 1 id_pais FROM Eurovip.destino x WHERE x.id_destino = LTRIM(RTRIM(e.id_destino)) AND x.id_idioma = 'ES') d
+     WHERE @Destino IS NULL OR LTRIM(RTRIM(e.id_destino)) = LTRIM(RTRIM(@Destino))
+     ORDER BY destino, CASE WHEN ISNULL(e.precio, 0) > 0 THEN 0 ELSE 1 END, e.precio, e.nombre;
+END
+GO
+
+CREATE OR ALTER PROCEDURE Eurovip.spPortalObtenerExcursion
+    @IdExcursion int
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT e.id_Excursion AS id_excursion, LTRIM(RTRIM(e.id_destino)) AS destino, e.nombre, e.descripcion, e.cancelable,
+           CAST(e.precio AS decimal(19,4)) AS precio, 'DOP' AS id_moneda,
+           '/imagenes/excursiones/' + Eurovip.fnNombreImagen(e.nombre) + '.webp' AS imagen,
+           (SELECT TOP 1 v.ruta FROM Eurovip.vMultimedia v WHERE v.tipo = 'EXCURSION' AND v.id_excursion = e.id_Excursion AND v.uso = 'PORTADA') AS imagen_ruta
+      FROM Eurovip.servicio_excursion e
+     WHERE e.id_Excursion = @IdExcursion;
+    -- Galería (portada primero, luego galería por orden)
+    SELECT v.uso, v.orden, v.ruta, v.texto_alternativo, v.ancho, v.alto
+      FROM Eurovip.vMultimedia v
+     WHERE v.tipo = 'EXCURSION' AND v.id_excursion = @IdExcursion
+     ORDER BY CASE v.uso WHEN 'PORTADA' THEN 0 ELSE 1 END, v.orden;
+END
+GO
+
+CREATE OR ALTER PROCEDURE Eurovip.spPortalBuscarTraslados
+    @Origen        varchar(10),
+    @IdAlojamiento int = NULL,
+    @Destino       varchar(50) = NULL,
+    @Pasajeros     int = 1,
+    @IdaVuelta     bit = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @IdAlojamiento IS NOT NULL
+        SELECT TOP 1 @Destino = LTRIM(RTRIM(id_destino)) FROM Eurovip.alojamiento WHERE id_alojamiento = @IdAlojamiento;
+    SET @Pasajeros = CASE WHEN ISNULL(@Pasajeros, 0) < 1 THEN 1 ELSE @Pasajeros END;
+
+    SELECT t.id_traslado, t.nombre, t.tipo, t.categoria, t.vehiculo, t.id_estacion_origen AS origen,
+           (SELECT TOP 1 e.nombre FROM Eurovip.estacion e WHERE e.id_estacion = t.id_estacion_origen) AS origen_nombre,
+           t.id_destino AS destino, t.maletas, t.duracion_min, t.pasajeros_min, t.pasajeros_max, t.cobro,
+           CAST(CASE WHEN @IdaVuelta = 1 THEN t.precio_ida_vuelta ELSE t.precio_ida END AS decimal(19,4)) AS precio,
+           CAST(CASE WHEN @IdaVuelta = 1 THEN t.precio_ida_vuelta ELSE t.precio_ida END
+                * CASE WHEN t.cobro = 'PERSONA' THEN @Pasajeros ELSE 1 END AS decimal(19,4)) AS precio_total,
+           t.id_moneda, t.cancelable, t.horas_cancelacion, t.descripcion,
+           CASE WHEN t.imagen IS NULL THEN NULL ELSE '/imagenes/traslados/' + t.imagen END AS imagen,
+           (SELECT TOP 1 v.ruta FROM Eurovip.vMultimedia v WHERE v.tipo = 'TRASLADO' AND v.id_traslado = t.id_traslado AND v.uso = 'PORTADA') AS imagen_ruta
+      FROM Eurovip.traslado t
+     WHERE t.activo = 1
+       AND t.id_estacion_origen = @Origen
+       AND (@Destino IS NULL OR t.id_destino = @Destino)
+       AND (CASE WHEN @IdaVuelta = 1 THEN t.precio_ida_vuelta ELSE t.precio_ida END) IS NOT NULL
+       AND @Pasajeros BETWEEN t.pasajeros_min AND t.pasajeros_max
+       AND (t.todos_hoteles = 1 OR @IdAlojamiento IS NULL
+            OR EXISTS (SELECT 1 FROM Eurovip.traslado_alojamiento a WHERE a.id_traslado = t.id_traslado AND a.id_alojamiento = @IdAlojamiento))
+     ORDER BY precio_total, t.tipo, t.categoria;
+END
+GO
+
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarTraslados
+    @Destino varchar(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT t.id_traslado, t.nombre, t.tipo, t.categoria, t.vehiculo, t.id_estacion_origen AS origen,
+           (SELECT TOP 1 e.nombre FROM Eurovip.estacion e WHERE e.id_estacion = t.id_estacion_origen) AS origen_nombre,
+           t.id_destino AS destino, t.maletas, t.duracion_min, t.pasajeros_min, t.pasajeros_max, t.cobro,
+           CAST(t.precio_ida AS decimal(19,4)) AS precio_ida, CAST(t.precio_ida_vuelta AS decimal(19,4)) AS precio_ida_vuelta,
+           t.id_moneda, t.cancelable, t.horas_cancelacion, t.descripcion, t.todos_hoteles,
+           CASE WHEN t.imagen IS NULL THEN NULL ELSE '/imagenes/traslados/' + t.imagen END AS imagen,
+           (SELECT TOP 1 v.ruta FROM Eurovip.vMultimedia v WHERE v.tipo = 'TRASLADO' AND v.id_traslado = t.id_traslado AND v.uso = 'PORTADA') AS imagen_ruta
+      FROM Eurovip.traslado t
+     WHERE t.activo = 1 AND (@Destino IS NULL OR t.id_destino = LTRIM(RTRIM(@Destino)))
+     ORDER BY t.id_destino, t.id_estacion_origen,
+              CASE WHEN t.precio_ida_vuelta IS NULL THEN t.precio_ida ELSE t.precio_ida_vuelta END, t.tipo, t.categoria;
+END
+GO
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -3620,6 +3850,12 @@ GO
 
    20/10/2026  FASE 19 aplicada (CAMBIO 61): tarjetas «Sin sección» ocultas en la web (trigger
                trInicioSinSeccion). No había ninguna sin sección: no cambió ningún dato.
+
+   21/10/2026  FASE 20 aplicada (CAMBIO 62 a 66): fotos de productos en Eurovip.imagen / multimedia
+               (ver FASE 20 y Database/esquema-multimedia.md). Las tablas estaban vacías y siguen así: las
+               fotos de antes se pasan con Herramientas → Fotos (multimedia) → «Pasar las fotos de antes»,
+               en la app del servidor (es donde están los archivos). Nota: spPortalListarPublico y
+               spPortalObtenerCircuito (borradores del portal) leen columnas que no existen en multimedia.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

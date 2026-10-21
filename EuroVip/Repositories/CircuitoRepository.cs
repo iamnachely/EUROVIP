@@ -203,6 +203,11 @@ namespace EuroVip.Repositories
                         caratula = @Caratula, itinerario = @Itinerario
                     WHERE id = @original AND id_idioma = @Idioma",
                     new { codigo, nombre, dto.Id_Proveedor, dto.Noches, Caratula = Nulo(dto.Caratula), Itinerario = Nulo(dto.Itinerario), original, Idioma }, tx);
+
+                // Las fotos (Eurovip.multimedia) van por nombre: si se renombra, lo siguen. Los archivos se quedan en su carpeta.
+                if (!string.Equals(nombreAnterior, nombre, StringComparison.Ordinal))
+                    await cn.ExecuteAsync("UPDATE Eurovip.multimedia SET nombre_circuito = @nombre WHERE tipo = 'CIRCUITO' AND nombre_circuito = @nombreAnterior",
+                        new { nombre, nombreAnterior }, tx);
             }
 
             foreach (var d in dto.Destinos.DistinctBy(x => (x.Id_Destino.Trim().ToUpperInvariant(), x.Id_Pais.Trim().ToUpperInvariant())))

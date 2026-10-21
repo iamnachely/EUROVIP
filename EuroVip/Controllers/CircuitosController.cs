@@ -18,8 +18,11 @@ namespace EuroVip.Controllers
         private readonly IImagenesLocales _img;
         private readonly ILogger<CircuitosController> _logger;
 
-        public CircuitosController(ICircuitoRepository repo, IImagenesLocales img, ILogger<CircuitosController> logger)
+        private readonly IMultimedia _mm;
+
+        public CircuitosController(ICircuitoRepository repo, IImagenesLocales img, ILogger<CircuitosController> logger, IMultimedia mm)
         {
+            _mm = mm;
             _repo = repo;
             _img = img;
             _logger = logger;
@@ -66,6 +69,8 @@ namespace EuroVip.Controllers
             try
             {
                 await _repo.GuardarAsync(dto);
+                // Si quitaron la portada en el formulario, también se quita de Eurovip.multimedia (si no, la web la seguiría mostrando)
+                if (string.IsNullOrWhiteSpace(dto.Caratula)) await _mm.QuitarUsoAsync("CIRCUITO", dto.Nombre.Trim(), "PORTADA");
                 await Auditar(excepto is null ? "Circuito_Crear" : "Circuito_Editar", dto);
                 return Json(new { ok = true, codigo = dto.Codigo.Trim(), mensaje = excepto is null ? $"Circuito \"{dto.Nombre}\" creado." : "Cambios guardados." });
             }
@@ -88,7 +93,8 @@ namespace EuroVip.Controllers
             var c = await _repo.ObtenerAsync(codigo);
             if (c is null) return NotFound(new { mensaje = "No encontramos ese circuito." });
             await _repo.EliminarAsync(codigo);
-            await Auditar("Circuito_Eliminar", new { c.Codigo, c.Nombre, Salidas = c.Salidas.Count });
+            var fotos = await _mm.EliminarProductoAsync("CIRCUITO", c.Nombre);   // portada, intermedia y galería (Eurovip.multimedia)
+            await Auditar("Circuito_Eliminar", new { c.Codigo, c.Nombre, Salidas = c.Salidas.Count, fotos });
             return Json(new { ok = true, mensaje = $"\"{c.Nombre}\" se eliminó" + (c.Salidas.Count > 0 ? $" junto con {c.Salidas.Count} salidas." : ".") });
         }
 
@@ -158,7 +164,8 @@ namespace EuroVip.Controllers
         }
 
         // ------------------------------------------------------------ imágenes (carpetas del proyecto, como BackTiTan)
-        // Portada:  wwwroot/imagenes/circuitos/{NombreSinEspacios}.webp              → circuito.caratula = "{NombreSinEspacios}.webp"
+        // Portada:  Eurovip.multimedia (CIRCUITO, PORTADA) → multimedia/circuitos/{slug}/{GUID}.webp; circuito.caratula = su URL.
+        //           La intermedia y la galería se cargan con el componente de fotos (/Multimedia).
         // Día:      wwwroot/imagenes/circuitos/itinerario/es/{Nombre}-itinerario-dia-{n}.webp → circuito_itinerario.caratula = "/imagenes/circuitos/itinerario/es/…"
         // La ruta se guarda en el circuito al pulsar "Guardar circuito".
 
@@ -172,9 +179,9 @@ namespace EuroVip.Controllers
             try
             {
                 await using var st = archivo!.OpenReadStream();
-                var img = await _img.GuardarComoAsync("circuitos", null, baseNombre + ".webp", st);
-                await Auditar("Circuito_ImagenPortada", new { nombre, img.Archivo, img.Bytes });
-                return Json(new { ok = true, caratula = img.Archivo, url = img.Url, imagen = img, mensaje = "Portada cargada. Se guarda en el circuito al pulsar Guardar." });
+                var img = await _mm.SubirAsync("CIRCUITO", nombre!.Trim(), "PORTADA", st, archivo.FileName);
+                await Auditar("Circuito_ImagenPortada", new { nombre, img.Ruta, img.Tamano_Bytes });
+                return Json(new { ok = true, caratula = img.Url, url = img.Url, imagen = img, mensaje = "Portada cargada." });
             }
             catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
         }
