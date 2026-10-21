@@ -334,22 +334,44 @@ namespace EuroVip.Services
             var (carpeta, producto) = await UbicacionAsync(t, v);
 
             var (datos, ancho, alto) = await ImagenesLocales.ConvertirWebpAsync(origen);
-            var nombre = await EscribirNuevoAsync(carpeta, uso == "INTERMEDIA" ? producto + "-banner" : producto, uso == "GALERIA", datos);
-            var fisica = Fisica(carpeta + nombre + ".webp");                 // archivo nuevo: nunca se sobrescribe
+            var nombreBase = uso == "INTERMEDIA" ? producto + "-banner" : producto;
+
+            // Portada y banner: SIEMPRE con su nombre (pedido de la usuaria: «miches, no miches-2; si ya existe, bórrala y ponla»).
+            // Si ese archivo es de OTRO producto con el mismo nombre (dos excursiones «Isla Saona»), no se pisa: se numera.
+            int? reutilizar = null;          // id de Eurovip.imagen que ya tiene esa ruta y se reemplaza
+            var fijo = uso != "GALERIA";
+            if (fijo)
+                using (var cn = _db.Conexion())
+                {
+                    var ya = await cn.QueryFirstOrDefaultAsync<int?>("SELECT id FROM Eurovip.imagen WHERE ruta_relativa = @carpeta AND nombre_archivo = @nombreBase AND extension = 'webp'", new { carpeta, nombreBase });
+                    var deOtro = ya is int yid && await cn.ExecuteScalarAsync<int>($"SELECT COUNT(*) FROM Eurovip.multimedia WHERE id_imagen = @yid AND NOT (tipo = @tipo AND {t.Columna} = @v AND uso = @uso)", new { yid, tipo = t.Tipo, v, uso }) > 0;
+                    if (deOtro) fijo = false; else reutilizar = ya;
+                }
+
+            string nombre, fisica, temporal;
+            if (fijo)
+            {
+                // Se escribe aparte y se pone en su sitio al confirmar la base (si algo falla, la foto de antes sigue intacta)
+                nombre = nombreBase;
+                fisica = Fisica(carpeta + nombre + ".webp");
+                temporal = fisica + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                Directory.CreateDirectory(Path.GetDirectoryName(fisica)!);
+                await File.WriteAllBytesAsync(temporal, datos);
+            }
+            else
+            {
+                nombre = await EscribirNuevoAsync(carpeta, nombreBase, uso == "GALERIA", datos);
+                fisica = Fisica(carpeta + nombre + ".webp");                 // galería: archivo nuevo, nunca se sobrescribe
+                temporal = fisica;
+            }
 
             int idMultimedia;
-            int? imagenVieja = null;
+            var imagenesViejas = new List<int>();
             try
             {
                 using var cn = _db.Conexion();
                 await cn.OpenAsync();
                 using var tx = cn.BeginTransaction();
-                var idImagen = await cn.ExecuteScalarAsync<int>(@"
-                    INSERT INTO Eurovip.imagen (ruta_relativa, nombre_archivo, extension, nombre_original, tamano_bytes, ancho, alto)
-                    VALUES (@carpeta, @nombre, 'webp', @original, @bytes, @ancho, @alto);
-                    SELECT CAST(SCOPE_IDENTITY() AS int);",
-                    new { carpeta, nombre, original = Recortar(nombreOriginal, 255), bytes = (long)datos.Length, ancho, alto }, tx);
-
                 short orden = 1;
                 if (uso == "GALERIA")
                     orden = await cn.ExecuteScalarAsync<short>($"SELECT CAST(ISNULL(MAX(orden), 0) + 1 AS smallint) FROM Eurovip.multimedia WITH (UPDLOCK, HOLDLOCK) WHERE tipo = @tipo AND {t.Columna} = @v AND uso = 'GALERIA'",
@@ -359,12 +381,27 @@ namespace EuroVip.Services
                     // Portada e intermedia son una sola: la anterior se quita (su archivo se borra si nadie más lo usa)
                     var anterior = (await cn.QueryAsync<(int Id, int IdImagen)>($"SELECT id, id_imagen FROM Eurovip.multimedia WITH (UPDLOCK, HOLDLOCK) WHERE tipo = @tipo AND {t.Columna} = @v AND uso = @uso",
                         new { tipo = t.Tipo, v, uso }, tx)).ToList();
-                    foreach (var a in anterior)
+                    foreach (var x in anterior)
                     {
-                        await cn.ExecuteAsync("DELETE FROM Eurovip.multimedia WHERE id = @Id", new { a.Id }, tx);
-                        imagenVieja = a.IdImagen;
+                        await cn.ExecuteAsync("DELETE FROM Eurovip.multimedia WHERE id = @Id", new { x.Id }, tx);
+                        imagenesViejas.Add(x.IdImagen);
                     }
                 }
+                int idImagen;
+                if (reutilizar is int rid)
+                {
+                    // Mismo nombre que antes: se actualiza esa fila en vez de crear otra
+                    await cn.ExecuteAsync(@"UPDATE Eurovip.imagen SET nombre_original = @original, tamano_bytes = @bytes, ancho = @ancho, alto = @alto, creado_utc = SYSUTCDATETIME() WHERE id = @rid",
+                        new { rid, original = Recortar(nombreOriginal, 255), bytes = (long)datos.Length, ancho, alto }, tx);
+                    idImagen = rid;
+                }
+                else
+                    idImagen = await cn.ExecuteScalarAsync<int>(@"
+                        INSERT INTO Eurovip.imagen (ruta_relativa, nombre_archivo, extension, nombre_original, tamano_bytes, ancho, alto)
+                        VALUES (@carpeta, @nombre, 'webp', @original, @bytes, @ancho, @alto);
+                        SELECT CAST(SCOPE_IDENTITY() AS int);",
+                        new { carpeta, nombre, original = Recortar(nombreOriginal, 255), bytes = (long)datos.Length, ancho, alto }, tx);
+                imagenesViejas.Remove(idImagen);
                 idMultimedia = await cn.ExecuteScalarAsync<int>($@"
                     INSERT INTO Eurovip.multimedia (id_imagen, tipo, uso, {t.Columna}, orden, texto_alternativo)
                     VALUES (@idImagen, @tipo, @uso, @v, @orden, @texto);
@@ -374,11 +411,14 @@ namespace EuroVip.Services
             }
             catch
             {
-                try { File.Delete(fisica); } catch { /* el archivo huérfano no rompe nada */ }
+                try { File.Delete(temporal); } catch { /* el archivo huérfano no rompe nada */ }
                 throw;
             }
+            if (temporal != fisica) File.Move(temporal, fisica, overwrite: true);   // la foto de antes con ese nombre se reemplaza
 
-            if (imagenVieja is int iv) await LimpiarHuerfanasAsync(new[] { iv });
+            // Las de antes de este producto (miches-1, miches-2… de versiones anteriores) se borran si nadie más las usa
+            if (imagenesViejas.Count > 0) await LimpiarHuerfanasAsync(imagenesViejas);
+
             if (uso == "PORTADA") await SincronizarProductoAsync(t, clave);
             using (var cn = _db.Conexion())
                 return Completar((await cn.QueryFirstAsync<MultimediaItem>($"{Sel} WHERE v.id = @idMultimedia", new { idMultimedia })));
@@ -565,8 +605,7 @@ namespace EuroVip.Services
             if (slug == "") throw new InvalidOperationException("Primero escribe el nombre del circuito.");
             slug = NombreArchivo(slug);
             var (datos, _, _) = await ImagenesLocales.ConvertirWebpAsync(origen);
-            var carpeta = "circuito_itinerario/";
-            return Url(carpeta + await EscribirNuevoAsync(carpeta, $"{slug}-dia-{dia}", false, datos) + ".webp");
+            return Url(await ReemplazarAsync($"circuito_itinerario/{slug}-dia-{dia}.webp", datos));
         }
 
         public async Task<string> GuardarArchivoAsync(string carpeta, string? nombre, Stream origen)
@@ -574,8 +613,21 @@ namespace EuroVip.Services
             carpeta = (carpeta ?? "").Trim().Trim('/');
             if (carpeta == "" || !Regex.IsMatch(carpeta, "^[a-z0-9_-]+(/[a-z0-9_-]+)*$")) throw new InvalidOperationException("Carpeta no válida.");
             var (datos, _, _) = await ImagenesLocales.ConvertirWebpAsync(origen);
-            carpeta += "/";
-            return Url(carpeta + await EscribirNuevoAsync(carpeta, NombreArchivo(nombre, carpeta.Split('/', StringSplitOptions.RemoveEmptyEntries).Last()), false, datos) + ".webp");
+            return Url(await ReemplazarAsync($"{carpeta}/{NombreArchivo(nombre, carpeta.Split('/').Last())}.webp", datos));
+        }
+
+        /// <summary>
+        /// Foto suelta con nombre fijo: si ya existe un archivo con ese nombre se REEMPLAZA (regla de la usuaria para todas las fotos:
+        /// «si ya existe, la borras y la agregas con su nombre»). Se escribe aparte y luego se pone en su sitio.
+        /// </summary>
+        private async Task<string> ReemplazarAsync(string ruta, byte[] datos)
+        {
+            var fisica = Fisica(ruta);
+            Directory.CreateDirectory(Path.GetDirectoryName(fisica)!);
+            var temporal = fisica + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            await File.WriteAllBytesAsync(temporal, datos);
+            File.Move(temporal, fisica, overwrite: true);
+            return ruta;
         }
 
         public async Task<ResumenRenombrar> RenombrarArchivosAsync()
@@ -598,17 +650,22 @@ namespace EuroVip.Services
                     if (f.Carp == carpeta && f.Nom == deseado) { r.YaBien++; continue; }
                     var vieja = Fisica(f.Carp + f.Nom + "." + f.Ext);
                     if (!File.Exists(vieja)) { r.SinArchivo.Add($"{t.Nombre} {f.Clave} ({f.Uso.ToLowerInvariant()}): {f.Carp}{f.Nom}.{f.Ext}"); continue; }
+                    // Mismo nombre siempre (la-romana, no la-romana-2): si ya hay un archivo con ese nombre que nadie usa, se borra.
+                    // Solo se numera si ese nombre lo usa OTRA foto registrada (otro producto que se llama igual).
                     var nombre = deseado;
-                    for (var n = 1; File.Exists(Fisica(carpeta + nombre + "." + f.Ext)); n++) nombre = $"{deseado}-{n}";
+                    using (var cn0 = _db.Conexion())
+                        for (var n = 1; await cn0.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.imagen WHERE ruta_relativa = @carpeta AND nombre_archivo = @nombre AND extension = @Ext AND id <> @IdImg",
+                                 new { carpeta, nombre, f.Ext, f.IdImg }) > 0; n++)
+                            nombre = $"{deseado}-{n}";
                     var nueva = Fisica(carpeta + nombre + "." + f.Ext);
                     Directory.CreateDirectory(Path.GetDirectoryName(nueva)!);
-                    File.Move(vieja, nueva);
+                    File.Move(vieja, nueva, overwrite: true);
                     try
                     {
                         using var cn = _db.Conexion();
                         await cn.ExecuteAsync("UPDATE Eurovip.imagen SET ruta_relativa = @carpeta, nombre_archivo = @nombre WHERE id = @IdImg", new { carpeta, nombre, f.IdImg });
                     }
-                    catch { File.Move(nueva, vieja); throw; }
+                    catch { File.Move(nueva, vieja, overwrite: true); throw; }
                     r.Renombradas++;
                     vacias.Add(Path.GetDirectoryName(vieja)!);
                     if (f.Uso == "PORTADA") await SincronizarProductoAsync(t, f.Clave);   // la URL nueva en las columnas de antes (Home, destino…)
