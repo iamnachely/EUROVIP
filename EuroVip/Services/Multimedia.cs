@@ -59,7 +59,7 @@ namespace EuroVip.Services
         Task<int> CambiarClaveAsync(string tipo, string vieja, string nueva, IDbConnection cn, IDbTransaction tx);
         Task<ResumenMigracion> MigrarImagenesViejasAsync();
         /// <summary>Foto de un día del itinerario de circuito: NO va en Eurovip.multimedia (se guarda en circuito_itinerario.caratula),
-        /// pero el archivo va en la misma base: {base}/circuito/itinerario/{circuito}-dia-{n}.webp. Devuelve su URL.</summary>
+        /// pero el archivo va en la misma base: {base}/circuito_itinerario/{circuito}-dia-{n}.webp. Devuelve su URL.</summary>
         Task<string> GuardarItinerarioAsync(string circuito, int dia, Stream origen);
         /// <summary>Guarda una foto suelta (no va en Eurovip.multimedia) en {base}/{carpeta}/{nombre}.webp y devuelve su URL.
         /// carpeta: solo minúsculas, números, "-", "_" y "/" (ej. "cruceros/halloween-en-alta-mar/actividades").</summary>
@@ -108,6 +108,8 @@ namespace EuroVip.Services
     ///  • Eurovip.imagen = el archivo; Eurovip.multimedia = qué producto lo usa, para qué (PORTADA, INTERMEDIA, GALERIA) y en qué orden.
     ///  • Archivo: {Multimedia:CarpetaFisica}/{tipo}/{nombre}.webp, sin subcarpeta por producto (pedido de la usuaria):
     ///    hotel/punta-cana.webp, traslado/traslado-punta-cana.webp, destino/punta-cana-banner.webp, galería -1, -2… — nunca se sobrescribe.
+    ///    Carpetas: destino, pais, traslado, excursion, circuito, circuito_itinerario, slider, crucero, hotel (paquetes),
+    ///    bookingmotor (pantalla Hoteles) y hoteles/{id_alojamiento} (alojamientos).
     ///    URL: {Multimedia:Url}/ + la misma ruta. Por defecto wwwroot/multimedia y "/multimedia".
     ///  • Tipos del documento (ALOJAMIENTO, CIRCUITO, EXCURSION, TRASLADO) + DESTINO, PAIS y HOTEL (tarjetas de la pantalla Hoteles).
     ///  • NO van aquí las fotos del itinerario de circuito ni las del slider: siguen como estaban.
@@ -124,7 +126,7 @@ namespace EuroVip.Services
             ["TRASLADO"] = new("TRASLADO", "id_traslado", true, "traslado", "traslados", "traslado"),
             ["DESTINO"] = new("DESTINO", "id_destino", false, "destino", "herramientas", "destino"),
             ["PAIS"] = new("PAIS", "id_pais", false, "pais", "herramientas", "país"),
-            ["HOTEL"] = new("HOTEL", "id_hotel", true, "hotel", "hoteles", "hotel"),
+            ["HOTEL"] = new("HOTEL", "id_hotel", true, "bookingmotor", "hoteles", "hotel"),   // pantalla Hoteles = bookingmotor
             ["CRUCERO"] = new("CRUCERO", "id_crucero", true, "crucero", "cruceros", "crucero"),
             // Foto propia de una tarjeta de la Home (Eurovip.inicio.id): no se comparte con el destino ni con otras tarjetas
             ["INICIO"] = new("INICIO", "id_inicio", true, "inicio", "home_web", "tarjeta"),
@@ -172,7 +174,7 @@ namespace EuroVip.Services
 
         /// <summary>
         /// Carpeta y nombre de la foto (pedido de la usuaria): {tipo}/{nombre}. Las tarjetas de la Home van en la carpeta de lo que
-        /// muestran: ofertas y hoteles → hotel/punta-cana; excursiones → excursion/excursion-punta-cana; traslados → traslado/traslado-punta-cana…
+        /// muestran: paquetes (ofertas) → hotel/punta-cana; hoteles (bookingmotor) → bookingmotor/hotel-kristal; excursiones → excursion/excursion-punta-cana; traslados → traslado/traslado-punta-cana…
         /// </summary>
         private async Task<(string Carpeta, string Nombre)> UbicacionAsync(TipoMultimedia t, object v)
         {
@@ -180,10 +182,13 @@ namespace EuroVip.Services
             {
                 using var cn = _db.Conexion();
                 var (tipo, destino) = await cn.QueryFirstOrDefaultAsync<(string?, string?)>("SELECT tipo_servicio, id_destino FROM Eurovip.inicio WHERE id = @v", new { v });
-                var carpeta = (tipo ?? "").ToUpperInvariant() switch { "OFERTA" or "HOTEL" or "COMBINADO" or "" => "hotel", var x => NombreArchivo(x, "inicio") };
+                // Paquetes (ofertas) → hotel/{destino}; Hoteles (bookingmotor) → bookingmotor/{hotel}; los demás → {tipo}/{tipo}-{destino}
+                var carpeta = (tipo ?? "").ToUpperInvariant() switch { "OFERTA" or "COMBINADO" or "" => "hotel", "HOTEL" => "bookingmotor", var x => NombreArchivo(x, "inicio") };
                 var nom = NombreArchivo(destino, "tarjeta-" + v);
-                return (carpeta + "/", carpeta == "hotel" ? nom : NombreArchivo($"{carpeta} {nom}"));
+                return (carpeta + "/", carpeta is "hotel" or "bookingmotor" ? nom : NombreArchivo($"{carpeta} {nom}"));
             }
+            // Alojamientos: una carpeta por hotel con su número → hoteles/{id_alojamiento}/{nombre}.webp
+            if (t.Tipo == "ALOJAMIENTO") return ($"hoteles/{v}/", await NombreProductoAsync(t, v));
             return (t.Carpeta + "/", await NombreProductoAsync(t, v));
         }
 
@@ -554,7 +559,7 @@ namespace EuroVip.Services
             if (slug == "") throw new InvalidOperationException("Primero escribe el nombre del circuito.");
             slug = NombreArchivo(slug);
             var (datos, _, _) = await ImagenesLocales.ConvertirWebpAsync(origen);
-            var carpeta = "circuito/itinerario/";
+            var carpeta = "circuito_itinerario/";
             return Url(carpeta + await EscribirNuevoAsync(carpeta, $"{slug}-dia-{dia}", false, datos) + ".webp");
         }
 

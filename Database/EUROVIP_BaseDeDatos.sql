@@ -4655,6 +4655,9 @@ GO
                traslado, excursion, destino, pais, circuito, alojamiento, crucero). Las tarjetas de la Home van en la
                carpeta de lo que muestran (ofertas/hoteles → hotel\punta-cana). Se movieron las 55 fotos de cruceros del
                93 a crucero\… (archivo + URL en la base, una transacción); la carpeta vieja cruceros\ quedó vacía y se borró.
+   22/10/2026  CARPETAS DE FOTOS DEFINITIVAS (pedido de la usuaria): destino, pais, traslado, excursion, circuito,
+               circuito_itinerario, slider, crucero, hotel (paquetes = ofertas), bookingmotor (pantalla Hoteles) y
+               hoteles/{id_alojamiento} (alojamientos). Sin cambios de datos: no había fotos de esos tipos en este equipo.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
