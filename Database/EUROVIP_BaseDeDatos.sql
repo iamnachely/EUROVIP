@@ -4292,6 +4292,21 @@ COMMIT;
 GO
 
 
+/* CAMBIO 87: datos — las direcciones de las fotos pasan a https://fotos.eurovip.com.do/eurovip/imagenes/… (pedido de la usuaria:
+   «todas las imágenes en eurovip\imagenes; eurovip\PDF u otras carpetas para otros archivos»). Solo se cambia el comienzo de la URL
+   en las columnas de Eurovip que la tienen; Eurovip.imagen guarda la ruta relativa y no cambia. */
+SET NOCOUNT ON; SET XACT_ABORT ON;
+BEGIN TRAN;
+DECLARE @sql nvarchar(max) = N'';
+SELECT @sql += N'UPDATE Eurovip.' + QUOTENAME(t.name) + N' SET ' + QUOTENAME(c.name) + N' = STUFF(' + QUOTENAME(c.name) + N', 1, LEN(''https://fotos.eurovip.com.do/eurovip/''), ''https://fotos.eurovip.com.do/eurovip/imagenes/'')'
+             + N' WHERE ' + QUOTENAME(c.name) + N' LIKE ''https://fotos.eurovip.com.do/eurovip/%'' AND ' + QUOTENAME(c.name) + N' NOT LIKE ''https://fotos.eurovip.com.do/eurovip/imagenes/%'';' + NCHAR(10)
+FROM sys.tables t JOIN sys.columns c ON c.object_id = t.object_id JOIN sys.types ty ON ty.user_type_id = c.user_type_id
+WHERE t.schema_id = SCHEMA_ID('Eurovip') AND ty.name IN ('varchar','nvarchar') AND (c.max_length >= 100 OR c.max_length = -1);
+EXEC sp_executesql @sql;
+COMMIT;
+GO
+
+
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
@@ -4726,6 +4741,12 @@ GO
                (inicio 114, archivo hotel/miches-2.webp en el servidor) pasó a ser la del destino Miches: destino.caratula e
                inicio 114 → https://fotos.eurovip.com.do/eurovip/hotel/miches-2.webp. En el servidor, Herramientas → Fotos →
                «Poner nombres a las fotos» la deja en destino/miches.webp.
+   22/10/2026  TODAS LAS IMÁGENES BAJO eurovip\imagenes (pedido de la usuaria: «la ruta de todas sea eurovip\imagenes\, porque si
+               deseo guardar PDF u otra cosa puede ser eurovip\PDF\»; se leen en https://fotos.eurovip.com.do/eurovip/imagenes/).
+               CAMBIO 87 (93): las URL de fotos en las columnas de Eurovip pasan a …/eurovip/imagenes/… (55 de cruceros, 4
+               tarjetas de inicio, destino Miches). Archivos de este equipo movidos a eurovip\imagenes\crucero. Excursiones
+               van a eurovip\imagenes\excursiones (pedido: «la ruta sería …\eurovip\excursiones»). En el servidor hay que
+               mover lo que ya esté en eurovip\ (p. ej. hotel\miches-2.webp) a eurovip\imagenes\.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

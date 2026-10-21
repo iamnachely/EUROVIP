@@ -34,7 +34,16 @@ namespace EuroVip.Controllers
             _logger = logger;
         }
 
-        private string Slider(string k) => _cfg[$"Eurovip:Slider:{k}"] ?? "";
+        /// <summary>Carpetas y URL del slider (Eurovip:Slider). Si faltan en appsettings: {carpeta de imágenes}slider (md, sm).</summary>
+        private string Slider(string k)
+        {
+            var v = _cfg[$"Eurovip:Slider:{k}"];
+            if (!string.IsNullOrWhiteSpace(v)) return v;
+            var sub = k.EndsWith("Md") ? "slider/md" : k.EndsWith("Sm") ? "slider/sm" : "slider";
+            return k.StartsWith("Fisico")
+                ? Path.Combine(Multimedia.CarpetaDe(_cfg), sub.Replace('/', Path.DirectorySeparatorChar))
+                : $"{Multimedia.UrlDe(_cfg)}/{sub}";
+        }
 
         public IActionResult Index() => View();
 
