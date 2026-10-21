@@ -4630,6 +4630,19 @@ GO
                Eurovip queda SOLO en el 93 (desarrollo).
    21/10/2026  FASE 23 aplicada SOLO en el 93 (CAMBIO 82 a 84): cruceros con casi todo opcional; la tarjeta de la
                Home sale con un crucero activo aunque aún no tenga precio. No cambió ningún dato (no había cruceros).
+   21/10/2026  CRUCERO DE EJEMPLO en el 93 (pedido de la usuaria: "carga un crucero de Disney de ejemplo de 7 noches,
+               varias categorías, cabinas, fechas, itinerario por día y muchas actividades con imágenes").
+               Cargado con el mismo código de la app (CruceroRepository + Multimedia) y los datos y fotos del PDF
+               «Resumen de Cruceros» (las fotos son recortes de sus capturas):
+               • Crucero n.º 1002 «Halloween en Alta Mar del Caribe Oriental», Disney Treasure (Disney Cruise Line),
+                 7 noches, Port Canaveral. 8 días de itinerario con horas, 4 secciones «a bordo» con 26 actividades
+                 (todas con foto), 6 tipos de cabina, 12 cabinas, 6 cubiertas, 5 salidas, 2 tarifas (BEST_PRICE y
+                 Florida Resident), 46 precios y 9 fotos (portada, banner y 7 de galería).
+               • Categorías nuevas con su foto: Caribe Oriental, Caribe Corto desde Miami, Sólo Adultos, Islas Griegas
+                 con Turquía y Mediterráneo. El crucero está en Cruceros de Disney, Caribe Oriental y Caribe Corto.
+               • Home: 3 tarjetas CRUCERO (una por categoría) con precio desde 1.696,70 por persona.
+               • Se completó la descripción del barco Disney Treasure.
+               Para quitarlo: pantalla Cruceros → Eliminar (borra todo lo suyo y sus fotos).
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
