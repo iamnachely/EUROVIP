@@ -64,7 +64,7 @@ Al borrar un crucero se borran en cascada todas sus partes. Sus fotos de `multim
   - PORTADA: la tarjeta de la lista.
   - INTERMEDIA: el banner de la cabecera.
   - GALERIA: el slider.
-  - Se guardan en `{Multimedia:CarpetaFisica}/crucero/` (eurovip/imagenes/crucero) con nombre legible: `{título}.webp` (portada), `{título}-banner.webp`, `{título}-1.webp`… (galería). Las sueltas: `crucero/{título}/actividades|cabinas|itinerario/{nombre}.webp` y `crucero/naviera|barco|categoria/{nombre}.webp`.
+  - Se guardan en `eurovip/imagenes/cruceros/` con nombre legible: `{título}.webp` (portada), `{título}-banner.webp`, `{título}-1.webp`… (galería). Las sueltas: `cruceros/{título}/actividades|cabinas|itinerario/{nombre}.webp` y `cruceros/navieras|barcos|categorias/{nombre}.webp`.
 aviera|barco|categoria{nombre}.webp`.
 - **Fotos sueltas**: actividad, tipo de cabina, plano de cubierta, día del itinerario, logo de naviera, barco y categoría.
   - Se guardan como URL en su propia columna.

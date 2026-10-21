@@ -4307,6 +4307,42 @@ COMMIT;
 GO
 
 
+/* CAMBIO 88: datos — carpetas en plural (regla de la usuaria: «destino → destinos, crucero → cruceros…»).
+   Fotos de cruceros: imagenes/crucero/… → imagenes/cruceros/… (naviera → navieras, barco → barcos, categoria → categorias). */
+SET NOCOUNT ON; SET XACT_ABORT ON;
+BEGIN TRAN;
+UPDATE Eurovip.imagen SET ruta_relativa = 'cruceros/' + SUBSTRING(ruta_relativa, LEN('crucero/') + 1, 500) WHERE ruta_relativa LIKE 'crucero/%';
+DECLARE @sql nvarchar(max) = N'';
+SELECT @sql += N'UPDATE Eurovip.' + QUOTENAME(t.name) + N' SET ' + QUOTENAME(c.name) + N' = REPLACE(REPLACE(REPLACE(REPLACE(' + QUOTENAME(c.name)
+     + N', ''/imagenes/crucero/naviera/'', ''/imagenes/cruceros/navieras/''), ''/imagenes/crucero/barco/'', ''/imagenes/cruceros/barcos/'')'
+     + N', ''/imagenes/crucero/categoria/'', ''/imagenes/cruceros/categorias/''), ''/imagenes/crucero/'', ''/imagenes/cruceros/'')'
+     + N' WHERE ' + QUOTENAME(c.name) + N' LIKE ''https://fotos.eurovip.com.do/eurovip/imagenes/crucero/%'';' + NCHAR(10)
+FROM sys.tables t JOIN sys.columns c ON c.object_id = t.object_id JOIN sys.types ty ON ty.user_type_id = c.user_type_id
+WHERE t.schema_id = SCHEMA_ID('Eurovip') AND ty.name IN ('varchar','nvarchar') AND (c.max_length >= 100 OR c.max_length = -1);
+EXEC sp_executesql @sql;
+COMMIT;
+GO
+
+/* CAMBIO 89: datos — la foto subida en la tarjeta Punta Cana (inicio 115, hotel/punta-cana.webp) pasa a ser la foto del DESTINO
+   Punta Cana y reemplaza la anterior (regla: «si ya existe la borras y guardas la nueva»). Los archivos están en el servidor:
+   allí Herramientas → Fotos → «Poner nombres a las fotos» los deja en imagenes/destinos/. */
+SET NOCOUNT ON; SET XACT_ABORT ON;
+BEGIN TRAN;
+DECLARE @nueva int = (SELECT id FROM Eurovip.multimedia WHERE tipo = 'INICIO' AND id_inicio = 115 AND uso = 'PORTADA');
+IF @nueva IS NOT NULL
+BEGIN
+    DECLARE @vieja TABLE (id_imagen int);
+    DELETE FROM Eurovip.multimedia OUTPUT deleted.id_imagen INTO @vieja WHERE tipo = 'DESTINO' AND id_destino = 'Punta Cana' AND uso = 'PORTADA';
+    DELETE i FROM Eurovip.imagen i JOIN @vieja v ON v.id_imagen = i.id WHERE NOT EXISTS (SELECT 1 FROM Eurovip.multimedia m WHERE m.id_imagen = i.id);
+    UPDATE Eurovip.multimedia SET tipo = 'DESTINO', id_inicio = NULL, id_destino = 'Punta Cana' WHERE id = @nueva;
+    DECLARE @url varchar(300) = (SELECT 'https://fotos.eurovip.com.do/eurovip/imagenes/' + ruta FROM Eurovip.vMultimedia WHERE id = @nueva);
+    UPDATE Eurovip.destino SET caratula = @url WHERE id_destino = 'Punta Cana';
+    UPDATE Eurovip.inicio SET caratulaDestino = @url WHERE id_destino = 'Punta Cana' AND tipo_servicio IN ('OFERTA', 'COMBINADO');
+END
+COMMIT;
+GO
+
+
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
@@ -4747,6 +4783,11 @@ GO
                tarjetas de inicio, destino Miches). Archivos de este equipo movidos a eurovip\imagenes\crucero. Excursiones
                van a eurovip\imagenes\excursiones (pedido: «la ruta sería …\eurovip\excursiones»). En el servidor hay que
                mover lo que ya esté en eurovip\ (p. ej. hotel\miches-2.webp) a eurovip\imagenes\.
+   22/10/2026  CARPETAS EN PLURAL (regla de la usuaria: «destino → destinos, crucero → cruceros… una imagen por cada destino,
+               traslado, excursión; si ya existe se borra y se guarda la nueva»). CAMBIO 88: fotos de cruceros movidas a
+               imagenes/cruceros (navieras, barcos, categorias) en este equipo y en la base. CAMBIO 89: la foto subida en la
+               tarjeta Punta Cana (hotel/punta-cana.webp, en el servidor) pasa a ser la del destino Punta Cana y reemplaza la
+               anterior. En el servidor: mover eurovip\hotel\*.webp a eurovip\imagenes\hotel\ y pulsar «Poner nombres a las fotos».
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

@@ -195,7 +195,7 @@ namespace EuroVip.Controllers
 
         /// <summary>
         /// Foto suelta (actividad, cabina, cubierta, día del itinerario, logo de naviera, barco o categoría) → URL.
-        /// Nombre legible: crucero/{crucero}/actividades/{actividad}.webp, crucero/naviera/{naviera}.webp…
+        /// Nombre legible: cruceros/{crucero}/actividades/{actividad}.webp, cruceros/navieras/{naviera}.webp…
         /// </summary>
         [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(12_000_000)]
         public async Task<IActionResult> SubirImagen([FromForm] string tipo, [FromForm] int? id, [FromForm] string? crucero, [FromForm] string? nombre, IFormFile? archivo)
@@ -203,13 +203,13 @@ namespace EuroVip.Controllers
             var delCrucero = Multimedia.NombreArchivo(crucero, id is > 0 ? "crucero-" + id : "crucero-nuevo");
             var carpeta = tipo switch
             {
-                "actividad" => $"crucero/{delCrucero}/actividades",
-                "cabina" => $"crucero/{delCrucero}/cabinas",
-                "cubierta" => $"crucero/{delCrucero}/cubiertas",
-                "itinerario" => $"crucero/{delCrucero}/itinerario",
-                "naviera" => "crucero/naviera",
-                "barco" => "crucero/barco",
-                "categoria" => "crucero/categoria",
+                "actividad" => $"cruceros/{delCrucero}/actividades",
+                "cabina" => $"cruceros/{delCrucero}/cabinas",
+                "cubierta" => $"cruceros/{delCrucero}/cubiertas",
+                "itinerario" => $"cruceros/{delCrucero}/itinerario",
+                "naviera" => "cruceros/navieras",
+                "barco" => "cruceros/barcos",
+                "categoria" => "cruceros/categorias",
                 _ => null
             };
             if (carpeta is null) return BadRequest(new { mensaje = "Tipo de foto desconocido." });
