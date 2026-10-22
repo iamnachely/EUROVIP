@@ -225,6 +225,7 @@ namespace EuroVip.Services
         /// </summary>
         private async Task<string> EscribirNuevoAsync(string carpeta, string nombreBase, bool numerar, byte[] datos)
         {
+            nombreBase = NombreArchivo(Regex.Replace((nombreBase ?? "").ToLowerInvariant(), "[^a-z0-9_-]", "-"));
             for (var n = numerar ? 1 : 0; n < 5000; n++)
             {
                 var nombre = n == 0 ? nombreBase : $"{nombreBase}-{n}";
@@ -334,6 +335,9 @@ namespace EuroVip.Services
             var v = Valor(t, clave);
             // destinos/punta-cana/punta-cana.webp · …/punta-cana-banner.webp · galería …/punta-cana-1.webp, -2…
             var (carpeta, producto) = await UbicacionAsync(t, v);
+            // Defensa: solo minúsculas, números, «-» y «_» (lo que exigen CK_Eurovip_imagen_ruta / _nombre); si algo raro se colara, se limpia
+            carpeta = Regex.Replace(carpeta.ToLowerInvariant(), "[^a-z0-9/_-]", "-");
+            producto = NombreArchivo(Regex.Replace(producto.ToLowerInvariant(), "[^a-z0-9_-]", "-"), t.Carpeta.TrimEnd('s'));
 
             var (datos, ancho, alto) = await ImagenesLocales.ConvertirWebpAsync(origen);
             var nombreBase = uso == "INTERMEDIA" ? producto + "-banner" : producto;
@@ -411,9 +415,11 @@ namespace EuroVip.Services
                     new { idImagen, tipo = t.Tipo, uso, v, orden, texto = Recortar(texto, 250) }, tx);
                 tx.Commit();
             }
-            catch
+            catch (Exception ex)
             {
                 try { File.Delete(temporal); } catch { /* el archivo huérfano no rompe nada */ }
+                // Si la base rechaza la ruta o el nombre, el mensaje dice cuál fue (para encontrarlo enseguida)
+                if (ex.Message.Contains("CK_Eurovip_imagen")) throw new InvalidOperationException($"La base no aceptó la foto «{carpeta}{nombre}.webp» ({t.Tipo} {clave}): {ex.Message}", ex);
                 throw;
             }
             if (temporal != fisica) File.Move(temporal, fisica, overwrite: true);   // la foto de antes con ese nombre se reemplaza
@@ -751,7 +757,7 @@ namespace EuroVip.Services
                     if (f is not null) candidatos.Add(("ALOJAMIENTO", id.ToString(), f, $"Alojamiento {id}"));
                 }
                 foreach (var (id, nombre) in await cn.QueryAsync<(int, string)>("SELECT id_servicio, LTRIM(RTRIM(id_destino)) FROM Eurovip.inicio WHERE tipo_servicio = 'HOTEL'"))
-                    candidatos.Add(("HOTEL", id.ToString(), Path.Combine(viejas, "hoteles", NombreArchivo(nombre)), $"Hotel {id} {nombre}"));
+                    candidatos.Add(("HOTEL", id.ToString(), Path.Combine(viejas, "hoteles", NombreViejo(nombre)), $"Hotel {id} {nombre}"));
             }
 
             foreach (var (tipo, clave, fisica, etiqueta) in candidatos)
@@ -840,7 +846,7 @@ namespace EuroVip.Services
         }
 
         // Mismas reglas de nombre que ImagenesLocales (las fotos viejas se guardaban así)
-        private static string NombreArchivo(string nombre)
+        private static string NombreViejo(string nombre)
         {
             var sb = new StringBuilder();
             foreach (var ch in (nombre ?? "").Normalize(NormalizationForm.FormD).ToLowerInvariant())
