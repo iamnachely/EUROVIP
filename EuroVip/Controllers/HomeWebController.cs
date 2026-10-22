@@ -52,6 +52,7 @@ namespace EuroVip.Controllers
         {
             var d = await _repo.DatosAsync();
             d.Imagenes = new HwImagenes { Web = Slider("Url"), Tablet = Slider("UrlMd"), Movil = Slider("UrlSm") };
+            foreach (var s in d.Slides) s.Version = VersionSlide(s.Ruta);
             var f = await FotosAsync();
             foreach (var t in d.Contenedores.SelectMany(c => c.Tarjetas).Concat(d.SinContenedor)) PonerImagen(t, f);
             d.Fuera = await _repo.FueraDeHomeAsync();   // qué no sale en la Home y por qué (aviso en la pantalla)
@@ -256,7 +257,7 @@ namespace EuroVip.Controllers
             var error = await GuardarImagenes(s.Ruta, web, tablet, movil, nuevo: false);
             if (error is not null) return BadRequest(new { mensaje = error });
             await Auditar("Carrusel_Imagenes", new { id, s.Ruta, web = web is not null, tablet = tablet is not null, movil = movil is not null });
-            return Json(new { ok = true, mensaje = "Imágenes reemplazadas. Si no ves el cambio, recarga (la web puede tenerlas en caché)." });
+            return Json(new { ok = true, mensaje = "Imágenes reemplazadas." });
         }
 
         [HttpPost, ValidateAntiForgeryToken]
@@ -315,6 +316,19 @@ namespace EuroVip.Controllers
         }
 
         // ================= helpers =================
+        /// <summary>
+        /// Versión del slide = hora más reciente de sus 3 imágenes. La web de fotos dice al navegador que guarde cada imagen UN AÑO;
+        /// como al reemplazar se usa el mismo nombre, sin ?v= el back seguía mostrando la imagen de antes.
+        /// </summary>
+        private string VersionSlide(string ruta)
+        {
+            long max = 0;
+            foreach (var k in new[] { "Fisico", "FisicoMd", "FisicoSm" })
+                try { var f = Path.Combine(Slider(k), ruta); if (System.IO.File.Exists(f)) max = Math.Max(max, System.IO.File.GetLastWriteTimeUtc(f).Ticks); }
+                catch { /* carpeta sin configurar: sin versión */ }
+            return max.ToString("x");
+        }
+
         private async Task<string?> GuardarImagenes(string ruta, IFormFile? web, IFormFile? tablet, IFormFile? movil, bool nuevo)
         {
             var lotes = new[] { (web, "Fisico", "web"), (tablet, "FisicoMd", "tablet"), (movil, "FisicoSm", "móvil") };

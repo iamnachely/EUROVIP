@@ -312,7 +312,8 @@ const HW = (() => {
     const PRECIO_ALERTA = 400;   // como BackTiTan: precio de slide menor a esto se marca
 
     const todas = () => [...D.contenedores.flatMap(c => c.tarjetas), ...D.sinContenedor];
-    const img = (ruta, d = dev) => !ruta ? '' : `${{ web: D.imagenes.web, tablet: D.imagenes.tablet, movil: D.imagenes.movil }[d]}/${encodeURIComponent(ruta)}`;
+    // ?v= = versión del slide (hora de sus imágenes): al reemplazarlas cambia y el navegador trae la nueva en vez de la de su caché
+    const img = (ruta, d = dev) => !ruta ? '' : `${{ web: D.imagenes.web, tablet: D.imagenes.tablet, movil: D.imagenes.movil }[d]}/${encodeURIComponent(ruta)}?v=${(D.slides || []).find(s => s.ruta === ruta)?.version || '0'}`;
     // t.imagen la calcula el servidor desde las carpetas del proyecto (fotos de Hoteles y portadas de Circuitos)
     const carat = t => t.imagen || (t.caratulaDestino && (EV.esUrl(t.caratulaDestino) || t.caratulaDestino.startsWith('/')) ? t.caratulaDestino : null);
     const tipoChip = { OFERTA: 'Oferta', CIRCUITO: 'Circuito', HOTEL: 'Hotel', EXCURSION: 'Excursiones', TRASLADO: 'Traslados', CRUCERO: 'Cruceros', COMBINADO: 'Combinado' };
@@ -552,7 +553,7 @@ const HW = (() => {
         slideActual = s; cat ??= await EVC.catalogos();
         $('#sdTitulo').textContent = s.ruta; $('#sdSub').textContent = s.activo ? `Posición ${s.orden} del carrusel` : 'Inactivo (no sale en la web)';
         $('#sdEliminar').hidden = false; $('#sdGuardar').hidden = false;
-        const vista = (d, et) => `<div class="cr-vista"><div class="im"><img src="${esc(img(s.ruta, d))}?v=${Date.now()}" alt="" onerror="this.replaceWith('Sin imagen')"></div><small>${et}</small>
+        const vista = (d, et) => `<div class="cr-vista"><div class="im"><img src="${esc(img(s.ruta, d))}&t=${Date.now()}" alt="" onerror="this.replaceWith('Sin imagen')"></div><small>${et}</small>
             <label><input type="file" accept="image/jpeg,image/png,image/webp" data-rep="${d}" hidden><i class="bi bi-arrow-repeat"></i> Reemplazar</label></div>`;
         $('#sdForm').innerHTML = `
             <div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-display"></i></span> Imágenes <small>mismo nombre de archivo en las 3 carpetas</small></div>
@@ -596,7 +597,7 @@ const HW = (() => {
         $$('[data-rep]', $('#sdForm')).forEach(inp => inp.onchange = async () => {
             const f = inp.files[0]; if (!f) return;
             const fd = new FormData(); fd.append('id', s.id_Carrusel); fd.append(inp.dataset.rep, f);
-            try { const r = await EV.post('/HomeWeb/ImagenesSlide', fd); EV.toast(r.mensaje); const im = inp.closest('.cr-vista').querySelector('.im'); im.innerHTML = `<img src="${URL.createObjectURL(f)}" alt="">`; await cargar(); }
+            try { const r = await EV.post('/HomeWeb/ImagenesSlide', fd); EV.toast(r.mensaje); cargar(); const im = inp.closest('.cr-vista').querySelector('.im'); im.innerHTML = `<img src="${URL.createObjectURL(f)}" alt="">`; await cargar(); }
             catch (e) { EV.toast(e.message, 'err'); }
         });
         dS.abrir();

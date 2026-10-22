@@ -70,6 +70,8 @@ namespace EuroVip.Models
         public string? Url { get; set; }
         public bool TieneTablet { get; set; }
         public bool TieneMovil { get; set; }
+        /// <summary>Hora de las imágenes del slide (?v=…): cambia al reemplazarlas, así el navegador no muestra la vieja de su caché.</summary>
+        public string Version { get; set; } = "0";
         public List<HwSlideDestino> Destinos { get; set; } = new();
     }
 
