@@ -733,7 +733,7 @@ const HW = (() => {
         if (irAFoto) setTimeout(() => $('#tdSecFoto')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
     }
     const fotoTitulo = t => ({ INICIO: 'Foto de esta tarjeta <small style="font-weight:600;color:var(--ev-muted)">(solo de esta tarjeta)</small>',
-                               DESTINO: 'Foto del destino <small style="font-weight:600;color:var(--ev-muted)">(paquetes: se guarda en destino/)</small>',
+                               DESTINO: 'Foto del destino <small style="font-weight:600;color:var(--ev-muted)">(Solo Hotel: se guarda en destinos/)</small>',
                                HOTEL: 'Fotos del hotel', CIRCUITO: 'Fotos del circuito y de su itinerario' })[t.foto_Tipo] || 'Foto';
 
     async function guardarTarjeta() {

@@ -31,12 +31,12 @@ namespace EuroVip.Controllers
         // Pantallas y accesos directos que encuentra el buscador de arriba (texto, palabras clave, dirección, módulo, icono)
         private static readonly (string Titulo, string Claves, string Url, string? Modulo, string Icono)[] Pantallas =
         {
-            ("Nuevo paquete (Express)", "cargar paquete oferta hotel express nueva carga manual", "/CargaManual/Express", "carga_manual", "bi-lightning-charge"),
-            ("Nuevo paquete con Excel (Clásica)", "cargar paquete oferta excel clasica", "/CargaManual/Clasica", "carga_manual", "bi-file-earmark-excel"),
+            ("Nuevo Solo Hotel (Express)", "cargar solo hotel paquete oferta hotel express nueva carga manual", "/CargaManual/Express", "carga_manual", "bi-lightning-charge"),
+            ("Nuevo Solo Hotel con Excel (Clásica)", "cargar solo hotel paquete oferta excel clasica", "/CargaManual/Clasica", "carga_manual", "bi-file-earmark-excel"),
             ("Excursiones", "excursiones excursion tour actividad buscar cargar editar foto", "/Excursiones/Index", "excursiones", "bi-compass"),
             ("Traslados", "traslados traslado transfer aeropuerto hotel shuttle compartido privado van", "/Traslados/Index", "traslados", "bi-bus-front"),
             ("Cruceros", "cruceros crucero barco naviera cabina cubierta itinerario puerto disney msc royal", "/Cruceros/Index", "cruceros", "bi-water"),
-            ("Paquetes cargados", "lista paquetes ofertas editar desactivar", "/Ofertas/Index", "carga_manual", "bi-pencil-square"),
+            ("Solo Hotel cargados", "lista solo hotel paquetes ofertas editar desactivar", "/Ofertas/Index", "carga_manual", "bi-pencil-square"),
             ("Nuevo hotel", "crear hotel vitrina", "/Hoteles/Index?nuevo=1", "hoteles", "bi-building-add"),
             ("Hoteles", "hotel fotos vitrina", "/Hoteles/Index", "hoteles", "bi-building"),
             ("Nuevo circuito", "crear circuito itinerario", "/Circuitos/Index?nuevo=1", "circuitos", "bi-signpost-split"),
@@ -230,7 +230,7 @@ namespace EuroVip.Controllers
         private static List<ModuloHome> ModulosCarga() => new()
         {
             new() { Titulo = "Carga de Hoteles", Descripcion = "Publica hoteles en la vitrina: precio, régimen e imagen.", Icono = "bi-building", Etiqueta = "Disponible", Url = "/Hoteles/Index", Disponible = true, Modulo = "hoteles" },
-            new() { Titulo = "Paquetes",         Descripcion = "Ofertas de hotel: Express o Clásica (con Excel). Vuelo opcional.", Icono = "bi-box-seam", Etiqueta = "Disponible", Url = "/Ofertas/Index", Disponible = true, Modulo = "carga_manual" },
+            new() { Titulo = "Solo Hotel",       Descripcion = "Ofertas de hotel: Express o Clásica (con Excel). Vuelo opcional.", Icono = "bi-box-seam", Etiqueta = "Disponible", Url = "/Ofertas/Index", Disponible = true, Modulo = "carga_manual" },
             new() { Titulo = "Excursiones",      Descripcion = "Excursiones por destino: precio, cancelación, descripción y foto.", Icono = "bi-compass", Etiqueta = "Disponible", Url = "/Excursiones/Index", Disponible = true, Modulo = "excursiones" },
             new() { Titulo = "Traslados",        Descripcion = "Traslados aeropuerto → hotel: compartido o privado, vehículo, precio y foto.", Icono = "bi-bus-front", Etiqueta = "Disponible", Url = "/Traslados/Index", Disponible = true, Modulo = "traslados" },
             new() { Titulo = "Cruceros",         Descripcion = "Itinerario, a bordo, cabinas y cubiertas, fechas, tarifas y precios.", Icono = "bi-water", Etiqueta = "Nuevo", Url = "/Cruceros/Index", Disponible = true, Modulo = "cruceros" },

@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Paquetes · Carga Express";
+    ViewData["Title"] = "Solo Hotel · Carga Express";
 }
 
 @section Styles {
@@ -34,12 +34,12 @@
     <i class="bi bi-lightning-charge ui-hero-ico" aria-hidden="true"></i>
     <div>
         <span class="ev-chip dark"><i class="bi bi-lightning-charge"></i> Versión 1 · Todo junto</span>
-        <h1>Paquetes · Carga Express</h1>
+        <h1>Solo Hotel · Carga Express</h1>
         <p>En 5 pasos: elige los hoteles, marca las fechas y pon los precios en una sola tabla, completa los datos comerciales, decide si lleva vuelo y listo. A la derecha ves en vivo lo que se va a crear.</p>
     </div>
     <div class="ui-hero-acts">
         <a class="ev-btn light" asp-controller="CargaManual" asp-action="Clasica"><i class="bi bi-ui-checks"></i> Ir a la Clásica</a>
-        <a class="ev-btn light" asp-controller="Ofertas" asp-action="Index"><i class="bi bi-list-ul"></i> Ver paquetes</a>
+        <a class="ev-btn light" asp-controller="Ofertas" asp-action="Index"><i class="bi bi-list-ul"></i> Ver Solo Hotel</a>
     </div>
     <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
         <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
@@ -338,7 +338,7 @@ const XP = (() => {
         const btn = $('#xpCargar'), html = btn.innerHTML;
         btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Cargando…';
         try {
-            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { titulo: 'Cargando paquetes' });
+            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { titulo: 'Cargando Solo Hotel' });
             $('#xpOk').innerHTML = `<div class="ring"><i class="bi bi-check-lg"></i></div><h2>${esc(r.mensaje)}</h2>
                 <p style="color:var(--ev-muted);margin:0 0 22px">Código de carga <b>${esc(r.codigo)}</b> · ofertas #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro de carga #${r.logId}</p>
                 <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
