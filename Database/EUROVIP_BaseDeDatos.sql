@@ -4344,6 +4344,62 @@ GO
 
 
 /* ##########################################################################################
+   FASE 25 — CRUCEROS: PARADAS EN EL MAPA  (22/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «una sección en la carga para poner los destinos, puertos o paradas que visitará el
+   crucero, los que quiera, con latitud y longitud, como Seleccionar Ubicación de BackTiTan (Google Maps), para verlos en
+   el mapa».
+   Explicado fácil:
+     • Eurovip.crucero_parada = una fila por parada de la ruta: orden, nombre, tipo (PUERTO, DESTINO, PARADA), día del
+       itinerario (opcional), latitud y longitud (opcionales, las dos o ninguna) y una nota.
+     • Se borra sola con el crucero (ON DELETE CASCADE); el editor la reemplaza entera al guardar (como el itinerario).
+     • Web: spPortalCruceroParadas @IdCrucero devuelve las paradas en orden para pintar el mapa de la ruta.
+     • La pantalla usa la clave de Google Maps de BackTiTan (GoogleMaps:ApiKey en appsettings; NO se sube al repo).
+   Probado con ROLLBACK (alta, consulta web, rechazo de coordenada incompleta) y aplicado.
+   ########################################################################################## */
+
+/* ---------- CAMBIO 90: paradas del crucero en el mapa (Eurovip.crucero_parada) ----------
+   Pedido de la usuaria: «una sección en la carga donde se puedan poner los destinos, puertos o paradas que visitará el
+   crucero, los que quiera, con latitud y longitud (como Seleccionar Ubicación de BackTiTan) para verlos en el mapa».
+     • orden       = el orden de la ruta (1, 2, 3…): el mapa une las paradas en ese orden.
+     • tipo        = PUERTO (donde atraca), DESTINO (ciudad o zona que se visita) o PARADA (otra: isla privada, punto de interés…).
+     • dia         = día del itinerario en que se visita (opcional).
+     • latitud / longitud = coordenadas (opcionales; sin ellas la parada no se dibuja en el mapa). */
+IF OBJECT_ID('Eurovip.crucero_parada') IS NULL
+CREATE TABLE Eurovip.crucero_parada (
+    id_parada   int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_parada PRIMARY KEY,
+    id_crucero  int           NOT NULL CONSTRAINT FK_Eurovip_crucero_parada_crucero REFERENCES Eurovip.crucero (id_crucero) ON DELETE CASCADE,
+    orden       smallint      NOT NULL CONSTRAINT CK_Eurovip_crucero_parada_orden CHECK (orden > 0),
+    nombre      nvarchar(150) NOT NULL,
+    tipo        varchar(10)   NOT NULL CONSTRAINT DF_Eurovip_crucero_parada_tipo DEFAULT ('PUERTO')
+                              CONSTRAINT CK_Eurovip_crucero_parada_tipo CHECK (tipo IN ('PUERTO', 'DESTINO', 'PARADA')),
+    dia         smallint      NULL CONSTRAINT CK_Eurovip_crucero_parada_dia CHECK (dia BETWEEN 1 AND 200),
+    latitud     decimal(9, 6) NULL CONSTRAINT CK_Eurovip_crucero_parada_lat CHECK (latitud BETWEEN -90 AND 90),
+    longitud    decimal(9, 6) NULL CONSTRAINT CK_Eurovip_crucero_parada_lng CHECK (longitud BETWEEN -180 AND 180),
+    descripcion nvarchar(500) NULL,
+    CONSTRAINT CK_Eurovip_crucero_parada_coord CHECK ((latitud IS NULL AND longitud IS NULL) OR (latitud IS NOT NULL AND longitud IS NOT NULL))
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_crucero_parada_crucero')
+    CREATE INDEX IX_Eurovip_crucero_parada_crucero ON Eurovip.crucero_parada (id_crucero, orden);
+GO
+
+/* ---------- CAMBIO 91: consulta para la web — paradas del crucero (para pintar el mapa de la ruta) ---------- */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalCruceroParadas
+    @IdCrucero int
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT p.orden, p.nombre, p.tipo, p.dia, p.latitud, p.longitud, p.descripcion
+      FROM Eurovip.crucero_parada p
+      JOIN Eurovip.crucero c ON c.id_crucero = p.id_crucero AND c.activo = 1
+     WHERE p.id_crucero = @IdCrucero
+     ORDER BY p.orden;
+END
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -4788,6 +4844,8 @@ GO
                imagenes/cruceros (navieras, barcos, categorias) en este equipo y en la base. CAMBIO 89: la foto subida en la
                tarjeta Punta Cana (hotel/punta-cana.webp, en el servidor) pasa a ser la del destino Punta Cana y reemplaza la
                anterior. En el servidor: mover eurovip\hotel\*.webp a eurovip\imagenes\hotel\ y pulsar «Poner nombres a las fotos».
+   22/10/2026  FASE 25 aplicada SOLO en el 93 (CAMBIO 90-91): tabla Eurovip.crucero_parada y spPortalCruceroParadas
+               (paradas del crucero con latitud y longitud para el mapa). Sin datos: se cargan en Cruceros → paso 4.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

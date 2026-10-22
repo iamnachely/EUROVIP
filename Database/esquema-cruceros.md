@@ -41,6 +41,8 @@ crucero_naviera ─< crucero_barco ─< crucero >─< crucero_categoria   (por c
 
 | Tabla | Clave | Qué guarda |
 |---|---|---|
+| `crucero_parada` (FASE 25) | id_parada | paradas de la ruta en el mapa: orden, nombre, tipo (PUERTO / DESTINO / PARADA), día, latitud, longitud, nota |
+|---|---|---|
 | `crucero_naviera` | id_naviera | nombre (único), logo, activo |
 | `crucero_barco` | id_barco | naviera, nombre (único por naviera), descripción («Tu barco»), imagen, activo |
 | `crucero_categoria` | id_categoria | nombre (único), descripción, imagen, orden, activo (visible en la web) |
@@ -96,6 +98,7 @@ aviera|barco|categoria{nombre}.webp`.
 |---|---|
 | `spPortalCrucerosCategorias` | categorías visibles con nº de cruceros y precio desde |
 | `spPortalListarCruceros @IdCategoria` | tarjetas de la lista (con portada, naviera, logo, itinerario resumido y precios por categoría) |
+| `spPortalCruceroParadas @IdCrucero` | las paradas en orden con latitud y longitud, para el mapa de la ruta |
 | `spPortalObtenerCrucero @IdCrucero` | 11 resultados: cabecera, fotos, itinerario, secciones, actividades, salidas, tarifas, tipos de cabina, precios, cubiertas, cabinas |
 
 ## 6. Pantalla (EurovipBack → Cruceros) — versión simple (FASE 23)

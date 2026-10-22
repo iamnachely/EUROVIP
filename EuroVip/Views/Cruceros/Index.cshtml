@@ -214,7 +214,33 @@
     .cz-home.no { background: #FFFAEB; border: 1px solid #FEDF89; color: #93370D; }
     .cz-home i { font-size: 22px; }
     /* ===== v3: editor grande, etiquetas visibles, colores y sugerencias ===== */
-    #czEditor.ui-drawer { width: calc(100vw - 24px); max-width: 1480px; }
+    #czEditor.ui-drawer { top: 8px; right: 8px; bottom: 8px; width: calc(100vw - 16px); max-width: none; border-radius: 22px; }
+    /* paso «Mapa y paradas» */
+    .cz-mp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 18px; align-items: start; }
+    .cz-mp-der { position: sticky; top: 0; display: grid; gap: 8px; }
+    .cz-mp-mapa { height: min(68vh, 640px); border-radius: 18px; overflow: hidden; border: 1px solid var(--ev-line); background: linear-gradient(135deg, #E0F2FE, #ECFEFB); }
+    .cz-mp-mapa.sin, .cz-mp-aviso { display: grid; place-items: center; }
+    .cz-mp-aviso { height: 100%; text-align: center; gap: 8px; color: var(--ev-muted); font-weight: 700; padding: 20px; }
+    .cz-mp-aviso i { font-size: 40px; color: #0E8F86; }
+    .cz-mp-ley { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; font: 700 12.5px var(--ev-font); }
+    .cz-mp-ley span { color: var(--c); display: inline-flex; gap: 5px; align-items: center; } .cz-mp-ley .sp { flex: 1; } .cz-mp-ley small { color: var(--ev-muted); font-weight: 700; }
+    .cz-mp-buscar { margin-bottom: 12px; }
+    #mpLista { display: grid; gap: 10px; }
+    .cz-mp-it { --c: #0E8F86; display: grid; grid-template-columns: 52px minmax(0, 1fr) 40px; gap: 12px; padding: 12px; border-radius: 16px; border: 1px solid var(--ev-line); border-left: 5px solid var(--c); background: var(--ev-surface); }
+    .cz-mp-it.sel { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 40%, transparent); }
+    .cz-mp-it.sincoord { background: linear-gradient(90deg, #FFFAEB, var(--ev-surface) 50%); }
+    .cz-mp-n { display: grid; justify-items: center; gap: 4px; } .cz-mp-n b { width: 40px; height: 40px; border-radius: 50%; background: var(--c); color: #fff; display: grid; place-items: center; font-size: 16px; } .cz-mp-n i { color: var(--c); }
+    .cz-mp-c { display: grid; gap: 10px; min-width: 0; }
+    .cz-mp-g { display: grid; grid-template-columns: 130px minmax(0, 1fr) 90px; gap: 10px; }
+    .cz-mp-g2 { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+    .cz-mp-a { display: grid; gap: 6px; align-content: start; }
+    .vz-ruta { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 14px; margin-bottom: 8px; }
+    .vz-ruta-l { display: grid; gap: 6px; align-content: start; }
+    .vz-ruta-l span { --c: #0E8F86; display: flex; gap: 8px; align-items: center; font-weight: 700; font-size: 13.5px; }
+    .vz-ruta-l b { width: 26px; height: 26px; border-radius: 50%; background: var(--c); color: #fff; display: grid; place-items: center; font-size: 12px; flex-shrink: 0; }
+    .vz-ruta-l small { color: var(--ev-muted); font-weight: 600; }
+    .vz-ruta-m { height: 320px; border-radius: 14px; overflow: hidden; background: var(--ev-surface-2); }
+    @@media (max-width: 1100px) { .cz-mp, .vz-ruta { grid-template-columns: 1fr; } .cz-mp-der { position: static; } .cz-mp-g { grid-template-columns: 1fr 1fr; } }
     #czEditor .ui-db { padding-left: 32px; padding-right: 32px; }
     #czEditor input:not([type=checkbox]):not([type=file]), #czEditor select, #czEditor textarea { font-size: 15px; padding: 10px 12px; border-radius: 12px; }
     #czEditor .cz-pasos .ui-tabs button { padding: 10px 16px; font-size: 14px; }
@@ -351,9 +377,10 @@
             <button type="button" data-tab="eDatos" class="on"><span class="num">1</span> Datos</button>
             <button type="button" data-tab="eFotos"><span class="num">2</span> Fotos</button>
             <button type="button" data-tab="eItin"><span class="num">3</span> Itinerario</button>
-            <button type="button" data-tab="eBordo"><span class="num">4</span> A bordo</button>
-            <button type="button" data-tab="eCabinas"><span class="num">5</span> Cabinas</button>
-            <button type="button" data-tab="ePrecios"><span class="num">6</span> Fechas y precios</button>
+            <button type="button" data-tab="eMapa"><span class="num">4</span> Mapa y paradas</button>
+            <button type="button" data-tab="eBordo"><span class="num">5</span> A bordo</button>
+            <button type="button" data-tab="eCabinas"><span class="num">6</span> Cabinas</button>
+            <button type="button" data-tab="ePrecios"><span class="num">7</span> Fechas y precios</button>
             <button type="button" data-tab="eResumen"><span class="num"><i class="bi bi-check2"></i></span> Revisar y guardar</button>
         </div>
     </div>
@@ -361,6 +388,7 @@
         <section class="ui-pane on" id="eDatos"></section>
         <section class="ui-pane" id="eFotos"></section>
         <section class="ui-pane" id="eItin"></section>
+        <section class="ui-pane" id="eMapa"></section>
         <section class="ui-pane" id="eBordo"></section>
         <section class="ui-pane" id="eCabinas"></section>
         <section class="ui-pane" id="ePrecios"></section>
@@ -410,6 +438,7 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
+<script>window.EV_MAPS_KEY = @Json.Serialize(((Microsoft.Extensions.Configuration.IConfiguration)Context.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration))!)["GoogleMaps:ApiKey"] ?? "");</script>
 <script>
 (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -417,7 +446,7 @@
     const esc = EV.esc;
     const editor = EV.drawer($('#czEditor')), visor = EV.drawer($('#czVer')), dCat = EV.drawer($('#czCat'));
     const vistas = EV.tabs($('#czVistas'));
-    const PASOS = ['eDatos', 'eFotos', 'eItin', 'eBordo', 'eCabinas', 'ePrecios', 'eResumen'];
+    const PASOS = ['eDatos', 'eFotos', 'eItin', 'eMapa', 'eBordo', 'eCabinas', 'ePrecios', 'eResumen'];
     let paso = 'eDatos';
     const edTabs = EV.tabs($('#edTabs'), id => { paso = id; alCambiarPaso(); });
     let D = { cruceros: [], navieras: [], barcos: [], categorias: [], categoriasCabina: {} };
@@ -604,12 +633,12 @@
     // ===================== EDITOR =====================
     const vacio = () => ({ id_Crucero: null, titulo: '', subtitulo: '', id_Barco: null, naviera_Nombre: '', barco_Nombre: '', puerto_Salida: '', puerto_Llegada: '', noches: null, codigo: '',
         descripcion: '', incluye: '', no_Incluye: '', titulo_Seccion: '', activo: true, categorias: D.categorias.length === 1 ? [D.categorias[0].id_Categoria] : [], categorias_Nuevas: [],
-        itinerario: [], secciones: [], cubiertas: [], cabinas: [], salidas: [], tarifas: [], precios: [] });
+        itinerario: [], paradas: [], secciones: [], cubiertas: [], cabinas: [], salidas: [], tarifas: [], precios: [] });
 
     async function abrir(id) {
         if (id) { try { C = await EV.api('/Cruceros/Obtener?id=' + id); } catch (e) { EV.toast(e.message, 'err'); return; } }
         else C = vacio();
-        C.categorias_Nuevas = [];
+        C.categorias_Nuevas = []; C.paradas ??= [];
         C.salidas.forEach(s => s.fecha = s.fecha.slice(0, 10));
         C.itinerario.sort((a, b) => a.dia - b.dia);
         tarSel = C.tarifas[0]?.clave || null;
@@ -630,12 +659,13 @@
         if (paso === 'eFotos') pintarFotos();
         if (paso === 'ePrecios') pintarPrecios();
         if (paso === 'eResumen') pintarResumen();
+        if (paso === 'eMapa') pintarMapa();
         marcarPasos();
         $('#edCuerpo').scrollTop = 0;
     }
     function marcarPasos() {
         if (!C) return;
-        const lleno = { eDatos: !!C.titulo?.trim(), eFotos: fotosMontadas || P.PORTADA || P.INTERMEDIA || P.GALERIA.length, eItin: C.itinerario.length, eBordo: C.secciones.length,
+        const lleno = { eDatos: !!C.titulo?.trim(), eFotos: fotosMontadas || P.PORTADA || P.INTERMEDIA || P.GALERIA.length, eItin: C.itinerario.length, eMapa: C.paradas?.length, eBordo: C.secciones.length,
                         eCabinas: C.cabinas.length, ePrecios: C.salidas.length };
         $$('#edTabs [data-tab]').forEach(b => b.classList.toggle('lleno', !!lleno[b.dataset.tab] && b.dataset.tab !== paso));
     }
@@ -730,7 +760,7 @@
         const sal = C.salidas.filter(s => s.activo).sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
         const n = noches();
         const sugeridos = [...new Set([C.puerto_Salida, C.puerto_Llegada, ...C.itinerario.map(d => d.puerto), ...PUERTOS].filter(p => p && !/^en navegaci/i.test(p)))];
-        $('#eItin').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Un día por fila, como la tabla «Itinerario» de la web: <b>puerto</b>, hora a la que <b>llega</b> y a la que <b>sale</b> el barco. Si ese día no hay puerto, pulsa «En el mar». ${sal ? `Las fechas salen de la primera salida (${fechaCorta(sal.fecha)}).` : 'Las fechas aparecen cuando agregues una fecha de salida (paso 6).'} ${opc}</span></div>
+        $('#eItin').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Un día por fila, como la tabla «Itinerario» de la web: <b>puerto</b>, hora a la que <b>llega</b> y a la que <b>sale</b> el barco. Si ese día no hay puerto, pulsa «En el mar». ${sal ? `Las fechas salen de la primera salida (${fechaCorta(sal.fecha)}).` : 'Las fechas aparecen cuando agregues una fecha de salida (paso 7).'} ${opc}</span></div>
             <div class="cz-barra">
                 ${n ? `<button type="button" class="ev-btn" data-it="generar"><i class="bi bi-magic"></i> Crear los ${n + 1} días (${n} noches)</button>` : '<span class="ui-help" style="margin:0">Pon las <b>noches</b> en el paso 1 para crear todos los días de una vez.</span>'}
                 <button type="button" class="ev-btn ghost" data-it="nuevo"><i class="bi bi-plus-lg"></i> Agregar un día</button>
@@ -762,7 +792,146 @@
             </div>`).join('')}</div>` : '<div class="ui-empty" style="padding:28px"><i class="bi bi-signpost-2" style="font-size:32px"></i><p style="margin:6px 0 0">Sin días todavía. Pulsa «Crear los días» o «Agregar un día».</p></div>'}`;
     }
 
-    // ---------- 4. A bordo ----------
+    // ---------- 4. Mapa y paradas ----------
+    // Destinos, puertos y paradas de la ruta con latitud y longitud (Eurovip.crucero_parada), como «Seleccionar Ubicación»
+    // de BackTiTan: buscar un lugar con Google Maps, clic en el mapa para poner la ubicación, marcadores que se arrastran.
+    const TIPO_PARADA = { PUERTO: { t: 'Puerto', i: 'bi-water', c: '#0E8F86' }, DESTINO: { t: 'Destino', i: 'bi-geo-alt-fill', c: '#2563EB' }, PARADA: { t: 'Parada', i: 'bi-flag-fill', c: '#EA580C' } };
+    let gmapsPromesa = null, mapa = null, marcadores = [], linea = null, paradaSel = null, lugarBuscado = null;
+    function cargarMaps() {
+        if (window.google?.maps?.Map) return Promise.resolve(google.maps);
+        if (!window.EV_MAPS_KEY) return Promise.reject(new Error('Falta la clave de Google Maps (GoogleMaps:ApiKey en appsettings.json). Puedes escribir latitud y longitud a mano.'));
+        window.gm_authFailure = () => { EV.toast('Google Maps no aceptó la clave (puede estar limitada a otro dominio). Puedes escribir latitud y longitud a mano.', 'err'); $$('.cz-mp-mapa').forEach(m => m.classList.add('sin')); };
+        gmapsPromesa ??= new Promise((ok, mal) => {
+            window.__evMapsListo = () => ok(google.maps);
+            const s = document.createElement('script');
+            s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(window.EV_MAPS_KEY)}&libraries=places&language=es&callback=__evMapsListo`;
+            s.async = true; s.onerror = () => { gmapsPromesa = null; mal(new Error('No se pudo cargar Google Maps (revisa la conexión).')); };
+            document.head.appendChild(s);
+        });
+        return gmapsPromesa;
+    }
+    const conCoord = p => p.latitud != null && p.longitud != null && p.latitud !== '' && p.longitud !== '';
+    const paradaNueva = (nombre, tipo = 'PUERTO', lat = null, lng = null, dia = null) => ({ nombre, tipo, dia, latitud: lat, longitud: lng, descripcion: '' });
+
+    function pintarMapa() {
+        C.paradas ??= [];
+        const conMapa = !!window.EV_MAPS_KEY;
+        $('#eMapa').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Los <b>destinos, puertos y paradas</b> que visita el crucero, en orden, con su <b>latitud y longitud</b> para marcarlos en el mapa de la web. Pon los que quieras. Busca un lugar arriba, o pulsa «📍 Ubicar» en una parada y luego haz clic en el mapa. Los marcadores se pueden arrastrar. ${opc}</span></div>
+            <div class="cz-mp">
+                <div class="cz-mp-izq">
+                    <div class="cz-blq cz-mp-buscar">
+                        <label class="cz-c"><span>Buscar un lugar ${conMapa ? '' : '(sin Google Maps: escribe el nombre y las coordenadas a mano)'}</span>
+                            <input id="mpBuscar" placeholder="Ej. Tortola, Cozumel, Castaway Cay, Puerto de La Romana…" autocomplete="off"></label>
+                        <div class="cz-barra" style="margin:10px 0 0">
+                            <select id="mpTipo">${Object.entries(TIPO_PARADA).map(([k, v]) => `<option value="${k}">${v.t}</option>`).join('')}</select>
+                            <button type="button" class="ev-btn" data-mp="agregar"><i class="bi bi-plus-lg"></i> Agregar a la ruta</button>
+                        </div>
+                        <div class="cz-barra" style="margin:10px 0 0">
+                            <button type="button" class="ev-btn ghost sm" data-mp="itinerario"><i class="bi bi-signpost-2"></i> Traer los puertos del itinerario</button>
+                            <button type="button" class="ev-btn ghost sm" data-mp="geocodificar" ${conMapa ? '' : 'disabled'}><i class="bi bi-crosshair"></i> Buscar coordenadas que faltan</button>
+                            <button type="button" class="ev-btn ghost sm" data-mp="vacia"><i class="bi bi-plus"></i> Parada vacía</button>
+                        </div>
+                    </div>
+                    <div id="mpLista"></div>
+                </div>
+                <div class="cz-mp-der"><div class="cz-mp-mapa ${conMapa ? '' : 'sin'}" id="mpMapa"><div class="cz-mp-aviso"><i class="bi bi-map"></i><span>${conMapa ? 'Cargando el mapa…' : 'Sin clave de Google Maps: el mapa no se puede mostrar, pero las coordenadas se guardan igual.'}</span></div></div>
+                    <div class="cz-mp-ley">${Object.values(TIPO_PARADA).map(v => `<span style="--c:${v.c}"><i class="bi ${v.i}"></i> ${v.t}</span>`).join('')}<span class="sp"></span><small id="mpModo"></small></div></div>
+            </div>`;
+        mapa = null; marcadores = []; linea = null; paradaSel = null; lugarBuscado = null;
+        pintarListaParadas();
+        if (conMapa) cargarMaps().then(iniciarMapa).catch(e => { const a = $('#mpMapa .cz-mp-aviso span'); if (a) a.textContent = e.message; $('#mpMapa')?.classList.add('sin'); });
+    }
+
+    function pintarListaParadas() {
+        const l = C.paradas;
+        $('#mpLista').innerHTML = l.length ? l.map((p, i) => { const tp = TIPO_PARADA[p.tipo] || TIPO_PARADA.PUERTO; return `<article class="cz-mp-it ${paradaSel === i ? 'sel' : ''} ${conCoord(p) ? '' : 'sincoord'}" style="--c:${tp.c}" data-mp-i="${i}">
+                <div class="cz-mp-n"><b>${i + 1}</b><i class="bi ${tp.i}"></i></div>
+                <div class="cz-mp-c">
+                    <div class="cz-mp-g">
+                        <label class="cz-c"><span>Tipo</span><select data-b="paradas.${i}.tipo">${Object.entries(TIPO_PARADA).map(([k, v]) => `<option value="${k}" ${k === p.tipo ? 'selected' : ''}>${v.t}</option>`).join('')}</select></label>
+                        <label class="cz-c ancho"><span>Nombre</span><input data-b="paradas.${i}.nombre" maxlength="150" value="${esc(p.nombre || '')}" placeholder="Ej. Tortola, Islas Vírgenes Británicas"></label>
+                        <label class="cz-c"><span>Día ${opc}</span><input type="number" min="1" max="200" data-t="num" data-b="paradas.${i}.dia" value="${p.dia ?? ''}" placeholder="—"></label>
+                    </div>
+                    <div class="cz-mp-g2">
+                        <label class="cz-c"><span>Latitud</span><input type="number" step="0.000001" min="-90" max="90" data-t="num" data-b="paradas.${i}.latitud" value="${p.latitud ?? ''}" placeholder="Ej. 18.4207"></label>
+                        <label class="cz-c"><span>Longitud</span><input type="number" step="0.000001" min="-180" max="180" data-t="num" data-b="paradas.${i}.longitud" value="${p.longitud ?? ''}" placeholder="Ej. -64.6400"></label>
+                        <button type="button" class="ev-btn ${paradaSel === i ? '' : 'ghost'} sm" data-mp="ubicar" data-i="${i}" title="Luego haz clic en el mapa"><i class="bi bi-geo-alt"></i> ${paradaSel === i ? 'Haz clic en el mapa…' : 'Ubicar'}</button>
+                    </div>
+                    <label class="cz-c"><span>Nota ${opc}</span><input data-b="paradas.${i}.descripcion" maxlength="500" value="${esc(p.descripcion || '')}" placeholder="Ej. Atraque en el muelle de cruceros de Road Town"></label>
+                </div>
+                <div class="cz-mp-a">
+                    <button type="button" class="ui-ibtn" data-mp="arriba" data-i="${i}" ${i === 0 ? 'disabled' : ''} title="Subir"><i class="bi bi-arrow-up"></i></button>
+                    <button type="button" class="ui-ibtn" data-mp="abajo" data-i="${i}" ${i === l.length - 1 ? 'disabled' : ''} title="Bajar"><i class="bi bi-arrow-down"></i></button>
+                    <button type="button" class="ui-ibtn danger" data-mp="quitar" data-i="${i}" title="Quitar"><i class="bi bi-trash3"></i></button>
+                </div></article>`; }).join('')
+            : '<div class="ui-empty" style="padding:26px"><i class="bi bi-pin-map" style="font-size:30px"></i><p style="margin:6px 0 0">Sin paradas. Busca un lugar arriba o trae los puertos del itinerario.</p></div>';
+        const sin = l.filter(p => !conCoord(p)).length;
+        if ($('#mpModo')) $('#mpModo').textContent = paradaSel != null ? `Haz clic en el mapa para ubicar «${l[paradaSel]?.nombre || 'la parada ' + (paradaSel + 1)}»` : `${l.length} parada(s)${sin ? ` · ${sin} sin ubicación` : ''}`;
+        refrescarMapa();
+    }
+
+    function iniciarMapa(gm) {
+        const el = $('#mpMapa'); if (!el) return;
+        el.innerHTML = ''; el.classList.remove('sin');
+        mapa = new gm.Map(el, { center: { lat: 18.7357, lng: -70.1627 }, zoom: 5, mapTypeControl: false, streetViewControl: false, fullscreenControl: true });
+        mapa.addListener('click', ev => {
+            const lat = +ev.latLng.lat().toFixed(6), lng = +ev.latLng.lng().toFixed(6);
+            if (paradaSel != null && C.paradas[paradaSel]) { Object.assign(C.paradas[paradaSel], { latitud: lat, longitud: lng }); paradaSel = null; }
+            else C.paradas.push(paradaNueva(`Parada ${C.paradas.length + 1}`, $('#mpTipo')?.value || 'PARADA', lat, lng));
+            pintarListaParadas(); $('#czEditor').dispatchEvent(new Event('ev-cambio'));
+        });
+        const input = $('#mpBuscar');
+        if (input && gm.places) {
+            const ac = new gm.places.Autocomplete(input, { fields: ['name', 'geometry', 'formatted_address'] });
+            ac.addListener('place_changed', () => {
+                const pl = ac.getPlace();
+                if (!pl.geometry?.location) { lugarBuscado = null; EV.toast('Elige una opción de la lista que aparece al escribir.', 'err'); return; }
+                lugarBuscado = { nombre: pl.name || input.value, lat: +pl.geometry.location.lat().toFixed(6), lng: +pl.geometry.location.lng().toFixed(6) };
+                mapa.panTo(pl.geometry.location); mapa.setZoom(9);
+            });
+        }
+        refrescarMapa(true);
+    }
+
+    function refrescarMapa(encuadrar) {
+        if (!mapa || !window.google?.maps) return;
+        const gm = google.maps;
+        marcadores.forEach(m => m.setMap(null)); marcadores = []; linea?.setMap(null);
+        const puntos = [];
+        C.paradas.forEach((p, i) => {
+            if (!conCoord(p)) return;
+            const pos = { lat: +p.latitud, lng: +p.longitud }, tp = TIPO_PARADA[p.tipo] || TIPO_PARADA.PUERTO;
+            puntos.push(pos);
+            const m = new gm.Marker({ map: mapa, position: pos, draggable: true, title: `${i + 1}. ${p.nombre || ''}`,
+                label: { text: String(i + 1), color: '#fff', fontWeight: '800', fontSize: '12px' },
+                icon: { path: gm.SymbolPath.CIRCLE, scale: 13, fillColor: tp.c, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 } });
+            m.addListener('dragend', ev => { Object.assign(C.paradas[i], { latitud: +ev.latLng.lat().toFixed(6), longitud: +ev.latLng.lng().toFixed(6) }); pintarListaParadas(); $('#czEditor').dispatchEvent(new Event('ev-cambio')); });
+            m.addListener('click', () => { const el = document.querySelector(`[data-mp-i="${i}"]`); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); EV.resaltar(el); });
+            marcadores.push(m);
+        });
+        if (puntos.length > 1) linea = new gm.Polyline({ map: mapa, path: puntos, geodesic: true, strokeColor: '#0E8F86', strokeOpacity: 0, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: .9, strokeWeight: 3, scale: 3 }, offset: '0', repeat: '14px' }] });
+        if (encuadrar && puntos.length) { const b = new gm.LatLngBounds(); puntos.forEach(p => b.extend(p)); if (puntos.length === 1) { mapa.setCenter(puntos[0]); mapa.setZoom(8); } else mapa.fitBounds(b, 60); }
+    }
+
+    async function geocodificarFaltantes() {
+        let gm; try { gm = await cargarMaps(); } catch (e) { EV.toast(e.message, 'err'); return; }
+        // Con el servicio de lugares (Places), el mismo que usa BackTiTan: la clave no tiene activado «Geocoding»
+        const svc = new gm.places.PlacesService(mapa || document.createElement('div')), faltan = C.paradas.filter(p => !conCoord(p) && (p.nombre || '').trim());
+        const buscar = txt => new Promise(res => svc.findPlaceFromQuery({ query: txt, fields: ['geometry', 'name'] }, (r, st) => res(st === gm.places.PlacesServiceStatus.OK ? r?.[0]?.geometry?.location : null)));
+        if (!faltan.length) { EV.toast('Todas las paradas ya tienen ubicación.'); return; }
+        let ok = 0;
+        for (const p of faltan) {
+            try {
+                const loc = await buscar(p.nombre);
+                if (loc) { p.latitud = +loc.lat().toFixed(6); p.longitud = +loc.lng().toFixed(6); ok++; }
+            } catch { /* sin resultado: se queda sin ubicación */ }
+            await new Promise(x => setTimeout(x, 150));
+        }
+        pintarListaParadas(); refrescarMapa(true); $('#czEditor').dispatchEvent(new Event('ev-cambio'));
+        EV.toast(`${ok} de ${faltan.length} ubicada(s).${ok < faltan.length ? ' Las demás: pulsa «Ubicar» y haz clic en el mapa.' : ''}`, ok ? 'ok' : 'err');
+    }
+
+    // ---------- 5. A bordo ----------
     // Pestañas que se ven en la web de las navieras (como en la captura de la usuaria) con color, icono y actividades sugeridas
     const SECCIONES = [
         { t: 'Descripción', i: 'bi-info-circle', c: '#2563EB', a: ['El barco', 'Datos del barco', 'Cubiertas'] },
@@ -815,7 +984,7 @@
     function pintarCabinas() {
         const tipoInp = (t, campo, ph, extra = '') => `<input data-tipo="${t.clave}" data-campo="${campo}" value="${esc(t[campo] ?? '')}" placeholder="${ph}" ${extra}>`;
         const ya = new Set(C.cabinas.map(t => (t.nombre || '').trim().toLowerCase()));
-        $('#eCabinas').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Los tipos de camarote que se venden. Cada tipo será una <b>columna de precios</b> en el paso 6. El <b>grupo</b> (Interior, Exterior, Balcón o Suite) es el que se ve en la tarjeta de la web («desde» de cada grupo). ${opc}</span></div>
+        $('#eCabinas').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Los tipos de camarote que se venden. Cada tipo será una <b>columna de precios</b> en el paso 7. El <b>grupo</b> (Interior, Exterior, Balcón o Suite) es el que se ve en la tarjeta de la web («desde» de cada grupo). ${opc}</span></div>
             <div class="cz-blq"><h3><i class="bi bi-lightbulb"></i> Tipos recomendados <small>pulsa para agregar · luego puedes cambiar todo</small></h3>
                 ${CATS.map(k => `<div class="cz-sugs" style="margin-bottom:6px"><small style="--c:${COLOR_CAT[k]}" class="cz-cat-et"><i class="bi ${ICONO_CAT[k]}"></i> ${CAT_CORTO[k]}</small>
                     ${CABINAS_SUG.filter(s => s.k === k).map(s => `<button type="button" class="cz-sug ${ya.has(s.n.toLowerCase()) ? 'ya' : ''}" style="--c:${COLOR_CAT[k]}" data-ca="sug" data-n="${esc(s.n)}" ${ya.has(s.n.toLowerCase()) ? 'disabled' : ''}>${ya.has(s.n.toLowerCase()) ? '<i class="bi bi-check2"></i>' : '<i class="bi bi-plus"></i>'} ${esc(s.n)}</button>`).join('')}</div>`).join('')}
@@ -885,7 +1054,7 @@
                     <select id="prNuevaCol"><option value="">Elige…</option>${libres.map(s => `<option value="${esc(s.n)}">${CAT_CORTO[s.k]} · ${esc(s.n)}</option>`).join('')}<option value="__otro">Otro (escribir nombre)…</option></select></span>
                     <button type="button" class="ev-btn ghost sm" data-pr="col"><i class="bi bi-plus-lg"></i> Agregar columna</button></div>
                 ${!C.salidas.length ? '<p class="ui-help" style="margin:0">Agrega una fecha arriba para poner precios.</p>'
-                  : !tipos.length ? '<p class="ui-help" style="margin:0">Agrega tipos de cabina: aquí arriba («Agregar otra columna») o en el paso 5.</p>'
+                  : !tipos.length ? '<p class="ui-help" style="margin:0">Agrega tipos de cabina: aquí arriba («Agregar otra columna») o en el paso 6.</p>'
                   : `<div style="overflow-x:auto"><table class="cz-grid"><thead><tr><th>Salida</th>${tipos.map(t => `<th style="--c:${COLOR_CAT[t.categoria]}"><small><i class="bi ${ICONO_CAT[t.categoria]}"></i> ${CAT_CORTO[t.categoria]}</small>${(t.nombre || '').trim().toLowerCase() === CAT_CORTO[t.categoria].toLowerCase() ? '' : esc(t.nombre || '')}</th>`).join('')}<th></th></tr></thead><tbody>
                      ${C.salidas.map(s => `<tr class="${s.activo ? '' : 'off'}"><td class="f">${fechaCorta(s.fecha)}${n ? ` <small style="color:var(--ev-muted);font-weight:600">→ ${fechaCorta(masDias(s.fecha, n))}</small>` : ''}${s.fecha <= hoy ? ' <small style="color:#B54708">(pasada)</small>' : ''}</td>
                         ${tipos.map(t => `<td><div class="cz-dinero"><b>${EV.simbolo()}</b><input type="number" min="0" step="0.01" data-precio="${s.clave}|${tar}|${t.clave}" value="${pr.get(`${s.clave}|${tarSel}|${t.clave}`) ?? ''}" placeholder="0"></div></td>`).join('')}
@@ -944,6 +1113,7 @@
             ${it(true, 'bi-tags', 'Categoría: ' + esc((cats.length ? cats : ['Cruceros (por defecto)']).join(', ')), C.categorias_Nuevas.length ? 'Las nuevas se crean al guardar' : 'Es la tarjeta de la Home donde sale', 'eDatos')}
             ${it(fotos, 'bi-images', 'Fotos', fotosTxt, 'eFotos')}
             ${it(C.itinerario.length, 'bi-signpost-2', `Itinerario: ${C.itinerario.length} día(s)`, C.itinerario.length ? `${C.itinerario.filter(d => !d.en_Navegacion).map(d => esc(d.puerto || '¿?')).join(' · ')}${nav ? ` · ${nav} en navegación` : ''}` : 'Sin itinerario', 'eItin')}
+            ${it(C.paradas.length, 'bi-pin-map', `Mapa: ${C.paradas.length} parada(s)`, C.paradas.length ? `${C.paradas.map((p, i) => `${i + 1}. ${esc(p.nombre || '¿?')}`).join(' · ')}${C.paradas.some(p => !conCoord(p)) ? ` · <b>${C.paradas.filter(p => !conCoord(p)).length} sin ubicación</b>` : ''}` : 'Sin paradas en el mapa', 'eMapa', C.paradas.some(p => !conCoord(p)))}
             ${it(C.secciones.length, 'bi-stars', `A bordo: ${C.secciones.length} sección(es), ${acts} actividad(es)`, C.secciones.map(s => esc(s.titulo || '¿?')).join(' · ') || 'Sin «Tu barco»', 'eBordo')}
             ${it(C.cabinas.length, 'bi-door-closed', `Cabinas: ${C.cabinas.length} tipo(s)`, C.cabinas.map(t => esc(t.nombre || CAT_CORTO[t.categoria])).join(' · ') || 'Sin tipos de cabina', 'eCabinas')}
             ${it(C.salidas.length, 'bi-calendar3', `Fechas: ${C.salidas.length} (${futuras.length} a la venta)`, C.salidas.length ? C.salidas.slice(0, 6).map(s => fechaCorta(s.fecha)).join(' · ') + (C.salidas.length > 6 ? ' …' : '') : 'Sin fechas', 'ePrecios', C.salidas.length && !futuras.length)}
@@ -1015,6 +1185,7 @@
                         ${nav.logo ? `<img src="${esc(nav.logo)}" alt="" style="max-width:180px;margin-top:10px">` : ''}</div>
                 </div>
                 ${c.descripcion ? `<p style="white-space:pre-line">${esc(c.descripcion)}</p>` : ''}
+                ${(c.paradas || []).length ? `<div class="vz-h">Ruta del crucero</div><div class="vz-ruta"><div class="vz-ruta-l">${c.paradas.map((p, i) => `<span style="--c:${(TIPO_PARADA[p.tipo] || TIPO_PARADA.PUERTO).c}"><b>${i + 1}</b> ${esc(p.nombre)}${p.dia ? ` <small>día ${p.dia}</small>` : ''}</span>`).join('')}</div><div class="vz-ruta-m" id="vzMapa"></div></div>` : ''}
                 <div class="vz-h">Itinerario</div>
                 ${c.itinerario.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Fecha</th><th>Puerto</th><th>Llega</th><th>Sale</th></tr></thead><tbody>${c.itinerario.map(d => `<tr>
                     <td>${d.dia}</td><td>${s ? fechaCorta(masDias(s.fecha, d.dia - 1)) : '—'}</td><td><b>${esc(d.en_Navegacion ? 'En navegación' : d.puerto)}</b>${d.descripcion ? `<br><small style="color:var(--ev-muted)">${esc(d.descripcion)}</small>` : ''}</td>
@@ -1037,6 +1208,14 @@
                         <small style="color:var(--ev-muted)">${t.cabinas.length ? 'Cabinas: ' + t.cabinas.map(k => `${esc(k.numero)}${k.cubierta ? ' (cub. ' + k.cubierta + ')' : ''}`).join(', ') : ''}${t.permite_Garantizada ? (t.cabinas.length ? ' · ' : '') + 'Garantizada' : ''}</small></div></div>`; }).join('')}` : ''}`;
             const pintarActs = i => { const x = c.secciones[i]; if (!x || !$('#vzActs')) return; $('#vzActs').innerHTML = `<div class="vz-acts">${x.actividades.map((a, j) => `<div class="vz-act" data-vact="${i}:${j}" title="Ver la descripción">${a.imagen ? `<img src="${esc(a.imagen)}" alt="">` : '<div class="sin"></div>'}<b>${esc(a.titulo)}</b><small>Leer más..</small></div>`).join('') || '<p class="ui-help">Sin actividades.</p>'}</div>`; };
             pintarActs(0);
+            // mapa de la ruta en la vista previa
+            const vm = $('#vzMapa');
+            if (vm && (c.paradas || []).some(conCoord)) cargarMaps().then(gm => {
+                const m = new gm.Map(vm, { zoom: 5, center: { lat: 18.7, lng: -70 }, mapTypeControl: false, streetViewControl: false }), b = new gm.LatLngBounds(), pts = [];
+                c.paradas.forEach((p, i) => { if (!conCoord(p)) return; const pos = { lat: +p.latitud, lng: +p.longitud }; pts.push(pos); b.extend(pos);
+                    new gm.Marker({ map: m, position: pos, title: p.nombre, label: { text: String(i + 1), color: '#fff', fontWeight: '800' }, icon: { path: gm.SymbolPath.CIRCLE, scale: 12, fillColor: (TIPO_PARADA[p.tipo] || TIPO_PARADA.PUERTO).c, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 } }); });
+                if (pts.length > 1) { new gm.Polyline({ map: m, path: pts, geodesic: true, strokeColor: '#0E8F86', strokeWeight: 3 }); m.fitBounds(b, 40); } else { m.setCenter(pts[0]); m.setZoom(8); }
+            }).catch(() => vm.innerHTML = '<div class="ui-help" style="padding:20px">Mapa no disponible.</div>');
             $('#verCuerpo').onclick = e => {
                 const va = e.target.closest('[data-vact]'); if (va) { const [si, ai] = va.dataset.vact.split(':').map(Number); verActividad(c.secciones[si], ai); return; }
                 const v = e.target.closest('[data-v]'), vs = e.target.closest('[data-vsec]'), vsal = e.target.closest('[data-vsal]'), vt = e.target.closest('[data-vtar]'), vc = e.target.closest('[data-vcat]');
@@ -1113,11 +1292,13 @@
             if (t.id === 'prTarifa') { tarSel = t.value; pintarPrecios(); return; }
             leer(t);
             if (t.dataset.b?.endsWith('en_Navegacion')) pintarItin();
+            if (t.dataset.b?.startsWith('paradas.')) { if (t.dataset.b.endsWith('.tipo')) pintarListaParadas(); else refrescarMapa(); }
             if (t.dataset.b === 'noches') { pintarItin(); }
             if (t.dataset.tipo && (t.dataset.campo === 'categoria' || t.dataset.campo === 'permite_Garantizada')) { pintarCabinas(); pintarPrecios(); }
             if (t.dataset.b?.startsWith('cubiertas.')) pintarCabinas();
             marcarPasos();
         });
+        ed.addEventListener('keydown', e => { if (e.target.id === 'mpBuscar' && e.key === 'Enter') { e.preventDefault(); setTimeout(() => $('[data-mp="agregar"]')?.click(), 120); return; } });
         ed.addEventListener('keydown', e => { if (e.target.id === 'edCatNueva' && e.key === 'Enter') { e.preventDefault(); ed.querySelector('[data-cat-agregar]').click(); } });
         // arrastrar fotos a los recuadros de un crucero nuevo
         ed.addEventListener('dragover', e => { const z = e.target.closest('[data-pend]'); if (z) { e.preventDefault(); z.classList.add('sobre'); } });
@@ -1130,6 +1311,33 @@
             const pq = e.target.closest('[data-pend-quitar]');
             if (pq) { e.preventDefault(); const [u, i] = pq.dataset.pendQuitar.split(':'); if (u === 'GALERIA') P.GALERIA.splice(+i, 1); else P[u] = null; pintarFotos(); marcarPasos(); return; }
             const ir = e.target.closest('[data-ir]'); if (ir) { edTabs.ir(ir.dataset.ir); return; }
+            const mp = e.target.closest('[data-mp]');
+            if (mp) {
+                const i = +mp.dataset.i, que = mp.dataset.mp;
+                if (que === 'agregar') {
+                    const txt = $('#mpBuscar').value.trim(), tipo = $('#mpTipo').value;
+                    if (lugarBuscado && txt) C.paradas.push(paradaNueva(lugarBuscado.nombre, tipo, lugarBuscado.lat, lugarBuscado.lng));
+                    else if (txt) C.paradas.push(paradaNueva(txt, tipo));
+                    else { EV.toast('Escribe el lugar que quieres agregar.', 'err'); $('#mpBuscar').focus(); return; }
+                    $('#mpBuscar').value = ''; lugarBuscado = null; pintarListaParadas(); refrescarMapa(true);
+                    if (!conCoord(C.paradas.at(-1)) && window.google?.maps) geocodificarFaltantes();
+                }
+                else if (que === 'itinerario') {
+                    let n = 0;
+                    C.itinerario.forEach((d, k) => { const nom = (d.puerto || '').trim(); if (d.en_Navegacion || !nom || /^por definir$/i.test(nom)) return;
+                        if (!C.paradas.some(p => (p.nombre || '').trim().toLowerCase() === nom.toLowerCase())) { C.paradas.push(paradaNueva(nom, 'PUERTO', null, null, k + 1)); n++; } });
+                    if (!n) { EV.toast(C.itinerario.length ? 'Los puertos del itinerario ya están en la lista.' : 'El itinerario (paso 3) no tiene puertos todavía.', 'err'); return; }
+                    EV.toast(`${n} puerto(s) agregados del itinerario.`); pintarListaParadas();
+                    if (window.EV_MAPS_KEY) geocodificarFaltantes();
+                }
+                else if (que === 'geocodificar') { geocodificarFaltantes(); return; }
+                else if (que === 'vacia') { C.paradas.push(paradaNueva('', $('#mpTipo').value)); paradaSel = C.paradas.length - 1; pintarListaParadas(); }
+                else if (que === 'ubicar') { paradaSel = paradaSel === i ? null : i; pintarListaParadas(); if (paradaSel != null) $('#mpMapa')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+                else if (que === 'arriba' || que === 'abajo') { const j2 = que === 'arriba' ? i - 1 : i + 1; [C.paradas[i], C.paradas[j2]] = [C.paradas[j2], C.paradas[i]]; paradaSel = null; pintarListaParadas(); }
+                else if (que === 'quitar') { C.paradas.splice(i, 1); paradaSel = null; pintarListaParadas(); }
+                $('#czEditor').dispatchEvent(new Event('ev-cambio'));
+                return;
+            }
             if (e.target.closest('[data-res="activar"]')) { C.activo = true; C._activoElegido = true; C._autoDesactivado = false; pintarResumen(); pintarDatos(); return; }
             if (e.target.closest('[data-cat-agregar]')) {
                 const v = $('#edCatNueva').value.trim(); if (!v) { $('#edCatNueva').focus(); return; }
@@ -1176,7 +1384,7 @@
                     EV.pedir({ titulo: 'Otro tipo de cabina', etiqueta: 'Nombre (ej. Yacht Club, Haven, Spa Suite…)', maxlength: 150, si: 'Agregar' }).then(nom => {
                         if (!nom?.trim()) return;
                         C.cabinas.push(tipoNuevo('SUITE', nom.trim())); pintarCabinas(); pintarPrecios(); cambio();
-                        EV.toast('Columna agregada. En el paso 5 puedes cambiar su grupo (Interior, Exterior, Balcón o Suite) y sus datos.');
+                        EV.toast('Columna agregada. En el paso 6 puedes cambiar su grupo (Interior, Exterior, Balcón o Suite) y sus datos.');
                     });
                     return;
                 }

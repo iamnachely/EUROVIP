@@ -91,6 +91,8 @@ namespace EuroVip.Repositories
                 Titulo = s.Titulo,
                 Actividades = actividades[s.Id].Select(a => new CruceroActividadDto { Titulo = a.Titulo, Descripcion = a.Desc, Imagen = a.Img }).ToList()
             }).ToList();
+            c.Paradas = (await cn.QueryAsync<CruceroParadaDto>(
+                "SELECT nombre AS Nombre, tipo AS Tipo, dia AS Dia, latitud AS Latitud, longitud AS Longitud, descripcion AS Descripcion FROM Eurovip.crucero_parada WHERE id_crucero = @id ORDER BY orden", new { id })).ToList();
             c.Cubiertas = (await cn.QueryAsync<CruceroCubiertaDto>("SELECT numero AS Numero, nombre AS Nombre, plano AS Plano FROM Eurovip.crucero_cubierta WHERE id_crucero = @id ORDER BY numero", new { id })).ToList();
             var tipos = (await cn.QueryAsync<TipoFila>(@"
                 SELECT id_cabina_tipo AS Id, categoria AS Categoria, codigo AS Codigo, nombre AS Nombre, descripcion AS Descripcion,
@@ -177,6 +179,7 @@ namespace EuroVip.Repositories
                     DELETE a FROM Eurovip.crucero_actividad a JOIN Eurovip.crucero_seccion s ON s.id_seccion = a.id_seccion WHERE s.id_crucero = @id;
                     DELETE FROM Eurovip.crucero_seccion WHERE id_crucero = @id;
                     DELETE FROM Eurovip.crucero_itinerario WHERE id_crucero = @id;
+                    DELETE FROM Eurovip.crucero_parada WHERE id_crucero = @id;
                     DELETE FROM Eurovip.crucero_categoria_crucero WHERE id_crucero = @id;", new { id }, tx);
             }
             else
@@ -197,6 +200,12 @@ namespace EuroVip.Repositories
                                         VALUES (@id, @Dia, @Puerto, @Nav, @Lleg, @Sal, @Desc, @Img)",
                     new { id, x.Dia, Puerto = (x.Puerto ?? "").Trim(), Nav = x.En_Navegacion, Lleg = x.En_Navegacion ? null : HoraDe(x.Hora_Llegada),
                           Sal = x.En_Navegacion ? null : HoraDe(x.Hora_Salida), Desc = Nulo(x.Descripcion), Img = Nulo(x.Imagen) }, tx);
+
+            short ordenParada = 0;
+            foreach (var x in d.Paradas)
+                await cn.ExecuteAsync(@"INSERT INTO Eurovip.crucero_parada (id_crucero, orden, nombre, tipo, dia, latitud, longitud, descripcion)
+                                        VALUES (@id, @o, @Nombre, @Tipo, @Dia, @Latitud, @Longitud, @Descripcion)",
+                    new { id, o = ++ordenParada, Nombre = (x.Nombre ?? "").Trim(), x.Tipo, x.Dia, x.Latitud, x.Longitud, Descripcion = Nulo(x.Descripcion) }, tx);
 
             short ordenSec = 0;
             foreach (var s in d.Secciones)

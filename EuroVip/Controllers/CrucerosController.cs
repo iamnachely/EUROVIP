@@ -93,6 +93,16 @@ namespace EuroVip.Controllers
                 f.Codigo = Texto(f.Codigo) ?? Texto(f.Nombre) ?? "BEST_PRICE";
                 f.Nombre = Texto(f.Nombre) ?? f.Codigo;
             }
+            // Paradas del mapa: sin nombre ni coordenadas se quitan; coordenadas redondeadas a 6 decimales
+            d.Paradas = d.Paradas.Where(p => Texto(p.Nombre) is not null || (p.Latitud is not null && p.Longitud is not null)).ToList();
+            foreach (var p in d.Paradas)
+            {
+                p.Nombre = Texto(p.Nombre) ?? "Parada";
+                p.Tipo = (p.Tipo ?? "").Trim().ToUpperInvariant() is "PUERTO" or "DESTINO" or "PARADA" ? p.Tipo!.Trim().ToUpperInvariant() : "PUERTO";
+                p.Descripcion = Texto(p.Descripcion);
+                if (p.Latitud is null || p.Longitud is null) { p.Latitud = null; p.Longitud = null; }
+                else { p.Latitud = Math.Round(p.Latitud.Value, 6); p.Longitud = Math.Round(p.Longitud.Value, 6); }
+            }
             if (d.Noches is null && d.Itinerario.Count > 1) d.Noches = (short)Math.Min(180, d.Itinerario.Max(x => x.Dia) - 1);
         }
 
@@ -116,6 +126,9 @@ namespace EuroVip.Controllers
             if (d.Salidas.GroupBy(x => x.Fecha.Date).FirstOrDefault(g => g.Count() > 1) is { } sr) return $"Fechas: la salida del {sr.Key:dd/MM/yyyy} está dos veces.";
             if (d.Tarifas.GroupBy(x => x.Codigo!.Trim().ToUpperInvariant()).FirstOrDefault(g => g.Count() > 1) is { } tr) return $"Tarifas: el código «{tr.Key}» está dos veces.";
             if (d.Precios.Any(p => p.Precio_Pp < 0)) return "Precios: no puede haber precios negativos.";
+            if (d.Paradas.FirstOrDefault(p => p.Latitud is < -90 or > 90 || p.Longitud is < -180 or > 180) is { } mal)
+                return $"Mapa: las coordenadas de «{mal.Nombre}» no son válidas (latitud de -90 a 90, longitud de -180 a 180).";
+            if (d.Paradas.FirstOrDefault(p => p.Dia is < 1 or > 200) is { } malDia) return $"Mapa: el día de «{malDia.Nombre}» tiene que ser de 1 a 200.";
             return null;
         }
 

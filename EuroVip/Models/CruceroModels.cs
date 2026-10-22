@@ -116,6 +116,8 @@ namespace EuroVip.Models
         public List<CruceroSalidaDto> Salidas { get; set; } = new();
         public List<CruceroTarifaDto> Tarifas { get; set; } = new();
         public List<CruceroPrecioDto> Precios { get; set; } = new();
+        /// <summary>Destinos, puertos y paradas de la ruta con sus coordenadas (para el mapa).</summary>
+        public List<CruceroParadaDto> Paradas { get; set; } = new();
 
         // Solo lectura (para la pantalla)
         public string? Usuario { get; set; }
@@ -191,6 +193,17 @@ namespace EuroVip.Models
         [StringLength(50)] public string? Codigo { get; set; }
         [StringLength(100)] public string? Nombre { get; set; }
         [StringLength(300)] public string? Descripcion { get; set; }
+    }
+
+    /// <summary>Parada de la ruta del crucero (Eurovip.crucero_parada): PUERTO, DESTINO o PARADA, con latitud y longitud.</summary>
+    public class CruceroParadaDto
+    {
+        [StringLength(150)] public string? Nombre { get; set; }
+        public string Tipo { get; set; } = "PUERTO";
+        public short? Dia { get; set; }
+        public decimal? Latitud { get; set; }
+        public decimal? Longitud { get; set; }
+        [StringLength(500)] public string? Descripcion { get; set; }
     }
 
     public class CruceroPrecioDto
