@@ -320,7 +320,7 @@ const CX = (() => {
         $('#edSub').textContent = c.codigoOriginal ? `Código ${c.codigoOriginal} · ${c.salidas.length} salidas cargadas` : 'Completa las pestañas; puedes guardar cuando quieras.';
         $('#edCodigo').value = c.codigo; $('#edNombre').value = c.nombre;
         $('#edProveedor').value = c.proveedor ? `${c.proveedor}` : ''; $('#edProveedor').dataset.valor = c.id_Proveedor || '';
-        $('#edNoches').value = c.noches; $('#edCaratula').value = c.caratula || ''; delete $('#edPortada').dataset.vista; $('#edResumen').value = c.itinerario || '';
+        $('#edNoches').value = c.noches; $('#edCaratula').value = c.caratula || ''; delete $('#edPortada').dataset.vista; delete $('#edCaratula').dataset.quitada; $('#edResumen').value = c.itinerario || '';
         $('#edEliminar').hidden = !c.codigoOriginal;
         $('#tabSalidas').hidden = !c.codigoOriginal;
         $$('.ui-f.err', ed).forEach(f => { f.classList.remove('err'); const m = $('.msg', f); if (m) m.textContent = ''; });
@@ -444,7 +444,7 @@ const CX = (() => {
         const dto = {
             CodigoOriginal: estado.codigoOriginal, Codigo: $('#edCodigo').value.trim(), Nombre: $('#edNombre').value.trim(),
             Id_Proveedor: $('#edProveedor').dataset.valor || '', Noches: parseInt($('#edNoches').value, 10) || 0,
-            Caratula: $('#edCaratula').value.trim() || null, Itinerario: $('#edResumen').value.trim() || null,
+            Caratula: $('#edCaratula').value.trim() || null, QuitarPortada: $('#edCaratula').dataset.quitada === '1', Itinerario: $('#edResumen').value.trim() || null,
             Destinos: estado.destinos.map(d => ({ Id_Destino: d.id_Destino, Id_Pais: d.id_Pais })),
             Hoteles: estado.hoteles.map(h => ({ Id_Alojamiento: h.id_Alojamiento, Categoria: h.categoria })),
             Dias: estado.dias.filter(d => d.titulo.trim()).map(d => ({ Titulo: d.titulo.trim(), Descripcion: d.descripcion, Visitas: d.visitas, Regimen: d.regimen, Transporte: d.transporte, Tipo_Alojamiento: d.tipo_Alojamiento, Caratula: d.caratula }))
@@ -513,13 +513,13 @@ const CX = (() => {
             if (!nombreBase($('#edNombre').value)) { EV.toast('Primero escribe el nombre del circuito: la imagen se guarda con ese nombre.', 'err'); $('#edNombre').focus(); return; }
             try {
                 const r = await subirImagen('/Circuitos/SubirPortada', { nombre: $('#edNombre').value.trim() }, archivo);
-                $('#edCaratula').value = r.caratula; $('#edPortada').dataset.vista = r.url;
+                $('#edCaratula').value = r.caratula; $('#edPortada').dataset.vista = r.url; delete $('#edCaratula').dataset.quitada;
                 portada(); EV.toast(r.mensaje);
             } catch (e) { EV.toast(e.message, 'err'); }
             finally { $('#edPortadaArchivo').value = ''; }
         };
         $('#edPortadaArchivo').addEventListener('change', e => subirPortada(e.target.files[0]));
-        $('#edPortadaQuitar').addEventListener('click', () => { $('#edCaratula').value = ''; delete $('#edPortada').dataset.vista; portada(); EV.toast('Portada quitada. Pulsa Guardar para dejarlo así.', 'info'); });
+        $('#edPortadaQuitar').addEventListener('click', () => { $('#edCaratula').value = ''; $('#edCaratula').dataset.quitada = '1'; delete $('#edPortada').dataset.vista; portada(); EV.toast('Portada quitada. Pulsa Guardar para dejarlo así.', 'info'); });
 
         // ---- imagen de cada día: /imagenes/circuitos/itinerario/es/{Nombre}-itinerario-dia-{n}.webp ----
         const subirDia = async (i, archivo) => {

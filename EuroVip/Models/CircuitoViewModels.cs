@@ -62,6 +62,9 @@ namespace EuroVip.Models
         /// <summary>Código original al editar; null = nuevo.</summary>
         public string? CodigoOriginal { get; set; }
 
+        /// <summary>true solo si pulsaron «Quitar portada» en el formulario (una portada vacía en el formulario NO borra la foto).</summary>
+        public bool QuitarPortada { get; set; }
+
         [Required(ErrorMessage = "Escribe un código para el circuito")]
         [StringLength(100, ErrorMessage = "Máximo 100 caracteres")]
         [RegularExpression(@"^[A-Za-z0-9 ]+$", ErrorMessage = "Solo letras, números y espacios")]

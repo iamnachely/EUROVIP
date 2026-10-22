@@ -49,6 +49,8 @@ namespace EuroVip.Services
         /// <summary>Portadas de todos los productos de un tipo: clave (en minúsculas) → URL.</summary>
         Task<Dictionary<string, string>> PortadasAsync(string tipo);
         Task<string?> PortadaAsync(string tipo, string clave);
+        /// <summary>Vuelve a copiar la portada real en la columna de antes (después de un Guardar que pudo escribir una foto vieja). Si no hay portada, no toca nada.</summary>
+        Task ResincronizarAsync(string tipo, string clave);
         Task<MultimediaItem> SubirAsync(string tipo, string clave, string uso, Stream origen, string? nombreOriginal, string? texto = null);
         Task<MultimediaItem?> QuitarAsync(int id);
         Task<int> QuitarUsoAsync(string tipo, string clave, string uso);
@@ -157,6 +159,18 @@ namespace EuroVip.Services
         public static string UrlDe(IConfiguration cfg) => (string.IsNullOrWhiteSpace(cfg["Multimedia:Url"]) ? UrlPorDefecto : cfg["Multimedia:Url"]!.Trim()).TrimEnd('/');
 
         public string Url(string ruta) => $"{UrlBase}/{ruta}";
+
+        /// <summary>
+        /// URL con versión: «…/miches.webp?v=…». El servidor de fotos dice al navegador que guarde cada foto UN AÑO (Cache-Control),
+        /// y como la foto nueva se guarda con el mismo nombre, sin esto se seguía viendo la vieja (parecía que no cambiaba ni se borraba).
+        /// El ?v= es la hora del archivo: cambia cada vez que se reemplaza.
+        /// </summary>
+        public string UrlV(string ruta)
+        {
+            try { var f = Fisica(ruta); if (File.Exists(f)) return $"{Url(ruta)}?v={File.GetLastWriteTimeUtc(f).Ticks:x}"; }
+            catch { /* ruta rara: sin versión */ }
+            return Url(ruta);
+        }
         public TipoMultimedia? Tipo(string? tipo) => tipo is not null && Tipos.TryGetValue(tipo.Trim(), out var t) ? t : null;
 
         /// <summary>«Ruta Colonial» → "ruta-colonial": minúsculas, sin acentos, guiones (lo que admite CK_Eurovip_imagen_ruta).</summary>
@@ -267,7 +281,7 @@ namespace EuroVip.Services
 
         private MultimediaItem Completar(MultimediaItem m)
         {
-            m.Url = Url(m.Ruta);
+            m.Url = UrlV(m.Ruta);
             m.Existe = File.Exists(Fisica(m.Ruta));
             return m;
         }
@@ -313,8 +327,14 @@ namespace EuroVip.Services
             using var cn = _db.Conexion();
             var filas = await cn.QueryAsync<(string Clave, string Ruta)>("SELECT clave, ruta FROM Eurovip.vMultimedia WHERE tipo = @tipo AND uso = 'PORTADA'", new { tipo = t.Tipo });
             var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var (c, r) in filas) d[c.Trim()] = Url(r);
+            foreach (var (c, r) in filas) d[c.Trim()] = UrlV(r);
             return d;
+        }
+
+        public async Task ResincronizarAsync(string tipo, string clave)
+        {
+            var t = Validar(tipo, clave);
+            if (await PortadaAsync(t.Tipo, clave) is not null) await SincronizarProductoAsync(t, clave);
         }
 
         public async Task<string?> PortadaAsync(string tipo, string clave)
@@ -323,7 +343,7 @@ namespace EuroVip.Services
             using var cn = _db.Conexion();
             var ruta = await cn.ExecuteScalarAsync<string?>($"SELECT TOP 1 ruta FROM Eurovip.vMultimedia WHERE tipo = @tipo AND {t.Columna} = @v AND uso = 'PORTADA'",
                 new { tipo = t.Tipo, v = Valor(t, clave) });
-            return ruta is null ? null : Url(ruta);
+            return ruta is null ? null : UrlV(ruta);
         }
 
         public async Task<MultimediaItem> SubirAsync(string tipo, string clave, string uso, Stream origen, string? nombreOriginal, string? texto = null)
@@ -571,8 +591,8 @@ namespace EuroVip.Services
                     await cn.ExecuteAsync(url is not null
                         ? @"UPDATE Eurovip.destino SET caratula = @url WHERE id_destino = @v;
                             UPDATE Eurovip.inicio SET caratulaDestino = @url WHERE id_destino = @v AND tipo_servicio IN ('OFERTA', 'COMBINADO');"
-                        : @"UPDATE Eurovip.destino SET caratula = NULL WHERE id_destino = @v AND caratula = @quitada;
-                            UPDATE Eurovip.inicio SET caratulaDestino = NULL WHERE id_destino = @v AND tipo_servicio IN ('OFERTA', 'COMBINADO') AND caratulaDestino = @quitada;", p);
+                        : @"UPDATE Eurovip.destino SET caratula = NULL WHERE id_destino = @v AND LEFT(caratula, LEN(@quitada)) = @quitada;
+                            UPDATE Eurovip.inicio SET caratulaDestino = NULL WHERE id_destino = @v AND tipo_servicio IN ('OFERTA', 'COMBINADO') AND LEFT(caratulaDestino, LEN(@quitada)) = @quitada;", p);
                     // Las tarjetas de PAQUETES (ofertas) de ese destino usan la foto del destino (pedido de la usuaria: «esos son destinos»).
                     // Las de excursiones y traslados NO: tienen su propia foto (tipo INICIO).
                     break;
@@ -580,17 +600,17 @@ namespace EuroVip.Services
                     // Cada tarjeta tiene su foto: la web la lee de inicio.caratulaDestino (la foto del destino ya no se copia en las tarjetas)
                     await cn.ExecuteAsync(url is not null
                         ? "UPDATE Eurovip.inicio SET caratulaDestino = @url WHERE id = @v"
-                        : "UPDATE Eurovip.inicio SET caratulaDestino = NULL WHERE id = @v AND caratulaDestino = @quitada", p);
+                        : "UPDATE Eurovip.inicio SET caratulaDestino = NULL WHERE id = @v AND LEFT(caratulaDestino, LEN(@quitada)) = @quitada", p);
                     break;
                 case "ALOJAMIENTO":
                     await cn.ExecuteAsync(url is not null
                         ? "UPDATE Eurovip.alojamiento SET caratula = @url WHERE id_alojamiento = @v"
-                        : "UPDATE Eurovip.alojamiento SET caratula = NULL WHERE id_alojamiento = @v AND caratula = @quitada", p);
+                        : "UPDATE Eurovip.alojamiento SET caratula = NULL WHERE id_alojamiento = @v AND LEFT(caratula, LEN(@quitada)) = @quitada", p);
                     break;
                 case "CIRCUITO":
                     await cn.ExecuteAsync(url is not null
                         ? "UPDATE Eurovip.circuito SET caratula = @url WHERE nombre_circuito = @v"
-                        : "UPDATE Eurovip.circuito SET caratula = NULL WHERE nombre_circuito = @v AND caratula = @quitada", p);
+                        : "UPDATE Eurovip.circuito SET caratula = NULL WHERE nombre_circuito = @v AND LEFT(caratula, LEN(@quitada)) = @quitada", p);
                     break;
                 case "TRASLADO":
                     // traslado.imagen era el archivo de wwwroot/imagenes/traslados: con portada nueva ya no se usa
@@ -617,7 +637,7 @@ namespace EuroVip.Services
             if (slug == "") throw new InvalidOperationException("Primero escribe el nombre del circuito.");
             slug = NombreArchivo(slug);
             var (datos, _, _) = await ImagenesLocales.ConvertirWebpAsync(origen);
-            return Url(await ReemplazarAsync($"circuito_itinerario/{slug}-dia-{dia}.webp", datos));
+            return UrlV(await ReemplazarAsync($"circuito_itinerario/{slug}-dia-{dia}.webp", datos));
         }
 
         public async Task<string> GuardarArchivoAsync(string carpeta, string? nombre, Stream origen)
@@ -625,7 +645,7 @@ namespace EuroVip.Services
             carpeta = (carpeta ?? "").Trim().Trim('/');
             if (carpeta == "" || !Regex.IsMatch(carpeta, "^[a-z0-9_-]+(/[a-z0-9_-]+)*$")) throw new InvalidOperationException("Carpeta no válida.");
             var (datos, _, _) = await ImagenesLocales.ConvertirWebpAsync(origen);
-            return Url(await ReemplazarAsync($"{carpeta}/{NombreArchivo(nombre, carpeta.Split('/').Last())}.webp", datos));
+            return UrlV(await ReemplazarAsync($"{carpeta}/{NombreArchivo(nombre, carpeta.Split('/').Last())}.webp", datos));
         }
 
         /// <summary>

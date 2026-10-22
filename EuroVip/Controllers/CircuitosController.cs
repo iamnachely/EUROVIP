@@ -69,8 +69,10 @@ namespace EuroVip.Controllers
             try
             {
                 await _repo.GuardarAsync(dto);
-                // Si quitaron la portada en el formulario, también se quita de Eurovip.multimedia (si no, la web la seguiría mostrando)
-                if (string.IsNullOrWhiteSpace(dto.Caratula)) await _mm.QuitarUsoAsync("CIRCUITO", dto.Nombre.Trim(), "PORTADA");
+                // Solo si pulsaron «Quitar portada» se quita de Eurovip.multimedia. Un campo vacío NO borra la foto (se perdían portadas
+                // subidas desde la Home o desde «Fotos»): se vuelve a copiar la portada real en circuito.caratula.
+                if (dto.QuitarPortada) await _mm.QuitarUsoAsync("CIRCUITO", dto.Nombre.Trim(), "PORTADA");
+                else await _mm.ResincronizarAsync("CIRCUITO", dto.Nombre.Trim());
                 await Auditar(excepto is null ? "Circuito_Crear" : "Circuito_Editar", dto);
                 return Json(new { ok = true, codigo = dto.Codigo.Trim(), mensaje = excepto is null ? $"Circuito \"{dto.Nombre}\" creado." : "Cambios guardados." });
             }
