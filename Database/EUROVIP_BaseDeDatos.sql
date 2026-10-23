@@ -4846,6 +4846,20 @@ GO
                anterior. En el servidor: mover eurovip\hotel\*.webp a eurovip\imagenes\hotel\ y pulsar «Poner nombres a las fotos».
    22/10/2026  FASE 25 aplicada SOLO en el 93 (CAMBIO 90-91): tabla Eurovip.crucero_parada y spPortalCruceroParadas
                (paradas del crucero con latitud y longitud para el mapa). Sin datos: se cargan en Cruceros → paso 4.
+   23/10/2026  SEGUNDO CRUCERO DE EJEMPLO en el 93 (pedido de la usuaria: "carga otro completo, sin imágenes, por el Caribe,
+               10 noches, 10 destinos, de cero y completo"). Cargado con el mismo código de la app (CruceroRepository):
+               • Crucero n.º 1004 «Gran Caribe desde La Romana», Explorer of the Seas (Royal Caribbean International:
+                 naviera y barco nuevos, con descripción del barco), 10 noches, ida y vuelta desde La Romana.
+               • 11 días de itinerario con horas: La Romana, San Juan, St. Thomas, St. Maarten, St. Kitts, Antigua,
+                 Guadalupe, Tortola, Samaná, Isla Catalina y regreso a La Romana.
+               • 10 paradas en el mapa con latitud y longitud (9 PUERTO + Isla Catalina como DESTINO).
+               • 6 secciones «a bordo» con 27 actividades, 10 cubiertas, 7 tipos de cabina (16 cabinas), 6 salidas
+                 (05/12/2026 a 03/04/2027), 2 tarifas (Mejor precio y Con bebidas y propinas) y 82 precios
+                 (19/12 sin interior estándar, a propósito, para ver una celda vacía).
+               • Categorías: Caribe Oriental (ya existía) y «Salidas desde República Dominicana» (nueva).
+               • Home: tarjeta 140 Caribe Oriental y tarjeta nueva 141 Salidas desde República Dominicana,
+                 precio desde 1.187 por persona. Sin fotos (se suben en Cruceros → paso 2 Fotos).
+               Para quitarlo: pantalla Cruceros → Eliminar.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
