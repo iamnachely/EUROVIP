@@ -39,6 +39,113 @@ namespace EuroVip.Controllers
         public IActionResult Editar() => View();
         public IActionResult Index() => RedirectToAction(nameof(Hub));
 
+        // ================= EDITOR (copia del editor de Flyer Cliente de BackTiTan) =================
+        // Mismas rutas y respuestas que FlyerClienteController de BackTiTan (la pantalla es la misma), con los datos de Eurovip:
+        // destinos y precios de tipo «Cliente», hoteles de Solo Hotel y Paquetes, fondos de uploads/flyers/fondos y la galería de Flyer Editar.
+        private string WebEurovip => (HttpContext.RequestServices.GetRequiredService<IConfiguration>()["Eurovip:Web"] is { Length: > 0 } w ? w : "http://eurovip.com.do").TrimEnd('/');
+
+        private async Task<List<FlyerDestino>> DestinosClienteAsync()
+        {
+            var destinos = await _repo.DestinosAsync(IFlyerRepository.Cliente);
+            foreach (var d in destinos) d.Fondo = _img.FondoUrl(d.Nombre_Destino);
+            return destinos;
+        }
+
+        public async Task<IActionResult> Editor()
+        {
+            var configs = await _repo.ConfigsAsync(IFlyerRepository.Cliente);
+            var destinos = await DestinosClienteAsync();
+            var fondos = new Dictionary<string, string>();
+            foreach (var n in configs.Select(c => c.Nombre_Destino ?? c.Id_Destino).Concat(destinos.Select(d => d.Nombre_Destino)).Distinct())
+                if (_img.FondoUrl(n) is string u) fondos[n] = u;
+            return View(new FlyerEditorModelo
+            {
+                Destinos = destinos, Configs = configs, Fondos = fondos, Web = WebEurovip,
+                WebTexto = System.Text.RegularExpressions.Regex.Replace(WebEurovip, "^https?://(www\\.)?", ""),
+                UltimaActualizacion = destinos.Select(d => d.Fecha_Actualizacion).Where(f => f.HasValue).Max()
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ObtenerDatos() => Json(await DestinosClienteAsync());
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActualizarDestino(int id)
+        {
+            var cfg = (await _repo.ConfigsAsync(IFlyerRepository.Cliente)).FirstOrDefault(c => c.Id == id);
+            if (cfg is null) return Json(new { success = false, mensaje = "Configuración no encontrada." });
+            var n = await _repo.ActualizarPreciosAsync(id, IFlyerRepository.Cliente);
+            return Json(n > 0 ? new { success = true, mensaje = $"Precios actualizados para {cfg.Nombre_Destino ?? cfg.Id_Destino}." }
+                              : new { success = false, mensaje = "Sin ofertas a la venta para este destino (revisa campaña, origen y régimen)." });
+        }
+
+        /// <summary>
+        /// Guarda en la galería de Flyer Editar el PNG que dibujó el editor. Como BackTiTan, el nombre tiene que llevar un destino
+        /// de la configuración (así el envío «con link» sabe a qué página de la web lleva el botón).
+        /// </summary>
+        [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(25_000_000)]
+        public async Task<IActionResult> GuardarImagen([FromBody] FlyerGuardarPngDto d)
+        {
+            if (string.IsNullOrWhiteSpace(d.ImageData)) return Json(new { success = false, mensaje = "Sin datos de imagen." });
+            var configs = await _repo.ConfigsAsync(IFlyerRepository.Cliente);
+            if (configs.Count == 0) return Json(new { success = false, mensaje = "No hay destinos configurados en Flyer Editar. Agrega al menos uno antes de guardar." });
+            var nombre = string.IsNullOrWhiteSpace(d.NombreArchivo) ? d.NombreDestino ?? "" : d.NombreArchivo.Trim();
+            var clave = AgenciaController.Slug(nombre);
+            var destino = configs.Select(c => c.Nombre_Destino ?? c.Id_Destino).FirstOrDefault(x => clave.Contains(AgenciaController.Slug(x)));
+            if (destino is null)
+                return Json(new { success = false, mensaje = "El nombre del archivo debe contener un destino de la configuración. Destinos válidos: " + string.Join(", ", configs.Select(c => c.Nombre_Destino ?? c.Id_Destino)) });
+            try
+            {
+                var img = await _img.GuardarPngAsync(d.ImageData, nombre);
+                await Auditar("Flyer_EditorGuardar", new { img.Archivo, destino, d.LinkOferta });
+                return Json(new { success = true, url = img.Url, nombre = img.Archivo });
+            }
+            catch (InvalidOperationException ex) { return Json(new { success = false, mensaje = ex.Message }); }
+        }
+
+        [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(10_000_000)]
+        public async Task<IActionResult> SubirImagenFondo(IFormFile? archivo, [FromForm] string? nombreDestino)
+        {
+            if (archivo is null || archivo.Length == 0) return Json(new { success = false, mensaje = "Sin archivo." });
+            if (string.IsNullOrWhiteSpace(nombreDestino) || nombreDestino.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return Json(new { success = false, mensaje = "Nombre de destino inválido." });
+            var ext = await ImagenSegura.ExtensionAsync(archivo);
+            if (ext is null or "webp") return Json(new { success = false, mensaje = "El fondo debe ser JPG o PNG." });
+            var url = await _img.GuardarFondoAsync(nombreDestino.Trim(), archivo, ext);
+            await Auditar("Flyer_Fondo", new { destino = nombreDestino });
+            return Json(new { success = true, url });
+        }
+
+        /// <summary>Buscador de destinos del editor: [{ value, text, id_pais }].</summary>
+        [HttpGet]
+        public async Task<IActionResult> BuscarDestinos(string? term)
+        {
+            if (string.IsNullOrWhiteSpace(term)) return Json(Array.Empty<object>());
+            using var cn = _db.Conexion();
+            var l = await Dapper.SqlMapper.QueryAsync<(string Destino, string Pais)>(cn,
+                "SELECT TOP 20 id_destino, id_pais FROM Eurovip.destino WHERE id_idioma = 'ES' AND id_destino LIKE '%' + @term + '%' ORDER BY CASE WHEN id_destino LIKE @term + '%' THEN 0 ELSE 1 END, id_destino",
+                new { term = term.Trim() });
+            return Json(l.Select(x => new { value = x.Destino, text = x.Destino, id_pais = x.Pais }));
+        }
+
+        /// <summary>Hoteles con precio del destino elegido (o por nombre): [{ value, text, precio_web, desde, regimen, caratula }].</summary>
+        [HttpGet]
+        public async Task<IActionResult> BuscarHoteles(string? term, string? idDestino, string? idPaisDestino)
+        {
+            var con = await _repo.HotelesConPrecioAsync(term, idDestino);
+            if (con.Count == 0 && !string.IsNullOrWhiteSpace(term))
+                return Json((await _repo.HotelesPorNombreAsync(term)).Select(h => new { value = h.Id_Alojamiento.ToString(), text = h.Nombre }));
+            return Json(con.Select(h => new { value = h.Id_Alojamiento.ToString(), text = h.Nombre, precio_web = h.Precio, desde = h.Desde, regimen = h.Regimen, caratula = h.Caratula }));
+        }
+
+        /// <summary>Precio más barato a la venta de un hotel: { nombre_hotel, regimen, nombre_habitacion, precio_final } o { error }.</summary>
+        [HttpGet]
+        public async Task<IActionResult> PrecioBarato(int idAlojamiento)
+        {
+            var h = (await _repo.HotelesConPrecioAsync(null, null, idAlojamiento)).FirstOrDefault();
+            return h is null ? Json(new { error = "Sin precio disponible para este hotel" })
+                             : Json(new { nombre_hotel = h.Nombre, regimen = h.Regimen, nombre_habitacion = h.Habitacion, precio_final = h.Precio });
+        }
+
         [HttpGet]
         public async Task<IActionResult> Datos()
         {
@@ -216,9 +323,26 @@ namespace EuroVip.Controllers
                             .Select(c => (FlyerRepository.LimpiarNumero(c.Numero), c.Nombre_Completo)).Where(x => x.Item1.Length >= 8).Distinct().ToList();
                 if (dest.Count == 0) return BadRequest(new { mensaje = "No hay contactos activos para enviar." });
             }
+            // Con link: el botón de cada flyer lleva a la página de su destino en la web (el destino sale del nombre de la imagen)
+            List<string>? botones = null;
+            var cfg = HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+            var plantillaLink = cfg["Eurovip:Flyer:PlantillaClienteLink"] is { Length: > 0 } pl ? pl : "cliente_info";
+            if (d.ConLink)
+            {
+                var destinos = (await _repo.ConfigsAsync(IFlyerRepository.Cliente)).Select(c => c.Nombre_Destino ?? c.Id_Destino).Distinct().OrderByDescending(x => x.Length).ToList();
+                var formato = cfg["Eurovip:Flyer:BotonClienteInfo"] is { Length: > 0 } f ? f : "hotel/{destino}";
+                botones = new();
+                foreach (var ruta in rutas)
+                {
+                    var clave = AgenciaController.Slug(Path.GetFileNameWithoutExtension(ruta));
+                    var destino = destinos.FirstOrDefault(x => clave.Contains(AgenciaController.Slug(x)));
+                    if (destino is null) return BadRequest(new { mensaje = $"Con link, cada flyer tiene que ser de un destino: «{Path.GetFileName(ruta)}» no es de ninguno ({string.Join(", ", destinos)})." });
+                    botones.Add(formato.Replace("{destino}", AgenciaController.Slug(destino)));
+                }
+            }
             var carpeta = d.Imagenes.First().Split('/')[0];
-            if (!_job.Iniciar(dest, rutas, d.Texto, carpeta, User.Identity?.Name ?? "")) return Conflict(new { mensaje = "Ya hay un envío en curso. Espera a que termine o cancélalo." });
-            await Auditar("Flyer_Enviar", new { destinatarios = dest.Count, prueba = !string.IsNullOrWhiteSpace(d.NumeroPrueba), imagenes = d.Imagenes, d.Texto });
+            if (!_job.Iniciar(dest, rutas, d.Texto, carpeta, User.Identity?.Name ?? "", botones, plantillaLink)) return Conflict(new { mensaje = "Ya hay un envío en curso. Espera a que termine o cancélalo." });
+            await Auditar("Flyer_Enviar", new { destinatarios = dest.Count, prueba = !string.IsNullOrWhiteSpace(d.NumeroPrueba), imagenes = d.Imagenes, d.Texto, d.ConLink, botones });
             return Json(new { ok = true, mensaje = $"Envío iniciado a {dest.Count} contacto(s)." });
         }
 

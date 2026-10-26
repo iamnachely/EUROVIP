@@ -168,7 +168,9 @@ namespace EuroVip.Services
 
         public void Cancelar() => _cts?.Cancel();
 
-        public bool Iniciar(List<(string Numero, string? Nombre)> destinatarios, List<string> imagenes, string? texto, string carpeta, string usuario)
+        /// <param name="botones">Con link: la parte variable del botón de cada imagen (mismo orden que imagenes); null = sin link.</param>
+        public bool Iniciar(List<(string Numero, string? Nombre)> destinatarios, List<string> imagenes, string? texto, string carpeta, string usuario,
+                            List<string>? botones = null, string? plantillaLink = null)
         {
             lock (_lock)
             {
@@ -195,7 +197,18 @@ namespace EuroVip.Services
                         {
                             // Primero los flyers con la plantilla aprobada (siempre llegan); el texto libre después,
                             // porque WhatsApp solo lo entrega si el contacto escribió en las últimas 24 h.
-                            foreach (var m in medias) { await wa.EnviarFlyerAsync(numero, m, nombre); await Task.Delay(300, ct); }
+                            for (var k = 0; k < medias.Count; k++)
+                            {
+                                if (botones is null) await wa.EnviarFlyerAsync(numero, medias[k], nombre);
+                                else
+                                {
+                                    // Con link: plantilla con botón a la página del destino de esa imagen
+                                    var (ok, status, resp) = await wa.EnviarPlantillaAsync(numero, plantillaLink ?? "cliente_info", medias[k],
+                                        new[] { string.IsNullOrWhiteSpace(nombre) ? "viajero" : nombre.Trim().Split(' ')[0] }, botones[k]);
+                                    if (!ok) throw new InvalidOperationException($"Meta {status}: {WhatsAppService.ErrorDe(resp)}");
+                                }
+                                await Task.Delay(300, ct);
+                            }
                             if (!string.IsNullOrWhiteSpace(texto)) { await wa.EnviarTextoAsync(numero, texto.Replace("{nombre}", (nombre ?? "").Split(' ')[0])); await Task.Delay(300, ct); }
                             lock (_lock) _estado.Enviados++;
                         }

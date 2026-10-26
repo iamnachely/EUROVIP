@@ -74,6 +74,40 @@ namespace EuroVip.Models
         public string? Estado { get; set; }
     }
 
+    /// <summary>Hotel con su precio más barato a la venta (buscador de hoteles del editor de Flyer Editar).</summary>
+    public class FlyerHotelPrecio
+    {
+        public int Id_Alojamiento { get; set; }
+        public string Nombre { get; set; } = "";
+        public string? Caratula { get; set; }
+        public string? Destino { get; set; }
+        public string? Regimen { get; set; }
+        public string? Habitacion { get; set; }
+        public DateTime? Desde { get; set; }
+        public int? Precio { get; set; }
+    }
+
+    /// <summary>Lo que necesita la pantalla del editor (copia del editor de Flyer Cliente de BackTiTan).</summary>
+    public class FlyerEditorModelo
+    {
+        public List<FlyerDestino> Destinos { get; set; } = new();
+        public List<FlyerConfig> Configs { get; set; } = new();
+        public DateTime? UltimaActualizacion { get; set; }
+        public Dictionary<string, string> Fondos { get; set; } = new();
+        public string Logo { get; set; } = "/img/flyer/logo-eurovip-travel.png";
+        public string Web { get; set; } = "http://eurovip.com.do";
+        public string WebTexto { get; set; } = "eurovip.com.do";
+    }
+
+    public class FlyerGuardarPngDto
+    {
+        public string ImageData { get; set; } = "";
+        public string? NombreDestino { get; set; }
+        public string? NombreArchivo { get; set; }
+        public string? LinkOferta { get; set; }
+        public int? Plantilla { get; set; }
+    }
+
     public class FlyerImagen
     {
         public string Carpeta { get; set; } = "";
@@ -90,6 +124,8 @@ namespace EuroVip.Models
         public string? NumeroPrueba { get; set; }
         public List<string> Imagenes { get; set; } = new();   // "carpeta/archivo.png"
         [StringLength(1000)] public string? Texto { get; set; }
+        /// <summary>Con botón a la web (plantilla «cliente_info»): cada flyer lleva un botón a la página de su destino.</summary>
+        public bool ConLink { get; set; }
     }
 
     public class FlyerEnvioEstado

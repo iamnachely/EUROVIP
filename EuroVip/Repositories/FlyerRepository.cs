@@ -22,6 +22,10 @@ namespace EuroVip.Repositories
         Task<int> EstadoContactosAsync(IEnumerable<int> ids, bool activo);
         Task<(int Nuevos, int Repetidos, int Invalidos)> ImportarAsync(string texto);
         Task<List<FlyerEnvio>> EnviosAsync();
+        /// <summary>Editor de Flyer Editar: hoteles con su precio más barato a la venta (Solo Hotel o Paquetes), por destino y/o nombre.</summary>
+        Task<List<FlyerHotelPrecio>> HotelesConPrecioAsync(string? texto, string? destino, int? idAlojamiento = null);
+        /// <summary>Hoteles por nombre aunque no tengan ofertas (el editor los muestra; el precio se escribe a mano).</summary>
+        Task<List<FlyerHotelPrecio>> HotelesPorNombreAsync(string texto);
         Task RegistrarEnvioAsync(FlyerEnvio e);
     }
 
@@ -57,6 +61,39 @@ namespace EuroVip.Repositories
 
         /// <summary>«Agencia» o «Cliente» (cualquier otro valor = Cliente, que es lo que había antes de Flyer Agencia).</summary>
         public static string Tipo(string? tipo) => string.Equals(tipo?.Trim(), IFlyerRepository.Agencia, StringComparison.OrdinalIgnoreCase) ? IFlyerRepository.Agencia : IFlyerRepository.Cliente;
+
+        private const string HotelesPrecio = @"
+            ;WITH p AS (
+                SELECT a.id_alojamiento, a.nombre, a.caratula, a.id_destino, r.descripcion AS regimen, ah.nombre AS habitacion, sd.desde,
+                       CAST(ROUND(s.precio_base * (1.0 - s.descuento / 100.0) + ISNULL(s.precio_mas_menos, 0) + ISNULL(s.ajuste, 0)
+                                  + ISNULL((SELECT SUM(st.valor) FROM Eurovip.servicio_tasa st WHERE st.id_Servicio = s.id_servicio), 0)
+                                  + ISNULL(sh.precio, 0), 0) AS INT) AS precio
+                FROM Eurovip.servicio s
+                    JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.id_idioma = s.id_idioma
+                    JOIN Eurovip.alojamiento a ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
+                    JOIN Eurovip.regimen r ON r.id_regimen = sd.id_regimen AND r.id_idioma = sd.id_idioma
+                    JOIN Eurovip.servicio_habitacion sh ON sh.id_servicio = s.id_servicio AND sh.id_alojamiento = sd.id_alojamiento
+                    JOIN Eurovip.alojamiento_habitacion ah ON ah.id_alojamiento = sh.id_alojamiento AND ah.id_habitacion = sh.id_habitacion AND ah.id_idioma = s.id_idioma
+                WHERE s.id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES') AND s.activo = 1 AND s.id_idioma = 'ES' AND sd.desde > CAST(GETDATE() AS date)
+                  AND (@destino IS NULL OR a.id_destino = @destino) AND (@id IS NULL OR a.id_alojamiento = @id)
+                  AND (@texto IS NULL OR a.nombre LIKE '%' + @texto + '%')
+            ), r AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY id_alojamiento ORDER BY precio, desde) AS rn FROM p)
+            SELECT TOP 30 id_alojamiento AS Id_Alojamiento, nombre AS Nombre, caratula AS Caratula, id_destino AS Destino, regimen AS Regimen,
+                   habitacion AS Habitacion, desde AS Desde, precio AS Precio
+            FROM r WHERE rn = 1 ORDER BY precio";
+
+        public async Task<List<FlyerHotelPrecio>> HotelesConPrecioAsync(string? texto, string? destino, int? idAlojamiento = null)
+        {
+            using var cn = _db.Conexion();
+            return (await cn.QueryAsync<FlyerHotelPrecio>(HotelesPrecio, new { texto = Vacio(texto), destino = Vacio(destino), id = idAlojamiento })).ToList();
+        }
+
+        public async Task<List<FlyerHotelPrecio>> HotelesPorNombreAsync(string texto)
+        {
+            using var cn = _db.Conexion();
+            return (await cn.QueryAsync<FlyerHotelPrecio>(@"SELECT TOP 30 id_alojamiento AS Id_Alojamiento, nombre AS Nombre, caratula AS Caratula, id_destino AS Destino
+                FROM Eurovip.alojamiento WHERE id_idioma = 'ES' AND activo = 1 AND nombre LIKE '%' + @texto + '%' ORDER BY nombre", new { texto = texto.Trim() })).ToList();
+        }
 
         public async Task<List<FlyerConfig>> ConfigsAsync(string tipo = IFlyerRepository.Cliente)
         {

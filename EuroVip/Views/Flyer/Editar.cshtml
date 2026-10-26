@@ -136,6 +136,7 @@
     </div>
     <span class="sp"></span>
     <div class="acts">
+        <a class="ev-btn light sm" href="/Flyer/Editor"><i class="bi bi-pencil-square"></i> Abrir editor</a>
         <button type="button" class="ev-btn light sm" id="flPrecios"><i class="bi bi-arrow-repeat"></i> Actualizar precios</button>
         <button type="button" class="ev-btn aqua sm" id="flGenerar"><i class="bi bi-magic"></i> Generar flyers</button>
     </div>
@@ -196,7 +197,12 @@
                 <div class="ui-help" style="margin:0 0 8px"><i class="bi bi-info-circle"></i> Los flyers se envían con la plantilla aprobada de WhatsApp y <b>siempre llegan</b>, con un saludo con el nombre del contacto.
                     Este mensaje extra solo le llega a quien te haya escrito por WhatsApp en las últimas 24 horas (regla de WhatsApp).</div>
                 <textarea id="eTexto" class="ui-input" rows="3" maxlength="1000" style="width:100%">Hola {nombre} 👋 Estas son nuestras ofertas de la semana a República Dominicana. ¡Escríbenos para reservar!</textarea></div>
-            <div class="fl-paso"><h3><span>3</span> ¿A quién?</h3>
+            <div class="fl-paso"><h3><span>3</span> Tipo de mensaje</h3>
+                <div class="fl-opc">
+                    <label><input type="radio" name="eLink" value="no" checked><span><b>Sin link</b><small>Plantilla «cliente»: el flyer y un saludo con el nombre del contacto.</small></span></label>
+                    <label><input type="radio" name="eLink" value="si"><span><b>Con botón a la web</b><small>Plantilla «cliente_info»: además, un botón que abre la página del destino del flyer en la web. Cada flyer tiene que ser de un destino.</small></span></label>
+                </div></div>
+            <div class="fl-paso"><h3><span>4</span> ¿A quién?</h3>
                 <div class="fl-opc">
                     <label><input type="radio" name="aQuien" value="prueba" checked><span><b>Prueba a un número</b><small>Recomendado antes de enviar a todos.</small><input id="eNum" class="ui-input" placeholder="34600111222 (con código de país)" style="margin-top:8px;width:100%"></span></label>
                     <label><input type="radio" name="aQuien" value="todos"><span><b>Todos los contactos activos</b><small id="eTotal"></small></span></label>
@@ -374,7 +380,7 @@
     }
     async function enviar() {
         const imgs = D.galeria.filter(g => elegidas.has(clave(g))).map(clave), quien = $('input[name=aQuien]:checked').value;
-        const dto = { Imagenes: imgs, Texto: $('#eTexto').value.trim() || null, NumeroPrueba: quien === 'prueba' ? $('#eNum').value.trim() : null, Contactos: [] };
+        const dto = { Imagenes: imgs, Texto: $('#eTexto').value.trim() || null, NumeroPrueba: quien === 'prueba' ? $('#eNum').value.trim() : null, Contactos: [], ConLink: $('input[name=eLink]:checked').value === 'si' };
         if (quien === 'prueba' && !dto.NumeroPrueba) { EV.toast('Escribe el número de prueba.', 'err'); return; }
         const ok = quien === 'prueba'
             ? await EV.confirmar({ titulo: '¿Enviar la prueba?', texto: `Se enviarán ${imgs.length} flyer(s)${dto.Texto ? ' y el mensaje' : ''} al <b>+${esc(dto.NumeroPrueba.replace(/\D/g, ''))}</b>.`, si: 'Enviar prueba', icono: 'whatsapp' })

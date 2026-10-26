@@ -16,6 +16,8 @@ namespace EuroVip.Services
         byte[] Zip(IEnumerable<string> rutas);
         string? FondoUrl(string nombreDestino);
         Task<string> GuardarFondoAsync(string nombreDestino, IFormFile archivo, string ext);
+        /// <summary>PNG que dibuja el editor del navegador (data:image/png;base64,…) → galería de hoy: flyer_{nombre}_editor_{hora}.png.</summary>
+        Task<FlyerImagen> GuardarPngAsync(string dataUrl, string nombre);
     }
 
     /// <summary>
@@ -107,6 +109,25 @@ namespace EuroVip.Services
             using var foto = FotoDe(d.Nombre_Destino) ?? FotoDe("Punta Cana");
             using var png = FlyerPlantillas.Dibujar(plantilla, d, foto, fuentes, Web);
             return png.ToArray();
+        }
+
+        public async Task<FlyerImagen> GuardarPngAsync(string dataUrl, string nombre)
+        {
+            var coma = dataUrl.IndexOf(',');
+            byte[] bytes;
+            try { bytes = Convert.FromBase64String(coma >= 0 ? dataUrl[(coma + 1)..] : dataUrl); } catch { throw new InvalidOperationException("La imagen llegó dañada."); }
+            if (bytes.Length > 15 * 1024 * 1024) throw new InvalidOperationException("La imagen pesa demasiado.");
+            if (bytes.Length < 8 || bytes[0] != 0x89 || bytes[1] != 0x50 || bytes[2] != 0x4E || bytes[3] != 0x47) throw new InvalidOperationException("La imagen tiene que ser PNG.");
+            var dia = DateTime.Now.ToString("yyyy-MM-dd");
+            var carpeta = System.IO.Path.Combine(Raiz, dia);
+            Directory.CreateDirectory(carpeta);
+            var baseNom = Seguro(nombre);
+            if (baseNom == "") baseNom = "flyer";
+            if (baseNom.Length > 80) baseNom = baseNom[..80];
+            var archivo = $"flyer_{baseNom}_editor_{DateTime.Now:HHmmss}.png";
+            for (var i = 2; File.Exists(System.IO.Path.Combine(carpeta, archivo)); i++) archivo = $"flyer_{baseNom}_editor{i}_{DateTime.Now:HHmmss}.png";
+            await File.WriteAllBytesAsync(System.IO.Path.Combine(carpeta, archivo), bytes);
+            return new FlyerImagen { Carpeta = dia, Archivo = archivo, Url = $"/{Carpeta}/{dia}/{Uri.EscapeDataString(archivo)}", Bytes = bytes.Length, Fecha = DateTime.Now };
         }
 
         public List<FlyerImagen> Galeria()

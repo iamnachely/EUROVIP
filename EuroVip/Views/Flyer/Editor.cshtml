@@ -1,0 +1,2452 @@
+@model EuroVip.Models.FlyerEditorModelo
+@* Editor de Flyer Editar (clientes): copia del editor de Flyer Cliente de BackTiTan (FlyerCliente/Editor.cshtml)
+   con los datos y la marca de Eurovip: destinos tipo «Cliente», hoteles de Solo Hotel y Paquetes, fondos de
+   uploads/flyers/fondos, logo Eurovip Travel, eurovip.com.do y precios en RD$. Lo que se guarda va a la galería de Flyer Editar. *@
+@{
+    ViewData["Title"] = "Flyer Editar — Editor";
+    var hayDatos = Model.Destinos.Any();
+    var primer   = Model.Destinos.FirstOrDefault();
+    var fondosDict = Model.Fondos;
+    string heroImgUrl = primer != null && fondosDict.TryGetValue(primer.Nombre_Destino, out var fondoUrl0)
+        ? fondoUrl0
+        : "";
+    var heroBg = !string.IsNullOrEmpty(heroImgUrl)
+        ? $"background: linear-gradient(to bottom, rgba(0,30,42,.15) 0%, rgba(0,30,42,.72) 100%), url('{heroImgUrl}') center/cover no-repeat;"
+        : "background: linear-gradient(155deg, #003d52 0%, #00647a 55%, #003d52 100%);";
+    var primerNombre    = primer?.Nombre_Destino ?? "Destino";
+    var posInitColors   = new[] { "#f5a623", "#6ec6f5", "#e07b39", "#cbd5e1", "#cbd5e1" };
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet" />
+
+<style>
+.flyerpage { padding: 28px 24px 60px; }
+
+/* ── Tab switcher ── */
+.tab-switcher { display: flex; gap: 4px; background: #f1f5f9; border-radius: 12px; padding: 4px; width: fit-content; }
+.tab-btn { padding: 9px 24px; border: none; border-radius: 9px; font-size: .88rem; font-weight: 700; cursor: pointer; background: transparent; color: #64748b; transition: all .2s; }
+.tab-btn.active { background: #fff; color: #0a3d3d; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ── Style toolbar ── */
+.style-toolbar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; flex-wrap: wrap; margin: 8px 0 4px; }
+.st-sep { width: 1px; height: 20px; background: #e2e8f0; flex-shrink: 0; }
+.st-btn { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 14px; font-size: .82rem; font-weight: 600; cursor: pointer; color: #334155; white-space: nowrap; transition: background .15s, border-color .15s; display: inline-flex; align-items: center; gap: 6px; }
+.st-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+.st-btn.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+.st-color-preview { display: inline-flex; gap: 4px; align-items: center; }
+.st-dot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(0,0,0,.1); display: inline-block; flex-shrink: 0; }
+
+/* ── Color modal backdrop ── */
+.c-backdrop { position: fixed; inset: 0; z-index: 10000; background: rgba(15,23,42,.55); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.c-modal { background: #fff; border-radius: 22px; width: 580px; max-width: 100%; box-shadow: 0 40px 100px rgba(0,0,0,.28), 0 0 0 1px rgba(255,255,255,.05); overflow: hidden; animation: cModalIn .2s cubic-bezier(.34,1.3,.64,1); }
+@@keyframes cModalIn { from { opacity:0; transform:scale(.93) translateY(-12px); } to { opacity:1; transform:none; } }
+
+.c-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 18px; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); }
+.c-header-title { font-size: 1rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 10px; }
+.c-header-sub { font-size: .75rem; color: rgba(255,255,255,.5); font-weight: 400; margin-top: 2px; }
+.c-close { background: rgba(255,255,255,.12); border: none; border-radius: 9px; width: 34px; height: 34px; color: rgba(255,255,255,.8); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: .85rem; transition: background .15s; flex-shrink: 0; }
+.c-close:hover { background: rgba(255,255,255,.22); color: #fff; }
+
+.c-body { padding: 22px 24px 8px; display: flex; gap: 18px; }
+.c-col { flex: 1; min-width: 0; }
+.c-col-label { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+.c-col-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; transition: background .2s; }
+.c-palette { display: grid; grid-template-columns: repeat(6,1fr); gap: 7px; margin-bottom: 12px; }
+.c-swatch { aspect-ratio: 1; border-radius: 9px; border: 2.5px solid transparent; cursor: pointer; transition: transform .12s, border-color .12s, box-shadow .12s; position: relative; }
+.c-swatch:hover { transform: scale(1.18); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.c-swatch.sel { border-color: #0f172a; transform: scale(1.12); box-shadow: 0 4px 14px rgba(0,0,0,.22); }
+.c-swatch.sel::after { content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: .6rem; font-weight: 900; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+.c-swatch[data-color="#ffffff"].sel::after { color: #334155; text-shadow: none; }
+.c-preview-box { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 11px; padding: 12px 14px; text-align: center; }
+.c-preview-price { font-family: Arial,sans-serif; font-size: 1.7rem; font-weight: 800; transition: color .18s; }
+.c-preview-euro { font-size: 1.1rem; font-weight: 400; opacity: .75; }
+.c-preview-lbl { font-size: .7rem; color: #94a3b8; margin-top: 4px; }
+.c-divider { width: 1px; background: #f1f5f9; flex-shrink: 0; margin: 0 2px; }
+
+.c-footer { padding: 14px 24px 20px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.c-custom-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+.c-custom-lbl { font-size: .78rem; font-weight: 600; color: #64748b; white-space: nowrap; }
+.c-custom-input { width: 34px; height: 34px; border: 2px solid #e2e8f0; border-radius: 8px; padding: 1px; cursor: pointer; background: none; }
+.c-apply { font-size: .76rem; font-weight: 700; padding: 5px 10px; border: 1.5px solid #e2e8f0; border-radius: 7px; background: #f8fafc; color: #334155; cursor: pointer; white-space: nowrap; transition: all .12s; }
+.c-apply:hover { background: #f1f5f9; border-color: #94a3b8; }
+.c-done { padding: 8px 22px; background: linear-gradient(135deg, #0f172a, #1e3a5f); color: #fff; border: none; border-radius: 10px; font-size: .85rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+.c-done:hover { opacity: .85; }
+
+/* ── Layout ── */
+.fb-layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start; }
+@@media (max-width: 900px) { .fb-layout { grid-template-columns: 1fr; } }
+.fb-controls { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 20px; min-width: 0; }
+.fb-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 20px; box-shadow: 0 2px 12px rgba(0,0,0,.05); min-width: 0; max-width: 100%; }
+.fb-card-title { font-size: .7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #94a3b8; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.fb-card-title i { font-size: .9rem; }
+.dest-select { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .9rem; font-weight: 500; background: #f8fafc; cursor: pointer; transition: border-color .15s; }
+.dest-select:focus { outline: none; border-color: #0d7377; }
+
+/* ── Buttons ── */
+.btn-tp { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; border: none; border-radius: 10px; font-size: .85rem; font-weight: 600; cursor: pointer; transition: background .15s, transform .1s; text-decoration: none; width: 100%; justify-content: center; }
+.btn-tp + .btn-tp { margin-top: 8px; }
+.btn-tp:active { transform: scale(.97); }
+.btn-tp.teal  { background: #0d7377; color: #fff; }
+.btn-tp.teal:hover  { background: #0a5254; }
+.btn-tp.green { background: #2eb5a0; color: #fff; }
+.btn-tp.green:hover { background: #23907e; }
+.btn-tp.ghost { background: #f8fafc; color: #334155; border: 1.5px solid #e2e8f0; }
+.btn-tp.ghost:hover { background: #f1f5f9; }
+.btn-tp.dark  { background: #0f172a; color: #fff; }
+.btn-tp.dark:hover  { background: #1e293b; }
+.btn-tp:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
+.btn-tp .spin { animation: tspin .7s linear infinite; display: inline-block; }
+@@keyframes tspin { to { transform: rotate(360deg); } }
+
+.saved-bar { display: none; margin-top: 12px; padding: 10px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; font-size: .8rem; color: #15803d; align-items: center; gap: 8px; }
+.saved-bar.show { display: flex; }
+.saved-bar a { font-weight: 700; color: #15803d; }
+.status-dot  { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 6px; vertical-align: middle; }
+.status-label { font-size: .83rem; color: #334155; font-weight: 600; }
+.status-date  { font-size: .76rem; color: #94a3b8; margin-top: 4px; }
+
+/* ── Hoteles ocultos ── */
+.ocultos-panel { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 10px 14px; }
+.ocultos-title { font-size: .7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px; }
+.oculto-item { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e2e8f0; font-size: .82rem; }
+.oculto-item:last-child { border-bottom: none; }
+.oculto-item span { color: #334155; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
+.btn-restaurar { background: none; border: 1px solid #cbd5e1; border-radius: 6px; font-size: .75rem; padding: 3px 8px; cursor: pointer; color: #64748b; white-space: nowrap; transition: border-color .15s, color .15s; flex-shrink: 0; }
+.btn-restaurar:hover { border-color: #0f172a; color: #0f172a; }
+
+/* ── Flyer template ── */
+.fb-stage { display: flex; justify-content: center; padding: 4px 0 40px; }
+.fb-scale-wrap { transform-origin: top center; }
+.flyer { width: 900px; min-height: 1200px; background: #fff; font-family: Arial, sans-serif; position: relative; overflow: hidden; box-shadow: 0 32px 80px rgba(0,61,82,.26); display: flex; flex-direction: column; }
+.flyer-accent { height: 9px; background: linear-gradient(90deg, #e76f51, #f4a261, #f9c74f, #f4a261, #e76f51); flex-shrink: 0; }
+.flyer-hero { background-color: #003d52; background-size: cover; background-position: center; min-height: 100px; padding: 16px 66px; flex-shrink: 0; position: relative; overflow: visible; display: flex; flex-direction: column; justify-content: flex-end; }
+.flyer-hero::before { content: ''; position: absolute; top: -90px; right: -90px; width: 390px; height: 390px; border-radius: 50%; background: rgba(249,199,79,.06); pointer-events: none; }
+.flyer-hero::after  { content: ''; position: absolute; bottom: -75px; left: -60px; width: 300px; height: 300px; border-radius: 50%; background: rgba(231,111,81,.06); pointer-events: none; }
+.flyer-title    { font-family: 'Playfair Display', serif; font-weight: 900; font-size: var(--tam-titulo,6.5rem); line-height: 1; color: #fff; margin: 0 0 12px; letter-spacing: -.5px; text-shadow: 0 2px 18px rgba(0,0,0,.35); }
+.flyer-subtitle { font-size: var(--tam-subtitulo,1.1rem); color: rgba(255,255,255,.5); letter-spacing: .5px; margin-bottom: 36px; }
+.flyer-section-title { font-size: .88rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: #e76f51; padding: 26px 66px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 14px; }
+.flyer-section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, #f1f5f9, transparent); }
+.flyer-hotels { flex: 1; }
+.fh-row { display: flex; align-items: flex-start; gap: 10px; padding: 20px 50px 20px 20px; border-bottom: 1px solid #f8fafc; border-left: 3px solid transparent; position: relative; }
+.fh-row:last-child { border-bottom: none; }
+.fh-row.best { background: linear-gradient(90deg, rgba(245,158,11,.06) 0%, transparent 55%); border-left: 3px solid #f59e0b; padding-left: 17px; }
+.fh-pos { font-family: Arial, sans-serif; font-size: 2.1rem; font-weight: 900; min-width: 52px; text-align: center; color: #cbd5e1; }
+.fh-pos.gold   { color: #f5a623; text-shadow: 0 0 12px rgba(245,166,35,.45); }
+.fh-pos.silver { color: #6ec6f5; text-shadow: 0 0 12px rgba(110,198,245,.35); }
+.fh-pos.bronze { color: #e07b39; text-shadow: 0 0 12px rgba(224,123,57,.35); }
+.fh-sep  { width: 1px; height: 56px; background: #e2e8f0; flex-shrink: 0; }
+.fh-info { flex: 1; min-width: 0; }
+.fh-name { font-size: var(--tam-nombre,2.1rem); font-weight: 700; color: #0f172a; white-space: normal; overflow: visible; }
+.fh-meta { font-size: var(--tam-regimen,1.85rem); font-weight: 700; color: #e07b39; margin-top: 4px; }
+.fh-best-tag { display: inline-flex; align-items: center; gap: 4px; font-size: .95rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #f59e0b; margin-top: 5px; }
+.fh-price { font-family: Arial, sans-serif; font-weight: 700; font-size: var(--tam-precio,2.75rem); color: #003d52; white-space: nowrap; text-align: right; align-self: flex-end; margin-top: auto; padding-top: 3.5rem; }
+.fh-price.rank1 { color: #f59e0b; }
+.precio-sym { font-size: 1.6rem; font-weight: 400; opacity: .75; margin-right: 2px; }
+.precio-val[contenteditable="true"] { cursor: text; min-width: 40px; display: inline-block; }
+.precio-val[contenteditable="true"]:focus { outline: 1.5px solid rgba(0,119,182,.3); border-radius: 4px; background: rgba(0,119,182,.05); }
+
+/* ── Hide hotel button ── */
+.btn-hide-hotel { position: absolute; top: 8px; right: 10px; background: none; border: none; cursor: pointer; color: #cbd5e1; font-size: 1rem; padding: 4px 7px; border-radius: 6px; transition: color .15s, background .15s; opacity: 0; }
+.fh-row:hover .btn-hide-hotel { opacity: 1; }
+.btn-hide-hotel:hover { color: #64748b; background: #f1f5f9; }
+
+/* ── Contenteditable focus ── */
+.flyer-title[contenteditable="true"]:focus,
+.flyer-subtitle[contenteditable="true"]:focus { outline: 2px dashed rgba(255,255,255,.35); border-radius: 4px; }
+.flyer-section-title[contenteditable="true"]:focus,
+.ff-url[contenteditable="true"]:focus,
+.ff-tag[contenteditable="true"]:focus,
+.fh-name[contenteditable="true"]:focus,
+.fh-meta[contenteditable="true"]:focus { outline: 1.5px solid rgba(0,119,182,.25); border-radius: 4px; background: rgba(0,119,182,.04); }
+[contenteditable="true"] { outline: none; }
+
+.flyer-footer { padding: 24px 66px; display: flex; align-items: center; gap: 26px; background: #fff; border-top: 1px solid #f1f5f9; flex-shrink: 0; font-size: var(--tam-footer, 1rem); }
+.ff-line  { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #00647a 40%, transparent); }
+.ff-brand { display: flex; flex-direction: column; align-items: center; }
+.ff-url   { font-family: Arial, sans-serif; font-size: .6em; font-weight: 700; color: #003d52; letter-spacing: .5px; white-space: nowrap; }
+.ff-tag   { font-size: .86em; color: #94a3b8; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
+.logo-panel { display: flex; flex-direction: column; gap: 12px; min-width: 0; width: 100%; }
+.logo-preview-box { min-height: 122px; padding: 14px; border-radius: 12px; border: 1px dashed #cbd5e1; background: #f8fafc; display: flex; align-items: center; justify-content: center; }
+.logo-preview-box img { max-width: 100%; max-height: 96px; object-fit: contain; display: block; }
+.logo-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.logo-actions .btn-tp { width: auto; flex: 1 1 132px; margin-top: 0 !important; }
+.logo-hint { font-size: .76rem; color: #64748b; line-height: 1.35; overflow-wrap: break-word; word-break: break-all; max-width: 100%; }
+.flyer-empty-hint { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 40px; text-align: center; }
+.flyer-empty-hint i { font-size: 2.8rem; color: #cbd5e1; display: block; margin-bottom: 14px; }
+.flyer-empty-hint p { font-size: .95rem; color: #94a3b8; }
+
+/* ── Editor panel ── */
+.hc-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.hc-num { font-size: .8rem; font-weight: 800; color: #0f172a; min-width: 18px; text-align: center; }
+.hc-row .ts-wrapper { flex: 1; min-width: 0; }
+.hc-del { background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1rem; padding: 5px 7px; border-radius: 7px; transition: background .15s; flex-shrink: 0; }
+.hc-del:hover { background: #fee2e2; }
+.dest-group + .dest-group { padding-top: 12px; margin-top: 4px; border-top: 1px solid #f1f5f9; }
+.dest-group-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.dest-group-hdr .ts-wrapper { flex: 1; min-width: 0; }
+.dest-group-del { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1rem; padding: 4px 6px; border-radius: 6px; flex-shrink: 0; transition: color .15s, background .15s; }
+.dest-group-del:hover { color: #dc2626; background: #fee2e2; }
+.btn-add-hotel-sm { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 5px 12px; border: 1px dashed #cbd5e1; border-radius: 8px; font-size: .78rem; font-weight: 600; color: #64748b; background: none; cursor: pointer; width: 100%; margin-top: 4px; transition: border-color .15s, color .15s, background .15s; }
+.btn-add-hotel-sm:hover:not(:disabled) { border-color: #0f172a; color: #0f172a; background: #f8fafc; }
+.btn-add-hotel-sm:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Template strip ── */
+.tpl-strip { display:flex; gap:6px; align-items:center; padding:8px 0 4px; flex-wrap:wrap; }
+.tpl-tab { display:inline-flex; align-items:center; gap:7px; padding:7px 14px; border:1.5px solid #e2e8f0; border-radius:9px; background:#fff; font-size:.82rem; font-weight:600; color:#64748b; cursor:pointer; transition:all .15s; user-select:none; }
+.tpl-tab:hover { border-color:#94a3b8; background:#f8fafc; }
+.tpl-tab.active { border-color:#0d7377; background:#f0fdfa; color:#0d7377; }
+.tpl-name { outline:none; min-width:50px; max-width:120px; cursor:text; }
+.tpl-del { background:none; border:none; color:#94a3b8; cursor:pointer; font-size:.8rem; padding:0 2px; transition:color .15s; line-height:1; flex-shrink:0; }
+.tpl-del:hover { color:#dc2626; }
+.btn-nueva-tpl { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border:1.5px dashed #cbd5e1; border-radius:9px; background:none; font-size:.82rem; font-weight:600; color:#64748b; cursor:pointer; transition:all .15s; }
+.btn-nueva-tpl:hover { border-color:#0d7377; color:#0d7377; background:#f0fdfa; }
+
+/* ── Mini swatches (extended color modal) ── */
+.c-mini-sec { padding:0 24px 16px; border-top:1px solid #f1f5f9; }
+.c-mini-header { font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:2px; color:#94a3b8; margin:14px 0 10px; }
+.c-mini-grid { display:flex; gap:8px; flex-wrap:wrap; }
+.c-mini-col { flex:1; min-width:80px; }
+.c-mini-lbl { font-size:.7rem; font-weight:700; color:#64748b; margin-bottom:6px; display:flex; align-items:center; gap:5px; }
+.c-mini-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; transition:background .2s; }
+.c-mini-pal { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; }
+.c-mini-sw { aspect-ratio:1; border-radius:5px; border:2px solid transparent; cursor:pointer; transition:transform .12s, border-color .12s; }
+.c-mini-sw:hover { transform:scale(1.2); }
+.c-mini-sw.sel { border-color:#0f172a; }
+.c-mini-prev { height:14px; border-radius:4px; margin-top:4px; border:1px solid #e2e8f0; transition:background .15s; }
+
+/* ── Tipografía modal ── */
+.tam-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #f1f5f9; }
+.tam-row:last-child { border-bottom:none; }
+.tam-label { font-size:.8rem; font-weight:600; color:#334155; min-width:120px; flex-shrink:0; }
+.tam-slider { flex:1; accent-color:#0d7377; }
+.tam-val { font-size:.8rem; font-weight:700; color:#0d7377; min-width:50px; text-align:right; white-space:nowrap; }
+
+/* ── Fondo gallery modal ── */
+.fondo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:12px 20px; max-height:270px; overflow-y:auto; }
+.fondo-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; border:2.5px solid transparent; transition:border-color .15s, box-shadow .15s; background:#e2e8f0; aspect-ratio:3/4; }
+.fondo-item:hover { border-color:#0d7377; box-shadow:0 4px 14px rgba(0,0,0,.15); }
+.fondo-item.sel { border-color:#f59e0b; }
+.fondo-item img { width:100%; height:100%; object-fit:cover; display:block; }
+.fondo-item-name { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.65); padding:5px 7px; font-size:.7rem; color:#fff; font-weight:600; outline:none; }
+.fondo-empty { padding:36px 20px; text-align:center; color:#94a3b8; font-size:.88rem; }
+
+/* ── Toast ── */
+.flyer-toast { position: fixed; bottom: 28px; right: 28px; padding: 13px 20px; border-radius: 10px; font-size: .84rem; font-weight: 600; color: #fff; box-shadow: 0 8px 30px rgba(0,0,0,.2); z-index: 9999; opacity: 0; transform: translateY(10px); transition: opacity .3s, transform .3s; pointer-events: none; }
+.flyer-toast.show { opacity: 1; transform: none; }
+.flyer-toast.ok   { background: #16a34a; }
+.flyer-toast.err  { background: #dc2626; }
+.flyer-toast.info { background: #0d7377; }
+/* utilidades de Bootstrap que usa el editor (Eurovip solo carga bootstrap-reboot) */
+.me-1 { margin-right: .25rem; } .ms-auto { margin-left: auto; } .mt-2 { margin-top: .5rem; } .mt-3 { margin-top: 1rem; } .mb-0 { margin-bottom: 0; }
+.small { font-size: .875em; } .text-muted { color: #64748b; } .d-none { display: none !important; }
+.ev-nav-editor { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; padding: 12px 16px; border-radius: 16px; background: #fff; border: 1px solid #e2e8f0; }
+.ev-nav-editor a { color: #0d7377; font-weight: 700; text-decoration: none; font-size: .9rem; }
+.ev-nav-editor a.ir { padding: 7px 14px; border-radius: 10px; background: #0d7377; color: #fff; }
+.ev-nav-editor b { font-size: 1rem; }
+</style>
+
+<div class="flyerpage">
+
+    @Html.AntiForgeryToken()
+    <div class="ev-nav-editor">
+        <a href="/Flyer/Hub"><i class="bi bi-arrow-left"></i> Centro de Flyers</a>
+        <b><i class="bi bi-person-check-fill"></i> Flyer Editar · Editor</b>
+        <span style="flex:1"></span>
+        <a href="/Flyer/Editar" class="ir"><i class="bi bi-images"></i> Galería, contactos y envío</a>
+    </div>
+
+    <!-- ── Tabs ── -->
+    <div class="tab-switcher mb-0">
+        <button class="tab-btn active" data-tab="modelo" onclick="switchTab('modelo',this)">
+            <i class="bi bi-layout-text-sidebar-reverse me-1"></i> Modelo
+        </button>
+        <button class="tab-btn" data-tab="editor" onclick="switchTab('editor',this)">
+            <i class="bi bi-pencil-square me-1"></i> Editor
+        </button>
+    </div>
+
+    <!-- ── Shared toolbar ── -->
+    <div class="style-toolbar">
+        <button id="btnAbrirColores" class="st-btn">
+            <i class="bi bi-palette-fill"></i> Colores
+            <span class="st-color-preview">
+                <span class="st-dot" id="dotBtnRank1" style="background:#f59e0b;"></span>
+                <span class="st-dot" id="dotBtnOtros" style="background:#003d52;"></span>
+            </span>
+        </button>
+        <span class="st-sep"></span>
+        <button id="btnAbrirTipografia" class="st-btn"><i class="bi bi-fonts"></i> Tipografía</button>
+        <span class="st-sep"></span>
+        <button id="btnAbrirFondo" class="st-btn"><i class="bi bi-image-fill"></i> Fondos</button>
+        <span class="st-sep"></span>
+        <button id="btnToggleLogo" class="st-btn"><i class="bi bi-image"></i> Logo</button>
+    </div>
+
+    <!-- ══════════════════════════════════
+         TAB: MODELO
+    ══════════════════════════════════ -->
+    <div id="tab-modelo" class="tab-pane active mt-3">
+        <div class="fb-layout">
+            <div class="fb-controls">
+                <div class="fb-card">
+                    <div class="fb-card-title"><i class="bi bi-geo-alt-fill"></i> Destino</div>
+                    <select id="destinoSelect" class="dest-select">
+                        @if (!Model.Destinos.Any())
+                        {
+                            <option value="">— Sin datos disponibles —</option>
+                        }
+                        @foreach (var d in Model.Destinos)
+                        {
+                            <option value="@d.Id_Destino" data-nombre="@d.Nombre_Destino">@d.Nombre_Destino</option>
+                        }
+                    </select>
+                    @if (!Model.Configs.Any())
+                    {
+                        <div class="mt-2 small text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Sin configuraciones de tipo Cliente.
+                            <a href="/Flyer/Editar" style="color:#0d7377;">Agregar</a>
+                        </div>
+                    }
+                </div>
+
+                <div class="fb-card">
+                    <div class="fb-card-title"><i class="bi bi-info-circle"></i> Estado</div>
+                    <div class="status-label">
+                        <span class="status-dot"></span>
+                        @(Model.UltimaActualizacion.HasValue ? "Datos disponibles" : "Sin datos")
+                    </div>
+                    @if (Model.UltimaActualizacion.HasValue)
+                    {
+                        <div class="status-date">Última actualización: @Model.UltimaActualizacion.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                    }
+                </div>
+
+                <div id="ocultosPanelModelo" class="ocultos-panel" style="display:none;"></div>
+
+                <div class="fb-card">
+                    <div class="fb-card-title"><i class="bi bi-lightning-fill"></i> Acciones</div>
+                    <button id="btnActualizar" class="btn-tp teal" onclick="actualizarDestino()">
+                        <i class="bi bi-arrow-clockwise"></i> Actualizar precios
+                    </button>
+
+                    @* [2026-08-05] Nombre editable del flyer — el input siempre visible muestra
+                       el nombre con que se guardará el archivo del destino actualmente seleccionado.
+                       Validación en vivo: debe contener el nombre de un destino de configuración. *@
+                    <div style="margin-top:10px;">
+                        <label for="nombreArchivoInput" style="display:block;font-size:.75rem;font-weight:700;color:#334155;letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px;">
+                            <i class="bi bi-file-earmark-image"></i> Nombre del flyer
+                        </label>
+                        <input id="nombreArchivoInput" type="text"
+                               style="width:100%;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:.82rem;font-family:'SF Mono',Consolas,monospace;color:#0f172a;background:#f8fafc;"
+                               placeholder="cliente_DESTINO_p1_YYYYMMDD.png"
+                               autocomplete="off" />
+                        <div id="nombreArchivoHint" style="margin-top:4px;font-size:.72rem;color:#64748b;line-height:1.35;">
+                            Debe contener un destino de configuración.
+                        </div>
+                    </div>
+
+                    <button id="btnGuardar" class="btn-tp green" onclick="guardarImagen()" style="margin-top:8px;">
+                        <i class="bi bi-download"></i> Guardar flyer
+                    </button>
+                    <a href="/Flyer/Editar" class="btn-tp dark" style="margin-top:8px;background:linear-gradient(135deg,#0d7377,#065f46);">
+                        <i class="bi bi-whatsapp"></i> Ir a envío WhatsApp
+                    </a>
+                    <a href="/Flyer/Editar" class="btn-tp ghost" style="margin-top:8px;">
+                        <i class="bi bi-images"></i> Ver flyers guardados
+                    </a>
+                    <div id="savedBar" class="saved-bar">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Guardado: <a id="savedLink" href="#" target="_blank">ver imagen</a></span>
+                    </div>
+                </div>
+
+                @if (Model.Configs.Any())
+                {
+                    <div class="fb-card">
+                        <div class="fb-card-title"><i class="bi bi-sliders2"></i> Configuraciones</div>
+                        @foreach (var cfg in Model.Configs)
+                        {
+                            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;">
+                                <span style="font-size:.82rem;font-weight:600;color:#334155;">@(cfg.Nombre_Config ?? cfg.Nombre_Destino ?? cfg.Id_Destino)</span>
+                                <button class="btn-tp teal" style="width:auto;padding:4px 12px;font-size:.75rem;" onclick="actualizarConfig(@cfg.Id)">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Flyer Modelo -->
+            <div>
+                <div class="fb-stage" id="fbStage">
+                    <div id="flyerScaleWrap" class="fb-scale-wrap">
+                        <div class="flyer" id="flyerTemplate">
+                            <div class="flyer-accent"></div>
+                            <div class="flyer-hero" id="flyerHero" style="@heroBg">
+                                <div id="logoWrapModelo" style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;white-space:nowrap;">
+                                    <div style="width:70px;height:1.5px;background:linear-gradient(90deg,transparent,rgba(249,199,79,.7));"></div>
+                                    <div style="border:1.5px solid rgba(249,199,79,.45);border-radius:10px;padding:4px 10px;background:rgba(0,40,60,.35);backdrop-filter:blur(6px);">
+                                        <img src="@Model.Logo" alt="Eurovip Travel" style="height:100px;object-fit:contain;display:block;">
+                                    </div>
+                                    <div style="width:70px;height:1.5px;background:linear-gradient(90deg,rgba(249,199,79,.7),transparent);"></div>
+                                </div>
+                                <div style="height:260px;flex-shrink:0;"></div>
+                                <div class="flyer-title" id="flyerTitleEl" contenteditable="true" spellcheck="false">@primerNombre</div>
+                                <div class="flyer-subtitle" id="flyerSubtitleModelo" contenteditable="true" spellcheck="false">Oferta especial · Todo incluido · Salida Madrid</div>
+                                <div style="height:33px;"></div>
+                            </div>
+
+                            <div class="flyer-section-title" id="flyerSeccionModelo" contenteditable="true" spellcheck="false">Top hoteles más económicos</div>
+
+                            <div class="flyer-hotels" id="flyerHoteles">
+                                @if (!hayDatos)
+                                {
+                                    <div class="flyer-empty-hint">
+                                        <i class="bi bi-geo-alt"></i>
+                                        <p>Haz clic en <strong>Actualizar precios</strong> para cargar datos del destino.</p>
+                                    </div>
+                                }
+                                else
+                                {
+                                    var dest = primer!;
+                                    for (int i = 0; i < dest.Hoteles.Count; i++)
+                                    {
+                                        var h        = dest.Hoteles[i];
+                                        var pos      = i + 1;
+                                        var posColor = i < posInitColors.Length ? posInitColors[i] : "#cbd5e1";
+                                        <div class="fh-row @(pos==1?"best":"")" data-precio="@h.Precio_Final">
+                                            <div class="fh-pos" style="color:@posColor">@pos</div>
+                                            <div class="fh-sep"></div>
+                                            <div class="fh-info">
+                                                <div class="fh-name" contenteditable="true" spellcheck="false">@h.Nombre_Hotel</div>
+                                                <div class="fh-meta" contenteditable="true" spellcheck="false" style="color:#e07b39">@h.Regimen</div>
+                                                @if (pos == 1) { <div class="fh-best-tag"><i class="bi bi-star-fill" style="font-size:.85rem;"></i> Mejor precio</div> }
+                                            </div>
+                                            <div class="fh-price @(pos==1?"rank1":"")">
+                                                <span class="precio-sym">RD$&nbsp;</span><span class="precio-val" contenteditable="true" spellcheck="false">@h.Precio_Final</span>
+                                            </div>
+                                            <button class="btn-hide-hotel" title="Ocultar hotel" type="button"><i class="bi bi-eye-slash"></i></button>
+                                        </div>
+                                    }
+                                }
+                            </div>
+
+                            <div class="flyer-footer">
+                                <div class="ff-line"></div>
+                                <div class="ff-brand">
+                                    <div class="ff-url" id="footerUrlModelo" contenteditable="true" spellcheck="false">@Model.WebTexto</div>
+                                    <div class="ff-tag" id="footerTagModelo" contenteditable="true" spellcheck="false">tu agencia de confianza</div>
+                                </div>
+                                <div class="ff-line"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         TAB: EDITOR
+    ══════════════════════════════════ -->
+    <div id="tab-editor" class="tab-pane mt-3">
+        <div class="fb-layout">
+            <div class="fb-controls">
+                <div class="fb-card">
+                    <div class="fb-card-title"><i class="bi bi-geo-alt-fill"></i> Destinos y Hoteles</div>
+                    <div id="destGroupsContainer"></div>
+                    <button id="btnAgregarDestino" class="btn-tp dark" style="margin-top:10px;">
+                        <i class="bi bi-plus-circle"></i> Agregar otro destino
+                    </button>
+                </div>
+
+                <div id="ocultosPanelEditor" class="ocultos-panel" style="display:none;"></div>
+
+                <div class="fb-card">
+                    <div class="fb-card-title"><i class="bi bi-badge-ad"></i> Logo y enlace</div>
+                    <div class="logo-panel">
+                        <div class="logo-preview-box">
+                            <img id="logoPreviewEditor" src="@Model.Logo" alt="Logo actual">
+                        </div>
+                        <div class="logo-actions">
+                            <input type="file" id="logoFileInputEditor" accept="image/png" style="display:none">
+                            <button type="button" class="btn-tp ghost" id="btnCargarLogoEditor">
+                                <i class="bi bi-upload"></i> Cargar logo
+                            </button>
+                            <button type="button" class="btn-tp ghost" id="btnRestaurarLogoEditor">
+                                <i class="bi bi-arrow-counterclockwise"></i> Logo por defecto
+                            </button>
+                            <button type="button" class="btn-tp teal" id="btnEditarLinkOferta">
+                                <i class="bi bi-link-45deg"></i> Link del botón
+                            </button>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+                            <span style="font-size:.75rem;color:#64748b;white-space:nowrap;flex-shrink:0;"><i class="bi bi-arrows-expand"></i> Tamaño logo:</span>
+                            <input type="range" id="logoAlturaSlider" min="40" max="220" step="5" value="100" style="flex:1;accent-color:#0d7377;cursor:pointer;">
+                            <span id="logoAlturaVal" style="font-size:.75rem;font-weight:700;color:#0d7377;min-width:44px;text-align:right;">100px</span>
+                        </div>
+                        <div class="logo-hint" id="logoHintEditor">El logo y el link se guardan por plantilla y se restauran al volver a abrir el editor.</div>
+                    </div>
+                </div>
+
+                <div class="fb-card">
+                    <div class="fb-card-title"><i class="bi bi-download"></i> Exportar</div>
+                    <button id="btnDescargar" class="btn-tp teal">
+                        <i class="bi bi-file-earmark-image"></i> Descargar PNG
+                    </button>
+
+                    @* [2026-08-05] Nombre editable del flyer (tab Editor) — mismo control que
+                       en el tab Modelo. El auto-name se refresca usando el nombre del primer
+                       grupo/destino del editor si el usuario no ha editado el input. *@
+                    <div style="margin-top:10px;">
+                        <label for="nombreArchivoInputEditor" style="display:block;font-size:.75rem;font-weight:700;color:#334155;letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px;">
+                            <i class="bi bi-file-earmark-image"></i> Nombre del flyer
+                        </label>
+                        <input id="nombreArchivoInputEditor" type="text"
+                               style="width:100%;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:.82rem;font-family:'SF Mono',Consolas,monospace;color:#0f172a;background:#f8fafc;"
+                               placeholder="cliente_DESTINO_p1_YYYYMMDD.png"
+                               autocomplete="off" />
+                        <div id="nombreArchivoHintEditor" style="margin-top:4px;font-size:.72rem;color:#64748b;line-height:1.35;">
+                            Debe contener un destino de configuración.
+                        </div>
+                    </div>
+
+                    <button id="btnGuardarEditor" class="btn-tp green" style="margin-top:8px;">
+                        <i class="bi bi-cloud-upload"></i> Guardar PNG
+                    </button>
+                    <a href="/Flyer/Editar" class="btn-tp dark" style="margin-top:8px;background:linear-gradient(135deg,#0d7377,#065f46);">
+                        <i class="bi bi-whatsapp"></i> Ir a envío WhatsApp
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- Flyer Editor — template strip + canvas -->
+            <div>
+                <!-- Template strip -->
+                <div class="tpl-strip" id="tplStrip"></div>
+                <div class="fb-stage" id="fbStageEditor">
+                    <div id="flyerScaleWrapEditor" class="fb-scale-wrap">
+                        <div class="flyer" id="flyerTemplateEditor">
+                            <div class="flyer-accent"></div>
+                            <div class="flyer-hero" id="flyerHeroEditor" style="@heroBg">
+                                <div id="logoWrapEditor" style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;white-space:nowrap;">
+                                    <div style="width:70px;height:1.5px;background:linear-gradient(90deg,transparent,rgba(249,199,79,.7));"></div>
+                                    <div style="border:1.5px solid rgba(249,199,79,.45);border-radius:10px;padding:4px 10px;background:rgba(0,40,60,.35);backdrop-filter:blur(6px);">
+                                        <img id="flyerLogoEditor" src="@Model.Logo" alt="Eurovip Travel" style="height:100px;object-fit:contain;display:block;">
+                                    </div>
+                                    <div style="width:70px;height:1.5px;background:linear-gradient(90deg,rgba(249,199,79,.7),transparent);"></div>
+                                </div>
+                                <div style="height:260px;flex-shrink:0;"></div>
+                                <div class="flyer-title" id="flyerTitleEditor" contenteditable="true" spellcheck="false">@primerNombre</div>
+                                <div class="flyer-subtitle" id="flyerSubtitleEditor" contenteditable="true" spellcheck="false">Oferta especial · Todo incluido · Salida Madrid</div>
+                                <div style="height:33px;"></div>
+                            </div>
+                            <div class="flyer-section-title" id="flyerSeccionEditor" contenteditable="true" spellcheck="false">Top hoteles más económicos</div>
+                            <div class="flyer-hotels" id="flyerHotelesEditor">
+                                <div class="flyer-empty-hint" id="flyerEmptyHint">
+                                    <i class="bi bi-geo-alt"></i>
+                                    <p>Selecciona un <strong>destino</strong> y agrega hoteles para construir el flyer.</p>
+                                </div>
+                            </div>
+                            <div class="flyer-footer">
+                                <div class="ff-line"></div>
+                                <div class="ff-brand">
+                                    <div class="ff-url" id="footerUrlEditor" contenteditable="true" spellcheck="false">@Model.WebTexto</div>
+                                    <div class="ff-tag" id="footerTagEditor" contenteditable="true" spellcheck="false">tu agencia de confianza</div>
+                                </div>
+                                <div class="ff-line"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Color Modal ── -->
+<div id="colorModal" class="c-backdrop" style="display:none;">
+    <div class="c-modal">
+        <div class="c-header">
+            <div>
+                <div class="c-header-title"><i class="bi bi-palette-fill me-2"></i> Colores del flyer</div>
+                <div class="c-header-sub">Selecciona un tono para cada tipo de precio</div>
+            </div>
+            <button class="c-close" id="btnCerrarModalTop"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="c-body">
+            <!-- Rank 1 -->
+            <div class="c-col">
+                <div class="c-col-label">
+                    <span class="c-col-dot" id="dotRank1" style="background:#f59e0b;"></span>
+                    Precio más económico
+                </div>
+                <div class="c-palette" id="paletteRank1"></div>
+                <div class="c-preview-box">
+                    <div class="c-preview-price" id="previewPriceRank1" style="color:#f59e0b;"><span class="c-preview-euro">RD$ </span>1.234</div>
+                    <div class="c-preview-lbl">Precio #1</div>
+                </div>
+            </div>
+            <div class="c-divider"></div>
+            <!-- Otros -->
+            <div class="c-col">
+                <div class="c-col-label">
+                    <span class="c-col-dot" id="dotOtros" style="background:#003d52;"></span>
+                    Otros precios
+                </div>
+                <div class="c-palette" id="paletteOtros"></div>
+                <div class="c-preview-box">
+                    <div class="c-preview-price" id="previewPriceOtros" style="color:#003d52;"><span class="c-preview-euro">RD$ </span>2.567</div>
+                    <div class="c-preview-lbl">Precio #2, #3…</div>
+                </div>
+            </div>
+        </div>
+        <!-- Mini section: régimen + posiciones -->
+        <div class="c-mini-sec">
+            <div class="c-mini-header">Colores adicionales</div>
+            <div class="c-mini-grid">
+                <div class="c-mini-col">
+                    <div class="c-mini-lbl"><span class="c-mini-dot" id="dotRegimen" style="background:#e07b39;"></span>Régimen</div>
+                    <div class="c-mini-pal" id="mpRegimen"></div>
+                    <div class="c-mini-prev" id="pvRegimen" style="background:#e07b39;"></div>
+                </div>
+                <div class="c-mini-col">
+                    <div class="c-mini-lbl"><span class="c-mini-dot" id="dotPos1" style="background:#f5a623;"></span>N° 1</div>
+                    <div class="c-mini-pal" id="mpPos1"></div>
+                    <div class="c-mini-prev" id="pvPos1" style="background:#f5a623;"></div>
+                </div>
+                <div class="c-mini-col">
+                    <div class="c-mini-lbl"><span class="c-mini-dot" id="dotPos2" style="background:#6ec6f5;"></span>N° 2</div>
+                    <div class="c-mini-pal" id="mpPos2"></div>
+                    <div class="c-mini-prev" id="pvPos2" style="background:#6ec6f5;"></div>
+                </div>
+                <div class="c-mini-col">
+                    <div class="c-mini-lbl"><span class="c-mini-dot" id="dotPos3" style="background:#e07b39;"></span>N° 3</div>
+                    <div class="c-mini-pal" id="mpPos3"></div>
+                    <div class="c-mini-prev" id="pvPos3" style="background:#e07b39;"></div>
+                </div>
+                <div class="c-mini-col">
+                    <div class="c-mini-lbl"><span class="c-mini-dot" id="dotPos45" style="background:#cbd5e1;"></span>N° 4-5</div>
+                    <div class="c-mini-pal" id="mpPos45"></div>
+                    <div class="c-mini-prev" id="pvPos45" style="background:#cbd5e1;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="c-footer">
+            <div class="c-custom-wrap">
+                <span class="c-custom-lbl"><i class="bi bi-eyedropper me-1"></i>Personalizado</span>
+                <input type="color" class="c-custom-input" id="customColorPicker" value="#f59e0b">
+                <div class="c-custom-btns" style="display:flex;gap:6px;">
+                    <button class="c-apply" onclick="aplicarColorPersonalizado('rank1')">→ Precio #1</button>
+                    <button class="c-apply" onclick="aplicarColorPersonalizado('otros')">→ Otros</button>
+                </div>
+            </div>
+            <button class="c-done" id="btnCerrarModalBot">Listo</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Tipografía Modal ── -->
+<div id="tamModal" class="c-backdrop" style="display:none;">
+    <div class="c-modal" style="width:460px;max-height:90vh;overflow-y:auto;">
+        <div class="c-header">
+            <div>
+                <div class="c-header-title"><i class="bi bi-fonts me-2"></i> Tipografía</div>
+                <div class="c-header-sub">Ajusta el tamaño de cada elemento de texto</div>
+            </div>
+            <button class="c-close" id="btnCerrarTamTop"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div style="padding:14px 24px;">
+            <div class="tam-row">
+                <span class="tam-label"><i class="bi bi-type-h1 me-1"></i> Título</span>
+                <input type="range" class="tam-slider" id="slTitulo" min="3" max="10" step="0.1" value="6.5">
+                <span class="tam-val" id="vTitulo">6.5rem</span>
+            </div>
+            <div class="tam-row">
+                <span class="tam-label"><i class="bi bi-type-h2 me-1"></i> Subtítulo</span>
+                <input type="range" class="tam-slider" id="slSubtitulo" min="0.7" max="2.5" step="0.05" value="1.1">
+                <span class="tam-val" id="vSubtitulo">1.1rem</span>
+            </div>
+            <div class="tam-row">
+                <span class="tam-label"><i class="bi bi-building me-1"></i> Nombre hotel</span>
+                <input type="range" class="tam-slider" id="slNombre" min="1" max="4" step="0.05" value="2.1">
+                <span class="tam-val" id="vNombre">2.1rem</span>
+            </div>
+            <div class="tam-row">
+                <span class="tam-label"><i class="bi bi-tag me-1"></i> Precio</span>
+                <input type="range" class="tam-slider" id="slPrecio" min="1.5" max="5" step="0.05" value="2.75">
+                <span class="tam-val" id="vPrecio">2.75rem</span>
+            </div>
+            <div class="tam-row">
+                <span class="tam-label"><i class="bi bi-cup-hot me-1"></i> Régimen</span>
+                <input type="range" class="tam-slider" id="slRegimen" min="0.8" max="3.5" step="0.05" value="1.85">
+                <span class="tam-val" id="vRegimen">1.85rem</span>
+            </div>
+            <div class="tam-row">
+                <span class="tam-label"><i class="bi bi-layout-text-sidebar-reverse me-1"></i> Pie</span>
+                <input type="range" class="tam-slider" id="slFooter" min="0.75" max="1.75" step="0.05" value="1">
+                <span class="tam-val" id="vFooter">1.00rem</span>
+            </div>
+        </div>
+        <div class="c-footer" style="justify-content:flex-end;">
+            <button class="c-done" id="btnCerrarTamBot">Listo</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Fondos Modal ── -->
+<div id="fondoModal" class="c-backdrop" style="display:none;">
+    <div class="c-modal" style="width:560px;max-height:90vh;">
+        <div class="c-header">
+            <div>
+                <div class="c-header-title"><i class="bi bi-image-fill me-2"></i> Fondos de pantalla</div>
+                <div class="c-header-sub">Solo se aceptan imágenes PNG</div>
+            </div>
+            <button class="c-close" id="btnCerrarFondoTop"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="fondo-upload-bar">
+            <input type="file" id="fondoFileInput" accept="image/png" style="display:none">
+            <button class="btn-tp teal" style="width:auto;padding:8px 16px;font-size:.82rem;" onclick="document.getElementById('fondoFileInput').click()">
+                <i class="bi bi-plus-circle"></i> Subir PNG
+            </button>
+            <span class="fondo-upload-hint"><i class="bi bi-info-circle me-1"></i>Clic en una imagen para aplicarla · Doble clic en el nombre para editarlo</span>
+        </div>
+        <div id="fondoGrid" class="fondo-grid">
+            <div class="fondo-empty"><i class="bi bi-image" style="font-size:2rem;display:block;margin-bottom:8px;"></i>Sube una imagen PNG para comenzar</div>
+        </div>
+        <div class="c-footer" style="justify-content:flex-end;">
+            <button class="c-done" id="btnCerrarFondoBot">Listo</button>
+        </div>
+    </div>
+</div>
+
+<div id="flyerToast" class="flyer-toast"></div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+        integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function () {
+
+    // Eurovip valida el token antiforgery en todos los POST: se agrega solo a los fetch de esta pantalla
+    var _tokenEv = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
+    var _fetchEv = window.fetch.bind(window);
+    window.fetch = function (url, opts) {
+        opts = opts || {};
+        if (opts.method && opts.method.toUpperCase() !== 'GET' && typeof url === 'string' && url.charAt(0) === '/') {
+            var h = new Headers(opts.headers || {}); h.set('RequestVerificationToken', _tokenEv); opts.headers = h;
+        }
+        return _fetchEv(url, opts);
+    };
+
+    var todosDestinos     = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Destinos));
+    var allConfigs        = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Configs));
+    var fondosPorDestino  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(fondosDict));
+
+    // ── Toast ──────────────────────────────────────────────────────────────────
+    var toast = document.getElementById('flyerToast');
+    function showToast(msg, type) {
+        toast.textContent = msg;
+        toast.className = 'flyer-toast show ' + type;
+        setTimeout(function () { toast.className = 'flyer-toast ' + type; }, 3500);
+    }
+
+    // ── Shared state ───────────────────────────────────────────────────────────
+    var colorRank1  = '#f59e0b';
+    var colorOtros  = '#003d52';
+    var colorRegimen= '#e07b39';
+    var colorPos1   = '#f5a623';
+    var colorPos2   = '#6ec6f5';
+    var colorPos3   = '#e07b39';
+    var colorPos45  = '#cbd5e1';
+    var tamTitulo   = 6.5;
+    var tamSubtitulo= 1.1;
+    var tamNombre   = 2.1;
+    var tamPrecio   = 2.75;
+    var tamRegimen  = 1.85;
+    var tamFooter   = 1.0;
+    var tabActivo   = 'modelo';
+    var fondosGaleria = []; // {url, nombre}
+    var modeloSortTimer = null;
+    var editorSortTimer = null;
+    var hotelesOcultosModeloList = [];
+    var editorOcultosList = [];
+
+    // ── Prevent Enter key in all flyer contenteditable elements ───────────────
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target.getAttribute('contenteditable') === 'true') {
+            if (e.target.closest('.flyer')) {
+                e.preventDefault();
+            }
+        }
+    });
+
+    // ── Tamaños via CSS custom properties ─────────────────────────────────────
+    function aplicarTamanos() {
+        var r = document.documentElement.style;
+        r.setProperty('--tam-titulo',    tamTitulo    + 'rem');
+        r.setProperty('--tam-subtitulo', tamSubtitulo + 'rem');
+        r.setProperty('--tam-nombre',    tamNombre    + 'rem');
+        r.setProperty('--tam-precio',    tamPrecio    + 'rem');
+        r.setProperty('--tam-regimen',   tamRegimen   + 'rem');
+        r.setProperty('--tam-footer',    tamFooter    + 'rem');
+    }
+
+    // ── Colores ────────────────────────────────────────────────────────────────
+    function getColorForPos(num) {
+        if (num === 1) return colorPos1;
+        if (num === 2) return colorPos2;
+        if (num === 3) return colorPos3;
+        return colorPos45;
+    }
+
+    function aplicarColores() {
+        document.querySelectorAll('#flyerHoteles .fh-price.rank1, #flyerHotelesEditor .fh-price.rank1').forEach(function (el) {
+            el.style.color = colorRank1;
+        });
+        document.querySelectorAll('#flyerHoteles .fh-price:not(.rank1), #flyerHotelesEditor .fh-price:not(.rank1)').forEach(function (el) {
+            el.style.color = colorOtros;
+        });
+        document.querySelectorAll('#flyerHoteles .fh-meta, #flyerHotelesEditor .fh-meta').forEach(function (el) {
+            el.style.color = colorRegimen;
+        });
+    }
+
+    function aplicarColoresPosicion() {
+        [document.getElementById('flyerHoteles'), document.getElementById('flyerHotelesEditor')].forEach(function (c) {
+            if (!c) return;
+            c.querySelectorAll('.fh-row').forEach(function (row, i) {
+                var p = row.querySelector('.fh-pos');
+                if (p) p.style.color = getColorForPos(i + 1);
+            });
+        });
+    }
+
+    // ── Tab switching ──────────────────────────────────────────────────────────
+    window.switchTab = function (tab, btn) {
+        tabActivo = tab;
+        document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-pane').forEach(function (p) { p.classList.remove('active'); });
+        if (btn) btn.classList.add('active');
+        document.getElementById('tab-' + tab).classList.add('active');
+        if (tab === 'modelo') setTimeout(scaleFlyer, 50);
+        if (tab === 'editor') setTimeout(scaleFlyerEditor, 50);
+    };
+
+    // ── Logo toggle ────────────────────────────────────────────────────────────
+    var logoVisible = true;
+    document.getElementById('btnToggleLogo').addEventListener('click', function () {
+        logoVisible = !logoVisible;
+        document.getElementById('logoWrapModelo').style.display = logoVisible ? '' : 'none';
+        document.getElementById('logoWrapEditor').style.display = logoVisible ? '' : 'none';
+        this.innerHTML = logoVisible
+            ? '<i class="bi bi-image"></i> Logo'
+            : '<i class="bi bi-image-fill"></i> Logo <small style="color:#64748b">(oculto)</small>';
+        this.classList.toggle('active', !logoVisible);
+        scheduleSaveEditorState();
+    });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // COLOR MODAL
+    // ══════════════════════════════════════════════════════════════════════════
+    var PALETA = [
+        '#f59e0b','#fbbf24','#fcd34d','#f5a623','#d97706','#b45309',
+        '#ef4444','#f97316','#e76f51','#dc2626','#c2410c','#ea580c',
+        '#ec4899','#d946ef','#a855f7','#8b5cf6','#db2777','#7c3aed',
+        '#0ea5e9','#3b82f6','#06b6d4','#0d7377','#0369a1','#1d4ed8',
+        '#10b981','#22c55e','#003d52','#0f172a','#334155','#ffffff'
+    ];
+
+    function buildPalette(containerId, target) {
+        var container = document.getElementById(containerId);
+        var previewId = target === 'rank1' ? 'previewPriceRank1' : 'previewPriceOtros';
+        var dotId     = target === 'rank1' ? 'dotRank1' : 'dotOtros';
+        var btnDotId  = target === 'rank1' ? 'dotBtnRank1' : 'dotBtnOtros';
+        var current   = target === 'rank1' ? colorRank1 : colorOtros;
+
+        container.innerHTML = '';
+        PALETA.forEach(function (color) {
+            var sw = document.createElement('div');
+            sw.className = 'c-swatch' + (color.toLowerCase() === current.toLowerCase() ? ' sel' : '');
+            sw.dataset.color = color;
+            sw.style.background = color;
+            if (color === '#ffffff') sw.style.border = '2.5px solid #e2e8f0';
+
+            sw.addEventListener('mouseover', function () {
+                document.getElementById(previewId).style.color = color;
+            });
+            sw.addEventListener('mouseout', function () {
+                var c = target === 'rank1' ? colorRank1 : colorOtros;
+                document.getElementById(previewId).style.color = c;
+            });
+            sw.addEventListener('click', function () {
+                if (target === 'rank1') colorRank1 = color;
+                else colorOtros = color;
+
+                document.getElementById(previewId).style.color = color;
+                document.getElementById(dotId).style.background = color;
+                document.getElementById(btnDotId).style.background = color;
+                container.querySelectorAll('.c-swatch').forEach(function (s) { s.classList.remove('sel'); });
+                sw.classList.add('sel');
+                aplicarColores();
+            });
+            container.appendChild(sw);
+        });
+    }
+
+    window.aplicarColorPersonalizado = function (target) {
+        var color = document.getElementById('customColorPicker').value;
+        if (target === 'rank1') colorRank1 = color;
+        else colorOtros = color;
+        document.getElementById(target === 'rank1' ? 'previewPriceRank1' : 'previewPriceOtros').style.color = color;
+        document.getElementById(target === 'rank1' ? 'dotRank1' : 'dotOtros').style.background = color;
+        document.getElementById(target === 'rank1' ? 'dotBtnRank1' : 'dotBtnOtros').style.background = color;
+        // remove sel from all, mark closest swatch if exists
+        ['paletteRank1','paletteOtros'].forEach(function (pid) {
+            document.getElementById(pid).querySelectorAll('.c-swatch').forEach(function (s) {
+                if (target === 'rank1' ? pid === 'paletteRank1' : pid === 'paletteOtros') s.classList.remove('sel');
+            });
+        });
+        aplicarColores();
+    };
+
+    // ── Mini palette for extended color modal ─────────────────────────────────
+    var MINI_PAL = [
+        '#f59e0b','#f5a623','#fbbf24','#d97706','#ef4444',
+        '#f97316','#e76f51','#dc2626','#ec4899','#d946ef',
+        '#a855f7','#8b5cf6','#0ea5e9','#3b82f6','#06b6d4',
+        '#0d7377','#10b981','#22c55e','#003d52','#6ec6f5',
+        '#e07b39','#cbd5e1','#94a3b8','#0f172a','#ffffff'
+    ];
+
+    function buildMiniPal(cid, getC, setC, dotId, pvId) {
+        var con = document.getElementById(cid);
+        if (!con) return;
+        con.innerHTML = '';
+        MINI_PAL.forEach(function (col) {
+            var sw = document.createElement('div');
+            sw.className = 'c-mini-sw' + (col.toLowerCase() === getC().toLowerCase() ? ' sel' : '');
+            sw.style.background = col;
+            if (col === '#ffffff') sw.style.border = '2px solid #e2e8f0';
+            sw.addEventListener('mouseover', function () { document.getElementById(pvId).style.background = col; });
+            sw.addEventListener('mouseout',  function () { document.getElementById(pvId).style.background = getC(); });
+            sw.addEventListener('click', function () {
+                setC(col);
+                document.getElementById(dotId).style.background = col;
+                document.getElementById(pvId).style.background = col;
+                con.querySelectorAll('.c-mini-sw').forEach(function (s) { s.classList.remove('sel'); });
+                sw.classList.add('sel');
+            });
+            con.appendChild(sw);
+        });
+    }
+
+    function abrirModalColores() {
+        buildPalette('paletteRank1', 'rank1');
+        buildPalette('paletteOtros', 'otros');
+        document.getElementById('previewPriceRank1').style.color = colorRank1;
+        document.getElementById('previewPriceOtros').style.color = colorOtros;
+        buildMiniPal('mpRegimen', function(){return colorRegimen;}, function(c){colorRegimen=c; aplicarColores();}, 'dotRegimen','pvRegimen');
+        buildMiniPal('mpPos1',    function(){return colorPos1;},    function(c){colorPos1=c; aplicarColoresPosicion();}, 'dotPos1','pvPos1');
+        buildMiniPal('mpPos2',    function(){return colorPos2;},    function(c){colorPos2=c; aplicarColoresPosicion();}, 'dotPos2','pvPos2');
+        buildMiniPal('mpPos3',    function(){return colorPos3;},    function(c){colorPos3=c; aplicarColoresPosicion();}, 'dotPos3','pvPos3');
+        buildMiniPal('mpPos45',   function(){return colorPos45;},   function(c){colorPos45=c; aplicarColoresPosicion();}, 'dotPos45','pvPos45');
+        document.getElementById('colorModal').style.display = 'flex';
+    }
+    function cerrarModalColores() {
+        document.getElementById('colorModal').style.display = 'none';
+    }
+
+    document.getElementById('btnAbrirColores').addEventListener('click', abrirModalColores);
+    document.getElementById('btnCerrarModalTop').addEventListener('click', cerrarModalColores);
+    document.getElementById('btnCerrarModalBot').addEventListener('click', cerrarModalColores);
+    document.getElementById('colorModal').addEventListener('click', function (e) {
+        if (e.target === this) cerrarModalColores();
+    });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // MODELO TAB
+    // ══════════════════════════════════════════════════════════════════════════
+    var flyerHero      = document.getElementById('flyerHero');
+    var flyerTitleEl   = document.getElementById('flyerTitleEl');
+    var flyerHotelesEl = document.getElementById('flyerHoteles');
+
+    function scaleFlyer() {
+        var stage = document.getElementById('fbStage');
+        var wrap  = document.getElementById('flyerScaleWrap');
+        var flyer = document.getElementById('flyerTemplate');
+        if (!stage) return;
+        var avail = stage.clientWidth - 32;
+        var scale = Math.min(1, avail / 900);
+        wrap.style.transform    = 'scale(' + scale + ')';
+        wrap.style.marginBottom = (flyer.offsetHeight * scale - flyer.offsetHeight) + 'px';
+    }
+    scaleFlyer();
+    window.addEventListener('resize', function () { scaleFlyer(); scaleFlyerEditor(); });
+
+    function buildHotelRows(hoteles) {
+        return hoteles.map(function (h, i) {
+            var pos     = i + 1;
+            var precio  = h.precio_Final || h.Precio_Final || 0;
+            var nombre  = h.nombre_Hotel || h.Nombre_Hotel || h.nombre_Destino || '';
+            var regimen = h.regimen || h.Regimen || '';
+            var priceColor = pos === 1 ? colorRank1 : colorOtros;
+            var posColor   = getColorForPos(pos);
+            return '<div class="fh-row' + (pos === 1 ? ' best' : '') + '" data-precio="' + precio + '">' +
+                '<div class="fh-pos" style="color:' + posColor + '">' + pos + '</div>' +
+                '<div class="fh-sep"></div>' +
+                '<div class="fh-info">' +
+                    '<div class="fh-name" contenteditable="true" spellcheck="false">' + nombre + '</div>' +
+                    '<div class="fh-meta" contenteditable="true" spellcheck="false" style="color:' + colorRegimen + '">' + regimen + '</div>' +
+                    (pos === 1 ? '<div class="fh-best-tag"><i class="bi bi-star-fill" style="font-size:.85rem;"></i> Mejor precio</div>' : '') +
+                '</div>' +
+                '<div class="fh-price' + (pos === 1 ? ' rank1' : '') + '" style="color:' + priceColor + '">' +
+                    '<span class="precio-sym">RD$&nbsp;</span>' +
+                    '<span class="precio-val" contenteditable="true" spellcheck="false">' + precio + '</span>' +
+                '</div>' +
+                '<button class="btn-hide-hotel" title="Ocultar hotel" type="button"><i class="bi bi-eye-slash"></i></button>' +
+            '</div>';
+        }).join('');
+    }
+
+    function renumerarHotelesModelo() {
+        var rows = flyerHotelesEl.querySelectorAll('.fh-row');
+        rows.forEach(function (row, i) {
+            var num   = i + 1;
+            var posEl = row.querySelector('.fh-pos');
+            var tagEl = row.querySelector('.fh-best-tag');
+            var precEl= row.querySelector('.fh-price');
+            if (posEl) { posEl.textContent = num; posEl.className = 'fh-pos'; posEl.style.color = getColorForPos(num); }
+            if (num === 1) {
+                row.classList.add('best');
+                if (precEl) { precEl.classList.add('rank1'); precEl.style.color = colorRank1; }
+                if (tagEl)  tagEl.style.display = '';
+            } else {
+                row.classList.remove('best');
+                if (precEl) { precEl.classList.remove('rank1'); precEl.style.color = colorOtros; }
+                if (tagEl)  tagEl.style.display = 'none';
+            }
+        });
+    }
+
+    function ordenarHotelesModelo() {
+        var rows = Array.from(flyerHotelesEl.querySelectorAll('.fh-row'));
+        rows.sort(function (a, b) {
+            var pa = parseFloat((a.querySelector('.precio-val') || {}).textContent) || 0;
+            var pb = parseFloat((b.querySelector('.precio-val') || {}).textContent) || 0;
+            return pa - pb;
+        });
+        rows.forEach(function (r) { flyerHotelesEl.appendChild(r); });
+        renumerarHotelesModelo();
+        setTimeout(scaleFlyer, 50);
+    }
+
+    function ocultarHotelModelo(row) {
+        var nombre = (row.querySelector('.fh-name') || {}).textContent || 'Hotel';
+        hotelesOcultosModeloList.push({ el: row, nombre: nombre });
+        row.remove();
+        renumerarHotelesModelo();
+        actualizarPanelOcultosModelo();
+        setTimeout(scaleFlyer, 50);
+    }
+    window.restaurarHotelModelo = function (idx) {
+        var item = hotelesOcultosModeloList[idx];
+        if (!item) return;
+        hotelesOcultosModeloList.splice(idx, 1);
+        flyerHotelesEl.appendChild(item.el);
+        ordenarHotelesModelo();
+        actualizarPanelOcultosModelo();
+        setTimeout(scaleFlyer, 50);
+    };
+    function actualizarPanelOcultosModelo() {
+        var panel = document.getElementById('ocultosPanelModelo');
+        if (!panel) return;
+        if (!hotelesOcultosModeloList.length) { panel.style.display = 'none'; return; }
+        panel.style.display = '';
+        panel.innerHTML = '<div class="ocultos-title"><i class="bi bi-eye-slash-fill me-1"></i>Hoteles ocultos</div>' +
+            hotelesOcultosModeloList.map(function (item, i) {
+                return '<div class="oculto-item"><span>' + item.nombre + '</span>' +
+                    '<button class="btn-restaurar" onclick="restaurarHotelModelo(' + i + ')"><i class="bi bi-eye-fill me-1"></i>Mostrar</button></div>';
+            }).join('');
+    }
+
+    flyerHotelesEl.addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-hide-hotel');
+        if (btn) { var row = btn.closest('.fh-row'); if (row) ocultarHotelModelo(row); }
+    });
+    flyerHotelesEl.addEventListener('input', function (e) {
+        if (e.target.classList.contains('precio-val')) {
+            clearTimeout(modeloSortTimer);
+            modeloSortTimer = setTimeout(ordenarHotelesModelo, 700);
+        }
+    });
+
+    function renderDestino(idDestino) {
+        var d = todosDestinos.find(function (x) { return x.id_Destino === idDestino || x.Id_Destino === idDestino; });
+        if (!d) return;
+        var nombre = d.nombre_Destino || d.Nombre_Destino || idDestino;
+        flyerTitleEl.textContent = nombre;
+        var urlFondoModelo = fondosPorDestino[nombre] || '';
+        flyerHero.style.background =
+            'linear-gradient(to bottom, rgba(0,30,42,.15) 0%, rgba(0,30,42,.72) 100%), ' +
+            "url('" + urlFondoModelo + "') center/cover no-repeat";
+        hotelesOcultosModeloList = [];
+        actualizarPanelOcultosModelo();
+        var hoteles = d.hoteles || d.Hoteles || [];
+        flyerHotelesEl.innerHTML = hoteles.length
+            ? buildHotelRows(hoteles)
+            : '<div class="flyer-empty-hint"><i class="bi bi-geo-alt"></i><p>Sin hoteles para este destino.</p></div>';
+        setTimeout(scaleFlyer, 100);
+    }
+
+    var destinoSelect = document.getElementById('destinoSelect');
+    if (destinoSelect) {
+        destinoSelect.addEventListener('change', function () {
+            renderDestino(this.value);
+            // [2026-08-05] Refrescar el input del nombre de archivo con el destino nuevo,
+            // salvo que el usuario ya lo haya editado manualmente.
+            if (typeof refrescarNombreArchivoAuto === 'function') refrescarNombreArchivoAuto();
+        });
+        if (destinoSelect.value) renderDestino(destinoSelect.value);
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    // [2026-08-05] Nombre editable del flyer + validación de destino
+    // - El input siempre está visible y muestra el nombre con que se
+    //   guardará el archivo del destino actualmente seleccionado.
+    // - Si el usuario edita, la bandera nombreArchivoEditado se activa
+    //   y el input deja de auto-refrescarse al cambiar destino.
+    // - Validación en vivo: el valor debe contener el nombre de un
+    //   destino de configuración (allConfigs). Si no, borde rojo y
+    //   se deshabilita el botón "Guardar flyer".
+    // - Al guardar (loop existente), la CURRENT destino usa el nombre
+    //   custom si el usuario lo editó y es válido; los OTROS destinos
+    //   del loop mantienen su nombre automático (comportamiento previo).
+    // ═════════════════════════════════════════════════════════════════
+    var nombreArchivoInput = document.getElementById('nombreArchivoInput');
+    var nombreArchivoHint  = document.getElementById('nombreArchivoHint');
+    var nombreArchivoEditado = false;
+
+    // [2026-08-05] Contraparte del tab Editor — mismo control, misma validación,
+    // botón Guardar (btnGuardarEditor) se habilita/deshabilita según validación.
+    var nombreArchivoInputEditor = document.getElementById('nombreArchivoInputEditor');
+    var nombreArchivoHintEditor  = document.getElementById('nombreArchivoHintEditor');
+    var nombreArchivoEditadoEditor = false;
+
+    function normalizarNombreFilename(s) {
+        return (s || '')
+            .toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .replace(/[^a-z0-9]+/g, '');
+    }
+    function sanearParaFilename(s) {
+        return (s || '')
+            .toString()
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .replace(/[^A-Za-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '');
+    }
+    function nombresDestinosConfig() {
+        return (allConfigs || [])
+            .map(function (c) { return c.Nombre_Destino || c.nombre_Destino || c.Id_Destino || c.id_Destino || ''; })
+            .filter(function (n) { return !!n; });
+    }
+    function timestampNombre() {
+        var d = new Date();
+        var pad = function (n) { return (n < 10 ? '0' + n : '' + n); };
+        return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate())
+             + '_' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+    }
+    function nombreAutoParaDestino(nombreDestino) {
+        var safe = sanearParaFilename(nombreDestino || 'destino');
+        return 'cliente_' + safe + '_p1_' + timestampNombre() + '.png';
+    }
+    window.nombreAutoParaDestino = nombreAutoParaDestino; // usado por guardarImagen
+
+    function validarNombreArchivo(valor) {
+        var v = normalizarNombreFilename(valor);
+        if (!v) return { ok: false, motivo: 'Escribe un nombre.' };
+        var destinos = nombresDestinosConfig().map(normalizarNombreFilename).filter(function (d) { return d.length > 0; });
+        if (destinos.length === 0) return { ok: false, motivo: 'No hay destinos configurados.' };
+        var match = destinos.some(function (d) { return v.indexOf(d) !== -1; });
+        return match
+            ? { ok: true, motivo: '' }
+            : { ok: false, motivo: 'Debe contener un destino de configuración (' + nombresDestinosConfig().slice(0, 4).join(', ') + (nombresDestinosConfig().length > 4 ? '…' : '') + ').' };
+    }
+    function aplicarEstadoValidacion() {
+        var val = nombreArchivoInput ? nombreArchivoInput.value : '';
+        var res = validarNombreArchivo(val);
+        var btn = document.getElementById('btnGuardar');
+        if (res.ok) {
+            if (nombreArchivoInput) nombreArchivoInput.style.borderColor = '#10b981';
+            if (nombreArchivoHint) {
+                nombreArchivoHint.textContent = '✓ Contiene un destino de configuración.';
+                nombreArchivoHint.style.color = '#059669';
+            }
+            if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
+        } else {
+            if (nombreArchivoInput) nombreArchivoInput.style.borderColor = '#ef4444';
+            if (nombreArchivoHint) {
+                nombreArchivoHint.textContent = '✗ ' + res.motivo;
+                nombreArchivoHint.style.color = '#b91c1c';
+            }
+            if (btn) { btn.disabled = true; btn.style.opacity = '.55'; btn.style.cursor = 'not-allowed'; }
+        }
+    }
+
+    // [2026-08-05] Validación equivalente para el input del tab Editor — habilita/deshabilita btnGuardarEditor.
+    function aplicarEstadoValidacionEditor() {
+        var val = nombreArchivoInputEditor ? nombreArchivoInputEditor.value : '';
+        var res = validarNombreArchivo(val);
+        var btn = document.getElementById('btnGuardarEditor');
+        if (res.ok) {
+            if (nombreArchivoInputEditor) nombreArchivoInputEditor.style.borderColor = '#10b981';
+            if (nombreArchivoHintEditor) {
+                nombreArchivoHintEditor.textContent = '✓ Contiene un destino de configuración.';
+                nombreArchivoHintEditor.style.color = '#059669';
+            }
+            if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
+        } else {
+            if (nombreArchivoInputEditor) nombreArchivoInputEditor.style.borderColor = '#ef4444';
+            if (nombreArchivoHintEditor) {
+                nombreArchivoHintEditor.textContent = '✗ ' + res.motivo;
+                nombreArchivoHintEditor.style.color = '#b91c1c';
+            }
+            if (btn) { btn.disabled = true; btn.style.opacity = '.55'; btn.style.cursor = 'not-allowed'; }
+        }
+    }
+
+    // Genera un nombre auto para el editor usando el primer grupo/destino que el usuario haya
+    // añadido en el tab Editor (misma fuente que usa btnGuardarEditor para nombreDestino).
+    window.refrescarNombreArchivoAutoEditor = function () {
+        if (!nombreArchivoInputEditor || nombreArchivoEditadoEditor) { aplicarEstadoValidacionEditor(); return; }
+        var nombre = 'editor';
+        try {
+            var primerGrupo = (typeof groupOrder !== 'undefined' && groupOrder.length > 0 && typeof groups !== 'undefined')
+                ? groups[groupOrder[0]] : null;
+            if (primerGrupo && primerGrupo.groupNombre && primerGrupo.groupNombre.trim()) {
+                nombre = primerGrupo.groupNombre.trim();
+            } else if (typeof flyerTitleEditor !== 'undefined' && flyerTitleEditor && flyerTitleEditor.textContent.trim()) {
+                nombre = flyerTitleEditor.textContent.trim();
+            }
+        } catch { /* usa 'editor' */ }
+        nombreArchivoInputEditor.value = nombreAutoParaDestino(nombre);
+        aplicarEstadoValidacionEditor();
+    };
+    if (nombreArchivoInputEditor) {
+        nombreArchivoInputEditor.addEventListener('input', function () {
+            nombreArchivoEditadoEditor = true;
+            // [2026-08-05] Persistir en la plantilla activa para que cada plantilla
+            // recuerde su propio nombre al cambiar entre pestañas de plantilla.
+            if (typeof plantillas !== 'undefined' && plantillas[plantillaActiva]) {
+                plantillas[plantillaActiva].nombreArchivo        = this.value;
+                plantillas[plantillaActiva].nombreArchivoEditado = true;
+            }
+            aplicarEstadoValidacionEditor();
+            if (typeof scheduleSaveEditorState === 'function') scheduleSaveEditorState();
+        });
+        // Init: si no hay grupos aún el auto-name usa 'editor' — sin destino → botón deshabilitado
+        // hasta que el usuario agregue un grupo o edite el nombre con un destino válido.
+        window.refrescarNombreArchivoAutoEditor();
+    }
+    window.refrescarNombreArchivoAuto = function () {
+        if (!nombreArchivoInput || nombreArchivoEditado) { aplicarEstadoValidacion(); return; }
+        var sel = destinoSelect;
+        var idDest = sel ? sel.value : '';
+        var opt = sel && sel.selectedOptions[0];
+        var nombre = opt ? (opt.getAttribute('data-nombre') || opt.textContent || idDest) : idDest;
+        nombreArchivoInput.value = nombreAutoParaDestino(nombre);
+        aplicarEstadoValidacion();
+    };
+    if (nombreArchivoInput) {
+        nombreArchivoInput.addEventListener('input', function () {
+            nombreArchivoEditado = true;
+            aplicarEstadoValidacion();
+        });
+        // Init: prellenar con el destino actualmente seleccionado
+        window.refrescarNombreArchivoAuto();
+    }
+
+    window.actualizarDestino = async function () {
+        var id  = destinoSelect ? destinoSelect.value : '';
+        var cfg = allConfigs.find(function (c) { return (c.id_Destino || c.Id_Destino) === id; });
+        if (!cfg && allConfigs.length > 0) cfg = allConfigs[0];
+        if (!cfg) { showToast('No hay configuraciones disponibles.', 'err'); return; }
+        var btn = document.getElementById('btnActualizar');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin bi bi-arrow-clockwise"></span> Actualizando…';
+        showToast('Actualizando precios…', 'info');
+        var res  = await fetch('/Flyer/ActualizarDestino?id=' + (cfg.Id ?? cfg.id) + '&_=' + Date.now(), { method: 'POST' });
+        var data = await res.json().catch(function () { return null; });
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualizar precios';
+        if (data && data.success) {
+            showToast('✓ ' + data.mensaje, 'ok');
+            todosDestinos = await fetch('/Flyer/ObtenerDatos').then(function (r) { return r.json(); }).catch(function () { return []; });
+            if (destinoSelect && destinoSelect.value) renderDestino(destinoSelect.value);
+        } else {
+            showToast('✗ ' + (data ? data.mensaje : 'Error'), 'err');
+        }
+    };
+
+    window.actualizarConfig = async function (cfgId) {
+        showToast('Actualizando…', 'info');
+        var res  = await fetch('/Flyer/ActualizarDestino?id=' + cfgId, { method: 'POST' });
+        var data = await res.json().catch(function () { return null; });
+        if (data && data.success) {
+            showToast('✓ ' + data.mensaje, 'ok');
+            todosDestinos = await fetch('/Flyer/ObtenerDatos').then(function (r) { return r.json(); }).catch(function () { return []; });
+            if (destinoSelect && destinoSelect.value) renderDestino(destinoSelect.value);
+        } else {
+            showToast('✗ ' + (data ? data.mensaje : 'Error'), 'err');
+        }
+    };
+
+    function hideHideBtns(templateId) {
+        return Array.from(document.querySelectorAll('#' + templateId + ' .btn-hide-hotel')).map(function (b) {
+            b.style.visibility = 'hidden'; return b;
+        });
+    }
+    function showHideBtns(btns) { btns.forEach(function (b) { b.style.visibility = ''; }); }
+
+    window.guardarImagen = async function () {
+        if (!todosDestinos || todosDestinos.length === 0) {
+            showToast('No hay destinos con datos. Actualiza primero los precios.', 'err');
+            return;
+        }
+        // [2026-08-05] Bloquear si el nombre editado no es válido (no contiene destino de config).
+        if (nombreArchivoInput && nombreArchivoEditado) {
+            var vRes = validarNombreArchivo(nombreArchivoInput.value);
+            if (!vRes.ok) {
+                showToast('Nombre inválido: ' + vRes.motivo, 'err');
+                return;
+            }
+        }
+        var btn = document.getElementById('btnGuardar');
+        btn.disabled = true;
+        var idOriginal = destinoSelect ? destinoSelect.value : '';
+        var saved = 0, errors = 0;
+
+        // [2026-08-05] Sólo el destino ACTUALMENTE seleccionado usa el nombre custom
+        // (si el usuario lo editó); los demás siguen con el nombre automático de
+        // siempre. Así se conserva el comportamiento multi-destino existente.
+        var idDestActual = destinoSelect ? destinoSelect.value : '';
+        var nombreCustom = (nombreArchivoInput && nombreArchivoEditado) ? nombreArchivoInput.value.trim() : '';
+
+        for (var i = 0; i < todosDestinos.length; i++) {
+            var d      = todosDestinos[i];
+            var idDest = d.Id_Destino || d.id_Destino || '';
+            var nombre = d.Nombre_Destino || d.nombre_Destino || idDest;
+
+            btn.innerHTML = '<span class="spin bi bi-arrow-clockwise"></span> Guardando ' + (i + 1) + '/' + todosDestinos.length + '…';
+            showToast('Generando: ' + nombre + '…', 'info');
+
+            renderDestino(idDest);
+            await new Promise(function (r) { setTimeout(r, 700); });
+
+            var btns = hideHideBtns('flyerTemplate');
+            try {
+                var canvas    = await html2canvas(document.getElementById('flyerTemplate'), { scale: 2, useCORS: true });
+                var imageData = canvas.toDataURL('image/png');
+                var payload = { imageData: imageData, nombreDestino: nombre };
+                if (nombreCustom && idDest === idDestActual) payload.nombreArchivo = nombreCustom;
+                var res  = await fetch('/Flyer/GuardarImagen', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                var data = await res.json().catch(function () { return null; });
+                if (data && data.success) saved++;
+                else errors++;
+            } catch (e) {
+                errors++;
+            }
+            showHideBtns(btns);
+        }
+
+        if (idOriginal && destinoSelect) {
+            destinoSelect.value = idOriginal;
+            renderDestino(idOriginal);
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-download"></i> Guardar flyer';
+
+        if (errors === 0) {
+            showToast('✓ ' + saved + ' flyer(s) guardados en Galería', 'ok');
+        } else {
+            showToast('✓ ' + saved + ' guardados, ✗ ' + errors + ' con error', 'err');
+        }
+        document.getElementById('savedBar').classList.add('show');
+    };
+
+    // window.enviarMasivo — movido a /Flyer/Contactos (2026-07-21).
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // EDITOR TAB
+    // ══════════════════════════════════════════════════════════════════════════
+    var DEFAULT_LOGO_SRC = '@Model.Logo';
+    var STORE_KEY = 'FlyerClienteEditorState_v1';
+    var saveTimer = null;
+    var restoreMode = false;
+    var savedGruposState = null;
+
+    var groups       = {};
+    var groupOrder   = [];
+    var tomSelects   = {};
+    var groupCounter = 0;
+    var slotCounter  = 0;
+
+    var flyerHotelesEditor  = document.getElementById('flyerHotelesEditor');
+    var destGroupsContainer = document.getElementById('destGroupsContainer');
+    var flyerHeroEditor     = document.getElementById('flyerHeroEditor');
+    var flyerTemplateEditor = document.getElementById('flyerTemplateEditor');
+    var flyerTitleEditor    = document.getElementById('flyerTitleEditor');
+    var flyerLogoEditor     = document.getElementById('flyerLogoEditor');
+    var logoPreviewEditor   = document.getElementById('logoPreviewEditor');
+    var logoHintEditor      = document.getElementById('logoHintEditor');
+    var logoFileInputEditor = document.getElementById('logoFileInputEditor');
+    var btnCargarLogoEditor = document.getElementById('btnCargarLogoEditor');
+    var btnRestaurarLogoEditor = document.getElementById('btnRestaurarLogoEditor');
+    var btnEditarLinkOferta = document.getElementById('btnEditarLinkOferta');
+    var emptyHint           = document.getElementById('flyerEmptyHint');
+    var tamFooter           = 1.0;
+
+    function scaleFlyerEditor() {
+        var stage = document.getElementById('fbStageEditor');
+        var wrap  = document.getElementById('flyerScaleWrapEditor');
+        var flyer = document.getElementById('flyerTemplateEditor');
+        if (!stage) return;
+        var avail = stage.clientWidth - 32;
+        var scale = Math.min(1, avail / 900);
+        wrap.style.transform    = 'scale(' + scale + ')';
+        wrap.style.marginBottom = (flyer.offsetHeight * scale - flyer.offsetHeight) + 'px';
+    }
+    scaleFlyerEditor();
+
+    function normalizarTextoEditor(value) {
+        return (value || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function getPlantillaActivaEditor() {
+        return (plantillas && plantillas[plantillaActiva]) ? plantillas[plantillaActiva] : (plantillas && plantillas[0] ? plantillas[0] : null);
+    }
+
+    function getLogoSrcEditor(p) {
+        return p && p.logoSrc ? p.logoSrc : DEFAULT_LOGO_SRC;
+    }
+
+    function aplicarLogoEditor(p) {
+        var src = getLogoSrcEditor(p);
+        var h   = (p && p.logoHeight) ? p.logoHeight : 100;
+        if (flyerLogoEditor) { flyerLogoEditor.src = src; flyerLogoEditor.style.height = h + 'px'; }
+        if (logoPreviewEditor) logoPreviewEditor.src = src;
+        var _sl = document.getElementById('logoAlturaSlider');
+        var _vl = document.getElementById('logoAlturaVal');
+        if (_sl) _sl.value = h;
+        if (_vl) _vl.textContent = h + 'px';
+    }
+
+    function actualizarLinkHintEditor(p) {
+        if (!logoHintEditor) return;
+        var link = p && p.linkOferta ? p.linkOferta : '';
+        if (link) {
+            var display = link.length > 42 ? link.substring(0, 39) + '…' : link;
+            logoHintEditor.textContent = display;
+            logoHintEditor.title       = link;
+            logoHintEditor.style.color = '#15803d';
+        } else {
+            logoHintEditor.textContent = 'El logo y el link se guardan por plantilla.';
+            logoHintEditor.title       = '';
+            logoHintEditor.style.color = '';
+        }
+    }
+
+    function scheduleSaveEditorState() {
+        if (restoreMode) return;
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(function () {
+            saveEditorState();
+        }, 250);
+    }
+
+    function saveEditorState() {
+        if (restoreMode) return;
+        try {
+            guardarEstadoPlantilla(plantillaActiva);
+            var state = {
+                version: 1,
+                tabActivo: tabActivo,
+                tamTitulo: tamTitulo,
+                tamSubtitulo: tamSubtitulo,
+                tamNombre: tamNombre,
+                tamPrecio: tamPrecio,
+                tamRegimen: tamRegimen,
+                tamFooter: tamFooter,
+                colorRank1: colorRank1,
+                colorOtros: colorOtros,
+                colorRegimen: colorRegimen,
+                colorPos1: colorPos1,
+                colorPos2: colorPos2,
+                colorPos3: colorPos3,
+                colorPos45: colorPos45,
+                logoVisible: logoVisible,
+                plantillaActiva: plantillaActiva,
+                plantillas: (plantillas || []).map(function (p) {
+                    return {
+                        nombre: p.nombre || '',
+                        titulo: p.titulo || '',
+                        subtitulo: p.subtitulo || '',
+                        seccion: p.seccion || '',
+                        footerUrl: p.footerUrl || '',
+                        footerTag: p.footerTag || '',
+                        heroBg: p.heroBg || '',
+                        hotelHtml: p.hotelHtml || '',
+                        ocultos: (p.ocultos || []).map(function (o) {
+                            return { html: o.html || '', nombre: o.nombre || '' };
+                        }),
+                        logoSrc: p.logoSrc || DEFAULT_LOGO_SRC,
+                        linkOferta: p.linkOferta || '',
+                        logoHeight: p.logoHeight || 100,
+                        // [2026-08-05] Persistir el nombre de archivo por plantilla en localStorage.
+                        nombreArchivo:        p.nombreArchivo || '',
+                        nombreArchivoEditado: !!p.nombreArchivoEditado
+                    };
+                }),
+                gruposState: buildGruposState()
+            };
+            localStorage.setItem(STORE_KEY, JSON.stringify(state));
+        } catch (e) {}
+    }
+
+    if (flyerTemplateEditor) {
+        flyerTemplateEditor.addEventListener('input', function (e) {
+            if (e.target && e.target.isContentEditable) scheduleSaveEditorState();
+        });
+        flyerTemplateEditor.addEventListener('blur', function (e) {
+            if (e.target && e.target.isContentEditable) scheduleSaveEditorState();
+        }, true);
+    }
+
+    function updateHeroEditor(nombre) {
+        var urlFondoEditor = fondosPorDestino[nombre] || '';
+        flyerHeroEditor.style.background =
+            'linear-gradient(to bottom, rgba(0,30,42,.15) 0%, rgba(0,30,42,.72) 100%), ' +
+            "url('" + urlFondoEditor + "') center/cover no-repeat";
+        flyerTitleEditor.textContent = nombre;
+        scheduleSaveEditorState();
+        setTimeout(scaleFlyerEditor, 50);
+    }
+
+    function getSugerenciaLinkOfertaEditor(titulo) {
+        var t = normalizarTextoEditor(titulo || '');
+        if (t.indexOf('super oferta de verano') !== -1 || t.indexOf('oferta de verano') !== -1 || t.indexOf('super oferta') !== -1) {
+            return '@(Model.Web)/';
+        }
+        return '';
+    }
+
+    async function editarLinkOfertaEditor() {
+        var p = getPlantillaActivaEditor();
+        if (!p) return;
+        var titulo = p.titulo || (flyerTitleEditor ? flyerTitleEditor.textContent : '');
+        var sugerido = p.linkOferta || getSugerenciaLinkOfertaEditor(titulo) || '@(Model.Web)/';
+        var r = await Swal.fire({
+            title: 'Link del botón',
+            input: 'text',
+            inputValue: sugerido,
+            inputPlaceholder: '@(Model.Web)/',
+            showCancelButton: true,
+            confirmButtonText: 'Guardar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#0d7377'
+        });
+        if (!r.isConfirmed) return;
+        p.linkOferta = (r.value || '').trim();
+        actualizarLinkHintEditor(p);
+        scheduleSaveEditorState();
+    }
+
+    function restaurarLogoDefaultEditor() {
+        var p = getPlantillaActivaEditor();
+        if (!p) return;
+        p.logoSrc    = DEFAULT_LOGO_SRC;
+        p.logoHeight = 100;
+        aplicarLogoEditor(p);
+        scheduleSaveEditorState();
+    }
+
+    if (btnCargarLogoEditor && logoFileInputEditor) {
+        btnCargarLogoEditor.addEventListener('click', function () {
+            logoFileInputEditor.click();
+        });
+        logoFileInputEditor.addEventListener('change', function () {
+            var file = this.files && this.files[0];
+            if (!file) return;
+            if (file.type !== 'image/png') {
+                showToast('âœ— Solo se aceptan imÃ¡genes PNG', 'err');
+                this.value = '';
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function () {
+                var p = getPlantillaActivaEditor();
+                if (!p) return;
+                p.logoSrc = reader.result;
+                aplicarLogoEditor(p);
+                scheduleSaveEditorState();
+            };
+            reader.readAsDataURL(file);
+            this.value = '';
+        });
+    }
+    if (btnRestaurarLogoEditor) {
+        btnRestaurarLogoEditor.addEventListener('click', restaurarLogoDefaultEditor);
+    }
+    (function () {
+        var sl = document.getElementById('logoAlturaSlider');
+        var vl = document.getElementById('logoAlturaVal');
+        if (!sl) return;
+        sl.addEventListener('input', function () {
+            var h = parseInt(this.value) || 100;
+            var p = getPlantillaActivaEditor();
+            if (p) p.logoHeight = h;
+            if (flyerLogoEditor) flyerLogoEditor.style.height = h + 'px';
+            if (vl) vl.textContent = h + 'px';
+            scheduleSaveEditorState();
+        });
+    })();
+    if (btnEditarLinkOferta) {
+        btnEditarLinkOferta.addEventListener('click', editarLinkOfertaEditor);
+    }
+
+    function renumerarHotelesEditor() {
+        var rows = flyerHotelesEditor.querySelectorAll('.fh-row');
+        rows.forEach(function (row, i) {
+            var num   = i + 1;
+            var posEl = row.querySelector('.fh-pos');
+            var tagEl = row.querySelector('.fh-best-tag');
+            var precEl= row.querySelector('.fh-price');
+            if (posEl) { posEl.textContent = num; posEl.className = 'fh-pos'; posEl.style.color = getColorForPos(num); }
+            if (num === 1) {
+                row.classList.add('best');
+                if (precEl) { precEl.classList.add('rank1'); precEl.style.color = colorRank1; }
+                if (tagEl)  tagEl.style.display = '';
+            } else {
+                row.classList.remove('best');
+                if (precEl) { precEl.classList.remove('rank1'); precEl.style.color = colorOtros; }
+                if (tagEl)  tagEl.style.display = 'none';
+            }
+        });
+        if (emptyHint) emptyHint.style.display = rows.length ? 'none' : '';
+    }
+
+    function ordenarHotelesEditor() {
+        var rows = Array.from(flyerHotelesEditor.querySelectorAll('.fh-row'));
+        rows.sort(function (a, b) {
+            var pa = parseFloat((a.querySelector('.precio-val') || {}).textContent) || 0;
+            var pb = parseFloat((b.querySelector('.precio-val') || {}).textContent) || 0;
+            return pa - pb;
+        });
+        rows.forEach(function (r) { flyerHotelesEditor.appendChild(r); });
+        renumerarHotelesEditor();
+        scheduleSaveEditorState();
+        setTimeout(scaleFlyerEditor, 50);
+    }
+
+    function ocultarHotelEditor(row) {
+        var nombre = (row.querySelector('.fh-name') || {}).textContent || 'Hotel';
+        editorOcultosList.push({ html: row.outerHTML, nombre: nombre });
+        row.remove();
+        renumerarHotelesEditor();
+        actualizarPanelOcultosEditor();
+        scheduleSaveEditorState();
+        setTimeout(scaleFlyerEditor, 50);
+    }
+    window.restaurarHotelEditor = function (idx) {
+        var item = editorOcultosList[idx];
+        if (!item) return;
+        editorOcultosList.splice(idx, 1);
+        var temp = document.createElement('div');
+        temp.innerHTML = item.html;
+        flyerHotelesEditor.appendChild(temp.firstElementChild);
+        ordenarHotelesEditor();
+        actualizarPanelOcultosEditor();
+        scheduleSaveEditorState();
+        setTimeout(scaleFlyerEditor, 50);
+    };
+    function actualizarPanelOcultosEditor() {
+        var panel = document.getElementById('ocultosPanelEditor');
+        if (!panel) return;
+        if (!editorOcultosList.length) { panel.style.display = 'none'; return; }
+        panel.style.display = '';
+        panel.innerHTML = '<div class="ocultos-title"><i class="bi bi-eye-slash-fill me-1"></i>Hoteles ocultos</div>' +
+            editorOcultosList.map(function (item, i) {
+                return '<div class="oculto-item"><span>' + item.nombre + '</span>' +
+                    '<button class="btn-restaurar" onclick="restaurarHotelEditor(' + i + ')"><i class="bi bi-eye-fill me-1"></i>Mostrar</button></div>';
+            }).join('');
+    }
+
+    flyerHotelesEditor.addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-hide-hotel');
+        if (btn) { var row = btn.closest('.fh-row'); if (row) ocultarHotelEditor(row); }
+    });
+    flyerHotelesEditor.addEventListener('keydown', function (e) {
+        if (!e.target.classList.contains('precio-val')) return;
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            e.target.blur();
+            ordenarHotelesEditor();
+            scheduleSaveEditorState();
+        }
+    });
+    flyerHotelesEditor.addEventListener('input', function (e) {
+        if (e.target.classList.contains('precio-val')) {
+            scheduleSaveEditorState();
+        }
+    });
+
+    function agregarHotelAlFlyer(gid, slotId, hotelNombre, regimen, precio) {
+        var existing = flyerHotelesEditor.querySelector('.fh-row[data-slot="' + slotId + '"]');
+        if (existing) existing.remove();
+        var fila = document.createElement('div');
+        fila.className    = 'fh-row';
+        fila.dataset.slot = slotId;
+        fila.dataset.gid  = gid;
+        fila.innerHTML =
+            '<div class="fh-pos"></div>' +
+            '<div class="fh-sep"></div>' +
+            '<div class="fh-info">' +
+                '<div class="fh-name" contenteditable="true" spellcheck="false">' + hotelNombre + '</div>' +
+                '<div class="fh-meta" contenteditable="true" spellcheck="false">' + regimen + '</div>' +
+                '<div class="fh-best-tag" style="display:none;"><i class="bi bi-star-fill" style="font-size:.85rem;"></i> Mejor precio</div>' +
+            '</div>' +
+            '<div class="fh-price">' +
+                '<span class="precio-sym">RD$&nbsp;</span>' +
+                '<span class="precio-val" contenteditable="true" spellcheck="false">' + precio + '</span>' +
+            '</div>' +
+            '<button class="btn-hide-hotel" title="Ocultar hotel" type="button"><i class="bi bi-eye-slash"></i></button>';
+        flyerHotelesEditor.appendChild(fila);
+        ordenarHotelesEditor();
+    }
+
+    function crearGrupo() {
+        var gid = 'g' + (++groupCounter);
+        groups[gid] = { groupDestinoId: null, groupNombre: '', slots: {} };
+        groupOrder.push(gid);
+
+        var groupEl = document.createElement('div');
+        groupEl.className   = 'dest-group';
+        groupEl.dataset.gid = gid;
+
+        var hdr = document.createElement('div');
+        hdr.className = 'dest-group-hdr';
+
+        var destSel = document.createElement('select');
+        destSel.id        = 'dest_' + gid;
+        destSel.className = 'form-control form-control-sm';
+
+        var delBtn = document.createElement('button');
+        delBtn.type      = 'button';
+        delBtn.className = 'dest-group-del';
+        delBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
+        delBtn.onclick   = function () { eliminarGrupo(gid, groupEl); };
+
+        hdr.appendChild(destSel);
+        hdr.appendChild(delBtn);
+        groupEl.appendChild(hdr);
+
+        var slotsContainer = document.createElement('div');
+        slotsContainer.id = 'slots_' + gid;
+        groupEl.appendChild(slotsContainer);
+
+        var addBtn = document.createElement('button');
+        addBtn.type      = 'button';
+        addBtn.className = 'btn-add-hotel-sm';
+        addBtn.innerHTML = '<i class="bi bi-plus-circle"></i> Agregar hotel';
+        addBtn.onclick   = function () { crearSlot(gid, slotsContainer); };
+        groupEl.appendChild(addBtn);
+
+        destGroupsContainer.appendChild(groupEl);
+
+        var ts = new TomSelect(destSel, {
+            valueField: 'value', labelField: 'text', searchField: 'text',
+            placeholder: 'Buscar destino…',
+            load: function (query, callback) {
+                if (!query.length) return callback();
+                fetch('/Flyer/BuscarDestinos?term=' + encodeURIComponent(query))
+                    .then(function (r) { return r.json(); }).then(callback).catch(function () { callback(); });
+            },
+            onChange: function (val) {
+                var opt = ts.options[val];
+                if (opt) {
+                    var destinoAnterior = groups[gid].groupDestinoId || '';
+                    groups[gid].groupDestinoId      = val;
+                    groups[gid].groupNombre         = opt.text;
+                    groups[gid].groupPaisDestinoId  = opt.id_pais || '';
+                    if (!restoreMode && groupOrder[0] === gid) {
+                        updateHeroEditor(opt.text);
+                        // [2026-08-05] Refrescar el nombre auto del archivo (tab Editor)
+                        // cuando cambia el destino del primer grupo (que es el que se usa
+                        // como nombreDestino al guardar).
+                        if (typeof window.refrescarNombreArchivoAutoEditor === 'function')
+                            window.refrescarNombreArchivoAutoEditor();
+                    }
+
+                    // Si el destino realmente cambió, limpiar las opciones cacheadas del TomSelect
+                    // de cada slot de hotel del grupo. La próxima vez que el usuario abra el dropdown,
+                    // se re-cargará la lista correcta del nuevo destino. La selección actual se mantiene
+                    // (no se borra el hotel ya elegido) para no sorprender al usuario.
+                    if (!restoreMode && destinoAnterior && destinoAnterior !== val) {
+                        Object.keys(groups[gid].slots).forEach(function (slotId) {
+                            var tsH = tomSelects['hotel_' + slotId];
+                            if (tsH) {
+                                var currentVal = tsH.getValue();
+                                var currentOpt = currentVal ? tsH.options[currentVal] : null;
+                                tsH.clearOptions();
+                                // re-añadir la option actual para que se siga viendo el hotel seleccionado
+                                if (currentOpt) { tsH.addOption(currentOpt); tsH.refreshOptions(false); }
+                            }
+                        });
+                    }
+                }
+            }
+        });
+        tomSelects['dest_' + gid] = ts;
+        crearSlot(gid, slotsContainer);
+    }
+
+    function crearSlot(gid, container) {
+        var slotId = 'slot_' + (++slotCounter);
+        groups[gid].slots[slotId] = true;
+
+        var row = document.createElement('div');
+        row.className    = 'hc-row';
+        row.dataset.slot = slotId;
+        row.dataset.gid  = gid;
+
+        var numEl = document.createElement('span');
+        numEl.className   = 'hc-num';
+        numEl.textContent = '•';
+
+        var sel = document.createElement('select');
+        sel.id        = 'hotel_' + slotId;
+        sel.className = 'form-control form-control-sm';
+
+        var delBtn = document.createElement('button');
+        delBtn.type      = 'button';
+        delBtn.className = 'hc-del';
+        delBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
+        delBtn.onclick   = function () { eliminarSlot(gid, slotId, row); };
+
+        row.appendChild(numEl);
+        row.appendChild(sel);
+        row.appendChild(delBtn);
+        container.appendChild(row);
+
+        var ts = new TomSelect(sel, {
+            valueField: 'value', labelField: 'text', searchField: 'text',
+            placeholder: 'Buscar hotel…', maxOptions: 30,
+            load: function (query, callback) {
+                var destId  = groups[gid].groupDestinoId || '';
+                var paisId  = groups[gid].groupPaisDestinoId || '';
+                // Si tenemos destino y país → usamos fnAlojamientoDestino (solo hoteles con precio).
+                // Sin término de búsqueda y con destino válido también pedimos la lista (precio_web ASC).
+                if (paisId && destId) {
+                    fetch('/Flyer/BuscarHoteles?term=' + encodeURIComponent(query || '') +
+                          '&idDestino=' + encodeURIComponent(destId) +
+                          '&idPaisDestino=' + encodeURIComponent(paisId))
+                        .then(function (r) { return r.json(); }).then(callback).catch(function () { callback(); });
+                    return;
+                }
+                if (!query.length) return callback();
+                fetch('/Flyer/BuscarHoteles?term=' + encodeURIComponent(query) + '&idDestino=' + encodeURIComponent(destId))
+                    .then(function (r) { return r.json(); }).then(callback).catch(function () { callback(); });
+            },
+            onChange: async function (val) {
+                if (!val || restoreMode) return;
+                var opt = ts.options[val];
+                // Si el option ya trae precio_web (vino de fnAlojamientoDestino), úsalo directo.
+                if (opt && opt.precio_web != null) {
+                    agregarHotelAlFlyer(gid, slotId, opt.text, opt.regimen || '', opt.precio_web || 0);
+                    return;
+                }
+                // Fallback: comportamiento original (PrecioBarato) si no tenemos precio en el option.
+                var r = await fetch('/Flyer/PrecioBarato?idAlojamiento=' + val);
+                var d = await r.json().catch(function () { return {}; });
+                if (d.error) { showToast(d.error, 'err'); return; }
+                agregarHotelAlFlyer(gid, slotId, d.nombre_hotel || opt.text, d.regimen || d.nombre_habitacion || '', d.precio_final || 0);
+            }
+        });
+        tomSelects['hotel_' + slotId] = ts;
+    }
+
+    function eliminarGrupo(gid, el) {
+        flyerHotelesEditor.querySelectorAll('.fh-row[data-gid="' + gid + '"]').forEach(function (r) { r.remove(); });
+        delete groups[gid];
+        groupOrder = groupOrder.filter(function (g) { return g !== gid; });
+        el.remove();
+        renumerarHotelesEditor();
+        scheduleSaveEditorState();
+        setTimeout(scaleFlyerEditor, 50);
+    }
+
+    function eliminarSlot(gid, slotId, row) {
+        delete groups[gid].slots[slotId];
+        var fila = flyerHotelesEditor.querySelector('.fh-row[data-slot="' + slotId + '"]');
+        if (fila) fila.remove();
+        row.remove();
+        renumerarHotelesEditor();
+        scheduleSaveEditorState();
+        setTimeout(scaleFlyerEditor, 50);
+    }
+
+    function buildGruposState() {
+        return groupOrder.map(function (gid) {
+            var g = groups[gid];
+            return {
+                gid: gid,
+                destinoId: g.groupDestinoId || '',
+                destinoNombre: g.groupNombre || '',
+                paisDestinoId: g.groupPaisDestinoId || '',
+                slots: Object.keys(g.slots).map(function (slotId) {
+                    var ts  = tomSelects['hotel_' + slotId];
+                    var val = ts ? ts.getValue() : '';
+                    var opt = (ts && val) ? ts.options[val] : null;
+                    return { slotId: slotId, hotelId: val || '', hotelNombre: opt ? opt.text : '' };
+                })
+            };
+        });
+    }
+
+    function restaurarGruposEstado(savedGroups) {
+        Array.from(destGroupsContainer.querySelectorAll('.dest-group')).forEach(function (el) { el.remove(); });
+        Object.keys(tomSelects).forEach(function (k) { try { tomSelects[k].destroy(); } catch (e) {} });
+        groups = {}; groupOrder = []; tomSelects = {}; groupCounter = 0; slotCounter = 0;
+
+        if (!savedGroups || !savedGroups.length) { crearGrupo(); return; }
+
+        restoreMode = true;
+        savedGroups.forEach(function (sg) {
+            crearGrupo();
+            var gid      = groupOrder[groupOrder.length - 1];
+            var tsDest   = tomSelects['dest_' + gid];
+            if (tsDest && sg.destinoId && sg.destinoNombre) {
+                tsDest.addOption({ value: sg.destinoId, text: sg.destinoNombre, id_pais: sg.paisDestinoId || '' });
+                tsDest.setValue(sg.destinoId, true);
+                groups[gid].groupDestinoId      = sg.destinoId;
+                groups[gid].groupPaisDestinoId  = sg.paisDestinoId || '';
+                groups[gid].groupNombre    = sg.destinoNombre;
+            }
+            var slotsContainer  = document.getElementById('slots_' + gid);
+            var existingSlotIds = Object.keys(groups[gid].slots);
+            (sg.slots || []).forEach(function (slotState, idx) {
+                var slotId;
+                if (idx === 0 && existingSlotIds.length > 0) {
+                    slotId = existingSlotIds[0];
+                } else {
+                    crearSlot(gid, slotsContainer);
+                    slotId = 'slot_' + slotCounter;
+                }
+                if (slotState.hotelId && slotState.hotelNombre) {
+                    var tsH = tomSelects['hotel_' + slotId];
+                    if (tsH) {
+                        tsH.addOption({ value: slotState.hotelId, text: slotState.hotelNombre });
+                        tsH.setValue(slotState.hotelId, true);
+                    }
+                }
+            });
+        });
+        restoreMode = false;
+    }
+
+    document.getElementById('btnAgregarDestino').addEventListener('click', crearGrupo);
+
+    // ── Descargar PNG ──────────────────────────────────────────────────────────
+    document.getElementById('btnDescargar').addEventListener('click', async function () {
+        var btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin bi bi-arrow-clockwise"></span> Generando…';
+        var btns = hideHideBtns('flyerTemplateEditor');
+        try {
+            var canvas = await html2canvas(document.getElementById('flyerTemplateEditor'), { scale: 2, useCORS: true });
+            var a = document.createElement('a');
+            a.href     = canvas.toDataURL('image/png');
+            a.download = 'flyer_editor_' + Date.now() + '.png';
+            a.click();
+        } catch (e) { showToast('✗ ' + e.message, 'err'); }
+        finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-file-earmark-image"></i> Descargar PNG'; showHideBtns(btns); }
+    });
+
+    // ── Guardar PNG ────────────────────────────────────────────────────────────
+    document.getElementById('btnGuardarEditor').addEventListener('click', async function () {
+        var btn = this;
+        // [2026-08-05] Bloquear si el nombre editado (o autogenerado) no contiene un destino
+        // de configuración. Esta validación es exactamente la misma que en el tab Modelo.
+        if (nombreArchivoInputEditor) {
+            var vRes = validarNombreArchivo(nombreArchivoInputEditor.value);
+            if (!vRes.ok) {
+                showToast('Nombre inválido: ' + vRes.motivo, 'err');
+                return;
+            }
+        }
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin bi bi-arrow-clockwise"></span> Guardando…';
+        showToast('Guardando imagen…', 'info');
+        // Usar nombre del primer destino para que el worker identifique el link correcto
+        var primerGrupo = groupOrder.length > 0 ? groups[groupOrder[0]] : null;
+        var nombre = (primerGrupo && primerGrupo.groupNombre && primerGrupo.groupNombre.trim())
+            ? primerGrupo.groupNombre.trim()
+            : (flyerTitleEditor ? flyerTitleEditor.textContent.trim() : 'editor');
+        var pActiva = getPlantillaActivaEditor();
+        guardarEstadoPlantilla(plantillaActiva);
+        scheduleSaveEditorState();
+        var btns   = hideHideBtns('flyerTemplateEditor');
+        // [2026-08-05] Enviar el nombre del input (custom si el usuario lo editó, auto si no).
+        // Server-side revalida contra Flyer_Config y rechaza si el filename no tiene destino.
+        var nombreArchivoFinal = nombreArchivoInputEditor ? nombreArchivoInputEditor.value.trim() : '';
+        try {
+            var canvas = await html2canvas(document.getElementById('flyerTemplateEditor'), { scale: 2, useCORS: true });
+            var blob   = await new Promise(function (r) { canvas.toBlob(r, 'image/png'); });
+            var reader = new FileReader();
+            reader.onload = async function () {
+                var payload = {
+                    imageData: reader.result,
+                    nombreDestino: nombre,
+                    plantilla: plantillaActiva + 1,
+                    linkOferta: pActiva && pActiva.linkOferta ? pActiva.linkOferta : ''
+                };
+                if (nombreArchivoFinal) payload.nombreArchivo = nombreArchivoFinal;
+                var res  = await fetch('/Flyer/GuardarImagen', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                var data = await res.json().catch(function () { return null; });
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-cloud-upload"></i> Guardar PNG';
+                showHideBtns(btns);
+                if (data && data.success) showToast('✓ Guardado en galería', 'ok');
+                else showToast('✗ ' + (data && data.mensaje ? data.mensaje : 'Error al guardar'), 'err');
+            };
+            reader.readAsDataURL(blob);
+        } catch (e) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-cloud-upload"></i> Guardar PNG';
+            showHideBtns(btns);
+            showToast('✗ ' + e.message, 'err');
+        }
+    });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // TIPOGRAFÍA MODAL
+    // ══════════════════════════════════════════════════════════════════════════
+    function sincSlider(id, valId, key) {
+        var sl = document.getElementById(id);
+        var vl = document.getElementById(valId);
+        if (!sl) return;
+        sl.addEventListener('input', function () {
+            var v = parseFloat(this.value);
+            if (key === 'titulo')    tamTitulo    = v;
+            if (key === 'subtitulo') tamSubtitulo = v;
+            if (key === 'nombre')    tamNombre    = v;
+            if (key === 'precio')    tamPrecio    = v;
+            if (key === 'regimen')   tamRegimen   = v;
+            if (key === 'footer')    tamFooter    = v;
+            vl.textContent = v.toFixed(key === 'titulo' ? 1 : 2) + 'rem';
+            aplicarTamanos();
+            scheduleSaveEditorState();
+        });
+    }
+    sincSlider('slTitulo',    'vTitulo',    'titulo');
+    sincSlider('slSubtitulo', 'vSubtitulo', 'subtitulo');
+    sincSlider('slNombre',    'vNombre',    'nombre');
+    sincSlider('slPrecio',    'vPrecio',    'precio');
+    sincSlider('slRegimen',   'vRegimen',   'regimen');
+    sincSlider('slFooter',    'vFooter',    'footer');
+
+    document.getElementById('btnAbrirTipografia').addEventListener('click', function () {
+        document.getElementById('slTitulo').value    = tamTitulo;
+        document.getElementById('slSubtitulo').value = tamSubtitulo;
+        document.getElementById('slNombre').value    = tamNombre;
+        document.getElementById('slPrecio').value    = tamPrecio;
+        document.getElementById('slRegimen').value   = tamRegimen;
+        document.getElementById('slFooter').value    = tamFooter;
+        document.getElementById('vTitulo').textContent    = tamTitulo.toFixed(1)    + 'rem';
+        document.getElementById('vSubtitulo').textContent = tamSubtitulo.toFixed(2) + 'rem';
+        document.getElementById('vNombre').textContent    = tamNombre.toFixed(2)    + 'rem';
+        document.getElementById('vPrecio').textContent    = tamPrecio.toFixed(2)    + 'rem';
+        document.getElementById('vRegimen').textContent   = tamRegimen.toFixed(2)   + 'rem';
+        document.getElementById('vFooter').textContent    = tamFooter.toFixed(2)    + 'rem';
+        document.getElementById('tamModal').style.display = 'flex';
+    });
+    document.getElementById('btnCerrarTamTop').addEventListener('click', function () { document.getElementById('tamModal').style.display = 'none'; });
+    document.getElementById('btnCerrarTamBot').addEventListener('click', function () { document.getElementById('tamModal').style.display = 'none'; });
+    document.getElementById('tamModal').addEventListener('click', function (e) { if (e.target === this) this.style.display = 'none'; });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // FONDOS MODAL
+    // ══════════════════════════════════════════════════════════════════════════
+    // Pre-populate from destinos
+    todosDestinos.forEach(function (d) {
+        var n = d.nombre_Destino || d.Nombre_Destino || '';
+        if (!n) return;
+        var url = fondosPorDestino[n];
+        if (!url) return;   // en Eurovip solo se listan los destinos que tienen fondo subido
+        fondosGaleria.push({ url: url, nombre: n });
+    });
+
+    function renderFondosGaleria() {
+        var grid = document.getElementById('fondoGrid');
+        if (!fondosGaleria.length) {
+            grid.innerHTML = '<div class="fondo-empty"><i class="bi bi-image" style="font-size:2rem;display:block;margin-bottom:8px;"></i>Sube una imagen PNG para comenzar</div>';
+            return;
+        }
+        grid.innerHTML = fondosGaleria.map(function (f, i) {
+            return '<div class="fondo-item" data-idx="' + i + '">' +
+                '<img src="' + f.url + '" alt="" onerror="this.style.opacity=\'.3\'">' +
+                '<div class="fondo-item-name" contenteditable="true" spellcheck="false" ' +
+                    'onclick="event.stopPropagation()" ' +
+                    'onblur="fondosGaleria[' + i + '].nombre=this.textContent.trim()">' + f.nombre + '</div>' +
+            '</div>';
+        }).join('');
+        grid.querySelectorAll('.fondo-item').forEach(function (el) {
+            el.addEventListener('click', function () {
+                var idx = parseInt(this.dataset.idx);
+                aplicarFondoGaleria(idx);
+                grid.querySelectorAll('.fondo-item').forEach(function (x) { x.classList.remove('sel'); });
+                this.classList.add('sel');
+            });
+        });
+    }
+
+    function aplicarFondoGaleria(idx) {
+        var f = fondosGaleria[idx];
+        if (!f) return;
+        var bg = 'linear-gradient(to bottom, rgba(0,30,42,.15) 0%, rgba(0,30,42,.72) 100%), url(' + f.url + ') center/cover no-repeat';
+        if (tabActivo === 'modelo') {
+            flyerHero.style.background = bg;
+            setTimeout(scaleFlyer, 50);
+        } else {
+            flyerHeroEditor.style.background = bg;
+            setTimeout(scaleFlyerEditor, 50);
+        }
+        showToast('✓ Fondo aplicado', 'ok');
+    }
+
+    document.getElementById('btnAbrirFondo').addEventListener('click', function () {
+        renderFondosGaleria();
+        document.getElementById('fondoModal').style.display = 'flex';
+    });
+    document.getElementById('btnCerrarFondoTop').addEventListener('click', function () { document.getElementById('fondoModal').style.display = 'none'; });
+    document.getElementById('btnCerrarFondoBot').addEventListener('click', function () { document.getElementById('fondoModal').style.display = 'none'; });
+    document.getElementById('fondoModal').addEventListener('click', function (e) { if (e.target === this) this.style.display = 'none'; });
+
+    // ── Subir PNG — solo PNG ───────────────────────────────────────────────────
+    document.getElementById('fondoFileInput').addEventListener('change', function () {
+        var file = this.files[0];
+        if (!file) return;
+        if (file.type !== 'image/png') {
+            showToast('✗ Solo se aceptan imágenes PNG', 'err');
+            this.value = '';
+            return;
+        }
+        var url    = URL.createObjectURL(file);
+        var nombre = file.name.replace(/\.png$/i, '').replace(/_/g, ' ');
+        fondosGaleria.push({ url: url, nombre: nombre });
+        renderFondosGaleria();
+        aplicarFondoGaleria(fondosGaleria.length - 1);
+        var fd = new FormData();
+        fd.append('archivo', file);
+        fd.append('nombreDestino', nombre);
+        fetch('/Flyer/SubirImagenFondo', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d && d.success && d.url) fondosGaleria[fondosGaleria.length - 1].url = d.url; })
+            .catch(function () {});
+        this.value = '';
+    });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // PLANTILLAS (Editor tab)
+    // ══════════════════════════════════════════════════════════════════════════
+    var plantillas = [{
+        nombre: 'Plantilla 1', titulo: '', subtitulo: '', seccion: '',
+        footerUrl: '', footerTag: '', heroBg: '', hotelHtml: '', ocultos: [],
+        logoSrc: DEFAULT_LOGO_SRC, linkOferta: '', logoHeight: 100,
+        // [2026-08-05] Cada plantilla lleva su propio nombre de archivo. Se muestra
+        // en el input "Nombre del flyer" del tab Editor cuando la plantilla está
+        // activa; al cambiar de plantilla el input refleja SU nombre. El flag
+        // nombreArchivoEditado se persiste para no perder el estado "el usuario
+        // ya editó este nombre" al alternar entre plantillas.
+        nombreArchivo: '', nombreArchivoEditado: false
+    }];
+    var plantillaActiva = 0;
+    var tplStripBound = false;
+
+    function guardarEstadoPlantilla(idx) {
+        var p = plantillas[idx];
+        p.titulo     = flyerTitleEditor    ? flyerTitleEditor.textContent    : '';
+        p.subtitulo  = document.getElementById('flyerSubtitleEditor') ? document.getElementById('flyerSubtitleEditor').textContent : '';
+        p.seccion    = document.getElementById('flyerSeccionEditor')  ? document.getElementById('flyerSeccionEditor').textContent  : '';
+        p.footerUrl  = document.getElementById('footerUrlEditor')     ? document.getElementById('footerUrlEditor').textContent     : '';
+        p.footerTag  = document.getElementById('footerTagEditor')     ? document.getElementById('footerTagEditor').textContent     : '';
+        p.heroBg     = flyerHeroEditor ? flyerHeroEditor.style.background : '';
+        p.hotelHtml  = flyerHotelesEditor ? Array.from(flyerHotelesEditor.querySelectorAll('.fh-row')).map(function(r){return r.outerHTML;}).join('') : '';
+        p.ocultos    = editorOcultosList.slice();
+        p.logoSrc    = flyerLogoEditor ? flyerLogoEditor.src : getLogoSrcEditor(p);
+        p.logoHeight = flyerLogoEditor ? (parseInt(flyerLogoEditor.style.height) || 100) : 100;
+        // [2026-08-05] Guardar también el nombre de archivo específico de esta plantilla
+        // y si el usuario lo editó — así se conserva al cambiar entre plantillas.
+        if (nombreArchivoInputEditor) {
+            p.nombreArchivo         = nombreArchivoInputEditor.value;
+            p.nombreArchivoEditado  = nombreArchivoEditadoEditor;
+        }
+    }
+
+    function cargarEstadoPlantilla(idx) {
+        var p = plantillas[idx];
+        var els = {
+            titulo:    document.getElementById('flyerTitleEditor'),
+            subtitulo: document.getElementById('flyerSubtitleEditor'),
+            seccion:   document.getElementById('flyerSeccionEditor'),
+            footerUrl: document.getElementById('footerUrlEditor'),
+            footerTag: document.getElementById('footerTagEditor')
+        };
+        if (els.titulo    && p.titulo)    els.titulo.textContent    = p.titulo;
+        if (els.subtitulo && p.subtitulo) els.subtitulo.textContent = p.subtitulo;
+        if (els.seccion   && p.seccion)   els.seccion.textContent   = p.seccion;
+        if (els.footerUrl && p.footerUrl) els.footerUrl.textContent = p.footerUrl;
+        if (els.footerTag && p.footerTag) els.footerTag.textContent = p.footerTag;
+        if (flyerHeroEditor && p.heroBg) flyerHeroEditor.style.background = p.heroBg;
+        aplicarLogoEditor(p);
+        actualizarLinkHintEditor(p);
+        if (flyerHotelesEditor) {
+            flyerHotelesEditor.innerHTML = p.hotelHtml ||
+                '<div class="flyer-empty-hint" id="flyerEmptyHint"><i class="bi bi-geo-alt"></i><p>Selecciona un <strong>destino</strong> y agrega hoteles.</p></div>';
+            emptyHint = document.getElementById('flyerEmptyHint');
+        }
+        editorOcultosList = p.ocultos.slice();
+        actualizarPanelOcultosEditor();
+        renumerarHotelesEditor();
+        aplicarColores();
+        aplicarColoresPosicion();
+        setTimeout(scaleFlyerEditor, 50);
+
+        // [2026-08-05] Cargar el nombre de archivo específico de esta plantilla en el input
+        // del tab Editor. Si nunca se guardó (p.nombreArchivo vacío) y el usuario no lo ha
+        // editado, se autogenera con el primer destino disponible.
+        if (nombreArchivoInputEditor) {
+            nombreArchivoEditadoEditor = !!p.nombreArchivoEditado;
+            if (p.nombreArchivo) {
+                nombreArchivoInputEditor.value = p.nombreArchivo;
+                aplicarEstadoValidacionEditor();
+            } else if (typeof window.refrescarNombreArchivoAutoEditor === 'function') {
+                window.refrescarNombreArchivoAutoEditor();
+            }
+        }
+    }
+
+    function renderTemplateStrip() {
+        var strip = document.getElementById('tplStrip');
+        if (!strip) return;
+        strip.innerHTML = plantillas.map(function (p, i) {
+            return '<div class="tpl-tab' + (i === plantillaActiva ? ' active' : '') + '" data-idx="' + i + '">' +
+                '<span class="tpl-name" contenteditable="' + (i === plantillaActiva ? 'true' : 'false') + '" spellcheck="false">' + (p.nombre || 'Plantilla ' + (i+1)) + '</span>' +
+                (plantillas.length > 1 ? '<button class="tpl-del" title="Eliminar" onclick="window.eliminarPlantilla(' + i + ');event.stopPropagation();"><i class="bi bi-x"></i></button>' : '') +
+            '</div>';
+        }).join('') +
+        '<button class="btn-nueva-tpl" onclick="window.nuevaPlantilla()"><i class="bi bi-plus"></i> Nueva</button>';
+
+        strip.querySelectorAll('.tpl-name').forEach(function (el) {
+            var i = parseInt(el.closest('.tpl-tab').dataset.idx);
+            el.addEventListener('blur', function () {
+                plantillas[i].nombre = this.textContent.trim() || ('Plantilla ' + (i+1));
+                scheduleSaveEditorState();
+            });
+            el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
+        });
+
+        if (!tplStripBound) {
+            strip.addEventListener('mousedown', function (e) {
+                var tab = e.target.closest('.tpl-tab');
+                if (!tab) return;
+                var idx = parseInt(tab.dataset.idx);
+                if (idx === plantillaActiva) return;
+                if (e.target.closest('.tpl-del')) return;
+                e.preventDefault();
+                guardarEstadoPlantilla(plantillaActiva);
+                plantillaActiva = idx;
+                cargarEstadoPlantilla(idx);
+                renderTemplateStrip();
+                scheduleSaveEditorState();
+            }, true);
+            tplStripBound = true;
+        }
+    }
+
+    // Init plantilla 0 from DOM
+    (function () {
+        var p = plantillas[0];
+        p.titulo    = flyerTitleEditor    ? flyerTitleEditor.textContent    : '';
+        p.subtitulo = document.getElementById('flyerSubtitleEditor') ? document.getElementById('flyerSubtitleEditor').textContent : '';
+        p.seccion   = document.getElementById('flyerSeccionEditor')  ? document.getElementById('flyerSeccionEditor').textContent  : '';
+        p.footerUrl = document.getElementById('footerUrlEditor')     ? document.getElementById('footerUrlEditor').textContent     : '';
+        p.footerTag = document.getElementById('footerTagEditor')     ? document.getElementById('footerTagEditor').textContent     : '';
+        p.heroBg    = flyerHeroEditor ? flyerHeroEditor.style.background : '';
+    })();
+    renderTemplateStrip();
+
+    // Apply colors + sizes on load
+    aplicarColores();
+    aplicarColoresPosicion();
+
+    function restoreEditorState() {
+        try {
+            var raw = localStorage.getItem(STORE_KEY);
+            if (!raw) return false;
+            var state = JSON.parse(raw);
+            if (state && Array.isArray(state.plantillas) && state.plantillas.length) {
+                plantillas = state.plantillas.map(function (p, i) {
+                    return {
+                        nombre: p.nombre || ('Plantilla ' + (i + 1)),
+                        titulo: p.titulo || '',
+                        subtitulo: p.subtitulo || '',
+                        seccion: p.seccion || '',
+                        footerUrl: p.footerUrl || '',
+                        footerTag: p.footerTag || '',
+                        heroBg: p.heroBg || '',
+                        hotelHtml: p.hotelHtml || '',
+                        ocultos: (p.ocultos || []).map(function (o) {
+                            return { html: o.html || '', nombre: o.nombre || '' };
+                        }),
+                        logoSrc: p.logoSrc || DEFAULT_LOGO_SRC,
+                        linkOferta: p.linkOferta || '',
+                        logoHeight: p.logoHeight || 100,
+                        // [2026-08-05] Restaurar nombre de archivo por plantilla (retro-compatible
+                        // con estados anteriores donde no existía este campo).
+                        nombreArchivo:        p.nombreArchivo || '',
+                        nombreArchivoEditado: !!p.nombreArchivoEditado
+                    };
+                });
+            }
+            if (typeof state.plantillaActiva === 'number') {
+                plantillaActiva = Math.max(0, Math.min(state.plantillaActiva, plantillas.length - 1));
+            }
+            if (typeof state.tamTitulo === 'number') tamTitulo = state.tamTitulo;
+            if (typeof state.tamSubtitulo === 'number') tamSubtitulo = state.tamSubtitulo;
+            if (typeof state.tamNombre === 'number') tamNombre = state.tamNombre;
+            if (typeof state.tamPrecio === 'number') tamPrecio = state.tamPrecio;
+            if (typeof state.tamRegimen === 'number') tamRegimen = state.tamRegimen;
+            if (typeof state.tamFooter === 'number') tamFooter = state.tamFooter;
+            if (typeof state.colorRank1 === 'string') colorRank1 = state.colorRank1;
+            if (typeof state.colorOtros === 'string') colorOtros = state.colorOtros;
+            if (typeof state.colorRegimen === 'string') colorRegimen = state.colorRegimen;
+            if (typeof state.colorPos1 === 'string') colorPos1 = state.colorPos1;
+            if (typeof state.colorPos2 === 'string') colorPos2 = state.colorPos2;
+            if (typeof state.colorPos3 === 'string') colorPos3 = state.colorPos3;
+            if (typeof state.colorPos45 === 'string') colorPos45 = state.colorPos45;
+            if (typeof state.logoVisible === 'boolean') logoVisible = state.logoVisible;
+            if (typeof state.tabActivo === 'string') tabActivo = state.tabActivo;
+            if (Array.isArray(state.gruposState)) savedGruposState = state.gruposState;
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function activarEstadoEditor() {
+        renderTemplateStrip();
+        cargarEstadoPlantilla(plantillaActiva);
+        if (savedGruposState) {
+            restaurarGruposEstado(savedGruposState);
+        } else if (!groupOrder.length) {
+            crearGrupo();
+        }
+        aplicarTamanos();
+        aplicarColores();
+        aplicarColoresPosicion();
+        document.getElementById('logoWrapModelo').style.display = logoVisible ? '' : 'none';
+        document.getElementById('logoWrapEditor').style.display = logoVisible ? '' : 'none';
+        var btnLogo = document.getElementById('btnToggleLogo');
+        if (btnLogo) {
+            btnLogo.innerHTML = logoVisible
+                ? '<i class="bi bi-image"></i> Logo'
+                : '<i class="bi bi-image-fill"></i> Logo <small style="color:#64748b">(oculto)</small>';
+            btnLogo.classList.toggle('active', !logoVisible);
+        }
+        var activeBtn = document.querySelector('.tab-btn[data-tab="' + tabActivo + '"]');
+        if (tabActivo === 'editor') {
+            switchTab('editor', activeBtn);
+        } else {
+            switchTab('modelo', activeBtn);
+        }
+        scheduleSaveEditorState();
+    }
+
+    window.nuevaPlantilla = function () {
+        guardarEstadoPlantilla(plantillaActiva);
+        var base = plantillas[plantillaActiva] || plantillas[0] || {};
+        plantillas.push({
+            nombre: 'Plantilla ' + (plantillas.length + 1),
+            titulo: base.titulo || '',
+            subtitulo: base.subtitulo || 'Oferta especial · Todo incluido · Salida Madrid',
+            seccion: base.seccion || 'Top hoteles más económicos',
+            footerUrl: base.footerUrl || '@Model.WebTexto',
+            footerTag: base.footerTag || 'tu agencia de confianza',
+            heroBg: base.heroBg || '',
+            hotelHtml: base.hotelHtml || '',
+            ocultos: (base.ocultos || []).map(function (o) { return { html: o.html || '', nombre: o.nombre || '' }; }),
+            logoSrc: base.logoSrc || DEFAULT_LOGO_SRC,
+            linkOferta: base.linkOferta || '',
+            logoHeight: base.logoHeight || 100,
+            // [2026-08-05] Plantilla nueva arranca sin nombre de archivo — cargarEstadoPlantilla
+            // dispara refrescarNombreArchivoAutoEditor y genera uno basado en el destino actual.
+            nombreArchivo: '', nombreArchivoEditado: false
+        });
+        plantillaActiva = plantillas.length - 1;
+        renderTemplateStrip();
+        cargarEstadoPlantilla(plantillaActiva);
+        scheduleSaveEditorState();
+    };
+
+    window.eliminarPlantilla = function (idx) {
+        if (plantillas.length <= 1) return;
+        plantillas.splice(idx, 1);
+        if (plantillaActiva >= plantillas.length) plantillaActiva = plantillas.length - 1;
+        renderTemplateStrip();
+        cargarEstadoPlantilla(plantillaActiva);
+        scheduleSaveEditorState();
+    };
+
+    if (!restoreEditorState()) {
+        guardarEstadoPlantilla(plantillaActiva);
+        crearGrupo();
+    }
+    activarEstadoEditor();
+
+    window.addEventListener('beforeunload', function () {
+        saveEditorState();
+    });
+
+})();
+</script>
+}
