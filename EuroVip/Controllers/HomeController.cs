@@ -198,6 +198,47 @@ namespace EuroVip.Controllers
             return Json(lista);
         }
 
+        /// <summary>
+        /// Columna derecha del Inicio (antes «Avance del proyecto» y «Hoja de ruta»): qué hay a la venta hoy de cada producto,
+        /// con su enlace, y las últimas cargas. Solo los productos de los módulos que el usuario tiene.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Resumen()
+        {
+            var p = HttpContext.Items[AccesoModuloFilter.ClavePermisos] as PermisosUsuario;
+            bool Puede(string m) => p?.Puede(m) ?? true;
+            using var cn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+            var c = await cn.QueryFirstAsync<(int SoloHotel, int Paquetes, int Circuitos, int Excursiones, int Traslados, int Cruceros, int Hoteles)>(@"
+                SELECT
+                  (SELECT COUNT(DISTINCT s.id_servicio) FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
+                    WHERE s.activo = 1 AND s.id_tipo_servicio = 'SOLO_HOTEL' AND sd.desde > CAST(GETDATE() AS date)),
+                  (SELECT COUNT(DISTINCT s.id_servicio) FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
+                    WHERE s.activo = 1 AND s.id_tipo_servicio = 'PAQUETES' AND sd.desde > CAST(GETDATE() AS date)),
+                  (SELECT COUNT(DISTINCT sc.nombre_circuito) FROM Eurovip.servicio_circuito sc JOIN Eurovip.servicio s ON s.id_servicio = sc.id_servicio
+                    WHERE s.activo = 1 AND sc.desde > CAST(GETDATE() AS date)),
+                  (SELECT COUNT(*) FROM Eurovip.servicio_excursion WHERE ISNULL(precio, 0) > 0),
+                  (SELECT COUNT(*) FROM Eurovip.traslado WHERE activo = 1),
+                  (SELECT COUNT(*) FROM Eurovip.crucero c WHERE c.activo = 1
+                     AND EXISTS (SELECT 1 FROM Eurovip.crucero_salida x WHERE x.id_crucero = c.id_crucero AND x.activo = 1 AND x.fecha_salida > CAST(GETDATE() AS date))),
+                  (SELECT COUNT(*) FROM Eurovip.inicio WHERE tipo_servicio = 'HOTEL' AND ISNULL(estado, 1) = 1)");
+            var productos = new List<object>();
+            void Agregar(string modulo, string titulo, string icono, int n, string sufijo, string url) { if (Puede(modulo)) productos.Add(new { titulo, icono, n, sufijo, url }); }
+            Agregar("carga_manual", "Solo Hotel", "bi-box-seam", c.SoloHotel, "salidas", "/Ofertas/Index");
+            Agregar("carga_manual", "Paquetes", "bi-suitcase2", c.Paquetes, "salidas", "/Paquetes/Index");
+            Agregar("circuitos", "Circuitos", "bi-signpost-split", c.Circuitos, "con salidas", "/Circuitos/Index");
+            Agregar("excursiones", "Excursiones", "bi-compass", c.Excursiones, "con precio", "/Excursiones/Index");
+            Agregar("traslados", "Traslados", "bi-bus-front", c.Traslados, "activos", "/Traslados/Index");
+            Agregar("cruceros", "Cruceros", "bi-water", c.Cruceros, "con salidas", "/Cruceros/Index");
+            Agregar("hoteles", "Hoteles", "bi-building", c.Hoteles, "visibles", "/Hoteles/Index");
+
+            var cargas = Puede("historial_cargas") || Puede("carga_manual") || Puede("circuitos")
+                ? (await cn.QueryAsync<(int Id, string Tipo, string Usuario, DateTime Fecha, string? Estatus, int? Registros)>(@"
+                    SELECT TOP 6 id, tipo_carga, usuario, fecha_hora, estatus, registros_insertados FROM Eurovip.Log_Cargas ORDER BY id DESC"))
+                    .Select(x => (object)new { x.Id, tipo = x.Tipo, usuario = x.Usuario, fecha = x.Fecha, estatus = x.Estatus, registros = x.Registros ?? 0 }).ToList()
+                : new List<object>();
+            return Json(new { productos, cargas, verHistorial = Puede("historial_cargas") });
+        }
+
         public async Task<IActionResult> Index()
         {
             var userName = User.Identity?.Name ?? string.Empty;

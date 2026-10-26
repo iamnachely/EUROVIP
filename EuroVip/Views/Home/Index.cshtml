@@ -9,14 +9,6 @@
     var iconoMomento = momento switch { "dia" => "bi-sun-fill", "tarde" => "bi-cloud-sun-fill", _ => "bi-moon-stars-fill" };
     var nombreBonito = new System.Globalization.CultureInfo("es-ES").TextInfo.ToTitleCase(primerNombre.ToLowerInvariant());
 
-    // Avance del proyecto Eurovip (fase 1 = base + login + home)
-    const int fasesTotales = 6;
-    const int fasesHechas = 4;
-    var pct = (int)Math.Round(fasesHechas * 100.0 / fasesTotales);
-    const double radio = 62;
-    var circ = 2 * Math.PI * radio;
-    var offset = circ * (1 - pct / 100.0);
-
     // Ola periódica: desplazar el grupo exactamente 1 período (120) = loop perfecto.
     string Ola(double y, double amp)
     {
@@ -181,6 +173,22 @@
         /* Anillo que se dibuja + paso actual que late */
         .h-ring-arc { stroke-dashoffset: var(--circ); animation: hRing 1.8s cubic-bezier(.2,.8,.2,1) .4s forwards; }
         @@keyframes hRing { to { stroke-dashoffset: var(--off); } }
+        .h-venta { display: grid; gap: 6px; }
+        .h-venta a { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 14px; text-decoration: none; color: var(--ev-text); transition: background .2s; }
+        .h-venta a:hover { background: var(--ev-surface-2); }
+        .h-venta .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--ev-mint); color: var(--ev-ink); flex-shrink: 0; }
+        .h-venta .tx { flex: 1; min-width: 0; font-weight: 700; font-size: 14px; }
+        .h-venta .tx small { display: block; color: var(--ev-muted); font-weight: 600; font-size: 12px; }
+        .h-venta b { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .h-venta a.cero b { color: var(--ev-muted); }
+        .h-venta a.cero .ic { background: var(--ev-surface-2); color: var(--ev-muted); }
+        .h-cargas { display: grid; }
+        .h-cargas .it { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-top: 1px solid var(--ev-line); }
+        .h-cargas .it:first-child { border-top: 0; }
+        .h-cargas .pt { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; background: #16A34A; }
+        .h-cargas .pt.mal { background: #D92D20; } .h-cargas .pt.va { background: #F79009; }
+        .h-cargas b { font-size: 13.5px; display: block; }
+        .h-cargas small { color: var(--ev-muted); font-weight: 600; font-size: 12px; }
         .ev-step.now { position: relative; }
         .ev-step.now::after {
             content: ""; position: absolute; inset: -4px; border-radius: 13px; border: 2px solid var(--ev-aqua);
@@ -403,7 +411,7 @@
             </div>
             <div class="ev-card ev-kpi ev-rise d3">
                 <div class="ev-kpi-icon"><i class="bi bi-calendar-check"></i></div>
-                <div><div class="ev-kpi-value" data-count="@Model.OfertasVenta">0</div><div class="ev-kpi-label">Ofertas a la venta</div></div>
+                <div><div class="ev-kpi-value" data-count="@Model.OfertasVenta">0</div><div class="ev-kpi-label">Solo Hotel y Paquetes</div></div>
             </div>
             <div class="ev-card ev-kpi ev-rise d4">
                 <div class="ev-kpi-icon"><i class="bi bi-signpost-split"></i></div>
@@ -466,39 +474,22 @@
 
     <!-- Rail derecho -->
     <aside class="ev-rail">
+        <!-- A la venta hoy: cuánto hay de cada producto (de los módulos que tienes), con su enlace -->
         <div class="ev-card ev-rise d2">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-                <b style="font-size:15px">Avance del proyecto</b>
-                <span class="ev-chip ghost">@DateTime.Now.ToString("MMM yyyy", new System.Globalization.CultureInfo("es-ES"))</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <b style="font-size:15px">A la venta hoy</b>
+                <span class="ev-chip ghost">@DateTime.Now.ToString("d MMM", new System.Globalization.CultureInfo("es-ES"))</span>
             </div>
-            <div class="ev-ring">
-                <svg width="150" height="150" viewBox="0 0 150 150">
-                    <defs>
-                        <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0" stop-color="#74F2E6" />
-                            <stop offset="1" stop-color="#2BD4C4" />
-                        </linearGradient>
-                    </defs>
-                    <circle cx="75" cy="75" r="@radio" fill="none" stroke="var(--ev-surface-2)" stroke-width="14" />
-                    <circle class="h-ring-arc" cx="75" cy="75" r="@radio" fill="none" stroke="url(#ringGrad)" stroke-width="14" stroke-linecap="round"
-                            stroke-dasharray="@circ.ToString("0.##", ci)"
-                            style="--circ:@circ.ToString("0.##", ci);--off:@offset.ToString("0.##", ci)" />
-                </svg>
-                <div class="ev-ring-label"><div><b data-count="@pct" data-suffix="%">0%</b><small>Fase @fasesHechas de @fasesTotales</small></div></div>
-            </div>
+            <div class="h-venta" id="hVenta"><div class="ui-skel" style="height:180px;border-radius:14px;background:var(--ev-surface-2)"></div></div>
         </div>
 
+        <!-- Últimas cargas: quién cargó qué y si salió bien -->
         <div class="ev-card ev-rise d3">
-            <b style="font-size:15px;display:block;margin-bottom:6px">Hoja de ruta</b>
-            <ul class="ev-timeline">
-                <li><span class="ev-step done"><i class="bi bi-check-lg"></i></span><div><b>Base, Login y Home</b><small>Esquema Eurovip + usuarios</small></div></li>
-                <li><span class="ev-step done"><i class="bi bi-check-lg"></i></span><div><b>Carga de Hoteles</b><small>Vitrina de la web (inicio)</small></div></li>
-                <li><span class="ev-step done"><i class="bi bi-check-lg"></i></span><div><b>Solo Hotel</b><small>Ofertas de hotel: Express o con Excel</small></div></li>
-                <li><span class="ev-step done"><i class="bi bi-check-lg"></i></span><div><b>Paquetes</b><small>Igual que Solo Hotel, se guardan como Paquete</small></div></li>
-                <li><span class="ev-step now">4</span><div><b>Excursiones y Traslados</b><small>Servicios por destino</small></div></li>
-                <li><span class="ev-step done"><i class="bi bi-check-lg"></i></span><div><b>Circuitos</b><small>Catálogo + carga Express o con Excel</small></div></li>
-                <li><span class="ev-step">6</span><div><b>Administración</b><small>Usuarios, accesos, catálogos</small></div></li>
-            </ul>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <b style="font-size:15px">Últimas cargas</b>
+                <a href="/Cargas/Index" id="hCargasVer" style="font-weight:800;font-size:12.5px;color:var(--ev-deep);text-decoration:none" hidden>Ver todas <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="h-cargas" id="hCargas"></div>
         </div>
 
         <div class="ev-card ev-rise d4 h-db" style="background:var(--ev-ink);color:#fff;border-color:var(--ev-ink)">
@@ -514,6 +505,30 @@
 
 @section Scripts {
     <script>
+        // ---- A la venta hoy y Últimas cargas (columna derecha) ----
+        (async function () {
+            const esc = s => (s ?? '').toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const fmt = n => Number(n || 0).toLocaleString('es-ES');
+            try {
+                const r = await fetch('/Home/Resumen', { headers: { Accept: 'application/json' } });
+                if (!r.ok) throw new Error();
+                const d = await r.json();
+                document.getElementById('hVenta').innerHTML = d.productos.length
+                    ? d.productos.map(p => `<a href="${esc(p.url)}" class="${p.n ? '' : 'cero'}"><span class="ic"><i class="bi ${esc(p.icono)}"></i></span>
+                        <span class="tx">${esc(p.titulo)}<small>${p.n ? esc(p.sufijo) : 'nada a la venta'}</small></span><b>${fmt(p.n)}</b></a>`).join('')
+                    : '<small style="color:var(--ev-muted);font-weight:600">No tienes módulos de productos.</small>';
+                const hoy = new Date().toDateString();
+                const cuando = f => { const x = new Date(f); return x.toDateString() === hoy ? 'hoy ' + x.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : x.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }); };
+                const caja = document.getElementById('hCargas');
+                caja.innerHTML = d.cargas.length
+                    ? d.cargas.map(c => { const ok = /correcto/i.test(c.estatus || ''), va = /proceso/i.test(c.estatus || '');
+                        return `<div class="it"><span class="pt ${ok ? '' : va ? 'va' : 'mal'}" title="${esc(c.estatus || '')}"></span><div><b>${esc(c.tipo)}${ok ? ` · ${fmt(c.registros)}` : ''}</b>
+                            <small>${esc(c.usuario)} · ${cuando(c.fecha)}${ok ? '' : ' · ' + esc(c.estatus || '')}</small></div></div>`; }).join('')
+                    : '<small style="color:var(--ev-muted);font-weight:600">Todavía no hay cargas.</small>';
+                document.getElementById('hCargasVer').hidden = !d.verHistorial || !d.cargas.length;
+            } catch { document.getElementById('hVenta').innerHTML = '<small style="color:var(--ev-muted);font-weight:600">No se pudo cargar el resumen.</small>'; }
+        })();
+
         // ---- Tus pendientes (lo que conviene revisar hoy) ----
         (async function () {
             const caja = document.getElementById('hPend');
