@@ -24,12 +24,12 @@ namespace EuroVip.Models
 
     /// <summary>
     /// Datos de una carga manual de ofertas. Lo usan las DOS versiones (Express y Clásica).
-    /// Por cada hotel × campaña × fecha se crea un "servicio" de tipo OFERTA.
+    /// Por cada hotel × campaña × fecha se crea un "servicio" de tipo SOLO_HOTEL.
     /// </summary>
     public class CargaOfertaDto
     {
         public string Modo { get; set; } = "clasica";
-        /// <summary>OFERTA (Solo Hotel, por defecto) o PAQUETE (Paquetes): se guarda en servicio.id_tipo_servicio.</summary>
+        /// <summary>SOLO_HOTEL (Solo Hotel, por defecto) o PAQUETES (Paquetes): se guarda en servicio.id_tipo_servicio.</summary>
         public string? Tipo { get; set; }
         [StringLength(30)] public string? CodigoServicio { get; set; }
         [Required(ErrorMessage = "Elige el proveedor")] [StringLength(10)] public string Id_Proveedor { get; set; } = "";
@@ -55,7 +55,7 @@ namespace EuroVip.Models
 
     public class OfertaFiltro
     {
-        /// <summary>OFERTA (Solo Hotel, por defecto) o PAQUETE (Paquetes).</summary>
+        /// <summary>SOLO_HOTEL (Solo Hotel, por defecto) o PAQUETES (Paquetes).</summary>
         public string? Tipo { get; set; }
         public string? Q { get; set; }
         public string? Destino { get; set; }

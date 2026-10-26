@@ -4560,6 +4560,75 @@ GO
 
 
 /* ##########################################################################################
+   FASE 28 — TIPOS DE SERVICIO: «SOLO_HOTEL» Y «PAQUETES»  (26/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «en vez de Oferta que se llame Solo Hotel y los paquetes que se llamen Paquetes en
+   tipo_servicio» (confirmó que también el valor guardado en la base, no solo el texto de las pantallas).
+   Explicado fácil:
+     • El código del tipo cambia: OFERTA → SOLO_HOTEL y PAQUETE → PAQUETES. Lo que estaba cargado se pasa al código nuevo.
+     • Cambia en todas las tablas que lo guardan: tipo_servicio, servicio, campanya, inicio (tarjetas de la Home),
+       alojamiento_destino (vitrina de hoteles) y flyer_config.
+     • fnSecuencia y spActualizaInicio tenían escritos los códigos viejos: se actualizan.
+     • El back, la web pública y su API se cambian a la vez (mismo día) para que todo use los códigos nuevos.
+   Cambios:
+     • CAMBIO 100: códigos nuevos en tipo_servicio y paso de los datos (una transacción).
+     • CAMBIO 101: fnSecuencia y spActualizaInicio con los códigos nuevos.
+   ########################################################################################## */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRAN;
+
+/* ---------- CAMBIO 100: OFERTA → SOLO_HOTEL, PAQUETE → PAQUETES ---------- */
+IF NOT EXISTS (SELECT 1 FROM Eurovip.tipo_servicio WHERE id_tipo_servicio = 'SOLO_HOTEL')
+    INSERT INTO Eurovip.tipo_servicio (id_tipo_servicio, descripcion, precio_minimo)
+    SELECT 'SOLO_HOTEL', 'Solo Hotel (servicios hoteleros)', ISNULL((SELECT precio_minimo FROM Eurovip.tipo_servicio WHERE id_tipo_servicio = 'Oferta'), 700);
+IF NOT EXISTS (SELECT 1 FROM Eurovip.tipo_servicio WHERE id_tipo_servicio = 'PAQUETES')
+    INSERT INTO Eurovip.tipo_servicio (id_tipo_servicio, descripcion, precio_minimo)
+    SELECT 'PAQUETES', 'Paquetes', ISNULL((SELECT precio_minimo FROM Eurovip.tipo_servicio WHERE id_tipo_servicio = 'Paquete'), 700);
+
+UPDATE Eurovip.servicio            SET id_tipo_servicio = 'SOLO_HOTEL' WHERE id_tipo_servicio = 'OFERTA';  PRINT CONCAT('servicio SOLO_HOTEL: ', @@ROWCOUNT);
+UPDATE Eurovip.servicio            SET id_tipo_servicio = 'PAQUETES'   WHERE id_tipo_servicio = 'PAQUETE'; PRINT CONCAT('servicio PAQUETES: ', @@ROWCOUNT);
+UPDATE Eurovip.campanya            SET id_tipo_servicio = 'SOLO_HOTEL' WHERE id_tipo_servicio = 'OFERTA';  PRINT CONCAT('campanya: ', @@ROWCOUNT);
+UPDATE Eurovip.campanya            SET id_tipo_servicio = 'PAQUETES'   WHERE id_tipo_servicio = 'PAQUETE';
+UPDATE Eurovip.inicio              SET tipo_servicio = 'SOLO_HOTEL'    WHERE tipo_servicio = 'OFERTA';     PRINT CONCAT('inicio: ', @@ROWCOUNT);
+UPDATE Eurovip.inicio              SET tipo_servicio = 'PAQUETES'      WHERE tipo_servicio = 'PAQUETE';
+UPDATE Eurovip.alojamiento_destino SET id_tipo_servicio = 'SOLO_HOTEL' WHERE id_tipo_servicio = 'OFERTA';  PRINT CONCAT('alojamiento_destino: ', @@ROWCOUNT);
+UPDATE Eurovip.alojamiento_destino SET id_tipo_servicio = 'PAQUETES'   WHERE id_tipo_servicio = 'PAQUETE';
+UPDATE Eurovip.flyer_config        SET id_tipo_servicio = 'SOLO_HOTEL' WHERE id_tipo_servicio = 'OFERTA';  PRINT CONCAT('flyer_config: ', @@ROWCOUNT);
+UPDATE Eurovip.flyer_config        SET id_tipo_servicio = 'PAQUETES'   WHERE id_tipo_servicio = 'PAQUETE';
+DELETE FROM Eurovip.tipo_servicio WHERE id_tipo_servicio IN ('Oferta', 'Paquete');
+
+/* ---------- CAMBIO 101: funciones y procedimientos con los códigos nuevos ---------- */
+EXEC (N'CREATE OR ALTER FUNCTION Eurovip.fnSecuencia (@numero INT)
+RETURNS SMALLINT
+AS
+BEGIN
+    -- Solo Hotel y Paquetes llevan un solo hotel por salida (FASE 26 y 28)
+    DECLARE @tipo VARCHAR(20) = (SELECT id_tipo_servicio FROM Eurovip.servicio WHERE id_servicio = @numero);
+    IF @tipo IN (''SOLO_HOTEL'', ''PAQUETES'')
+        RETURN CASE WHEN EXISTS (SELECT 1 FROM Eurovip.servicio_detalle WHERE id_servicio = @numero) THEN -1 ELSE 1 END;
+    RETURN (SELECT ISNULL(MAX(secuencia), 0) + 1 FROM Eurovip.servicio_detalle WHERE id_servicio = @numero);
+END');
+
+DECLARE @def nvarchar(max) = OBJECT_DEFINITION(OBJECT_ID('Eurovip.spActualizaInicio')), @nuevo nvarchar(max);
+SET @nuevo = REPLACE(@def, N'IF @tipoServicio IN (''OFERTA'', ''PAQUETE'', ''COMBINADO'')', N'IF @tipoServicio IN (''SOLO_HOTEL'', ''PAQUETES'', ''COMBINADO'')');
+IF @nuevo = @def OR CHARINDEX(N'CREATE   PROCEDURE', @nuevo) = 0 THROW 50101, 'CAMBIO 101: no se encontró el texto a cambiar en spActualizaInicio', 1;
+SET @nuevo = REPLACE(@nuevo, N'CREATE   PROCEDURE', N'CREATE OR ALTER PROCEDURE');
+EXEC sp_executesql @nuevo;
+
+/* comprobación: ya no queda ningún código viejo */
+SELECT 'quedan OFERTA/PAQUETE' AS revision,
+       (SELECT COUNT(*) FROM Eurovip.servicio WHERE id_tipo_servicio IN ('OFERTA', 'PAQUETE'))
+     + (SELECT COUNT(*) FROM Eurovip.inicio WHERE tipo_servicio IN ('OFERTA', 'PAQUETE'))
+     + (SELECT COUNT(*) FROM Eurovip.campanya WHERE id_tipo_servicio IN ('OFERTA', 'PAQUETE'))
+     + (SELECT COUNT(*) FROM Eurovip.alojamiento_destino WHERE id_tipo_servicio IN ('OFERTA', 'PAQUETE'))
+     + (SELECT COUNT(*) FROM Eurovip.flyer_config WHERE id_tipo_servicio IN ('OFERTA', 'PAQUETE')) AS n;
+SELECT id_tipo_servicio, descripcion FROM Eurovip.tipo_servicio ORDER BY 1;
+
+COMMIT;
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -5032,6 +5101,12 @@ GO
                reservas de una web de Eurovip (solo DominicanaTours y otras marcas), por eso no se importa desde reservas.
    26/10/2026  DESTINOS DE FLYER AGENCIA: se copiaron las 6 configuraciones de Flyer Editar (Punta Cana, La Romana, Puerto Plata, Samaná,
                Miches, Riviera Maya; OFERTA, campaña 99, DOP, Madrid, TI) como tipo Agencia y se calcularon sus precios (4 con hoteles).
+   26/10/2026  FASE 28 aplicada SOLO en el 93 (CAMBIO 100-101; pedido de la usuaria, confirmado que también en la base): códigos de tipo
+               OFERTA → SOLO_HOTEL y PAQUETE → PAQUETES. Pasaron 649 servicios, 1 campaña, 5 tarjetas de la Home, 22 filas de
+               alojamiento_destino y 11 configuraciones de flyer; tipo_servicio con SOLO_HOTEL y PAQUETES (Oferta y Paquete borrados);
+               fnSecuencia y spActualizaInicio actualizados. Ensayado antes con ROLLBACK. El back, la web pública y la API se cambiaron
+               el mismo día: hay que publicar los tres. VDTDESA (93): no tenía datos con OFERTA; la migración 008 de la web ajusta la
+               regla de solicitud_servicio cuando se cree la tabla.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

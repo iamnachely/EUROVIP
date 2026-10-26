@@ -86,7 +86,7 @@ namespace EuroVip.Models
                 new HrCampo[] {
                     new("id_campanya", "Número", "number", Clave: true, Auto: true, Ayuda: "Se asigna solo"),
                     new("nombre", "Nombre", Max: 30, Req: true),
-                    new("id_tipo_servicio", "Tipo de servicio", "select", 20, Req: true, Lista: "tiposServicio", Defecto: "Oferta"),
+                    new("id_tipo_servicio", "Tipo de servicio", "select", 20, Req: true, Lista: "tiposServicio", Defecto: "SOLO_HOTEL"),
                     new("descripcion", "Descripción", "textarea")
                 }, "nombre", new[] { "nombre", "id_tipo_servicio", "CAST(t.id_campanya AS varchar(10))" },
                 new[] {

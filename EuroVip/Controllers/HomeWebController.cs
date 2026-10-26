@@ -85,7 +85,7 @@ namespace EuroVip.Controllers
             }
             else if (string.Equals(t.Tipo_Servicio, "CIRCUITO", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(t.Nombre_Circuito))
             { t.Foto_Tipo = "CIRCUITO"; t.Foto_Clave = t.Nombre_Circuito.Trim(); }
-            else if ((string.Equals(t.Tipo_Servicio, "OFERTA", StringComparison.OrdinalIgnoreCase) || string.Equals(t.Tipo_Servicio, "PAQUETE", StringComparison.OrdinalIgnoreCase)
+            else if ((string.Equals(t.Tipo_Servicio, "SOLO_HOTEL", StringComparison.OrdinalIgnoreCase) || string.Equals(t.Tipo_Servicio, "PAQUETES", StringComparison.OrdinalIgnoreCase)
                       || string.Equals(t.Tipo_Servicio, "COMBINADO", StringComparison.OrdinalIgnoreCase))
                      && !string.IsNullOrWhiteSpace(t.Id_Destino))
             {
@@ -174,7 +174,7 @@ namespace EuroVip.Controllers
             var id = await _repo.GuardarTarjetaAsync(dto);
             // El formulario trae la foto que tenía al abrirse: si mientras tanto se cambió (📷), se vuelve a poner la buena
             await _mm.ResincronizarAsync("INICIO", id.ToString());
-            if (dto.Tipo_Servicio?.Trim().ToUpperInvariant() is "OFERTA" or "PAQUETE" or "COMBINADO" && !string.IsNullOrWhiteSpace(dto.Id_Destino))
+            if (dto.Tipo_Servicio?.Trim().ToUpperInvariant() is "SOLO_HOTEL" or "PAQUETES" or "COMBINADO" && !string.IsNullOrWhiteSpace(dto.Id_Destino))
                 await _mm.ResincronizarAsync("DESTINO", dto.Id_Destino.Trim());
             await Auditar(dto.Id is null ? "Home_TarjetaCrear" : "Home_TarjetaEditar", new { antes, despues = dto });
             return Json(new { ok = true, id, mensaje = dto.Id is null ? "Tarjeta agregada a la Home." : "Tarjeta guardada." });

@@ -204,7 +204,7 @@ namespace EuroVip.Services
                 using var cn = _db.Conexion();
                 var (tipo, destino) = await cn.QueryFirstOrDefaultAsync<(string?, string?)>("SELECT tipo_servicio, id_destino FROM Eurovip.inicio WHERE id = @v", new { v });
                 // Paquetes (ofertas) → destinos/{destino}; Hoteles (bookingmotor) → hotel/{hotel}; los demás → {tipos}/{tipos}-{destino}
-                var carpeta = (tipo ?? "").ToUpperInvariant() switch { "OFERTA" or "PAQUETE" or "COMBINADO" or "" => "destinos", "HOTEL" => "hotel", "EXCURSION" => "excursiones", "TRASLADO" => "traslados",
+                var carpeta = (tipo ?? "").ToUpperInvariant() switch { "SOLO_HOTEL" or "PAQUETES" or "COMBINADO" or "" => "destinos", "HOTEL" => "hotel", "EXCURSION" => "excursiones", "TRASLADO" => "traslados",
                                                                     "CIRCUITO" => "circuitos", "CRUCERO" => "cruceros", var x => NombreArchivo(x, "inicio") };
                 var nom = NombreArchivo(destino, "tarjeta-" + v);
                 return (carpeta + "/", carpeta is "destinos" or "hotel" ? nom : NombreArchivo($"{carpeta} {nom}"));
@@ -590,9 +590,9 @@ namespace EuroVip.Services
                 case "DESTINO":
                     await cn.ExecuteAsync(url is not null
                         ? @"UPDATE Eurovip.destino SET caratula = @url WHERE id_destino = @v;
-                            UPDATE Eurovip.inicio SET caratulaDestino = @url WHERE id_destino = @v AND tipo_servicio IN ('OFERTA', 'PAQUETE', 'COMBINADO');"
+                            UPDATE Eurovip.inicio SET caratulaDestino = @url WHERE id_destino = @v AND tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES', 'COMBINADO');"
                         : @"UPDATE Eurovip.destino SET caratula = NULL WHERE id_destino = @v AND LEFT(caratula, LEN(@quitada)) = @quitada;
-                            UPDATE Eurovip.inicio SET caratulaDestino = NULL WHERE id_destino = @v AND tipo_servicio IN ('OFERTA', 'PAQUETE', 'COMBINADO') AND LEFT(caratulaDestino, LEN(@quitada)) = @quitada;", p);
+                            UPDATE Eurovip.inicio SET caratulaDestino = NULL WHERE id_destino = @v AND tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES', 'COMBINADO') AND LEFT(caratulaDestino, LEN(@quitada)) = @quitada;", p);
                     // Las tarjetas de PAQUETES (ofertas) de ese destino usan la foto del destino (pedido de la usuaria: «esos son destinos»).
                     // Las de excursiones y traslados NO: tienen su propia foto (tipo INICIO).
                     break;

@@ -1,9 +1,9 @@
 @{
-    // Solo Hotel (OFERTA) o Paquetes (PAQUETE): misma pantalla, solo cambian los textos, los enlaces y el tipo que se guarda
-    var tipo = (ViewData["Tipo"] as string) ?? "OFERTA";
-    var esPaq = tipo == "PAQUETE";
+    // Solo Hotel (SOLO_HOTEL) o Paquetes (PAQUETES): misma pantalla, solo cambian los textos, los enlaces y el tipo que se guarda
+    var tipo = (ViewData["Tipo"] as string) ?? "SOLO_HOTEL";
+    var esPaq = tipo == "PAQUETES";
     var nombre = esPaq ? "Paquetes" : "Solo Hotel";
-    var qs = esPaq ? "?tipo=PAQUETE" : "";
+    var qs = esPaq ? "?tipo=PAQUETES" : "";
     var lista = esPaq ? "/Paquetes/Index" : "/Ofertas/Index";
     var ofs = esPaq ? "paquetes" : "ofertas";
     var of1 = esPaq ? "paquete" : "oferta";
@@ -94,7 +94,7 @@
             <div class="ui-row r4">
                 <div class="ui-f"><label>Código servicio</label>
                     <div style="display:flex;gap:6px"><input id="iCodigo" maxlength="30" placeholder="Se genera solo"><button type="button" class="ui-ibtn" title="Generar código" onclick="CL.generarCodigo()"><i class="bi bi-arrow-repeat"></i></button></div></div>
-                <div class="ui-f"><label>Tipo servicio</label><input value="@(esPaq ? "PAQUETE" : "OFERTA (solo hotel)")" readonly tabindex="-1" style="font-weight:800"></div>
+                <div class="ui-f"><label>Tipo servicio</label><input value="@(esPaq ? "PAQUETES" : "SOLO_HOTEL (Solo Hotel)")" readonly tabindex="-1" style="font-weight:800"></div>
                 <div class="ui-f"><label>Idioma</label><input value="ES · Español" readonly tabindex="-1" style="font-weight:800"></div>
                 <div class="ui-f"><label>Divisa</label><select id="iDivisa"></select></div>
             </div>
@@ -215,7 +215,7 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
 <script>
-const TIPO = '@tipo', ES_PAQ = TIPO === 'PAQUETE', QS = '@qs', LISTA = '@lista', NOMBRE = '@nombre', OFS = '@ofs', OF1 = '@of1', OF1M = ES_PAQ ? 'Paquete' : 'Oferta';
+const TIPO = '@tipo', ES_PAQ = TIPO === 'PAQUETES', QS = '@qs', LISTA = '@lista', NOMBRE = '@nombre', OFS = '@ofs', OF1 = '@of1', OF1M = ES_PAQ ? 'Paquete' : 'Oferta';
 const CL = (() => {
     const $ = (s, el = document) => el.querySelector(s);
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];

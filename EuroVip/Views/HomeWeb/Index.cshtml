@@ -255,7 +255,7 @@
 <section class="ui-pane" id="pTabla">
     <div class="ui-toolbar" style="margin-top:0">
         <label class="ui-search"><i class="bi bi-search"></i><input id="tQ" type="search" placeholder="Buscar destino, origen, descripción, nº de servicio…"></label>
-        <select class="ui-select" id="tTipo"><option value="">Todos los tipos</option><option>OFERTA</option><option>CIRCUITO</option><option>HOTEL</option><option>EXCURSION</option><option>TRASLADO</option><option>CRUCERO</option><option>COMBINADO</option></select>
+        <select class="ui-select" id="tTipo"><option value="">Todos los tipos</option><option>SOLO_HOTEL</option><option>PAQUETES</option><option>CIRCUITO</option><option>HOTEL</option><option>EXCURSION</option><option>TRASLADO</option><option>CRUCERO</option><option>COMBINADO</option></select>
         <select class="ui-select" id="tSec"><option value="">Todas las secciones</option><option value="-1">Sin sección</option></select>
         <select class="ui-select" id="tEst"><option value="">Visibles y ocultas</option><option value="1">Visibles</option><option value="0">Ocultas</option><option value="v">Ya no se venden</option></select>
         <button type="button" class="ev-btn sm" onclick="HW.nuevaTarjeta()"><i class="bi bi-plus-lg"></i> Nueva tarjeta</button>
@@ -316,7 +316,7 @@ const HW = (() => {
     const img = (ruta, d = dev) => !ruta ? '' : `${{ web: D.imagenes.web, tablet: D.imagenes.tablet, movil: D.imagenes.movil }[d]}/${encodeURIComponent(ruta)}?v=${(D.slides || []).find(s => s.ruta === ruta)?.version || '0'}`;
     // t.imagen la calcula el servidor desde las carpetas del proyecto (fotos de Hoteles y portadas de Circuitos)
     const carat = t => t.imagen || (t.caratulaDestino && (EV.esUrl(t.caratulaDestino) || t.caratulaDestino.startsWith('/')) ? t.caratulaDestino : null);
-    const tipoChip = { OFERTA: 'Oferta', CIRCUITO: 'Circuito', HOTEL: 'Hotel', EXCURSION: 'Excursiones', TRASLADO: 'Traslados', CRUCERO: 'Cruceros', COMBINADO: 'Combinado' };
+    const tipoChip = { SOLO_HOTEL: 'Solo Hotel', PAQUETES: 'Paquetes', CIRCUITO: 'Circuito', HOTEL: 'Hotel', EXCURSION: 'Excursiones', TRASLADO: 'Traslados', CRUCERO: 'Cruceros', COMBINADO: 'Combinado' };
 
     async function cargar() {
         D = await EV.api('/HomeWeb/Datos');
@@ -329,8 +329,8 @@ const HW = (() => {
         const sinVenta = f.filter(x => !x.proxima);   // incluye hoteles ocultos o sin sección
         if (!f.length) { $('#hwFuera').innerHTML = ''; return; }
         // Desplegable cerrado de entrada (solo el resumen); dentro, un grupo desplegable por tipo
-        const grupos = [['CIRCUITO', 'Circuitos', 'bi-signpost-split'], ['OFERTA', 'Ofertas de hotel', 'bi-building'], ['HOTEL', 'Hoteles', 'bi-house-heart']]
-            .map(([t, n, i]) => ({ t, n, i, l: f.filter(x => (['CIRCUITO', 'HOTEL'].includes(x.tipo) ? x.tipo : 'OFERTA') === t) })).filter(g => g.l.length);
+        const grupos = [['CIRCUITO', 'Circuitos', 'bi-signpost-split'], ['SOLO_HOTEL', 'Solo Hotel', 'bi-building'], ['PAQUETES', 'Paquetes', 'bi-suitcase2'], ['HOTEL', 'Hoteles', 'bi-house-heart']]
+            .map(([t, n, i]) => ({ t, n, i, l: f.filter(x => (['CIRCUITO', 'HOTEL', 'PAQUETES'].includes(x.tipo) ? x.tipo : 'SOLO_HOTEL') === t) })).filter(g => g.l.length);
         let abierto = false; try { abierto = localStorage.getItem('ev.homeweb.fuera') === '1'; } catch { }
         const item = x => `
                     <div class="it">
@@ -684,7 +684,7 @@ const HW = (() => {
     async function abrirTarjeta(t, idSeccion, irAFoto) {
         cat ??= await EVC.catalogos();
         tarjetaActual = t;
-        const v = t || { tipo_Servicio: 'OFERTA', id_Pais_Origen: 'ES', origen: '', id_PaisDestino: 'DO', id_Destino: '', estado: true, id_Contenedor: idSeccion ?? null };
+        const v = t || { tipo_Servicio: 'SOLO_HOTEL', id_Pais_Origen: 'ES', origen: '', id_PaisDestino: 'DO', id_Destino: '', estado: true, id_Contenedor: idSeccion ?? null };
         $('#tdTitulo').textContent = t ? (t.tipo_Servicio === 'CIRCUITO' ? t.descripcion : t.id_Destino) : 'Nueva tarjeta';
         $('#tdSub').textContent = t ? `${tipoChip[t.tipo_Servicio] || t.tipo_Servicio}${t.id_Servicio > 0 ? ' · servicio #' + t.id_Servicio : ' · tarjeta manual'}` : 'Se agrega a la Home';
         $('#tdEliminar').hidden = !t;
@@ -697,7 +697,7 @@ const HW = (() => {
             </div>
             <div class="ui-sec"><div class="ui-sec-t"><span>1</span> Qué se muestra</div>
                 <div class="ui-row r3">
-                    <div class="ui-f"><label>Tipo</label><select id="tTipoF">${['OFERTA', 'CIRCUITO', 'HOTEL', 'EXCURSION', 'TRASLADO', 'CRUCERO', 'COMBINADO'].map(x => `<option>${x}</option>`).join('')}</select></div>
+                    <div class="ui-f"><label>Tipo</label><select id="tTipoF">${['SOLO_HOTEL', 'PAQUETES', 'CIRCUITO', 'HOTEL', 'EXCURSION', 'TRASLADO', 'CRUCERO', 'COMBINADO'].map(x => `<option>${x}</option>`).join('')}</select></div>
                     <div class="ui-f"><label>Campaña *</label><select id="tCam">${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)}</option>`).join('')}</select></div>
                     <div class="ui-f"><label>Sección</label><select id="tSecF"><option value="">— Sin sección —</option>${D.contenedores.map(c => `<option value="${c.id_Contenedor}">${esc(c.nombre)}</option>`).join('')}</select></div>
                 </div>

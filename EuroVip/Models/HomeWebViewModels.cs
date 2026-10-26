@@ -95,7 +95,7 @@ namespace EuroVip.Models
     /// <summary>Algo cargado que no aparece en la Home y por qué.</summary>
     public class HwFuera
     {
-        public string Tipo { get; set; } = "";          // CIRCUITO · OFERTA
+        public string Tipo { get; set; } = "";          // CIRCUITO · SOLO_HOTEL
         public string Nombre { get; set; } = "";        // circuito o destino de las ofertas
         public string? Codigo { get; set; }             // código del circuito (para "Cargar salidas")
         public int Total { get; set; }                  // salidas/fechas activas
@@ -124,7 +124,7 @@ namespace EuroVip.Models
     public class HwTarjetaDto
     {
         public int? Id { get; set; }
-        [Required] public string Tipo_Servicio { get; set; } = "OFERTA";
+        [Required] public string Tipo_Servicio { get; set; } = "SOLO_HOTEL";
         [Range(1, short.MaxValue, ErrorMessage = "Elige la campaña")] public short Id_Campanya { get; set; }
         [Required(ErrorMessage = "Elige el país de origen")] public string Id_Pais_Origen { get; set; } = "ES";
         [Required(ErrorMessage = "Elige el origen")] [StringLength(30)] public string Origen { get; set; } = "";
@@ -141,7 +141,7 @@ namespace EuroVip.Models
 
     public class HwActualizarDto
     {
-        public string Tipo_Servicio { get; set; } = "OFERTA";
+        public string Tipo_Servicio { get; set; } = "SOLO_HOTEL";
         public short Id_Campanya { get; set; }
         public string Id_Destino { get; set; } = "";
         public string Origen { get; set; } = "";

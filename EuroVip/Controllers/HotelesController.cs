@@ -193,10 +193,10 @@ namespace EuroVip.Controllers
                         CargaExcel.TipoXlsx, "Eurovip-plantilla-hoteles.xlsx");
         }
 
-        /// <summary>La campaña si el Excel no la trae: la única de tipo Oferta (si hay una sola).</summary>
+        /// <summary>La campaña si el Excel no la trae: la única de tipo Solo Hotel (si hay una sola).</summary>
         private static Common.Data.Entities.Campanya? CampanyaPorDefecto(List<Common.Data.Entities.Campanya> camps)
         {
-            var ofertas = camps.Where(c => string.Equals(c.Id_Tipo_Servicio?.Trim(), "Oferta", StringComparison.OrdinalIgnoreCase)).ToList();
+            var ofertas = camps.Where(c => string.Equals(c.Id_Tipo_Servicio?.Trim(), OfertaRepository.Tipo, StringComparison.OrdinalIgnoreCase)).ToList();
             return ofertas.Count == 1 ? ofertas[0] : camps.Count == 1 ? camps[0] : null;
         }
 
