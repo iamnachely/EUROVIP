@@ -2,6 +2,7 @@ using EuroVip.Helpers;
 using EuroVip.Models;
 using EuroVip.Repositories;
 using EuroVip.Services;
+using Dapper;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EuroVip.Controllers
@@ -70,32 +71,7 @@ namespace EuroVip.Controllers
                 var errores = ModelState.Where(x => x.Value?.Errors.Count > 0).ToDictionary(x => x.Key, x => x.Value!.Errors.First().ErrorMessage);
                 return BadRequest(new { mensaje = errores.Values.First(), errores });
             }
-            dto.Nombre = ReglasDatos.Limpiar(dto.Nombre);
-            dto.Tipo = (dto.Tipo ?? "").Trim().ToUpperInvariant();
-            dto.Categoria = (dto.Categoria ?? "").Trim().ToUpperInvariant();
-            dto.Vehiculo = (dto.Vehiculo ?? "").Trim().ToUpperInvariant();
-            dto.Cobro = (dto.Cobro ?? "").Trim().ToUpperInvariant();
-            dto.Id_Estacion_Origen = ReglasDatos.Limpiar(dto.Id_Estacion_Origen).ToUpperInvariant();
-
-            if (ReglasDatos.Nombre("nombre del traslado", dto.Nombre, 3) is string malNombre) return Mal("Nombre", malNombre);
-            if (!TrasladoValores.Tipos.ContainsKey(dto.Tipo)) return Mal("Tipo", "Elige Compartido o Privado.");
-            if (!TrasladoValores.Categorias.ContainsKey(dto.Categoria)) return Mal("Categoria", "Elige la categoría.");
-            if (!TrasladoValores.Vehiculos.ContainsKey(dto.Vehiculo)) return Mal("Vehiculo", "Elige el vehículo.");
-            if (!TrasladoValores.Cobros.ContainsKey(dto.Cobro)) return Mal("Cobro", "Elige cómo se cobra.");
-            if (dto.Pasajeros_Max < dto.Pasajeros_Min) return Mal("Pasajeros_Max", "El máximo de pasajeros no puede ser menor que el mínimo.");
-            if (dto.Precio_Ida is null && dto.Precio_Ida_Vuelta is null) return Mal("Precio_Ida_Vuelta", "Escribe al menos un precio: ida y vuelta o solo ida.");
-            if (await _repo.ValidarEstacionAsync(dto.Id_Estacion_Origen) is string malEst) return Mal("Id_Estacion_Origen", malEst);
-            var (malDestino, destino, _) = await _repo.ValidarDestinoAsync(dto.Id_Destino);
-            if (malDestino is not null) return Mal("Id_Destino", malDestino);
-            dto.Id_Destino = destino!;
-            if (!dto.Todos_Hoteles)
-            {
-                if (dto.Hoteles.Count == 0) return Mal("Hoteles", "Elige al menos un hotel o marca «Todos los hoteles del destino».");
-                var fuera = await _repo.HotelesQueNoSonDelDestinoAsync(dto.Hoteles, dto.Id_Destino);
-                if (fuera.Count > 0) return Mal("Hoteles", $"Estos hoteles no son de {dto.Id_Destino}: {string.Join(", ", fuera)}. Quítalos de la lista.");
-            }
-            if (await _repo.RepetidoAsync(dto) is int otro)
-                return Mal("Nombre", $"Ya existe ese traslado (n.º {otro}) con la misma ruta, tipo, categoría y vehículo.");
+            if (await RevisarAsync(dto) is var (campo, mal)) return Mal(campo, mal);
 
             try
             {
@@ -111,6 +87,133 @@ namespace EuroVip.Controllers
                 _logger.LogError(ex, "Error guardando el traslado {Nombre}", dto.Nombre);
                 return StatusCode(500, new { mensaje = "No se pudo guardar: " + ex.Message });
             }
+        }
+
+        /// <summary>
+        /// Reglas para guardar un traslado (las mismas en el formulario y en Cargar Excel). Deja los códigos en mayúsculas y el destino
+        /// como está en Eurovip.destino. Devuelve el campo y el error, o null si está bien.
+        /// </summary>
+        private async Task<(string Campo, string Mensaje)?> RevisarAsync(TrasladoGuardarDto dto)
+        {
+            dto.Nombre = ReglasDatos.Limpiar(dto.Nombre);
+            dto.Tipo = (dto.Tipo ?? "").Trim().ToUpperInvariant();
+            dto.Categoria = (dto.Categoria ?? "").Trim().ToUpperInvariant();
+            dto.Vehiculo = (dto.Vehiculo ?? "").Trim().ToUpperInvariant();
+            dto.Cobro = (dto.Cobro ?? "").Trim().ToUpperInvariant();
+            dto.Id_Estacion_Origen = ReglasDatos.Limpiar(dto.Id_Estacion_Origen).ToUpperInvariant();
+
+            if (ReglasDatos.Nombre("nombre del traslado", dto.Nombre, 3) is string malNombre) return ("Nombre", malNombre);
+            if (!TrasladoValores.Tipos.ContainsKey(dto.Tipo)) return ("Tipo", "Elige Compartido o Privado.");
+            if (!TrasladoValores.Categorias.ContainsKey(dto.Categoria)) return ("Categoria", "Elige la categoría.");
+            if (!TrasladoValores.Vehiculos.ContainsKey(dto.Vehiculo)) return ("Vehiculo", "Elige el vehículo.");
+            if (!TrasladoValores.Cobros.ContainsKey(dto.Cobro)) return ("Cobro", "Elige cómo se cobra.");
+            if (dto.Pasajeros_Max < dto.Pasajeros_Min) return ("Pasajeros_Max", "El máximo de pasajeros no puede ser menor que el mínimo.");
+            if (dto.Precio_Ida is null && dto.Precio_Ida_Vuelta is null) return ("Precio_Ida_Vuelta", "Escribe al menos un precio: ida y vuelta o solo ida.");
+            if (await _repo.ValidarEstacionAsync(dto.Id_Estacion_Origen) is string malEst) return ("Id_Estacion_Origen", malEst);
+            var (malDestino, destino, _) = await _repo.ValidarDestinoAsync(dto.Id_Destino);
+            if (malDestino is not null) return ("Id_Destino", malDestino);
+            dto.Id_Destino = destino!;
+            if (!dto.Todos_Hoteles)
+            {
+                if (dto.Hoteles.Count == 0) return ("Hoteles", "Elige al menos un hotel o marca «Todos los hoteles del destino».");
+                var fuera = await _repo.HotelesQueNoSonDelDestinoAsync(dto.Hoteles, dto.Id_Destino);
+                if (fuera.Count > 0) return ("Hoteles", $"Estos hoteles no son de {dto.Id_Destino}: {string.Join(", ", fuera)}. Quítalos de la lista.");
+            }
+            if (await _repo.RepetidoAsync(dto) is int otro)
+                return ("Nombre", $"Ya existe ese traslado (n.º {otro}) con la misma ruta, tipo, categoría y vehículo.");
+            return null;
+        }
+
+        // ================= CARGAR EXCEL (muchos traslados de una vez) =================
+        private static readonly string[] Columnas =
+        {
+            "Nombre", "Tipo", "Categoría", "Vehículo", "Aeropuerto", "Destino", "Maletas", "Duración (min)", "Pasajeros mín", "Pasajeros máx",
+            "Cobro", "Precio ida y vuelta", "Precio solo ida", "Cancelable", "Horas cancelación", "Descripción", "Activo"
+        };
+
+        /// <summary>Plantilla: hoja «Traslados» (una fila por traslado) y hoja «Instrucciones» con los valores válidos.</summary>
+        [HttpGet]
+        public async Task<IActionResult> Plantilla()
+        {
+            using var cn = _aud.Conexion();
+            var aeropuertos = (await cn.QueryAsync<(string Codigo, string? Nombre, string? Destino)>(@"
+                SELECT e.id_estacion, MIN(e.nombre), MIN(LTRIM(RTRIM(e.id_destino))) FROM Eurovip.estacion e
+                WHERE e.id_pais = 'DO' OR EXISTS (SELECT 1 FROM Eurovip.traslado t WHERE t.id_estacion_origen = e.id_estacion)
+                GROUP BY e.id_estacion ORDER BY e.id_estacion")).ToList();
+            var destinos = (await cn.QueryAsync<(string Destino, string? Pais)>(@"SELECT d.id_destino, ISNULL(p.nombre, d.id_pais) FROM Eurovip.destino d
+                LEFT JOIN Eurovip.pais p ON p.id_pais = d.id_pais AND p.id_idioma = 'ES' WHERE d.id_idioma = 'ES' ORDER BY d.id_destino")).ToList();
+            static string Lista(Dictionary<string, string> d) => string.Join(" · ", d.Values);
+            var datos = new ExcelTabla.Hoja("Traslados", Columnas, new List<object?[]>
+            {
+                new object?[] { "Aeropuerto Punta Cana → hoteles de Bávaro", "Compartido", "Estándar", "Autobús", "PUJ", "Punta Cana", 2, 30, 1, 1,
+                                "Por persona", 25m, 15m, "Sí", 24, "Traslado compartido desde el aeropuerto a tu hotel en Bávaro.", "Sí" },
+                new object?[] { "Privado Santo Domingo → La Romana", "Privado", "Premium", "Van", "SDQ", "La Romana", 6, 90, 1, 6,
+                                "Para todos los viajeros", 180m, 100m, "Sí", 48, "Van privada con aire acondicionado para hasta 6 personas.", "Sí" },
+            }, new double[] { 40, 13, 12, 12, 12, 18, 9, 14, 13, 13, 22, 18, 15, 12, 17, 60, 9 });
+            var ayuda = new ExcelTabla.Hoja("Instrucciones", new[] { "Columna", "Qué poner", "" }, new List<object?[]>
+            {
+                new object?[] { "Nombre", "Obligatorio. No se puede repetir la misma ruta con el mismo tipo, categoría y vehículo.", null },
+                new object?[] { "Tipo", Lista(TrasladoValores.Tipos), null },
+                new object?[] { "Categoría", Lista(TrasladoValores.Categorias), null },
+                new object?[] { "Vehículo", Lista(TrasladoValores.Vehiculos), null },
+                new object?[] { "Aeropuerto", "Código del aeropuerto de salida (lista abajo).", null },
+                new object?[] { "Destino", "Tal cual está en Eurovip (lista abajo). Llega a todos los hoteles del destino.", null },
+                new object?[] { "Maletas, Duración, Pasajeros", "Números. Vacío: 2 maletas, 1 a 1 pasajeros.", null },
+                new object?[] { "Cobro", Lista(TrasladoValores.Cobros), null },
+                new object?[] { "Precios", "Al menos uno de los dos: ida y vuelta o solo ida.", null },
+                new object?[] { "Cancelable / Activo", "Sí o No. Vacío = Sí.", null },
+                new object?[] { "Horas cancelación", "Hasta cuántas horas antes se puede cancelar (opcional).", null },
+                new object?[] { "", "", null },
+                new object?[] { "Aeropuertos válidos", "Nombre", "Destino" },
+            }.Concat(aeropuertos.Select(a => new object?[] { a.Codigo, a.Nombre, a.Destino }))
+             .Append(new object?[] { "", "", null }).Append(new object?[] { "Destinos válidos", "País", null })
+             .Concat(destinos.Select(d => new object?[] { d.Destino, d.Pais, null })).ToList(), new double[] { 30, 80, 24 });
+            return File(ExcelTabla.Crear(datos, ayuda), CargaExcel.TipoXlsx, "Eurovip-plantilla-traslados.xlsx");
+        }
+
+        /// <summary>Cargar Excel: con guardar = false solo revisa; con guardar = true crea los traslados de las filas correctas.</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        [RequestSizeLimit(CargaExcel.MaxBytes + 100_000)]
+        public async Task<IActionResult> CargarExcel(IFormFile? archivo, bool guardar)
+        {
+            var (filas, error) = await CargaExcel.LeerAsync(archivo);
+            if (error is not null) return BadRequest(new { mensaje = error });
+            var r = new CargaExcelResultado { Guardado = guardar };
+            var vistas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            short Corto(ExcelTabla.Fila f, short defecto, params string[] c) => f.Cifra(c) is decimal d ? (short)Math.Clamp(Math.Round(d), short.MinValue, short.MaxValue) : defecto;
+            foreach (var f in filas!)
+            {
+                string Valor(Dictionary<string, string> d, string col) => CargaExcel.Opcion(d, f.Texto(col)) ?? (f.Texto(col) ?? "");
+                var dto = new TrasladoGuardarDto
+                {
+                    Nombre = f.Texto("Nombre", "Traslado") ?? "",
+                    Tipo = Valor(TrasladoValores.Tipos, "Tipo"), Categoria = Valor(TrasladoValores.Categorias, "Categoría"),
+                    Vehiculo = Valor(TrasladoValores.Vehiculos, "Vehículo"), Cobro = Valor(TrasladoValores.Cobros, "Cobro"),
+                    Id_Estacion_Origen = f.Texto("Aeropuerto", "Aeropuerto de salida", "Desde") ?? "", Id_Destino = f.Texto("Destino", "Hasta") ?? "",
+                    Maletas = Corto(f, 2, "Maletas"), Duracion_Min = f.Cifra("Duración (min)", "Duración", "Minutos") is decimal du ? (short)Math.Round(du) : null,
+                    Pasajeros_Min = Corto(f, 1, "Pasajeros mín", "Pasajeros minimo"), Pasajeros_Max = Corto(f, 1, "Pasajeros máx", "Pasajeros maximo"),
+                    Precio_Ida_Vuelta = f.Cifra("Precio ida y vuelta"), Precio_Ida = f.Cifra("Precio solo ida", "Precio ida"),
+                    Cancelable = f.SiNo(true, "Cancelable"), Horas_Cancelacion = f.Cifra("Horas cancelación", "Horas cancelacion") is decimal h ? (short)Math.Round(h) : null,
+                    Descripcion = f.Texto("Descripción", "Descripcion"), Activo = f.SiNo(true, "Activo"), Todos_Hoteles = true
+                };
+                var fila = new CargaExcelFila { Fila = f.Numero, Nombre = dto.Nombre, Detalle = $"{dto.Id_Estacion_Origen} → {dto.Id_Destino} · {f.Texto("Tipo")} · {f.Texto("Vehículo")}" };
+                r.Filas.Add(fila);
+                fila.Mensaje = CargaExcel.ErrorModelo(dto);
+                if (fila.Mensaje is null && await RevisarAsync(dto) is var (_, mal)) fila.Mensaje = mal;
+                if (fila.Mensaje is null && !vistas.Add($"{dto.Id_Estacion_Origen}|{dto.Id_Destino}|{dto.Tipo}|{dto.Categoria}|{dto.Vehiculo}"))
+                    fila.Mensaje = "Está repetido en el Excel (misma ruta, tipo, categoría y vehículo).";
+                fila.Nombre = dto.Nombre; fila.Ok = fila.Mensaje is null;
+                if (!fila.Ok || !guardar) continue;
+                try
+                {
+                    fila.Id = await _repo.GuardarAsync(dto, User.Identity?.Name ?? "desconocido");
+                    r.Guardadas++;
+                    await Auditar("Traslado_Crear", fila.Id.Value, new { dto, excel = archivo!.FileName, fila = f.Numero });
+                }
+                catch (Exception ex) { fila.Ok = false; fila.Mensaje = "No se pudo guardar: " + ex.Message; _logger.LogError(ex, "Cargar Excel: traslado fila {Fila}", f.Numero); }
+            }
+            r.Mensaje = CargaExcel.Mensaje(r, "traslado", "traslados");
+            return Json(r);
         }
 
         [HttpPost, ValidateAntiForgeryToken]

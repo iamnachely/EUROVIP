@@ -15,7 +15,7 @@ namespace EuroVip.Repositories
 
     /// <summary>
     /// Carga manual de ofertas de hotel (equivale a /CargarOferta/CargarServices rama "Oferta" de BackTiTan) para Eurovip:
-    ///   • por cada HOTEL × CAMPAÑA × FECHA se crea un servicio OFERTA con su hotel (servicio_detalle),
+    ///   • por cada HOTEL × CAMPAÑA × FECHA se crea un servicio OFERTA (Solo Hotel) o PAQUETE (Paquetes, dto.Tipo) con su hotel (servicio_detalle),
     ///     sus habitaciones (servicio_habitacion), suplementos, notas, origen de venta y, solo si lleva, vuelos;
     ///   • fecha de salida del hotel = desde + noches (una sola regla);
     ///   • todo en UNA transacción; sin vuelos de relleno; se guarda el número de vuelo;
@@ -24,7 +24,6 @@ namespace EuroVip.Repositories
     public class CargaOfertaService : ICargaOfertaService
     {
         private const string Idioma = "ES";
-        private const string Tipo = OfertaRepository.Tipo;
         private readonly ICircuitoRepository _db;
         private readonly IOfertaRepository _ofertas;
         private readonly ILogger<CargaOfertaService> _logger;
@@ -108,11 +107,11 @@ namespace EuroVip.Repositories
                 {
                     var rep = (await cn.QueryAsync<(DateTime Desde, short Camp)>(@"
                         SELECT sd.desde, s.id_campanya FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
-                        WHERE s.id_tipo_servicio = 'OFERTA' AND s.activo = 1 AND sd.id_alojamiento = @a AND sd.id_regimen = @r AND s.id_moneda = @m
+                        WHERE s.id_tipo_servicio = @tipo AND s.activo = 1 AND sd.id_alojamiento = @a AND sd.id_regimen = @r AND s.id_moneda = @m
                           AND sd.desde IN @fechas AND s.id_campanya IN @camps",
-                        new { a = h.Id_Alojamiento, r = h.Id_Regimen, m = dto.Divisa, fechas = h.Salidas.Select(x => x.Desde.Date).ToList(), camps = dto.Campanyas.Select(x => x.Id_Campanya).ToList() })).ToList();
+                        new { tipo = OfertaRepository.TipoDe(dto.Tipo), a = h.Id_Alojamiento, r = h.Id_Regimen, m = dto.Divisa, fechas = h.Salidas.Select(x => x.Desde.Date).ToList(), camps = dto.Campanyas.Select(x => x.Id_Campanya).ToList() })).ToList();
                     if (rep.Count > 0)
-                        e.Add($"{et}: ya hay ofertas activas para " + string.Join(", ", rep.Select(x => $"{x.Desde:dd/MM/yyyy} (campaña #{x.Camp})").Distinct().Take(6)) +
+                        e.Add($"{et}: ya hay {(OfertaRepository.TipoDe(dto.Tipo) == OfertaRepository.TipoPaquete ? "paquetes" : "ofertas")} activos para " + string.Join(", ", rep.Select(x => $"{x.Desde:dd/MM/yyyy} (campaña #{x.Camp})").Distinct().Take(6)) +
                               (rep.Count > 6 ? "…" : "") + ". Desactívalas en la lista o quita esas fechas.");
                 }
             }
@@ -146,11 +145,14 @@ namespace EuroVip.Repositories
         {
             void Avance(double pct, string paso) => _progreso.Reportar(progresoId, pct, paso);   // barra de progreso de la pantalla
             Avance(3, "Revisando los datos…");
+            var tipo = OfertaRepository.TipoDe(dto.Tipo);
+            var esPaquete = tipo == OfertaRepository.TipoPaquete;
+            var palabra = esPaquete ? "paquete" : "oferta";
             var errores = await ValidarAsync(dto);
             if (errores.Count > 0) return (null, errores);
 
             var codigo = string.IsNullOrWhiteSpace(dto.CodigoServicio) ? CargaCircuitoService.Corta($"{usuario}{DateTime.Now:yyyyMMddHHmmss}", 30)! : CargaCircuitoService.Corta(dto.CodigoServicio.Trim(), 30)!;
-            var nombre = string.IsNullOrWhiteSpace(dto.Nombre) ? "Oferta" : CargaCircuitoService.Corta(dto.Nombre.Trim(), 50)!;
+            var nombre = string.IsNullOrWhiteSpace(dto.Nombre) ? (esPaquete ? "Paquete" : "Oferta") : CargaCircuitoService.Corta(dto.Nombre.Trim(), 50)!;
             var total = dto.Hoteles.Sum(h => h.Salidas.Count) * Math.Max(1, dto.Campanyas.Count);
             var todas = dto.Hoteles.SelectMany(h => h.Salidas).ToList();
 
@@ -168,7 +170,7 @@ namespace EuroVip.Repositories
                 SELECT CAST(SCOPE_IDENTITY() AS int);",
                 new
                 {
-                    tipo = dto.Modo == "express" ? "Carga Express Ofertas" : dto.Modo == "excel" ? "Carga Excel Ofertas" : "Carga Clásica Ofertas",
+                    tipo = (dto.Modo == "express" ? "Carga Express " : "Carga Excel ") + (esPaquete ? "Paquetes" : "Ofertas"),
                     usuario, ip, navegador = CargaCircuitoService.Corta(navegador, 1000),
                     origen = $"{dto.Origen} ({dto.Id_Pais_Origen})",
                     destino = CargaCircuitoService.Corta($"{destino.Destino.Trim()} — {string.Join(" · ", nombresHotel)}", 1000),
@@ -181,7 +183,7 @@ namespace EuroVip.Repositories
 
             var r = new CargaResultado { LogId = logId, Codigo = codigo, Circuito = nombresHotel.Count == 1 ? nombresHotel[0] : $"{nombresHotel.Count} hoteles" };
             var tasasSuplementos = dto.Suplementos.Sum(x => x.Valor);
-            Avance(8, $"Datos correctos. Creando {total} oferta{(total == 1 ? "" : "s")}…");
+            Avance(8, $"Datos correctos. Creando {total} {palabra}{(total == 1 ? "" : "s")}…");
 
             using (var tx = cn.BeginTransaction())
             {
@@ -198,7 +200,7 @@ namespace EuroVip.Repositories
                     {
                         var desde = salida.Desde.Date;
                         var p = new DynamicParameters();
-                        p.Add("@tipoServicio", Tipo); p.Add("@idioma", Idioma); p.Add("@moneda", dto.Divisa); p.Add("@campanya", camp.Id_Campanya);
+                        p.Add("@tipoServicio", tipo); p.Add("@idioma", Idioma); p.Add("@moneda", dto.Divisa); p.Add("@campanya", camp.Id_Campanya);
                         p.Add("@proveedor", dto.Id_Proveedor); p.Add("@apertura", DateTime.Today); p.Add("@usuario", CargaCircuitoService.Corta(usuario, 15));
                         p.Add("@precioBase", salida.PrecioTotal - (salida.Tasas ?? tasasSuplementos)); p.Add("@descuento", camp.Descuento); p.Add("@nota", "");
                         p.Add("@activo", true); p.Add("@noches", dto.Noches); p.Add("@precioMasMenos", 0m); p.Add("@codigoServicio", codigo);
@@ -206,9 +208,9 @@ namespace EuroVip.Repositories
                         p.Add("@ret", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
                         await cn.ExecuteAsync("Eurovip.spInsertaServicio", p, tx, commandType: CommandType.StoredProcedure);
                         var id = p.Get<int>("@ret");
-                        if (id <= 0) throw new InvalidOperationException($"No se pudo crear la oferta del {desde:dd/MM/yyyy}.");
+                        if (id <= 0) throw new InvalidOperationException($"No se pudo crear {(esPaquete ? "el paquete" : "la oferta")} del {desde:dd/MM/yyyy}.");
                         r.Ids.Add(id);
-                        Avance(8 + 80.0 * r.Ids.Count / Math.Max(1, total), $"Creando oferta {r.Ids.Count} de {total} · {desde:dd/MM/yyyy}");
+                        Avance(8 + 80.0 * r.Ids.Count / Math.Max(1, total), $"Creando {palabra} {r.Ids.Count} de {total} · {desde:dd/MM/yyyy}");
 
                         await cn.ExecuteAsync("Eurovip.spInsertaServicioDetalle", new
                         {
@@ -243,7 +245,7 @@ namespace EuroVip.Repositories
                 catch (Exception ex)
                 {
                     tx.Rollback();
-                    _logger.LogError(ex, "Error en carga de ofertas (log {LogId})", logId);
+                    _logger.LogError(ex, "Error en carga de {Tipo} (log {LogId})", tipo, logId);
                     await cn.ExecuteAsync(@"UPDATE Eurovip.Log_Cargas SET estatus = N'Revisar', mensaje = @m, fecha_hora_fin = GETDATE(), registros_insertados = 0, registros_no_insertados = @n WHERE id = @logId",
                         new { m = ex.Message, n = total, logId });
                     return (null, new List<string> { "No se cargó nada (se deshizo todo). Motivo: " + CargaCircuitoService.MensajeAmigable(ex) });
@@ -259,7 +261,7 @@ namespace EuroVip.Repositories
 
             r.Ok = true;
             r.Servicios = r.Ids.Count;
-            r.Mensaje = $"¡Listo! Se cargaron {r.Servicios} oferta{(r.Servicios == 1 ? "" : "s")} de {r.Circuito}" + (dto.ConVuelo ? $" con {r.Vuelos} vuelos." : " (sin vuelo).");
+            r.Mensaje = $"¡Listo! Se cargaron {r.Servicios} {palabra}{(r.Servicios == 1 ? "" : "s")} de {r.Circuito}" + (dto.ConVuelo ? $" con {r.Vuelos} vuelos." : " (sin vuelo).");
             await cn.ExecuteAsync(@"UPDATE Eurovip.Log_Cargas SET estatus = N'Correcto', mensaje = @m, fecha_hora_fin = GETDATE(), registros_insertados = @n, registros_no_insertados = 0 WHERE id = @logId",
                 new { m = r.Mensaje, n = r.Servicios, logId });
             return (r, new List<string>());

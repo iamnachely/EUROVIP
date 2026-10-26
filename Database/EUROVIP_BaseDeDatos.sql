@@ -4400,6 +4400,52 @@ GO
 
 
 /* ##########################################################################################
+   FASE 26 — PAQUETES (tipo PAQUETE)  (26/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «duplica /Ofertas/Index tal cual: lo que se cargue ahí se llamará Paquetes y se guarda con
+   tipo_servicio = Paquete; lo de Solo Hotel se sigue guardando como Oferta».
+   Explicado fácil:
+     • Paquetes se carga y se guarda EXACTAMENTE igual que Solo Hotel (servicio + hotel + habitaciones + vuelo opcional);
+       lo único distinto es servicio.id_tipo_servicio = 'PAQUETE' (Solo Hotel sigue siendo 'OFERTA').
+     • Las tarjetas de la Home salen con tipo_servicio = 'PAQUETE' (una por destino, la más barata), igual que las de Solo Hotel.
+   Cambios:
+     • CAMBIO 92: Eurovip.tipo_servicio — nuevo tipo «Paquete» (la FK de servicio lo exige).
+     • CAMBIO 93: fnSecuencia — un paquete, como una oferta, lleva un solo hotel por salida.
+     • CAMBIO 94: spActualizaInicio — las tarjetas de paquetes usan la foto del DESTINO (como Solo Hotel, CAMBIO 85).
+   No cambia ningún dato existente.
+   ########################################################################################## */
+
+/* ---------- CAMBIO 92: tipo de servicio «Paquete» ---------- */
+IF NOT EXISTS (SELECT 1 FROM Eurovip.tipo_servicio WHERE id_tipo_servicio = 'Paquete')
+    INSERT INTO Eurovip.tipo_servicio (id_tipo_servicio, descripcion, precio_minimo) VALUES ('Paquete', 'Paquetes de hotel (como Oferta)', 700);
+GO
+
+/* ---------- CAMBIO 93: un paquete lleva un solo hotel (igual que una oferta) ---------- */
+CREATE OR ALTER FUNCTION Eurovip.fnSecuencia (@numero INT)
+RETURNS SMALLINT
+AS
+BEGIN
+    DECLARE @tipo VARCHAR(20) = (SELECT id_tipo_servicio FROM Eurovip.servicio WHERE id_servicio = @numero);
+    IF @tipo IN ('OFERTA', 'PAQUETE')
+        RETURN CASE WHEN EXISTS (SELECT 1 FROM Eurovip.servicio_detalle WHERE id_servicio = @numero) THEN -1 ELSE 1 END;
+    RETURN (SELECT ISNULL(MAX(secuencia), 0) + 1 FROM Eurovip.servicio_detalle WHERE id_servicio = @numero);
+END
+GO
+
+/* ---------- CAMBIO 94: tarjetas de paquetes con la foto del destino ---------- */
+SET XACT_ABORT ON;
+DECLARE @def nvarchar(max) = OBJECT_DEFINITION(OBJECT_ID('Eurovip.spActualizaInicio')), @nuevo nvarchar(max);
+IF CHARINDEX(N'''PAQUETE''', @def) = 0
+BEGIN
+    SET @nuevo = REPLACE(@def, N'IF @tipoServicio IN (''OFERTA'', ''COMBINADO'')', N'IF @tipoServicio IN (''OFERTA'', ''PAQUETE'', ''COMBINADO'')   -- CAMBIO 94: paquetes también');
+    IF @nuevo = @def OR CHARINDEX(N'CREATE   PROCEDURE', @nuevo) = 0 THROW 50094, 'CAMBIO 94: no se encontró el texto a cambiar en spActualizaInicio', 1;
+    SET @nuevo = REPLACE(@nuevo, N'CREATE   PROCEDURE', N'CREATE OR ALTER PROCEDURE');
+    EXEC sp_executesql @nuevo;
+END
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -4860,6 +4906,10 @@ GO
                • Home: tarjeta 140 Caribe Oriental y tarjeta nueva 141 Salidas desde República Dominicana,
                  precio desde 1.187 por persona. Sin fotos (se suben en Cruceros → paso 2 Fotos).
                Para quitarlo: pantalla Cruceros → Eliminar.
+   26/10/2026  FASE 26 aplicada SOLO en el 93 (CAMBIO 92-94): tipo de servicio «Paquete» (pantalla Paquetes, igual que
+               Solo Hotel pero guarda id_tipo_servicio = PAQUETE), un hotel por salida en paquetes (fnSecuencia) y foto del
+               destino en sus tarjetas de la Home (spActualizaInicio). Probado con una carga real de 1 paquete (servicio 3062,
+               tipo PAQUETE, «Carga Express Paquetes» en Log_Cargas) que después se borró. No cambió ningún dato existente.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

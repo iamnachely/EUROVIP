@@ -125,6 +125,8 @@
         <p>Carga los traslados del aeropuerto al hotel como en el tour operador: desde qué aeropuerto, a qué destino u hoteles, si es compartido o privado, el vehículo, maletas, pasajeros, precio y foto.</p>
     </div>
     <div class="ui-hero-acts">
+        <a class="ev-btn light" href="/Traslados/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
+        <button class="ev-btn light" type="button" id="trExcel"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</button>
         <button class="ev-btn" type="button" id="trNuevo"><i class="bi bi-plus-lg"></i> Nuevo traslado</button>
     </div>
     <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
@@ -275,6 +277,7 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-excel.js" asp-append-version="true"></script>
 <script>
 (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -631,6 +634,7 @@
     // ---------------- inicio ----------------
     function iniciar() {
         $('#trNuevo').onclick = () => abrir(null);
+        $('#trExcel').onclick = () => EVExcel.abrir({ titulo: 'Cargar traslados con Excel', plantilla: '/Traslados/Plantilla', url: '/Traslados/CargarExcel', uno: 'traslado', varios: 'traslados', alTerminar: cargar });
         $('#trQ').addEventListener('input', EV.debounce(e => { st.q = e.target.value.trim(); pintar(); }, 200));
         $('#trOrigen').onchange = e => { st.origen = e.target.value; pintar(); };
         $('#trDestino').onchange = e => { st.destino = e.target.value; pintar(); };

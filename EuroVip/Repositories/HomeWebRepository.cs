@@ -51,7 +51,7 @@ namespace EuroVip.Repositories
                    i.id_destino AS Id_Destino, i.caratulaDestino AS CaratulaDestino, i.descripcion AS Descripcion, i.precioWeb AS PrecioWeb,
                    i.id_contenedor AS Id_Contenedor, i.contenedor AS Contenedor, i.posicion_destino AS Posicion_Destino,
                    CAST(ISNULL(i.estado, 1) AS bit) AS Estado, i.noches AS Noches, i.notas AS Notas,
-                   CASE WHEN i.tipo_servicio IN ('OFERTA', 'CIRCUITO') THEN
+                   CASE WHEN i.tipo_servicio IN ('OFERTA', 'PAQUETE', 'CIRCUITO') THEN
                         CAST(CASE WHEN EXISTS (SELECT 1 FROM Eurovip.servicio s
                                                  LEFT JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
                                                  LEFT JOIN Eurovip.servicio_circuito sc ON sc.id_servicio = s.id_servicio
@@ -255,16 +255,16 @@ namespace EuroVip.Repositories
                                   WHERE i.tipo_servicio = 'CIRCUITO' AND ISNULL(i.estado, 1) = 1 AND x.nombre_circuito = c.nombre_circuito)
                 GROUP BY c.nombre_circuito, c.id
                 UNION ALL
-                SELECT 'OFERTA', d.destino, NULL,
+                SELECT s.id_tipo_servicio, d.destino, NULL,
                        SUM(CASE WHEN s.activo = 1 THEN 1 ELSE 0 END),
                        MIN(CASE WHEN s.activo = 1 AND sd.desde > CAST(GETDATE() AS date) THEN sd.desde END),
                        MAX(CASE WHEN s.activo = 1 THEN sd.desde END), NULL
                 FROM Eurovip.servicio_destino d
                     JOIN Eurovip.servicio s ON s.id_servicio = d.id_servicio
                     JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
-                WHERE s.id_tipo_servicio = 'OFERTA' AND s.id_idioma = @Idioma
-                  AND NOT EXISTS (SELECT 1 FROM Eurovip.inicio i WHERE i.tipo_servicio = 'OFERTA' AND ISNULL(i.estado, 1) = 1 AND i.id_destino = d.destino)
-                GROUP BY d.destino
+                WHERE s.id_tipo_servicio IN ('OFERTA', 'PAQUETE') AND s.id_idioma = @Idioma
+                  AND NOT EXISTS (SELECT 1 FROM Eurovip.inicio i WHERE i.tipo_servicio = s.id_tipo_servicio AND ISNULL(i.estado, 1) = 1 AND i.id_destino = d.destino)
+                GROUP BY s.id_tipo_servicio, d.destino
                 UNION ALL
                 -- Hoteles (tarjetas manuales de /Hoteles): no salen si están ocultos o no tienen sección de la web
                 SELECT 'HOTEL', LTRIM(RTRIM(i.id_destino)), CAST(i.id_servicio AS varchar(20)), 0, NULL, NULL,
@@ -283,7 +283,7 @@ namespace EuroVip.Repositories
                 }
                 var que = f.Tipo == "CIRCUITO" ? "salidas" : "fechas";
                 if (f.Total == 0)
-                    f.Motivo = f.Tipo == "CIRCUITO" ? "No tiene salidas activas cargadas." : "No tiene ofertas activas.";
+                    f.Motivo = f.Tipo == "CIRCUITO" ? "No tiene salidas activas cargadas." : f.Tipo == "PAQUETE" ? "No tiene paquetes activos." : "No tiene ofertas activas.";
                 else if (f.Proxima is null)
                     f.Motivo = $"Sus {que} son de hoy o ya pasaron (la última: {f.Ultima:dd/MM/yyyy}). Solo sale en la Home lo que tiene {que} desde mañana ({manana}).";
                 else
@@ -292,7 +292,7 @@ namespace EuroVip.Repositories
                 if (f.Proxima is null)
                     (f.Accion, f.Url) = f.Tipo == "CIRCUITO"
                         ? ("Cargar salidas", "/CargaCircuitos/Express?circuito=" + Uri.EscapeDataString(f.Codigo ?? f.Nombre))
-                        : ("Cargar ofertas", "/CargaManual/Express");
+                        : f.Tipo == "PAQUETE" ? ("Cargar paquetes", "/CargaManual/Express?tipo=PAQUETE") : ("Cargar ofertas", "/CargaManual/Express");
             }
             return filas.OrderBy(f => f.Proxima is null && f.Tipo != "HOTEL" ? 0 : f.Tipo == "HOTEL" ? 1 : 2).ThenBy(f => f.Tipo).ThenBy(f => f.Nombre).ToList();
         }
@@ -302,13 +302,13 @@ namespace EuroVip.Repositories
         {
             using var cn = _db.Conexion();
             return await cn.QueryAsync<HwActualizarDto>(@"
-                SELECT DISTINCT 'OFERTA' AS Tipo_Servicio, s.id_campanya AS Id_Campanya, a.id_destino AS Id_Destino, so.origen AS Origen,
+                SELECT DISTINCT s.id_tipo_servicio AS Tipo_Servicio, s.id_campanya AS Id_Campanya, a.id_destino AS Id_Destino, so.origen AS Origen,
                        so.id_pais_origen AS Id_Pais_Origen, s.id_moneda AS Id_Moneda
                 FROM Eurovip.servicio s
                     JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
                     JOIN Eurovip.alojamiento a ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
                     JOIN Eurovip.servicio_origen so ON so.id_servicio = s.id_servicio
-                WHERE s.activo = 1 AND s.id_tipo_servicio = 'OFERTA' AND s.id_idioma = @Idioma AND sd.desde > GETDATE()
+                WHERE s.activo = 1 AND s.id_tipo_servicio IN ('OFERTA', 'PAQUETE') AND s.id_idioma = @Idioma AND sd.desde > GETDATE()
                 UNION
                 SELECT DISTINCT 'CIRCUITO', s.id_campanya, cd.id_pais, sc.origen, sc.id_pais_origen, s.id_moneda
                 FROM Eurovip.servicio s

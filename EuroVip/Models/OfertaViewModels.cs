@@ -29,6 +29,8 @@ namespace EuroVip.Models
     public class CargaOfertaDto
     {
         public string Modo { get; set; } = "clasica";
+        /// <summary>OFERTA (Solo Hotel, por defecto) o PAQUETE (Paquetes): se guarda en servicio.id_tipo_servicio.</summary>
+        public string? Tipo { get; set; }
         [StringLength(30)] public string? CodigoServicio { get; set; }
         [Required(ErrorMessage = "Elige el proveedor")] [StringLength(10)] public string Id_Proveedor { get; set; } = "";
         [StringLength(50)] public string? Nombre { get; set; }
@@ -53,6 +55,8 @@ namespace EuroVip.Models
 
     public class OfertaFiltro
     {
+        /// <summary>OFERTA (Solo Hotel, por defecto) o PAQUETE (Paquetes).</summary>
+        public string? Tipo { get; set; }
         public string? Q { get; set; }
         public string? Destino { get; set; }
         public short? Campanya { get; set; }

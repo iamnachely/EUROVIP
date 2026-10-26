@@ -30,8 +30,9 @@ namespace EuroVip.Controllers
             _logger = logger;
         }
 
-        public IActionResult Express() => View();
-        public IActionResult Clasica() => View();
+        // ?tipo=PAQUETE → la misma carga, pero guarda Paquetes (sin tipo: Solo Hotel = OFERTA)
+        public IActionResult Express(string? tipo) { ViewData["Tipo"] = OfertaRepository.TipoDe(tipo); return View(); }
+        public IActionResult Clasica(string? tipo) { ViewData["Tipo"] = OfertaRepository.TipoDe(tipo); return View(); }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -57,7 +58,7 @@ namespace EuroVip.Controllers
             {
                 var (r, errs) = await _carga.CargarAsync(dto, User.Identity?.Name ?? "eurovip", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), Request.Headers[ProgresoCargas.Cabecera].ToString());
                 if (r is null) return BadRequest(new { mensaje = errs.FirstOrDefault(), errores = errs });
-                await _aud.AuditarAsync("Oferta_Carga", r.Ids, new { dto.Modo, r.Codigo, r.LogId }, User.Identity?.Name ?? "desconocido",
+                await _aud.AuditarAsync(OfertaRepository.TipoDe(dto.Tipo) == OfertaRepository.TipoPaquete ? "Paquete_Carga" : "Oferta_Carga", r.Ids, new { dto.Modo, r.Codigo, r.LogId }, User.Identity?.Name ?? "desconocido",
                     HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
                 return Json(r);
             }

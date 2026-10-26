@@ -84,7 +84,8 @@
     </div>
     <div class="ui-hero-acts">
         <a class="ev-btn light" asp-controller="CargaCircuitos" asp-action="Express"><i class="bi bi-lightning-charge"></i> Carga Express</a>
-        <a class="ev-btn light" asp-controller="CargaCircuitos" asp-action="Clasica"><i class="bi bi-ui-checks"></i> Carga Clásica</a>
+        <a class="ev-btn light" href="/CargaCircuitos/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
+        <a class="ev-btn light" asp-controller="CargaCircuitos" asp-action="Clasica"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</a>
         <button class="ev-btn" type="button" onclick="CX.nuevo()"><i class="bi bi-plus-lg"></i> Nuevo circuito</button>
     </div>
     <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
@@ -185,7 +186,7 @@
         <section class="ui-pane" id="tSalidas">
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
                 <a class="ev-btn sm" id="edCargarExpress" href="#"><i class="bi bi-lightning-charge"></i> Cargar salidas (Express)</a>
-                <a class="ev-btn ghost sm" id="edCargarClasica" href="#"><i class="bi bi-ui-checks"></i> Carga Clásica</a>
+                <a class="ev-btn ghost sm" id="edCargarClasica" href="#"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</a>
             </div>
             <div id="edSalidas"></div>
         </section>
@@ -426,7 +427,7 @@ const CX = (() => {
         $('#nSal').textContent = estado.salidas.length;
         $('#edCargarExpress').href = '/CargaCircuitos/Express?circuito=' + encodeURIComponent(estado.codigoOriginal || '');
         $('#edCargarClasica').href = '/CargaCircuitos/Clasica?circuito=' + encodeURIComponent(estado.codigoOriginal || '');
-        if (!estado.salidas.length) { $('#edSalidas').innerHTML = '<div class="ui-empty" style="padding:24px"><i class="bi bi-calendar-plus big"></i><h3>Sin salidas cargadas</h3><p>Carga fechas y precios con la Carga Express o la Clásica.</p></div>'; return; }
+        if (!estado.salidas.length) { $('#edSalidas').innerHTML = '<div class="ui-empty" style="padding:24px"><i class="bi bi-calendar-plus big"></i><h3>Sin salidas cargadas</h3><p>Carga fechas y precios con la Carga Express o con Cargar Excel.</p></div>'; return; }
         $('#edSalidas').innerHTML = `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Salida</th><th>Regreso</th><th>Campaña</th><th>Categoría</th><th>Origen</th><th>Vuelo</th><th class="num">Precio web</th><th>Activa</th><th></th></tr></thead><tbody>
             ${estado.salidas.map(s => `<tr>
                 <td>${s.id_Servicio}</td><td><b>${EV.fecha(s.desde)}</b></td><td>${EV.fecha(s.hasta)}</td><td>${esc(s.campanya || '#' + s.id_Campanya)}</td>

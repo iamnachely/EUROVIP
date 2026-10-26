@@ -2,6 +2,7 @@ using EuroVip.Helpers;
 using EuroVip.Models;
 using EuroVip.Repositories;
 using EuroVip.Services;
+using Dapper;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EuroVip.Controllers
@@ -100,18 +101,8 @@ namespace EuroVip.Controllers
                 var errores = ModelState.Where(x => x.Value?.Errors.Count > 0).ToDictionary(x => x.Key, x => x.Value!.Errors.First().ErrorMessage);
                 return BadRequest(new { mensaje = errores.Values.First(), errores });
             }
-            dto.Nombre = ReglasDatos.Limpiar(dto.Nombre);
-            if (ReglasDatos.Nombre("nombre de excursión", dto.Nombre, 3) is string malNombre)
-                return BadRequest(new { mensaje = malNombre, errores = new Dictionary<string, string> { ["Nombre"] = malNombre } });
-            var (malDestino, destino) = await _repo.ValidarDestinoAsync(dto.Id_Destino);
-            if (malDestino is not null)
-                return BadRequest(new { mensaje = malDestino, errores = new Dictionary<string, string> { ["Id_Destino"] = malDestino } });
-            dto.Id_Destino = destino!;
-            if (Archivo(dto.Nombre) == "")
-                return BadRequest(new { mensaje = "El nombre tiene que llevar letras o números.", errores = new Dictionary<string, string> { ["Nombre"] = "Escribe un nombre con letras" } });
-            if (await _repo.RepetidaAsync(dto.Nombre, dto.Id_Destino, dto.Id_Excursion) is int otra)
-                return BadRequest(new { mensaje = $"Ya existe la excursión «{dto.Nombre}» en {dto.Id_Destino} (n.º {otra}). No se puede repetir.",
-                                        errores = new Dictionary<string, string> { ["Nombre"] = "Ya existe en ese destino" } });
+            if (await RevisarAsync(dto) is var (campo, mal))
+                return BadRequest(new { mensaje = mal, errores = new Dictionary<string, string> { [campo] = mal } });
 
             try
             {
@@ -133,6 +124,90 @@ namespace EuroVip.Controllers
                 _logger.LogError(ex, "Error guardando la excursión {Nombre}", dto.Nombre);
                 return StatusCode(500, new { mensaje = "No se pudo guardar: " + ex.Message });
             }
+        }
+
+        /// <summary>
+        /// Reglas para guardar una excursión (las mismas en el formulario y en Cargar Excel): nombre con letras, destino que exista
+        /// (lo deja escrito como en Eurovip.destino) y que no se repita el nombre en ese destino. Devuelve el campo y el error, o null.
+        /// </summary>
+        private async Task<(string Campo, string Mensaje)?> RevisarAsync(ExcursionGuardarDto dto)
+        {
+            dto.Nombre = ReglasDatos.Limpiar(dto.Nombre);
+            if (ReglasDatos.Nombre("nombre de excursión", dto.Nombre, 3) is string malNombre) return ("Nombre", malNombre);
+            var (malDestino, destino) = await _repo.ValidarDestinoAsync(dto.Id_Destino);
+            if (malDestino is not null) return ("Id_Destino", malDestino);
+            dto.Id_Destino = destino!;
+            if (Archivo(dto.Nombre) == "") return ("Nombre", "El nombre tiene que llevar letras o números.");
+            if (await _repo.RepetidaAsync(dto.Nombre, dto.Id_Destino, dto.Id_Excursion) is int otra)
+                return ("Nombre", $"Ya existe la excursión «{dto.Nombre}» en {dto.Id_Destino} (n.º {otra}). No se puede repetir.");
+            return null;
+        }
+
+        // ================= CARGAR EXCEL (muchas excursiones de una vez) =================
+        private static readonly string[] Columnas = { "Nombre", "Destino", "Precio", "Cancelable", "Descripción" };
+
+        /// <summary>Plantilla: hoja «Excursiones» (una fila por excursión) y hoja «Instrucciones» con los destinos que existen.</summary>
+        [HttpGet]
+        public async Task<IActionResult> Plantilla()
+        {
+            using var cn = _aud.Conexion();
+            var destinos = (await cn.QueryAsync<(string Destino, string? Pais)>(@"SELECT d.id_destino, ISNULL(p.nombre, d.id_pais) FROM Eurovip.destino d
+                LEFT JOIN Eurovip.pais p ON p.id_pais = d.id_pais AND p.id_idioma = 'ES' WHERE d.id_idioma = 'ES' ORDER BY d.id_destino")).ToList();
+            var datos = new ExcelTabla.Hoja("Excursiones", Columnas, new List<object?[]>
+            {
+                new object?[] { "Isla Saona en catamarán", "Punta Cana", 4500m, "Sí", "Día completo en Isla Saona: catamarán, almuerzo buffet, bebidas y piscina natural." },
+                new object?[] { "Cascada El Limón a caballo", "Samaná", 3200m, "No", "Paseo a caballo hasta la cascada El Limón con almuerzo típico." },
+            }, new double[] { 42, 22, 12, 12, 80 });
+            var ayuda = new ExcelTabla.Hoja("Instrucciones", new[] { "Columna", "Qué poner" }, new List<object?[]>
+            {
+                new object?[] { "Nombre", "Obligatorio. Nombre de la excursión (no se puede repetir en el mismo destino)." },
+                new object?[] { "Destino", "Obligatorio. Tal cual está en Eurovip (lista abajo)." },
+                new object?[] { "Precio", "Obligatorio. Precio por persona (número, sin símbolo)." },
+                new object?[] { "Cancelable", "Sí o No. Vacío = No." },
+                new object?[] { "Descripción", "Opcional." },
+                new object?[] { "", "" },
+                new object?[] { "Destinos válidos", "País" },
+            }.Concat(destinos.Select(d => new object?[] { d.Destino, d.Pais })).ToList(), new double[] { 32, 90 });
+            return File(ExcelTabla.Crear(datos, ayuda), CargaExcel.TipoXlsx, "Eurovip-plantilla-excursiones.xlsx");
+        }
+
+        /// <summary>
+        /// Cargar Excel: con guardar = false solo revisa (dice fila por fila si está bien o qué falla); con guardar = true crea
+        /// las excursiones de las filas correctas (las que fallan no se guardan). Cada una actualiza la tarjeta de su destino en la Home.
+        /// </summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        [RequestSizeLimit(CargaExcel.MaxBytes + 100_000)]
+        public async Task<IActionResult> CargarExcel(IFormFile? archivo, bool guardar)
+        {
+            var (filas, error) = await CargaExcel.LeerAsync(archivo);
+            if (error is not null) return BadRequest(new { mensaje = error });
+            var r = new CargaExcelResultado { Guardado = guardar };
+            var vistas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in filas!)
+            {
+                var dto = new ExcursionGuardarDto
+                {
+                    Nombre = f.Texto("Nombre", "Excursión", "Excursion") ?? "", Id_Destino = f.Texto("Destino") ?? "",
+                    Precio = f.Cifra("Precio", "Precio por persona"), Cancelable = f.SiNo(false, "Cancelable"), Descripcion = f.Texto("Descripción", "Descripcion")
+                };
+                var fila = new CargaExcelFila { Fila = f.Numero, Nombre = dto.Nombre, Detalle = $"{dto.Id_Destino} · {(dto.Precio is decimal p ? p.ToString("N2") : "sin precio")}" };
+                r.Filas.Add(fila);
+                fila.Mensaje = CargaExcel.ErrorModelo(dto);
+                if (fila.Mensaje is null && f.Texto("Precio", "Precio por persona") is string tp && dto.Precio is null) fila.Mensaje = $"El precio «{tp}» no es un número.";
+                if (fila.Mensaje is null && await RevisarAsync(dto) is var (_, mal)) fila.Mensaje = mal;
+                if (fila.Mensaje is null && !vistas.Add($"{dto.Id_Destino}|{dto.Nombre}")) fila.Mensaje = "Está repetida en el Excel (mismo nombre y destino).";
+                fila.Nombre = dto.Nombre; fila.Ok = fila.Mensaje is null;
+                if (!fila.Ok || !guardar) continue;
+                try
+                {
+                    fila.Id = await _repo.GuardarAsync(dto);
+                    r.Guardadas++;
+                    await Auditar("Excursion_Crear", fila.Id.Value, new { dto, excel = archivo!.FileName, fila = f.Numero });
+                }
+                catch (Exception ex) { fila.Ok = false; fila.Mensaje = "No se pudo guardar: " + ex.Message; _logger.LogError(ex, "Cargar Excel: excursión fila {Fila}", f.Numero); }
+            }
+            r.Mensaje = CargaExcel.Mensaje(r, "excursión", "excursiones");
+            return Json(r);
         }
 
         [HttpPost, ValidateAntiForgeryToken]

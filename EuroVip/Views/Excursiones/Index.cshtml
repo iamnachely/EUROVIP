@@ -120,6 +120,8 @@
         <p>Busca, carga y edita las excursiones de cada destino con su precio, si se puede cancelar, su descripción y su foto. Arrastra una foto encima de una tarjeta para ponérsela.</p>
     </div>
     <div class="ui-hero-acts">
+        <a class="ev-btn light" href="/Excursiones/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
+        <button class="ev-btn light" type="button" id="exExcel"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</button>
         <button class="ev-btn" type="button" id="exNueva"><i class="bi bi-plus-lg"></i> Nueva excursión</button>
     </div>
     <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
@@ -216,6 +218,7 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-excel.js" asp-append-version="true"></script>
 <script>
 const EX = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -530,6 +533,7 @@ const EX = (() => {
     // ---------------- inicio ----------------
     function iniciar() {
         $('#exNueva').onclick = () => abrir(null);
+        $('#exExcel').onclick = () => EVExcel.abrir({ titulo: 'Cargar excursiones con Excel', plantilla: '/Excursiones/Plantilla', url: '/Excursiones/CargarExcel', uno: 'excursión', varios: 'excursiones', alTerminar: cargar });
         $('#exQ').addEventListener('input', EV.debounce(e => { st.q = e.target.value.trim(); pintar(); }, 200));
         $('#exDestino').onchange = e => { st.destino = e.target.value; pintar(); };
         $('#exOrden').onchange = e => { st.orden = e.target.value; pintar(); };

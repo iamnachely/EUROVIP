@@ -352,6 +352,8 @@
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="ev-btn ghost" type="button" onclick="HX.fotos()"><i class="bi bi-images"></i> Fotos</button>
+        <a class="ev-btn ghost" href="/Hoteles/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
+        <button class="ev-btn ghost" type="button" onclick="EVExcel.abrir({ titulo: 'Cargar hoteles con Excel', plantilla: '/Hoteles/Plantilla', url: '/Hoteles/CargarExcel', uno: 'hotel', varios: 'hoteles', alTerminar: () => HX.recargar() })"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</button>
         <button class="ev-btn" type="button" onclick="HX.nuevo()"><i class="bi bi-plus-lg"></i> Nuevo hotel</button>
     </div>
     <svg class="hx-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
@@ -696,6 +698,7 @@
 <div class="hx-toasts" id="hxToasts"></div>
 
 @section Scripts {
+<script src="~/js/eurovip-excel.js" asp-append-version="true"></script>
 <script>
 const HX = (() => {
     const $ = (s, el = document) => el.querySelector(s);

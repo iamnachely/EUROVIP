@@ -1,5 +1,13 @@
 @{
-    ViewData["Title"] = "Solo Hotel · Carga Express";
+    // Solo Hotel (OFERTA) o Paquetes (PAQUETE): misma pantalla, solo cambian los textos, los enlaces y el tipo que se guarda
+    var tipo = (ViewData["Tipo"] as string) ?? "OFERTA";
+    var esPaq = tipo == "PAQUETE";
+    var nombre = esPaq ? "Paquetes" : "Solo Hotel";
+    var qs = esPaq ? "?tipo=PAQUETE" : "";
+    var lista = esPaq ? "/Paquetes/Index" : "/Ofertas/Index";
+    var ofs = esPaq ? "paquetes" : "ofertas";
+    var of1 = esPaq ? "paquete" : "oferta";
+    ViewData["Title"] = nombre + " · Carga Express";
 }
 
 @section Styles {
@@ -34,12 +42,13 @@
     <i class="bi bi-lightning-charge ui-hero-ico" aria-hidden="true"></i>
     <div>
         <span class="ev-chip dark"><i class="bi bi-lightning-charge"></i> Versión 1 · Todo junto</span>
-        <h1>Solo Hotel · Carga Express</h1>
+        <h1>@nombre · Carga Express</h1>
         <p>En 5 pasos: elige los hoteles, marca las fechas y pon los precios en una sola tabla, completa los datos comerciales, decide si lleva vuelo y listo. A la derecha ves en vivo lo que se va a crear.</p>
     </div>
     <div class="ui-hero-acts">
-        <a class="ev-btn light" asp-controller="CargaManual" asp-action="Clasica"><i class="bi bi-ui-checks"></i> Ir a la Clásica</a>
-        <a class="ev-btn light" asp-controller="Ofertas" asp-action="Index"><i class="bi bi-list-ul"></i> Ver Solo Hotel</a>
+        <a class="ev-btn light" href="/CargaManual/Clasica@(qs)"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</a>
+        <a class="ev-btn light" href="/CargaManual/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
+        <a class="ev-btn light" href="@lista"><i class="bi bi-list-ul"></i> Ver @nombre</a>
     </div>
     <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
         <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
@@ -101,10 +110,10 @@
             <h2>Datos comerciales</h2>
             <p class="sub">Quién la vende, desde dónde, en qué campañas y qué suplementos lleva.</p>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>A</span> Oferta</div>
+                <div class="ui-sec-t"><span>A</span> @(esPaq ? "Paquete" : "Oferta")</div>
                 <div class="ui-row r3">
                     <div class="ui-f"><label>Proveedor <em>tour operador</em></label><input id="cProveedor" placeholder="Busca el proveedor…"><span class="msg"></span></div>
-                    <div class="ui-f"><label>Nombre de la oferta <em>opcional</em></label><input id="cNombre" maxlength="50" placeholder="Ej. Punta Cana verano"></div>
+                    <div class="ui-f"><label>Nombre @(esPaq ? "del paquete" : "de la oferta") <em>opcional</em></label><input id="cNombre" maxlength="50" placeholder="Ej. Punta Cana verano"></div>
                     <div class="ui-f"><label>Moneda</label><select id="cDivisa"></select></div>
                 </div>
             </div>
@@ -116,7 +125,7 @@
                 </div>
             </div>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>C</span> Campañas <small>se crea una oferta por cada hotel × fecha × campaña</small></div>
+                <div class="ui-sec-t"><span>C</span> Campañas <small>se crea @(esPaq ? "un paquete" : "una oferta") por cada hotel × fecha × campaña</small></div>
                 <div id="cCampanyas"></div>
             </div>
             <div class="ui-sec">
@@ -129,7 +138,7 @@
 
         <!-- PASO 4 -->
         <section class="xp-panel ui-pane" data-paso="4">
-            <h2>¿La oferta incluye vuelo?</h2>
+            <h2>¿@(esPaq ? "El paquete" : "La oferta") incluye vuelo?</h2>
             <p class="sub">En Eurovip el vuelo es opcional. Si no lleva, se vende solo hotel.</p>
             <div class="ui-row" style="margin-bottom:18px">
                 <button type="button" class="ui-opt on" data-vuelo="no"><span class="ico"><i class="bi bi-building"></i></span><span><b>Sin vuelo</b><small>Solo hotel</small></span></button>
@@ -148,7 +157,7 @@
             <h2>Notas y confirmación</h2>
             <p class="sub">Agrega lo que incluye y no incluye (opcional) y revisa antes de cargar.</p>
             <div class="ui-sec xp-notas">
-                <div class="ui-sec-t"><span><i class="bi bi-journal-text"></i></span> Notas <small>se guardan en cada oferta</small></div>
+                <div class="ui-sec-t"><span><i class="bi bi-journal-text"></i></span> Notas <small>se guardan en cada @of1</small></div>
                 <div id="xpNotas"></div>
                 <div class="ui-chips">
                     <button type="button" class="ui-pick" onclick="XP.nota('Incluye')">+ Incluye</button>
@@ -162,7 +171,7 @@
             <div class="xp-nav">
                 <button type="button" class="ev-btn ghost" data-ant><i class="bi bi-arrow-left"></i> Atrás</button><span class="sp"></span>
                 <button type="button" class="ev-btn ghost" id="xpRevisar"><i class="bi bi-search"></i> Revisar</button>
-                <button type="button" class="ev-btn" id="xpCargar"><i class="bi bi-rocket-takeoff"></i> Cargar ofertas</button>
+                <button type="button" class="ev-btn" id="xpCargar"><i class="bi bi-rocket-takeoff"></i> Cargar @ofs</button>
             </div>
         </section>
 
@@ -178,6 +187,7 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
 <script>
+const TIPO = '@tipo', ES_PAQ = TIPO === 'PAQUETE', QS = '@qs', LISTA = '@lista', NOMBRE = '@nombre', OFS = '@ofs', OF1 = '@of1', OF1M = ES_PAQ ? 'Paquete' : 'Oferta';
 const XP = (() => {
     const $ = (s, el = document) => el.querySelector(s);
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -254,7 +264,7 @@ const XP = (() => {
         const ds = EVC.destinosDe(S.bloques.map(b => b.comp));
         $('#xpDestino').innerHTML = !ds.length ? ''
             : ds.length === 1
-                ? `<div class="ui-note info" style="margin:0 0 14px"><i class="bi bi-geo-alt-fill"></i><div>Destino de la oferta: <b>${esc(ds[0])}</b>. Solo puedes agregar hoteles de ${esc(ds[0])}; para otro destino haz otra carga.</div></div>`
+                ? `<div class="ui-note info" style="margin:0 0 14px"><i class="bi bi-geo-alt-fill"></i><div>Destino ${ES_PAQ ? 'del paquete' : 'de la oferta'}: <b>${esc(ds[0])}</b>. Solo puedes agregar hoteles de ${esc(ds[0])}; para otro destino haz otra carga.</div></div>`
                 : `<div class="ui-note err" style="margin:0 0 14px"><i class="bi bi-exclamation-triangle"></i><div>Hay hoteles de destinos distintos (<b>${ds.map(esc).join(', ')}</b>). Todos los hoteles de una carga tienen que ser del mismo destino: quita los que sobran.</div></div>`;
     }
 
@@ -286,7 +296,7 @@ const XP = (() => {
         $('#xpResumen').innerHTML = `
             <span class="mini">SE VAN A CREAR</span>
             <div class="big">${total}</div>
-            <div class="mini">oferta${total === 1 ? '' : 's'} (${hs.length} hotel${hs.length === 1 ? '' : 'es'} × fechas con precio × ${Math.max(1, camps.length)} campaña${camps.length === 1 ? '' : 's'})</div>
+            <div class="mini">${OF1}${total === 1 ? '' : 's'} (${hs.length} hotel${hs.length === 1 ? '' : 'es'} × fechas con precio × ${Math.max(1, camps.length)} campaña${camps.length === 1 ? '' : 's'})</div>
             <dl>
                 <div><dt>Destino</dt><dd>${esc(EVC.destinosDe(S.bloques.map(b => b.comp)).join(' · ') || '—')}</dd></div>
                 <div><dt>Hoteles</dt><dd>${hs.length ? hs.map(h => esc(h.nombre)).join('<br>') : '—'}</dd></div>
@@ -305,7 +315,7 @@ const XP = (() => {
     // ===================== ENVIAR =====================
     function armarDto() {
         return {
-            Modo: 'express',
+            Modo: 'express', Tipo: TIPO,
             Id_Proveedor: $('#cProveedor').dataset.valor || '', Nombre: $('#cNombre').value.trim() || null,
             Noches: noches(), Divisa: moneda(), Origen: $('#cOrigen').dataset.valor || '', Id_Pais_Origen: $('#cPaisOrigen').value,
             Hoteles: hoteles().map(h => ({ ...S.bloques.find(b => b.uid === h.uid).comp.datos(), Salidas: mx.salidas(h.uid) })),
@@ -324,7 +334,7 @@ const XP = (() => {
         try {
             const r = await EV.post('/CargaManual/Validar', armarDto());
             $('#xpRevision').innerHTML = r.ok
-                ? `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div>Todo correcto. Se van a crear <b>${r.servicios}</b> ofertas.</div></div>`
+                ? `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div>Todo correcto. Se van a crear <b>${r.servicios}</b> ${OFS}.</div></div>`
                 : `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>Antes de cargar corrige esto:<ul>${r.errores.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div></div>`;
             return r.ok;
         } catch (e) { EV.toast(e.message, 'err'); return false; }
@@ -334,16 +344,16 @@ const XP = (() => {
     async function cargarTodo() {
         if (!await revisar()) return;
         const dto = armarDto(), total = servicios();
-        if (!await EV.confirmar({ titulo: `¿Cargar ${total} ofertas?`, texto: `Se crearán <b>${total}</b> ofertas en <b>${dto.Hoteles.length}</b> hotel${dto.Hoteles.length === 1 ? '' : 'es'}. Si algo falla, no se guarda nada.`, si: 'Sí, cargar', icono: 'rocket-takeoff' })) return;
+        if (!await EV.confirmar({ titulo: `¿Cargar ${total} ${OFS}?`, texto: `Se crearán <b>${total}</b> ${OFS} en <b>${dto.Hoteles.length}</b> hotel${dto.Hoteles.length === 1 ? '' : 'es'}. Si algo falla, no se guarda nada.`, si: 'Sí, cargar', icono: 'rocket-takeoff' })) return;
         const btn = $('#xpCargar'), html = btn.innerHTML;
         btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Cargando…';
         try {
-            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { titulo: 'Cargando Solo Hotel' });
+            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { titulo: 'Cargando ' + NOMBRE });
             $('#xpOk').innerHTML = `<div class="ring"><i class="bi bi-check-lg"></i></div><h2>${esc(r.mensaje)}</h2>
-                <p style="color:var(--ev-muted);margin:0 0 22px">Código de carga <b>${esc(r.codigo)}</b> · ofertas #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro de carga #${r.logId}</p>
+                <p style="color:var(--ev-muted);margin:0 0 22px">Código de carga <b>${esc(r.codigo)}</b> · ${OFS} #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro de carga #${r.logId}</p>
                 <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-                    <a class="ev-btn" href="/Ofertas/Index"><i class="bi bi-eye"></i> Ver las ofertas</a>
-                    <a class="ev-btn ghost" href="/CargaManual/Express"><i class="bi bi-arrow-repeat"></i> Hacer otra carga</a></div>`;
+                    <a class="ev-btn" href="${LISTA}"><i class="bi bi-eye"></i> Ver los ${OFS}</a>
+                    <a class="ev-btn ghost" href="/CargaManual/Express${QS}"><i class="bi bi-arrow-repeat"></i> Hacer otra carga</a></div>`;
             ir('ok');
             guardia?.liberar();
             EV.confeti();

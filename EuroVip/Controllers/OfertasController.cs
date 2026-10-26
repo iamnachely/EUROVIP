@@ -22,16 +22,16 @@ namespace EuroVip.Controllers
             _logger = logger;
         }
 
-        public IActionResult Index() => View();
+        public IActionResult Index() { ViewData["Tipo"] = OfertaRepository.Tipo; return View(); }
 
         [HttpGet]
         public async Task<IActionResult> Listar([FromQuery] OfertaFiltro f)
         {
             var (items, total) = await _repo.ListarAsync(f);
-            return Json(new { items, total, pagina = Math.Max(1, f.Pagina), tam = Math.Clamp(f.Tam, 10, 100), stats = await _repo.EstadisticasAsync() });
+            return Json(new { items, total, pagina = Math.Max(1, f.Pagina), tam = Math.Clamp(f.Tam, 10, 100), stats = await _repo.EstadisticasAsync(OfertaRepository.TipoDe(f.Tipo)) });
         }
 
-        [HttpGet] public async Task<IActionResult> Destinos() => Json(await _repo.DestinosConOfertasAsync());
+        [HttpGet] public async Task<IActionResult> Destinos(string? tipo) => Json(await _repo.DestinosConOfertasAsync(OfertaRepository.TipoDe(tipo)));
         [HttpGet] public async Task<IActionResult> Habitaciones(int hotel) => Json(await _repo.HabitacionesAsync(hotel));
 
         [HttpGet]
@@ -95,7 +95,7 @@ namespace EuroVip.Controllers
             foreach (var o in todas)
                 sb.AppendLine(Csv.Fila(o.Id_Servicio, o.Hotel, o.Destino, $"{o.Id_Regimen} {o.Regimen}", o.Desde.ToString("dd/MM/yyyy"), o.Hasta.ToString("dd/MM/yyyy"),
                     o.Noches, o.Campanya, o.Precio_Base, o.Tasas, o.Descuento, o.PrecioWeb, o.Id_Moneda, o.Origen, o.Vuelos, o.Activo, o.Codigo, o.Usuario));
-            return Csv.Archivo(sb, $"eurovip-ofertas-{DateTime.Now:yyyyMMdd-HHmm}.csv");
+            return Csv.Archivo(sb, $"eurovip-{(OfertaRepository.TipoDe(f.Tipo) == OfertaRepository.TipoPaquete ? "paquetes" : "solo-hotel")}-{DateTime.Now:yyyyMMdd-HHmm}.csv");
         }
 
         private Task Auditar(string tipo, IEnumerable<int> ids, object cambios) =>

@@ -38,6 +38,50 @@ namespace EuroVip.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Plantilla del Excel de circuito, igual al que se usa en BackTiTan (lo que lee ExcelCircuitoParser):
+        /// columna A = hoteles; de la B en adelante una fila de FECHAS y justo debajo su PRECIO (se pueden poner varios bloques);
+        /// más abajo Aerolínea, Tasa, Segmento 1 y Segmento 2. La hoja «Instrucciones» lo explica (esa hoja no se lee).
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Plantilla()
+        {
+            // Hoteles de ejemplo que SÍ existen en Eurovip (así el ejemplo se reconoce al subirlo); si no hay, nombres de muestra
+            List<string> hoteles;
+            using (var cn = _repo.Conexion())
+                hoteles = (await Dapper.SqlMapper.QueryAsync<string>(cn, @"SELECT TOP 3 a.nombre FROM Eurovip.alojamiento a
+                    WHERE a.id_idioma = 'ES' AND a.activo = 1 AND a.id_alojamiento IN (SELECT x.id_alojamiento FROM Eurovip.servicio_circuito_alojamiento x) ORDER BY a.nombre")).ToList();
+            hoteles.AddRange(new[] { "Hotel Riu Plaza España", "Hotel Ilunion Pío XII", "Hotel Meliá Sevilla" }.Skip(hoteles.Count));
+            var primera = DateTime.Today.AddDays(((int)DayOfWeek.Saturday - (int)DateTime.Today.DayOfWeek + 7) % 7 + 14);
+            var fechas = Enumerable.Range(0, 12).Select(i => primera.AddDays(i * 7)).ToList();
+            object?[] Fechas(int desde) => new object?[] { null }.Concat(fechas.Skip(desde).Take(6).Cast<object?>()).ToArray();
+            object?[] Precios(int baseP) => new object?[] { null }.Concat(Enumerable.Range(0, 6).Select(i => (object?)(baseP + (i % 3) * 25m))).ToArray();
+            var f1 = Fechas(0); f1[0] = "HOTELES";
+            var p1 = Precios(1790); p1[0] = hoteles[0];
+            var f2 = Fechas(6); f2[0] = hoteles[1];
+            var p2 = Precios(1840); p2[0] = hoteles[2];
+            var circuito = new ExcelTabla.Hoja("Circuito", Array.Empty<string>(), new List<object?[]>
+            {
+                f1, p1, f2, p2,
+                new object?[] { null },
+                new object?[] { "Aerolínea", "IBEROJET" },
+                new object?[] { "Tasa", 260m },
+                new object?[] { "Segmento 1", "18:30 - 21:20" },
+                new object?[] { "Segmento 2", "23:20 - 17:35" },
+            }, new double[] { 34, 13, 13, 13, 13, 13, 13 });
+            var ayuda = new ExcelTabla.Hoja("Instrucciones", new[] { "Qué", "Cómo" }, new List<object?[]>
+            {
+                new object?[] { "Hoteles", "Columna A: un hotel por fila, con el nombre como está en Eurovip (Herramientas › Alojamientos)." },
+                new object?[] { "Fechas", "De la columna B en adelante: una fila con las fechas de salida (formato fecha)." },
+                new object?[] { "Precios", "Justo debajo de cada fecha, el precio TOTAL por persona de esa salida. Puedes poner varios bloques de fechas y precios." },
+                new object?[] { "Aerolínea", "Opcional. Nombre o código de la aerolínea (en Eurovip el vuelo es opcional)." },
+                new object?[] { "Tasa", "Opcional. Tasas que se restan del precio total." },
+                new object?[] { "Segmento 1 / 2", "Opcional. Horario del vuelo de ida y de vuelta (salida - llegada)." },
+                new object?[] { "Importante", "Solo se lee la primera hoja (Circuito). Los datos del circuito (nombre, noches, campañas…) se ponen en la pantalla." },
+            }, new double[] { 18, 110 });
+            return File(ExcelTabla.Crear(circuito, ayuda), CargaExcel.TipoXlsx, "Eurovip-plantilla-circuito.xlsx");
+        }
+
         [HttpGet]
         public IActionResult CodigoServicio() =>
             Json(new { codigo = $"{User.Identity?.Name}{DateTime.Now:yyyyMMddHHmmss}" is var c && c.Length > 30 ? c[..30] : c });

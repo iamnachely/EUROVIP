@@ -48,7 +48,9 @@
                     <button type="button" class="ev-nav-label" aria-expanded="true"><span>Cargas</span><i class="bi bi-chevron-down"></i></button>
                     <ul class="ev-nav">
                         @if (Ve("hoteles")) { <li><a asp-controller="Hoteles" asp-action="Index" class="@Activo("Hoteles")"><i class="bi bi-building"></i> Hoteles</a></li> }
-                        @if (Ve("carga_manual")) { <li><a asp-controller="Ofertas" asp-action="Index" class="@(Activo("Ofertas") != "" || Activo("CargaManual") != "" ? "active" : "")"><i class="bi bi-box-seam"></i> Solo Hotel</a></li> }
+                        @if (Ve("carga_manual")) { var paqActivo = Activo("Paquetes") != "" || (Activo("CargaManual") != "" && string.Equals(Context.Request.Query["tipo"], "PAQUETE", StringComparison.OrdinalIgnoreCase));
+                            <li><a asp-controller="Ofertas" asp-action="Index" class="@((Activo("Ofertas") != "" || Activo("CargaManual") != "") && !paqActivo ? "active" : "")"><i class="bi bi-box-seam"></i> Solo Hotel</a></li>
+                            <li><a asp-controller="Paquetes" asp-action="Index" class="@(paqActivo ? "active" : "")"><i class="bi bi-suitcase2"></i> Paquetes</a></li> }
                         @if (Ve("circuitos")) { <li><a asp-controller="Circuitos" asp-action="Index" class="@(Activo("Circuitos") != "" || Activo("CargaCircuitos") != "" ? "active" : "")"><i class="bi bi-signpost-split"></i> Circuitos</a></li> }
                         @if (Ve("excursiones")) { <li><a asp-controller="Excursiones" asp-action="Index" class="@Activo("Excursiones")"><i class="bi bi-compass"></i> Excursiones</a></li> }
                         @if (Ve("traslados")) { <li><a asp-controller="Traslados" asp-action="Index" class="@Activo("Traslados")"><i class="bi bi-bus-front"></i> Traslados</a></li> }

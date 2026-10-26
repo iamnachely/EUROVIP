@@ -8,26 +8,33 @@ namespace EuroVip.Repositories
     public interface IOfertaRepository
     {
         Task<(IEnumerable<OfertaItem> Items, int Total)> ListarAsync(OfertaFiltro f);
-        Task<OfertaEstadisticas> EstadisticasAsync();
+        Task<OfertaEstadisticas> EstadisticasAsync(string? tipo = null);
         Task<OfertaDetalle?> ObtenerAsync(int id);
         Task<string?> EditarAsync(OfertaEditarDto dto);
         Task<int> LoteAsync(OfertaLoteDto dto);
         Task<int> EliminarAsync(IEnumerable<int> ids);
         Task<IEnumerable<OfertaHabitacionDetalle>> HabitacionesAsync(int idAlojamiento);
-        Task<IEnumerable<Opcion>> DestinosConOfertasAsync();
+        Task<IEnumerable<Opcion>> DestinosConOfertasAsync(string? tipo = null);
         Task RefrescarVitrinaAsync(IEnumerable<VitrinaClave> claves);
         Task<List<VitrinaClave>> ClavesVitrinaAsync(SqlConnection cn, SqlTransaction? tx, IEnumerable<int> ids);
     }
 
-    public record VitrinaClave(short Id_Campanya, string Id_Moneda, string Id_Pais_Origen, string Origen, string Id_Pais, string Id_Destino);
+    public record VitrinaClave(short Id_Campanya, string Id_Moneda, string Id_Pais_Origen, string Origen, string Id_Pais, string Id_Destino, string Id_Tipo_Servicio);
 
     /// <summary>
-    /// Ofertas de hotel cargadas (servicio tipo OFERTA) en el esquema Eurovip: buscar, editar, activar/desactivar y eliminar.
+    /// Ofertas de hotel cargadas en el esquema Eurovip: buscar, editar, activar/desactivar y eliminar. Dos pantallas iguales:
+    /// Solo Hotel (servicio tipo OFERTA) y Paquetes (tipo PAQUETE); se guardan igual, solo cambia el tipo.
     /// Corrige lo que en BackTiTan afectaba a otras ofertas: aquí cada cambio toca SOLO las salidas elegidas.
     /// </summary>
     public class OfertaRepository : IOfertaRepository
     {
         public const string Tipo = "OFERTA";
+        public const string TipoPaquete = "PAQUETE";
+        /// <summary>Los dos tipos que se cargan con estas pantallas (Solo Hotel y Paquetes).</summary>
+        public static readonly string[] Tipos = { Tipo, TipoPaquete };
+        /// <summary>"PAQUETE" → PAQUETE; cualquier otro valor (o nada) → OFERTA (Solo Hotel).</summary>
+        public static string TipoDe(string? tipo) => string.Equals(tipo?.Trim(), TipoPaquete, StringComparison.OrdinalIgnoreCase) ? TipoPaquete : Tipo;
+        private static string[] TiposDe(string? tipo) => string.IsNullOrWhiteSpace(tipo) ? Tipos : new[] { TipoDe(tipo) };
         private const string Idioma = "ES";
         private readonly ICircuitoRepository _db;
         private readonly ILogger<OfertaRepository> _logger;
@@ -48,7 +55,7 @@ namespace EuroVip.Repositories
             LEFT JOIN Eurovip.servicio_itinerario v ON v.id_servicio = s.id_servicio AND v.segmento = 1
             LEFT JOIN Eurovip.servicio_origen so    ON so.id_servicio = s.id_servicio
             LEFT JOIN Eurovip.servicio_destino sdx  ON sdx.id_servicio = s.id_servicio   -- destino de la oferta (FASE 11)
-            WHERE s.id_tipo_servicio = 'OFERTA' AND s.id_idioma = 'ES'";
+            WHERE s.id_tipo_servicio IN @tipos AND s.id_idioma = 'ES'";
 
         private const string Columnas = @"
             s.id_servicio AS Id_Servicio, s.nombre AS Nombre, a.id_alojamiento AS Id_Alojamiento, a.nombre AS Hotel, a.caratula AS Caratula,
@@ -87,7 +94,7 @@ namespace EuroVip.Repositories
                 _ => "sd.desde, a.nombre, s.id_servicio"
             };
             var filtro = where.Count > 0 ? " AND " + string.Join(" AND ", where) : "";
-            p.Add("offset", (pagina - 1) * tam); p.Add("tam", tam);
+            p.Add("offset", (pagina - 1) * tam); p.Add("tam", tam); p.Add("tipos", new[] { TipoDe(f.Tipo) });
 
             using var cn = _db.Conexion();
             using var m = await cn.QueryMultipleAsync($@"
@@ -97,7 +104,7 @@ namespace EuroVip.Repositories
             return (await m.ReadAsync<OfertaItem>(), total);
         }
 
-        public async Task<OfertaEstadisticas> EstadisticasAsync()
+        public async Task<OfertaEstadisticas> EstadisticasAsync(string? tipo = null)
         {
             using var cn = _db.Conexion();
             return await cn.QuerySingleAsync<OfertaEstadisticas>($@"
@@ -107,14 +114,14 @@ namespace EuroVip.Repositories
                        COUNT(DISTINCT a.id_alojamiento) AS Hoteles,
                        ISNULL(SUM(CASE WHEN v.id_servicio IS NOT NULL THEN 1 ELSE 0 END), 0) AS ConVuelo,
                        MIN(CASE WHEN s.activo = 1 AND sd.desde >= CAST(GETDATE() AS date) THEN Eurovip.fnPrecioWeb(s.id_servicio) END) AS PrecioDesde
-                {Base}");
+                {Base}", new { tipos = TiposDe(tipo) });
         }
 
         public async Task<OfertaDetalle?> ObtenerAsync(int id)
         {
             using var cn = _db.Conexion();
             var o = await cn.QueryFirstOrDefaultAsync<OfertaDetalle>(
-                $"SELECT {Columnas}, s.id_Proveedor AS Id_Proveedor, COALESCE(v.id_pais_origen, so.id_pais_origen) AS Id_Pais_Origen {Base} AND s.id_servicio = @id", new { id });
+                $"SELECT {Columnas}, s.id_Proveedor AS Id_Proveedor, COALESCE(v.id_pais_origen, so.id_pais_origen) AS Id_Pais_Origen {Base} AND s.id_servicio = @id", new { id, tipos = Tipos });
             if (o is null) return null;
             using var m = await cn.QueryMultipleAsync(@"
                 SELECT ah.id_habitacion AS Id_Habitacion, ah.nombre AS Nombre, ah.id_tipo_habitacion AS Id_Tipo_Habitacion, sh.precio AS Precio
@@ -143,7 +150,7 @@ namespace EuroVip.Repositories
             await cn.OpenAsync();
             using var tx = cn.BeginTransaction();
             var actual = await cn.QueryFirstOrDefaultAsync<(int Aloj, short Camp)>(
-                "SELECT sd.id_alojamiento, s.id_campanya FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1 WHERE s.id_servicio = @id AND s.id_tipo_servicio = 'OFERTA'",
+                "SELECT sd.id_alojamiento, s.id_campanya FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1 WHERE s.id_servicio = @id AND s.id_tipo_servicio IN ('OFERTA', 'PAQUETE')",
                 new { id = d.Id_Servicio }, tx);
             if (actual.Aloj == 0) return "Esa oferta ya no existe.";
             if (d.Habitaciones.Count == 0) return "Deja al menos una habitación.";
@@ -188,7 +195,7 @@ namespace EuroVip.Repositories
                     activo = COALESCE(@activo, activo),
                     precio_base = precio_base + ISNULL(@ajuste, 0),
                     descuento = COALESCE(@descuento, descuento)
-                WHERE id_servicio IN @ids AND id_tipo_servicio = 'OFERTA'",
+                WHERE id_servicio IN @ids AND id_tipo_servicio IN ('OFERTA', 'PAQUETE')",
                 new { activo = d.Activo, ajuste = d.AjustePrecio, descuento = d.Descuento, ids = d.Ids });
             await RefrescarVitrinaAsync(claves);
             return n;
@@ -202,7 +209,7 @@ namespace EuroVip.Repositories
             await cn.OpenAsync();
             var claves = await ClavesVitrinaAsync(cn, null, lista);
             using var tx = cn.BeginTransaction();
-            var validos = (await cn.QueryAsync<int>("SELECT id_servicio FROM Eurovip.servicio WHERE id_servicio IN @lista AND id_tipo_servicio = 'OFERTA'", new { lista }, tx)).ToList();
+            var validos = (await cn.QueryAsync<int>("SELECT id_servicio FROM Eurovip.servicio WHERE id_servicio IN @lista AND id_tipo_servicio IN ('OFERTA', 'PAQUETE')", new { lista }, tx)).ToList();
             foreach (var id in validos)
                 await cn.ExecuteAsync("Eurovip.spEliminaServicio", new { idServicio = id }, tx, commandType: CommandType.StoredProcedure);
             tx.Commit();
@@ -219,25 +226,25 @@ namespace EuroVip.Repositories
                 new { idAlojamiento });
         }
 
-        public async Task<IEnumerable<Opcion>> DestinosConOfertasAsync()
+        public async Task<IEnumerable<Opcion>> DestinosConOfertasAsync(string? tipo = null)
         {
             using var cn = _db.Conexion();
             return await cn.QueryAsync<Opcion>($@"
                 SELECT COALESCE(sdx.destino, a.id_destino) AS Valor, COALESCE(sdx.destino, a.id_destino) AS Texto, CAST(COUNT(*) AS varchar(10)) AS Extra {Base}
-                GROUP BY COALESCE(sdx.destino, a.id_destino) ORDER BY COALESCE(sdx.destino, a.id_destino)");
+                GROUP BY COALESCE(sdx.destino, a.id_destino) ORDER BY COALESCE(sdx.destino, a.id_destino)", new { tipos = TiposDe(tipo) });
         }
 
         public async Task<List<VitrinaClave>> ClavesVitrinaAsync(SqlConnection cn, SqlTransaction? tx, IEnumerable<int> ids) =>
             (await cn.QueryAsync<VitrinaClave>(@"
                 SELECT DISTINCT s.id_campanya AS Id_Campanya, s.id_moneda AS Id_Moneda,
                        COALESCE(v.id_pais_origen, so.id_pais_origen) AS Id_Pais_Origen, COALESCE(v.origen, so.origen) AS Origen,
-                       a.id_pais AS Id_Pais, a.id_destino AS Id_Destino
+                       a.id_pais AS Id_Pais, a.id_destino AS Id_Destino, s.id_tipo_servicio AS Id_Tipo_Servicio
                 FROM Eurovip.servicio s
                 JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
                 JOIN Eurovip.alojamiento a ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
                 LEFT JOIN Eurovip.servicio_itinerario v ON v.id_servicio = s.id_servicio AND v.segmento = 1
                 LEFT JOIN Eurovip.servicio_origen so ON so.id_servicio = s.id_servicio
-                WHERE s.id_servicio IN @ids AND s.id_tipo_servicio = 'OFERTA'
+                WHERE s.id_servicio IN @ids AND s.id_tipo_servicio IN ('OFERTA', 'PAQUETE')
                   AND COALESCE(v.origen, so.origen) IS NOT NULL", new { ids = ids.ToList() }, tx)).ToList();
 
         /// <summary>Recalcula la vitrina web de hoteles para cada combinación afectada (fuera de transacción).</summary>
@@ -250,7 +257,7 @@ namespace EuroVip.Repositories
                 {
                     await cn.ExecuteAsync("Eurovip.spActualizaAlojamientoDestino", new
                     {
-                        idIdioma = Idioma, idTipoServicio = Tipo, idCampanya = k.Id_Campanya, idMoneda = k.Id_Moneda,
+                        idIdioma = Idioma, idTipoServicio = k.Id_Tipo_Servicio, idCampanya = k.Id_Campanya, idMoneda = k.Id_Moneda,
                         idPaisOrigen = k.Id_Pais_Origen, idOrigen = k.Origen, idPaisDestino = k.Id_Pais, idDestino = k.Id_Destino
                     }, commandType: CommandType.StoredProcedure);
                 }

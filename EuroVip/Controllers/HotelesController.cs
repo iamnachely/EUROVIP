@@ -73,10 +73,7 @@ namespace EuroVip.Controllers
         public async Task<IActionResult> Guardar([FromBody] HotelGuardarDto dto)
         {
             // Limpia espacios y deja la descripción con el formato de ViajeVDT: "Régimen -Código"
-            dto.Id_Destino = dto.Id_Destino?.Trim() ?? "";
-            dto.CaratulaDestino = dto.CaratulaDestino?.Trim();
-            var d = System.Text.RegularExpressions.Regex.Match(dto.Descripcion ?? "", @"^(.+?)\s*-\s*(\d+)\s*$");
-            if (d.Success) dto.Descripcion = $"{d.Groups[1].Value.Trim()} -{d.Groups[2].Value}";
+            Preparar(dto);
             if (!ModelState.IsValid)
             {
                 var errores = ModelState.Where(x => x.Value?.Errors.Count > 0)
@@ -84,12 +81,8 @@ namespace EuroVip.Controllers
                 return BadRequest(new { mensaje = "Revisa los campos marcados.", errores });
             }
             // Nada de nombres basura ("222") ni destinos que no existen o están mal escritos.
-            dto.Id_Destino = ReglasDatos.Limpiar(dto.Id_Destino);
-            dto.CaratulaDestino = ReglasDatos.Limpiar(dto.CaratulaDestino);
-            if (ReglasDatos.Nombre("nombre de hotel", dto.Id_Destino, 3) is string malHotel)
-                return BadRequest(new { mensaje = malHotel, errores = new Dictionary<string, string> { ["Id_Destino"] = malHotel } });
-            if (await _repo.ErrorDestinoAsync(dto.CaratulaDestino) is string malDestino)
-                return BadRequest(new { mensaje = malDestino, errores = new Dictionary<string, string> { ["CaratulaDestino"] = malDestino } });
+            if (await RevisarAsync(dto) is var (campo, mal))
+                return BadRequest(new { mensaje = mal, errores = new Dictionary<string, string> { [campo] = mal } });
 
             try
             {
@@ -123,6 +116,154 @@ namespace EuroVip.Controllers
                 _logger.LogError(ex, "Error guardando hotel {@Dto}", dto);
                 return StatusCode(500, new { mensaje = "No se pudo guardar. Intenta de nuevo en unos segundos." });
             }
+        }
+
+        /// <summary>Limpia espacios y deja la descripción con el formato de ViajeVDT: "Régimen -Código".</summary>
+        private static void Preparar(HotelGuardarDto dto)
+        {
+            dto.Id_Destino = dto.Id_Destino?.Trim() ?? "";
+            dto.CaratulaDestino = dto.CaratulaDestino?.Trim();
+            var d = System.Text.RegularExpressions.Regex.Match(dto.Descripcion ?? "", @"^(.+?)\s*-\s*(\d+)\s*$");
+            if (d.Success) dto.Descripcion = $"{d.Groups[1].Value.Trim()} -{d.Groups[2].Value}";
+        }
+
+        /// <summary>
+        /// Reglas para guardar un hotel (las mismas en el formulario y en Cargar Excel): nada de nombres basura ("222")
+        /// ni destinos que no existen o están mal escritos. Devuelve el campo y el error, o null.
+        /// </summary>
+        private async Task<(string Campo, string Mensaje)?> RevisarAsync(HotelGuardarDto dto)
+        {
+            dto.Id_Destino = ReglasDatos.Limpiar(dto.Id_Destino);
+            dto.CaratulaDestino = ReglasDatos.Limpiar(dto.CaratulaDestino);
+            if (ReglasDatos.Nombre("nombre de hotel", dto.Id_Destino, 3) is string malHotel) return ("Id_Destino", malHotel);
+            if (await _repo.ErrorDestinoAsync(dto.CaratulaDestino) is string malDestino) return ("CaratulaDestino", malDestino);
+            return null;
+        }
+
+        // ================= CARGAR EXCEL (muchos hoteles de una vez) =================
+        private static readonly string[] Columnas =
+        {
+            "Hotel", "Destino", "Régimen", "Código hotel", "Precio", "Noches", "Moneda", "Campaña", "País salida", "Ciudad salida",
+            "País destino", "Latitud", "Longitud", "Sección de la web", "Visible", "Notas"
+        };
+        private static readonly string[] Regimenes = { "Solo Habitación", "Alojamiento y Desayuno", "Media Pensión", "Pensión Completa", "Todo Incluido", "Room Only" };
+
+        /// <summary>Plantilla: hoja «Hoteles» (una fila por hotel) y hoja «Instrucciones» con campañas, secciones, monedas y destinos.</summary>
+        [HttpGet]
+        public async Task<IActionResult> Plantilla()
+        {
+            var camps = (await _repo.CampanyasAsync(HotelRepository.IdiomaHotel)).ToList();
+            var conts = (await _repo.ContenedoresAsync(HotelRepository.IdiomaHotel)).ToList();
+            var monedas = (await _repo.MonedasAsync()).ToList();
+            var destinos = (await _repo.DestinosAsync()).ToList();
+            var camp = CampanyaPorDefecto(camps)?.Id_Campanya.ToString() ?? camps.FirstOrDefault()?.Id_Campanya.ToString();
+            // Destinos de ejemplo que SÍ existen (si no, la fila de ejemplo saldría con error al subirla)
+            string Dest(string quiero, int i) => destinos.FirstOrDefault(x => ExcelTabla.Clave(x) == ExcelTabla.Clave(quiero)) ?? destinos.ElementAtOrDefault(i) ?? quiero;
+            var seccion = conts.FirstOrDefault(c => ExcelTabla.Clave(c.Nombre).Contains("hotel"))?.Nombre ?? conts.FirstOrDefault()?.Nombre;
+            var datos = new ExcelTabla.Hoja("Hoteles", Columnas, new List<object?[]>
+            {
+                new object?[] { "Riu Palace Bavaro", Dest("Punta Cana", 0), "Todo Incluido", "603258", 1290m, 7, "DOP", camp, "ES", "Madrid", "DO", "18.7357", "-68.4447", seccion, "Sí", null },
+                new object?[] { "Iberostar Selection Hacienda Dominicus", Dest("La Romana", 1), "Todo Incluido", "702115", 1450m, 7, "DOP", camp, "ES", "Madrid", "DO", null, null, seccion, "Sí", "Ejemplo: borra estas filas y pon tus hoteles." },
+            }, new double[] { 38, 18, 20, 13, 11, 9, 9, 11, 11, 14, 12, 11, 11, 22, 9, 40 });
+            var ayuda = new List<object?[]>
+            {
+                new object?[] { "Hotel", "Obligatorio. Nombre del hotel (no debe existir ya en la vitrina).", null },
+                new object?[] { "Destino", "Obligatorio. Tal cual está en Eurovip (lista abajo).", null },
+                new object?[] { "Régimen", "Obligatorio. Ej.: " + string.Join(" · ", Regimenes), null },
+                new object?[] { "Código hotel", "Obligatorio. Código numérico del hotel (3 a 12 cifras).", null },
+                new object?[] { "Precio / Noches", "Precio «desde» y noches (opcionales).", null },
+                new object?[] { "Moneda", "Código (lista abajo). Vacío = DOP.", null },
+                new object?[] { "Campaña", "Número o nombre (lista abajo)." + (camp is null ? "" : $" Vacío = {camp}."), null },
+                new object?[] { "País salida / Ciudad salida", "Obligatorios. País en 2 letras (ES, DO…) y ciudad (Madrid…).", null },
+                new object?[] { "País destino", "2 letras. Vacío = DO.", null },
+                new object?[] { "Latitud / Longitud", "Opcionales (para el mapa).", null },
+                new object?[] { "Sección de la web", "Nombre de la sección (lista abajo). Sin sección el hotel queda oculto.", null },
+                new object?[] { "Visible", "Sí o No. Vacío = Sí.", null },
+                new object?[] { "", "", null },
+                new object?[] { "Campañas", "Nombre", "Tipo" },
+            };
+            ayuda.AddRange(camps.Select(c => new object?[] { c.Id_Campanya.ToString(), c.Nombre, c.Id_Tipo_Servicio }));
+            ayuda.Add(new object?[] { "", "", null }); ayuda.Add(new object?[] { "Secciones de la web", "Posición", null });
+            ayuda.AddRange(conts.Select(c => new object?[] { c.Nombre, c.Posicion, null }));
+            ayuda.Add(new object?[] { "", "", null }); ayuda.Add(new object?[] { "Monedas", "Nombre", null });
+            ayuda.AddRange(monedas.Select(m => new object?[] { m.Codigo, m.Nombre, null }));
+            ayuda.Add(new object?[] { "", "", null }); ayuda.Add(new object?[] { "Destinos válidos", "", null });
+            ayuda.AddRange(destinos.Select(x => new object?[] { x, null, null }));
+            return File(ExcelTabla.Crear(datos, new ExcelTabla.Hoja("Instrucciones", new[] { "Columna", "Qué poner", "" }, ayuda, new double[] { 30, 80, 14 })),
+                        CargaExcel.TipoXlsx, "Eurovip-plantilla-hoteles.xlsx");
+        }
+
+        /// <summary>La campaña si el Excel no la trae: la única de tipo Oferta (si hay una sola).</summary>
+        private static Common.Data.Entities.Campanya? CampanyaPorDefecto(List<Common.Data.Entities.Campanya> camps)
+        {
+            var ofertas = camps.Where(c => string.Equals(c.Id_Tipo_Servicio?.Trim(), "Oferta", StringComparison.OrdinalIgnoreCase)).ToList();
+            return ofertas.Count == 1 ? ofertas[0] : camps.Count == 1 ? camps[0] : null;
+        }
+
+        /// <summary>Cargar Excel: con guardar = false solo revisa; con guardar = true crea los hoteles de las filas correctas.</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        [RequestSizeLimit(CargaExcel.MaxBytes + 100_000)]
+        public async Task<IActionResult> CargarExcel(IFormFile? archivo, bool guardar)
+        {
+            var (filas, error) = await CargaExcel.LeerAsync(archivo);
+            if (error is not null) return BadRequest(new { mensaje = error });
+            var camps = (await _repo.CampanyasAsync(HotelRepository.IdiomaHotel)).ToList();
+            var conts = (await _repo.ContenedoresAsync(HotelRepository.IdiomaHotel)).ToList();
+            var monedas = (await _repo.MonedasAsync()).Select(m => m.Codigo.Trim().ToUpperInvariant()).ToHashSet();
+            var existentes = new HashSet<string>((await _repo.NombresAsync()).Select(ExcelTabla.Clave));
+            var porDefecto = CampanyaPorDefecto(camps);
+            var r = new CargaExcelResultado { Guardado = guardar };
+            var vistas = new HashSet<string>();
+            foreach (var f in filas!)
+            {
+                var fila = new CargaExcelFila { Fila = f.Numero, Nombre = f.Texto("Hotel", "Nombre", "Nombre del hotel") ?? "" };
+                r.Filas.Add(fila);
+                string? mal = null;
+                // Campaña: número o nombre; vacía = la de por defecto
+                var tc = f.Texto("Campaña", "Campanya");
+                var camp = tc is null ? porDefecto
+                    : camps.FirstOrDefault(c => c.Id_Campanya.ToString() == tc.Trim() || ExcelTabla.Clave(c.Nombre) == ExcelTabla.Clave(tc));
+                if (camp is null) mal = tc is null ? "Escribe la campaña (número o nombre, mira la hoja Instrucciones)." : $"La campaña «{tc}» no existe.";
+                // Sección: por nombre; vacía = sin sección (queda oculto)
+                var ts = f.Texto("Sección de la web", "Sección", "Seccion");
+                var cont = ts is null ? null : conts.FirstOrDefault(c => ExcelTabla.Clave(c.Nombre) == ExcelTabla.Clave(ts));
+                if (mal is null && ts is not null && cont is null) mal = $"La sección «{ts}» no existe. Mira la hoja Instrucciones.";
+                var moneda = (f.Texto("Moneda") ?? "DOP").Trim().ToUpperInvariant();
+                if (mal is null && !monedas.Contains(moneda)) mal = $"La moneda «{moneda}» no existe.";
+                var regimen = f.Texto("Régimen", "Regimen"); var codigo = f.Texto("Código hotel", "Codigo hotel", "Código", "Codigo");
+                if (mal is null && regimen is null) mal = "Escribe el régimen (ej. Todo Incluido).";
+                if (mal is null && codigo is null) mal = "Escribe el código del hotel.";
+
+                var dto = new HotelGuardarDto
+                {
+                    Id_Destino = fila.Nombre, CaratulaDestino = f.Texto("Destino"), Descripcion = $"{regimen} -{codigo}", Id_Idioma = HotelRepository.IdiomaHotel,
+                    Id_Campanya = camp?.Id_Campanya, Id_Moneda = moneda, PrecioWeb = f.Cifra("Precio", "Precio web", "Precio desde"),
+                    Noches = f.Cifra("Noches") is decimal n ? (int)Math.Round(n) : null,
+                    Id_Pais_Origen = (f.Texto("País salida", "Pais salida", "País de salida", "País origen") ?? "").ToUpperInvariant(),
+                    Origen = f.Texto("Ciudad salida", "Ciudad de salida", "Origen") ?? "",
+                    Id_PaisDestino = (f.Texto("País destino", "Pais destino") ?? "DO").ToUpperInvariant(),
+                    Latitud = f.Texto("Latitud"), Longitud = f.Texto("Longitud"), Id_Contenedor = cont?.Id_Contenedor,
+                    Estado = f.SiNo(true, "Visible", "Activo"), Notas = f.Texto("Notas")
+                };
+                Preparar(dto);
+                mal ??= CargaExcel.ErrorModelo(dto);
+                if (mal is null && await RevisarAsync(dto) is var (_, m)) mal = m;
+                if (mal is null && existentes.Contains(ExcelTabla.Clave(dto.Id_Destino))) mal = $"Ya hay un hotel «{dto.Id_Destino}» en la vitrina: edítalo en la lista.";
+                if (mal is null && !vistas.Add(ExcelTabla.Clave(dto.Id_Destino))) mal = "Está repetido en el Excel.";
+                fila.Nombre = dto.Id_Destino;
+                fila.Detalle = $"{dto.CaratulaDestino} · {dto.Descripcion} · {(dto.PrecioWeb is decimal p ? p.ToString("N2") + " " + moneda : "sin precio")}";
+                fila.Mensaje = mal; fila.Ok = mal is null;
+                if (!fila.Ok || !guardar) continue;
+                try
+                {
+                    fila.Id = await _repo.CrearAsync(dto);
+                    r.Guardadas++;
+                    await Auditar("Hotel_Crear", fila.Id.Value, new { dto, excel = archivo!.FileName, fila = f.Numero });
+                }
+                catch (Exception ex) { fila.Ok = false; fila.Mensaje = "No se pudo guardar: " + ex.Message; _logger.LogError(ex, "Cargar Excel: hotel fila {Fila}", f.Numero); }
+            }
+            r.Mensaje = CargaExcel.Mensaje(r, "hotel", "hoteles");
+            return Json(r);
         }
 
         [HttpPost]

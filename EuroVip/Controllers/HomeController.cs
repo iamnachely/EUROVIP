@@ -31,12 +31,15 @@ namespace EuroVip.Controllers
         // Pantallas y accesos directos que encuentra el buscador de arriba (texto, palabras clave, dirección, módulo, icono)
         private static readonly (string Titulo, string Claves, string Url, string? Modulo, string Icono)[] Pantallas =
         {
-            ("Nuevo Solo Hotel (Express)", "cargar solo hotel paquete oferta hotel express nueva carga manual", "/CargaManual/Express", "carga_manual", "bi-lightning-charge"),
-            ("Nuevo Solo Hotel con Excel (Clásica)", "cargar solo hotel paquete oferta excel clasica", "/CargaManual/Clasica", "carga_manual", "bi-file-earmark-excel"),
+            ("Nuevo Solo Hotel (Express)", "cargar solo hotel oferta hotel express nueva carga manual", "/CargaManual/Express", "carga_manual", "bi-lightning-charge"),
+            ("Nuevo Solo Hotel con Excel", "cargar solo hotel oferta excel clasica", "/CargaManual/Clasica", "carga_manual", "bi-file-earmark-excel"),
+            ("Nuevo Paquete (Express)", "cargar paquete paquetes vuelo hotel express nueva carga manual", "/CargaManual/Express?tipo=PAQUETE", "carga_manual", "bi-lightning-charge"),
+            ("Nuevo Paquete con Excel", "cargar paquete paquetes excel clasica", "/CargaManual/Clasica?tipo=PAQUETE", "carga_manual", "bi-file-earmark-excel"),
             ("Excursiones", "excursiones excursion tour actividad buscar cargar editar foto", "/Excursiones/Index", "excursiones", "bi-compass"),
             ("Traslados", "traslados traslado transfer aeropuerto hotel shuttle compartido privado van", "/Traslados/Index", "traslados", "bi-bus-front"),
             ("Cruceros", "cruceros crucero barco naviera cabina cubierta itinerario puerto disney msc royal", "/Cruceros/Index", "cruceros", "bi-water"),
-            ("Solo Hotel cargados", "lista solo hotel paquetes ofertas editar desactivar", "/Ofertas/Index", "carga_manual", "bi-pencil-square"),
+            ("Solo Hotel cargados", "lista solo hotel ofertas editar desactivar", "/Ofertas/Index", "carga_manual", "bi-pencil-square"),
+            ("Paquetes cargados", "lista paquetes paquete editar desactivar", "/Paquetes/Index", "carga_manual", "bi-suitcase2"),
             ("Nuevo hotel", "crear hotel vitrina", "/Hoteles/Index?nuevo=1", "hoteles", "bi-building-add"),
             ("Hoteles", "hotel fotos vitrina", "/Hoteles/Index", "hoteles", "bi-building"),
             ("Nuevo circuito", "crear circuito itinerario", "/Circuitos/Index?nuevo=1", "circuitos", "bi-signpost-split"),
@@ -89,13 +92,16 @@ namespace EuroVip.Controllers
                         Agregar("Hoteles de la web", "bi-building", h.Nombre, h.Destino, "/Hoteles/Index?editar=" + h.Id);
                 if (Puede("carga_manual"))
                 {
-                    foreach (var o in await cn.QueryAsync<(string Hotel, int N)>(@"
-                        SELECT TOP 5 a.nombre, COUNT(*) FROM Eurovip.servicio s
+                    foreach (var o in await cn.QueryAsync<(string Tipo, string Hotel, int N)>(@"
+                        SELECT TOP 5 s.id_tipo_servicio, a.nombre, COUNT(*) FROM Eurovip.servicio s
                             JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
                             JOIN Eurovip.alojamiento a ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
-                        WHERE s.id_tipo_servicio = 'OFERTA' AND s.activo = 1 AND sd.desde > CAST(GETDATE() AS date) AND a.nombre LIKE @like
-                        GROUP BY a.nombre ORDER BY a.nombre", new { like }))
-                        Agregar("Ofertas", "bi-pencil-square", o.Hotel, $"{o.N} oferta{(o.N == 1 ? "" : "s")} a la venta", "/Ofertas/Index?q=" + Uri.EscapeDataString(o.Hotel));
+                        WHERE s.id_tipo_servicio IN ('OFERTA', 'PAQUETE') AND s.activo = 1 AND sd.desde > CAST(GETDATE() AS date) AND a.nombre LIKE @like
+                        GROUP BY s.id_tipo_servicio, a.nombre ORDER BY a.nombre", new { like }))
+                        if (o.Tipo == "PAQUETE")
+                            Agregar("Paquetes", "bi-suitcase2", o.Hotel, $"{o.N} paquete{(o.N == 1 ? "" : "s")} a la venta", "/Paquetes/Index?q=" + Uri.EscapeDataString(o.Hotel));
+                        else
+                            Agregar("Solo Hotel", "bi-pencil-square", o.Hotel, $"{o.N} oferta{(o.N == 1 ? "" : "s")} a la venta", "/Ofertas/Index?q=" + Uri.EscapeDataString(o.Hotel));
                     foreach (var d in await cn.QueryAsync<(string Destino, int N)>(@"
                         SELECT TOP 3 d.destino, COUNT(*) FROM Eurovip.servicio_destino d JOIN Eurovip.servicio s ON s.id_servicio = d.id_servicio
                         WHERE s.activo = 1 AND d.destino LIKE @like GROUP BY d.destino ORDER BY d.destino", new { like }))
@@ -135,11 +141,11 @@ namespace EuroVip.Controllers
 
                 // 1) Lo que se acaba pronto: la última fecha a la venta es dentro de los próximos 7 días
                 var vencen = await cn.QueryAsync<(string Tipo, string Nombre, DateTime Ultima)>(@"
-                    SELECT 'OFERTA', d.destino, MAX(sd.desde)
+                    SELECT s.id_tipo_servicio, d.destino, MAX(sd.desde)
                     FROM Eurovip.servicio_destino d JOIN Eurovip.servicio s ON s.id_servicio = d.id_servicio
                         JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
-                    WHERE s.activo = 1 AND s.id_tipo_servicio = 'OFERTA' AND sd.desde > CAST(GETDATE() AS date)
-                    GROUP BY d.destino HAVING MAX(sd.desde) <= DATEADD(DAY, 7, CAST(GETDATE() AS date))
+                    WHERE s.activo = 1 AND s.id_tipo_servicio IN ('OFERTA', 'PAQUETE') AND sd.desde > CAST(GETDATE() AS date)
+                    GROUP BY s.id_tipo_servicio, d.destino HAVING MAX(sd.desde) <= DATEADD(DAY, 7, CAST(GETDATE() AS date))
                     UNION ALL
                     SELECT 'CIRCUITO', sc.nombre_circuito, MAX(sc.desde)
                     FROM Eurovip.servicio_circuito sc JOIN Eurovip.servicio s ON s.id_servicio = sc.id_servicio
@@ -147,11 +153,12 @@ namespace EuroVip.Controllers
                     GROUP BY sc.nombre_circuito HAVING MAX(sc.desde) <= DATEADD(DAY, 7, CAST(GETDATE() AS date))");
                 foreach (var v in vencen)
                 {
-                    if (v.Tipo == "OFERTA" && !Puede("carga_manual")) continue;
+                    var paq = v.Tipo == "PAQUETE";
+                    if (v.Tipo is "OFERTA" or "PAQUETE" && !Puede("carga_manual")) continue;
                     if (v.Tipo == "CIRCUITO" && !Puede("circuitos")) continue;
-                    Agregar("aviso", "bi-hourglass-split", v.Tipo == "OFERTA" ? $"Las ofertas de {v.Nombre} se acaban pronto" : $"El circuito {v.Nombre} se acaba pronto",
+                    Agregar("aviso", "bi-hourglass-split", v.Tipo == "CIRCUITO" ? $"El circuito {v.Nombre} se acaba pronto" : paq ? $"Los paquetes de {v.Nombre} se acaban pronto" : $"Las ofertas de {v.Nombre} se acaban pronto",
                         $"Su última fecha a la venta es el {v.Ultima:dd/MM/yyyy}. Después deja de salir en la web.",
-                        v.Tipo == "OFERTA" ? "Cargar más fechas" : "Cargar salidas", v.Tipo == "OFERTA" ? "/CargaManual/Express" : "/Circuitos/Index");
+                        v.Tipo == "CIRCUITO" ? "Cargar salidas" : "Cargar más fechas", v.Tipo == "CIRCUITO" ? "/Circuitos/Index" : paq ? "/CargaManual/Express?tipo=PAQUETE" : "/CargaManual/Express");
                 }
 
                 // 2) Cargas que quedaron para revisar (últimos 30 días)
@@ -208,7 +215,7 @@ namespace EuroVip.Controllers
                         (SELECT COUNT(*) FROM Eurovip.usuario WHERE activo = 1)                                AS UsuariosActivos,
                         (SELECT COUNT(*) FROM Eurovip.UsuarioModulos WHERE usuario = @userName AND acceso = 1) AS ModulosConAcceso,
                         (SELECT COUNT(*) FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
-                          WHERE s.activo = 1 AND s.id_tipo_servicio = 'OFERTA' AND sd.desde > CAST(GETDATE() AS date)) AS OfertasVenta,
+                          WHERE s.activo = 1 AND s.id_tipo_servicio IN ('OFERTA', 'PAQUETE') AND sd.desde > CAST(GETDATE() AS date)) AS OfertasVenta,
                         (SELECT COUNT(DISTINCT sc.nombre_circuito) FROM Eurovip.servicio_circuito sc JOIN Eurovip.servicio s ON s.id_servicio = sc.id_servicio
                           WHERE s.activo = 1 AND sc.desde > CAST(GETDATE() AS date))                         AS CircuitosVenta",
                     new { userName });
@@ -230,7 +237,8 @@ namespace EuroVip.Controllers
         private static List<ModuloHome> ModulosCarga() => new()
         {
             new() { Titulo = "Carga de Hoteles", Descripcion = "Publica hoteles en la vitrina: precio, régimen e imagen.", Icono = "bi-building", Etiqueta = "Disponible", Url = "/Hoteles/Index", Disponible = true, Modulo = "hoteles" },
-            new() { Titulo = "Solo Hotel",       Descripcion = "Ofertas de hotel: Express o Clásica (con Excel). Vuelo opcional.", Icono = "bi-box-seam", Etiqueta = "Disponible", Url = "/Ofertas/Index", Disponible = true, Modulo = "carga_manual" },
+            new() { Titulo = "Solo Hotel",       Descripcion = "Ofertas de hotel: Express o con Excel. Vuelo opcional.", Icono = "bi-box-seam", Etiqueta = "Disponible", Url = "/Ofertas/Index", Disponible = true, Modulo = "carga_manual" },
+            new() { Titulo = "Paquetes",         Descripcion = "Paquetes de hotel: Express o con Excel. Se cargan igual que Solo Hotel.", Icono = "bi-suitcase2", Etiqueta = "Nuevo", Url = "/Paquetes/Index", Disponible = true, Modulo = "carga_manual" },
             new() { Titulo = "Excursiones",      Descripcion = "Excursiones por destino: precio, cancelación, descripción y foto.", Icono = "bi-compass", Etiqueta = "Disponible", Url = "/Excursiones/Index", Disponible = true, Modulo = "excursiones" },
             new() { Titulo = "Traslados",        Descripcion = "Traslados aeropuerto → hotel: compartido o privado, vehículo, precio y foto.", Icono = "bi-bus-front", Etiqueta = "Disponible", Url = "/Traslados/Index", Disponible = true, Modulo = "traslados" },
             new() { Titulo = "Cruceros",         Descripcion = "Itinerario, a bordo, cabinas y cubiertas, fechas, tarifas y precios.", Icono = "bi-water", Etiqueta = "Nuevo", Url = "/Cruceros/Index", Disponible = true, Modulo = "cruceros" },

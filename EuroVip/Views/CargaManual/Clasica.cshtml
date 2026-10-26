@@ -1,5 +1,13 @@
 @{
-    ViewData["Title"] = "Solo Hotel · Carga Clásica";
+    // Solo Hotel (OFERTA) o Paquetes (PAQUETE): misma pantalla, solo cambian los textos, los enlaces y el tipo que se guarda
+    var tipo = (ViewData["Tipo"] as string) ?? "OFERTA";
+    var esPaq = tipo == "PAQUETE";
+    var nombre = esPaq ? "Paquetes" : "Solo Hotel";
+    var qs = esPaq ? "?tipo=PAQUETE" : "";
+    var lista = esPaq ? "/Paquetes/Index" : "/Ofertas/Index";
+    var ofs = esPaq ? "paquetes" : "ofertas";
+    var of1 = esPaq ? "paquete" : "oferta";
+    ViewData["Title"] = nombre + " · Cargar Excel";
 }
 
 @section Styles {
@@ -57,13 +65,14 @@
 <section class="ui-hero ev-rise">
     <i class="bi bi-ui-checks ui-hero-ico" aria-hidden="true"></i>
     <div>
-        <span class="ev-chip dark"><i class="bi bi-ui-checks"></i> Versión 2 · Igual que CargarExcel</span>
-        <h1>Solo Hotel · Carga Clásica</h1>
-        <p>Como en BackTiTan: en INICIO pones los datos de la oferta, en VUELOS el vuelo (opcional) y en CARGAR EXCEL subes el Excel con los hoteles y sus precios. Revisas hotel por hotel y guardas todos de una vez.</p>
+        <span class="ev-chip dark"><i class="bi bi-file-earmark-excel"></i> Versión 2 · Con Excel</span>
+        <h1>@nombre · Cargar Excel</h1>
+        <p>Como en BackTiTan: en INICIO pones los datos @(esPaq ? "del paquete" : "de la oferta"), en VUELOS el vuelo (opcional) y en CARGAR EXCEL subes el Excel con los hoteles y sus precios. Revisas hotel por hotel y guardas todos de una vez.</p>
     </div>
     <div class="ui-hero-acts">
-        <a class="ev-btn light" asp-controller="CargaManual" asp-action="Express"><i class="bi bi-lightning-charge"></i> Ir a la Express</a>
-        <a class="ev-btn light" asp-controller="Ofertas" asp-action="Index"><i class="bi bi-list-ul"></i> Ver Solo Hotel</a>
+        <a class="ev-btn light" href="/CargaManual/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
+        <a class="ev-btn light" href="/CargaManual/Express@(qs)"><i class="bi bi-lightning-charge"></i> Ir a la Express</a>
+        <a class="ev-btn light" href="@lista"><i class="bi bi-list-ul"></i> Ver @nombre</a>
     </div>
     <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
         <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
@@ -81,17 +90,17 @@
     <!-- ===================== INICIO ===================== -->
     <section class="cl-panel ui-pane on" id="pInicio">
         <div class="ui-sec">
-            <div class="ui-sec-t"><span>1</span> Datos de la oferta</div>
+            <div class="ui-sec-t"><span>1</span> Datos @(esPaq ? "del paquete" : "de la oferta")</div>
             <div class="ui-row r4">
                 <div class="ui-f"><label>Código servicio</label>
                     <div style="display:flex;gap:6px"><input id="iCodigo" maxlength="30" placeholder="Se genera solo"><button type="button" class="ui-ibtn" title="Generar código" onclick="CL.generarCodigo()"><i class="bi bi-arrow-repeat"></i></button></div></div>
-                <div class="ui-f"><label>Tipo servicio</label><input value="OFERTA (hotel)" readonly tabindex="-1" style="font-weight:800"></div>
+                <div class="ui-f"><label>Tipo servicio</label><input value="@(esPaq ? "PAQUETE" : "OFERTA (solo hotel)")" readonly tabindex="-1" style="font-weight:800"></div>
                 <div class="ui-f"><label>Idioma</label><input value="ES · Español" readonly tabindex="-1" style="font-weight:800"></div>
                 <div class="ui-f"><label>Divisa</label><select id="iDivisa"></select></div>
             </div>
             <div class="ui-row r3">
                 <div class="ui-f"><label>Selecciona proveedor <em>tour operador</em></label><input id="iProveedor" placeholder="Busca el proveedor…"><span class="msg"></span></div>
-                <div class="ui-f"><label>Nombre de la oferta <em>opcional</em></label><input id="iNombre" maxlength="50" placeholder="Ej. Punta Cana verano"></div>
+                <div class="ui-f"><label>Nombre @(esPaq ? "del paquete" : "de la oferta") <em>opcional</em></label><input id="iNombre" maxlength="50" placeholder="Ej. Punta Cana verano"></div>
                 <div class="ui-f"><label>Noches <em>se usa para calcular la fecha hasta</em></label><input id="iNoches" type="number" min="1" max="60" value="7"><span class="msg"></span></div>
             </div>
             <div class="ui-row">
@@ -100,7 +109,7 @@
             </div>
         </div>
         <div class="ui-sec">
-            <div class="ui-sec-t"><span>2</span> Campañas <small>una oferta por hotel × fecha × campaña</small></div>
+            <div class="ui-sec-t"><span>2</span> Campañas <small>@(esPaq ? "un paquete" : "una oferta") por hotel × fecha × campaña</small></div>
             <div id="iCampanyas"></div>
         </div>
         <div class="ui-sec">
@@ -206,6 +215,7 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
 <script>
+const TIPO = '@tipo', ES_PAQ = TIPO === 'PAQUETE', QS = '@qs', LISTA = '@lista', NOMBRE = '@nombre', OFS = '@ofs', OF1 = '@of1', OF1M = ES_PAQ ? 'Paquete' : 'Oferta';
 const CL = (() => {
     const $ = (s, el = document) => el.querySelector(s);
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -240,7 +250,7 @@ const CL = (() => {
         const fd = new FormData(); fd.append('archivo', archivo);
         $('#xEstado').innerHTML = '<span class="ui-spin"></span> Leyendo el Excel…';
         try {
-            const r = await EVProgreso.subirConVentana('/CargaManual/LeerExcel', fd, 'Leyendo el Excel de Solo Hotel');
+            const r = await EVProgreso.subirConVentana('/CargaManual/LeerExcel', fd, 'Leyendo el Excel de ' + NOMBRE);
             const hoy = EV.hoy(), tasa = $('#gTasa').value === '' ? tasasSup() : num($('#gTasa').value);
             let pasadas = 0;
             H = r.hoteles.map(h => ({
@@ -293,7 +303,7 @@ const CL = (() => {
         const ds = destinosCarga();
         $('#xDestino').innerHTML = !ds.length ? ''
             : ds.length === 1
-                ? `<div class="ui-note info" style="margin:0 0 10px"><i class="bi bi-geo-alt-fill"></i><div>Destino de la oferta: <b>${esc(ds[0])}</b>. Todos los hoteles de esta carga tienen que ser de ${esc(ds[0])}.</div></div>`
+                ? `<div class="ui-note info" style="margin:0 0 10px"><i class="bi bi-geo-alt-fill"></i><div>Destino ${ES_PAQ ? 'del paquete' : 'de la oferta'}: <b>${esc(ds[0])}</b>. Todos los hoteles de esta carga tienen que ser de ${esc(ds[0])}.</div></div>`
                 : `<div class="ui-note err" style="margin:0 0 10px"><i class="bi bi-exclamation-triangle"></i><div>El Excel trae hoteles de destinos distintos (<b>${ds.map(esc).join(', ')}</b>). La carga es de <b>${esc(destinoCarga())}</b>: cambia o marca "No cargar" los que están en rojo.</div></div>`;
         $('#xChips').innerHTML = H.map((h, i) => `<button type="button" class="cx-chip ${i === actual ? 'on' : ''}" data-i="${i}" title="${esc(h.texto)}"><i class="dot ${fueraDeDestino(h) ? 'bad' : estadoHotel(h)}"></i><span class="n">${i + 1}. ${esc(h.elegido?.nombre || h.texto)}</span></button>`).join('');
         $('#xChips .on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
@@ -353,7 +363,7 @@ const CL = (() => {
         const notas = [['Incluye', '#nIncluye'], ['No incluye', '#nNoIncluye'], ['Condiciones', '#nNota'], ['Oferta', '#nOferta']]
             .map(([t, id]) => ({ Tipo: t, Texto: $(id).value.trim() })).filter(n => n.Texto);
         return {
-            Modo: 'excel',
+            Modo: 'excel', Tipo: TIPO,
             CodigoServicio: $('#iCodigo').value.trim() || null,
             Id_Proveedor: $('#iProveedor').dataset.valor || '', Nombre: $('#iNombre').value.trim() || null,
             Noches: noches(), Divisa: moneda(), Origen: $('#iOrigen').dataset.valor || '', Id_Pais_Origen: $('#iPaisOrigen').value,
@@ -409,7 +419,7 @@ const CL = (() => {
             const r = await EV.post('/CargaManual/Validar', armarDto());
             const omitidos = H.filter(h => h.omitir).length;
             $('#clRevision').innerHTML = r.ok
-                ? `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div>Formulario correcto. Se van a crear <b>${r.servicios}</b> ofertas de <b>${H.filter(listo).length}</b> hoteles${omitidos ? ` (se saltan ${omitidos} marcados "no cargar")` : ''}.</div></div>`
+                ? `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div>Formulario correcto. Se van a crear <b>${r.servicios}</b> ${OFS} de <b>${H.filter(listo).length}</b> hoteles${omitidos ? ` (se saltan ${omitidos} marcados "no cargar")` : ''}.</div></div>`
                 : `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>Antes de guardar corrige esto:<ul>${r.errores.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>`;
             $('#clRevision').scrollIntoView({ behavior: 'smooth', block: 'center' });
             return r.ok;
@@ -420,12 +430,12 @@ const CL = (() => {
     async function guardar() {
         if (!await revisar()) return;
         const dto = armarDto(), total = servicios();
-        if (!await EV.confirmar({ titulo: `¿Guardar ${total} ofertas?`, texto: `Se crearán <b>${total}</b> ofertas de <b>${dto.Hoteles.length}</b> hotel${dto.Hoteles.length === 1 ? '' : 'es'}. Si algo falla, no se guarda nada.`, si: 'Sí, guardar todos', icono: 'cloud-arrow-up' })) return;
+        if (!await EV.confirmar({ titulo: `¿Guardar ${total} ${OFS}?`, texto: `Se crearán <b>${total}</b> ${OFS} de <b>${dto.Hoteles.length}</b> hotel${dto.Hoteles.length === 1 ? '' : 'es'}. Si algo falla, no se guarda nada.`, si: 'Sí, guardar todos', icono: 'cloud-arrow-up' })) return;
         const b = $('#bGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
         try {
-            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { titulo: 'Cargando Solo Hotel' });
-            $('#clRevision').innerHTML = `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div><b>${esc(r.mensaje)}</b><br>Código de carga <b>${esc(r.codigo)}</b> · ofertas #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro #${r.logId}
-                <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><a class="ev-btn sm" href="/Ofertas/Index"><i class="bi bi-eye"></i> Ver las ofertas</a><a class="ev-btn ghost sm" href="/CargaManual/Clasica"><i class="bi bi-arrow-repeat"></i> Nueva carga</a></div></div></div>`;
+            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { titulo: 'Cargando ' + NOMBRE });
+            $('#clRevision').innerHTML = `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div><b>${esc(r.mensaje)}</b><br>Código de carga <b>${esc(r.codigo)}</b> · ${OFS} #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro #${r.logId}
+                <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><a class="ev-btn sm" href="${LISTA}"><i class="bi bi-eye"></i> Ver los ${OFS}</a><a class="ev-btn ghost sm" href="/CargaManual/Clasica"><i class="bi bi-arrow-repeat"></i> Nueva carga</a></div></div></div>`;
             $('#clRevision').scrollIntoView({ behavior: 'smooth', block: 'center' });
             EV.toast(r.mensaje, 'ok');
             guardia?.liberar();

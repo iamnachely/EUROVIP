@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Carga Clásica de circuitos";
+    ViewData["Title"] = "Circuitos · Cargar Excel";
     var circuitoInicial = ViewData["Circuito"] as string;
 }
 
@@ -43,11 +43,12 @@
 <section class="ui-hero ev-rise">
     <i class="bi bi-ui-checks ui-hero-ico" aria-hidden="true"></i>
     <div>
-        <span class="ev-chip dark"><i class="bi bi-ui-checks"></i> Versión 2 · Tal cual BackTiTan</span>
-        <h1>Carga Clásica de circuitos</h1>
+        <span class="ev-chip dark"><i class="bi bi-file-earmark-excel"></i> Versión 2 · Con Excel</span>
+        <h1>Circuitos · Cargar Excel</h1>
         <p>Como en BackTiTan (CargarCircuito/Index2): INICIO con los datos del circuito, VUELOS (opcional) y CARGAR EXCEL con los hoteles, las fechas y los precios. Revisa el formulario y guarda.</p>
     </div>
     <div class="ui-hero-acts">
+        <a class="ev-btn light" href="/CargaCircuitos/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
         <a class="ev-btn light" asp-controller="CargaCircuitos" asp-action="Express"><i class="bi bi-lightning-charge"></i> Ir a la Express</a>
         <a class="ev-btn light" asp-controller="Circuitos" asp-action="Index"><i class="bi bi-signpost-split"></i> Catálogo</a>
     </div>
@@ -133,6 +134,7 @@
             <div style="color:var(--ev-muted);font-weight:600;font-size:13px;margin-top:4px">Formato .xlsx · hoteles en la columna A y fechas + precios totales. Aerolínea, Tasa y Segmentos se detectan por su etiqueta.</div>
             <input type="file" id="xArchivo" accept=".xlsx,.xlsm" hidden>
         </label>
+        <div style="margin-top:10px"><a class="ev-btn ghost sm" href="/CargaCircuitos/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a></div>
         <div id="xAvisos" style="margin-top:14px"></div>
 
         <!-- Datos generales del circuito -->

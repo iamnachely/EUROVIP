@@ -1,5 +1,13 @@
 @{
-    ViewData["Title"] = "Solo Hotel";
+    // Solo Hotel (OFERTA) o Paquetes (PAQUETE): misma pantalla, solo cambian los textos, los enlaces y el tipo que se guarda
+    var tipo = (ViewData["Tipo"] as string) ?? "OFERTA";
+    var esPaq = tipo == "PAQUETE";
+    var nombre = esPaq ? "Paquetes" : "Solo Hotel";
+    var qs = esPaq ? "?tipo=PAQUETE" : "";
+    var lista = esPaq ? "/Paquetes/Index" : "/Ofertas/Index";
+    var ofs = esPaq ? "paquetes" : "ofertas";
+    var of1 = esPaq ? "paquete" : "oferta";
+    ViewData["Title"] = nombre;
 }
 
 @section Styles {
@@ -49,13 +57,14 @@
 <section class="ui-hero ev-rise">
     <i class="bi bi-pencil-square ui-hero-ico" aria-hidden="true"></i>
     <div>
-        <span class="ev-chip dark"><i class="bi bi-building"></i> Ofertas de hotel</span>
-        <h1>Solo Hotel</h1>
-        <p>Aquí ves todas las ofertas de hotel cargadas: búscalas, edítalas, actívalas o elimínalas. Para cargar nuevas usa la versión Express (todo junto) o la Clásica (como BackTiTan, con Excel). El vuelo es opcional.</p>
+        <span class="ev-chip dark"><i class="bi @(esPaq ? "bi-suitcase2" : "bi-building")"></i> @(esPaq ? "Paquetes de hotel" : "Ofertas de hotel")</span>
+        <h1>@nombre</h1>
+        <p>Aquí ves todos los @ofs cargados: búscalos, edítalos, actívalos o elimínalos. Para cargar nuevos usa la Carga Express (todo junto) o Cargar Excel (un Excel con los hoteles y sus precios). Descarga la plantilla si no la tienes. El vuelo es opcional.</p>
     </div>
     <div class="ui-hero-acts">
-        <a class="ev-btn light" asp-controller="CargaManual" asp-action="Clasica"><i class="bi bi-ui-checks"></i> Carga Clásica</a>
-        <a class="ev-btn" asp-controller="CargaManual" asp-action="Express"><i class="bi bi-lightning-charge"></i> Carga Express</a>
+        <a class="ev-btn light" href="/CargaManual/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
+        <a class="ev-btn light" href="/CargaManual/Clasica@(qs)"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</a>
+        <a class="ev-btn" href="/CargaManual/Express@(qs)"><i class="bi bi-lightning-charge"></i> Carga Express</a>
     </div>
     <svg class="ui-hero-waves" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
         <g><path d="M-240 18 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 q30 -8 60 0 t60 0 L840 40 L-240 40 Z" fill="#fff" /></g>
@@ -64,14 +73,14 @@
 </section>
 
 <section class="of-kpis">
-    <div class="ev-card of-kpi ev-rise d1"><i class="bi bi-calendar-check"></i><div><b id="kFut">—</b><small>Ofertas a la venta</small></div></div>
-    <div class="ev-card of-kpi ev-rise d2"><i class="bi bi-building" style="background:var(--ev-aqua)"></i><div><b id="kHot">—</b><small>Hoteles con ofertas</small></div></div>
+    <div class="ev-card of-kpi ev-rise d1"><i class="bi bi-calendar-check"></i><div><b id="kFut">—</b><small>@(esPaq ? "Paquetes" : "Ofertas") a la venta</small></div></div>
+    <div class="ev-card of-kpi ev-rise d2"><i class="bi bi-building" style="background:var(--ev-aqua)"></i><div><b id="kHot">—</b><small>Hoteles con @ofs</small></div></div>
     <div class="ev-card of-kpi ev-rise d3"><i class="bi bi-airplane" style="background:var(--ev-ink);color:var(--ev-aqua)"></i><div><b id="kVue">—</b><small>Con vuelo</small></div></div>
     <div class="ev-card of-kpi ev-rise d4"><i class="bi bi-tags"></i><div><b id="kDesde">—</b><small>Precio desde</small></div></div>
 </section>
 
 <div class="ui-toolbar">
-    <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar hotel, destino, campaña, código o nº de oferta…" /></label>
+    <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar hotel, destino, campaña, código o nº de @of1…" /></label>
     <select class="ui-select" id="fDestino"><option value="">Todos los destinos</option></select>
     <select class="ui-select" id="fCampanya"><option value="">Todas las campañas</option></select>
     <select class="ui-select" id="fOrden"><option value="fecha">Por fecha</option><option value="precio">Precio más bajo</option><option value="hotel">Hotel A–Z</option><option value="recientes">Recién cargadas</option></select>
@@ -113,7 +122,7 @@
 <aside class="ui-drawer" id="ofEditor" aria-hidden="true">
     <div class="ui-dh">
         <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-pencil-square"></i></div>
-        <div style="min-width:0"><h2 id="eTitulo">Oferta</h2><small id="eSub"></small></div>
+        <div style="min-width:0"><h2 id="eTitulo">@(esPaq ? "Paquete" : "Oferta")</h2><small id="eSub"></small></div>
         <button class="ui-ibtn x" type="button" onclick="OF.cerrar()" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="ui-db">
@@ -158,6 +167,7 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
 <script>
+const TIPO = '@tipo', ES_PAQ = TIPO === 'PAQUETE', QS = '@qs', LISTA = '@lista', NOMBRE = '@nombre', OFS = '@ofs', OF1 = '@of1', OF1M = ES_PAQ ? 'Paquete' : 'Oferta';
 const OF = (() => {
     const $ = (s, el = document) => el.querySelector(s);
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -176,13 +186,13 @@ const OF = (() => {
     let items = [], cat, actual = null, sups = null;
     const drawer = EV.drawer($('#ofEditor'));
 
-    const params = () => new URLSearchParams({ q: st.q, destino: st.destino, campanya: st.campanya, estado: st.estado, vuelo: st.vuelo, desde: st.desde, hasta: st.hasta, pasadas: st.pasadas, orden: st.orden, pagina: st.pagina, tam: 25 });
+    const params = () => new URLSearchParams({ tipo: TIPO, q: st.q, destino: st.destino, campanya: st.campanya, estado: st.estado, vuelo: st.vuelo, desde: st.desde, hasta: st.hasta, pasadas: st.pasadas, orden: st.orden, pagina: st.pagina, tam: 25 });
     const thumb = o => EV.esUrl(o.caratula) ? `<img src="${esc(o.caratula)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${esc(EV.iniciales(o.hotel)).replace(/'/g, '')}'">` : esc(EV.iniciales(o.hotel));
 
     /** Destinos con ofertas que NO salen en la Home de la web, y por qué. */
     async function pintarAviso() {
         let f = [];
-        try { f = await EV.api('/HomeWeb/Fuera?tipo=OFERTA'); } catch { }
+        try { f = await EV.api('/HomeWeb/Fuera?tipo=' + TIPO); } catch { }
         $('#ofAviso').innerHTML = !f.length ? '' : `<div class="ui-note ${f.some(x => !x.proxima) ? 'warn' : 'info'}" style="margin:0 0 14px"><i class="bi bi-house-exclamation"></i><div>
             <b>${f.length === 1 ? 'Un destino no sale' : f.length + ' destinos no salen'} en la Home de la web:</b>
             <ul style="margin:6px 0 0;padding-left:18px">${f.map(x => `<li><b>${esc(x.nombre)}</b>: ${esc(x.motivo)}${x.url ? ` <a href="${esc(x.url)}">${esc(x.accion)}</a>` : ''}</li>`).join('')}</ul></div></div>`;
@@ -199,16 +209,16 @@ const OF = (() => {
             $('#kFut').textContent = EV.fmt(d.stats.futuras); $('#kHot').textContent = EV.fmt(d.stats.hoteles);
             $('#kVue').textContent = EV.fmt(d.stats.conVuelo); $('#kDesde').textContent = d.stats.precioDesde != null ? EV.dinero(d.stats.precioDesde) : '—';
             pintar(d);
-        } catch (e) { $('#ofLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar las ofertas</h3><p>${esc(e.message)}</p><button type="button" class="ev-btn" onclick="OF.recargar()"><i class="bi bi-arrow-clockwise"></i> Reintentar</button></div>`; }
+        } catch (e) { $('#ofLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar los ${OFS}</h3><p>${esc(e.message)}</p><button type="button" class="ev-btn" onclick="OF.recargar()"><i class="bi bi-arrow-clockwise"></i> Reintentar</button></div>`; }
     }
 
     function pintar(d) {
         if (!d.items.length) {
             const filtrando = st.q || st.destino || st.campanya || st.estado || st.vuelo || st.desde || st.hasta;
-            $('#ofLista').innerHTML = `<div class="ui-empty"><i class="bi bi-building big"></i><h3>${filtrando ? 'No hay ofertas con esos filtros' : 'Todavía no hay ofertas cargadas'}</h3>
-                <p>${filtrando ? 'Prueba con otros filtros o activa "Incluir pasadas".' : 'Carga las primeras con la versión Express o la Clásica.'}</p>
+            $('#ofLista').innerHTML = `<div class="ui-empty"><i class="bi bi-building big"></i><h3>${filtrando ? `No hay ${OFS} con esos filtros` : `Todavía no hay ${OFS} cargados`}</h3>
+                <p>${filtrando ? 'Prueba con otros filtros o activa "Incluir pasadas".' : 'Carga los primeros con la Carga Express o con Cargar Excel (descarga la plantilla si no la tienes).'}</p>
                 ${filtrando ? '<p><button type="button" class="ev-btn ghost" onclick="OF.limpiarFiltros()"><i class="bi bi-funnel"></i> Limpiar filtros</button></p>' : ''}
-                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><a class="ev-btn" href="/CargaManual/Express"><i class="bi bi-lightning-charge"></i> Carga Express</a><a class="ev-btn ghost" href="/CargaManual/Clasica"><i class="bi bi-ui-checks"></i> Carga Clásica</a></div></div>`;
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><a class="ev-btn" href="/CargaManual/Express${QS}"><i class="bi bi-lightning-charge"></i> Carga Express</a><a class="ev-btn ghost" href="/CargaManual/Clasica${QS}"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</a><a class="ev-btn ghost" href="/CargaManual/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a></div></div>`;
             $('#ofPager').hidden = true; return;
         }
         $('#ofLista').innerHTML = `<div class="ui-table-wrap"><table class="ui-table"><thead><tr>
@@ -230,7 +240,7 @@ const OF = (() => {
         $('#selTodo').checked = d.items.every(o => sel.has(o.id_Servicio));
         const desde = (d.pagina - 1) * d.tam + 1, hasta = Math.min(d.pagina * d.tam, d.total), pags = Math.ceil(d.total / d.tam);
         $('#ofPager').hidden = false;
-        $('#ofRango').textContent = `Mostrando ${desde}–${hasta} de ${d.total} oferta${d.total === 1 ? '' : 's'}`;
+        $('#ofRango').textContent = `Mostrando ${desde}–${hasta} de ${d.total} ${OF1}${d.total === 1 ? '' : 's'}`;
         $('#ofPages').innerHTML = pags <= 1 ? '' :
             `<button ${d.pagina === 1 ? 'disabled' : ''} data-p="${d.pagina - 1}"><i class="bi bi-chevron-left"></i></button>` +
             Array.from({ length: pags }, (_, i) => i + 1).filter(n => n === 1 || n === pags || Math.abs(n - d.pagina) <= 1)
@@ -247,7 +257,7 @@ const OF = (() => {
             actual = o;
             const habsHotel = await EV.api('/Ofertas/Habitaciones?hotel=' + o.id_Alojamiento);
             $('#eTitulo').textContent = o.hotel;
-            $('#eSub').textContent = `Oferta #${o.id_Servicio} · ${o.destino || ''} · ${esc(o.proveedor || '')}`;
+            $('#eSub').textContent = `${OF1M} #${o.id_Servicio} · ${o.destino || ''} · ${esc(o.proveedor || '')}`;
             $('#eDesde').value = o.desde.slice(0, 10); $('#eNoches').value = o.noches;
             $('#eRegimen').innerHTML = cat.regimenes.map(r => `<option value="${esc(r.valor)}">${esc(r.valor)} · ${esc(r.texto)}</option>`).join('');
             $('#eRegimen').value = o.id_Regimen.trim();
@@ -269,7 +279,7 @@ const OF = (() => {
                 ${vuelos.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Vuelo</th><th>Ruta</th><th>Sale</th><th>Llega</th></tr></thead><tbody>
                     ${vuelos.map(v => `<tr><td>${v.segmento}</td><td>${esc(v.id_Proveedor)} ${esc(v.vuelo || '')}</td><td>${esc(v.id_Estacion_Origen)} → ${esc(v.id_Estacion_Destino)}</td>
                     <td>${EV.fecha(v.fecha_Salida.slice(0, 10))} ${esc(v.hora_Salida)}</td><td>${EV.fecha(v.fecha_Regreso.slice(0, 10))} ${esc(v.hora_Regreso)}</td></tr>`).join('')}</tbody></table></div>
-                    <div class="ui-help" style="margin-top:8px">Si cambias la fecha de entrada, los vuelos se mueven los mismos días.</div>` : '<div class="ui-chip ghost"><i class="bi bi-bus-front"></i> Oferta sin vuelo</div>'}
+                    <div class="ui-help" style="margin-top:8px">Si cambias la fecha de entrada, los vuelos se mueven los mismos días.</div>` : '<div class="ui-chip ghost"><i class="bi bi-bus-front"></i> ' + OF1M + ' sin vuelo</div>'}
                 ${o.notas.length ? `<div style="margin-top:12px">${o.notas.map(n => `<div class="ui-note info" style="margin-bottom:8px"><i class="bi bi-journal-text"></i><div><b>${esc(n.tipo)}</b><br>${esc(n.nota1)}</div></div>`).join('')}</div>` : ''}`;
             $('#eEliminar').onclick = () => eliminarIds([o.id_Servicio]);
             hasta(); precioVivo();
@@ -309,7 +319,7 @@ const OF = (() => {
 
     async function eliminarIds(ids) {
         const n = ids.length;
-        const ok = await EV.confirmar({ titulo: n === 1 ? '¿Eliminar esta oferta?' : `¿Eliminar ${n} ofertas?`, peligro: true, si: 'Sí, eliminar',
+        const ok = await EV.confirmar({ titulo: n === 1 ? (ES_PAQ ? '¿Eliminar este paquete?' : '¿Eliminar esta oferta?') : `¿Eliminar ${n} ${OFS}?`, peligro: true, si: 'Sí, eliminar',
             texto: `Se borran con sus habitaciones, tasas, notas y vuelos. No se puede deshacer.<br>Si solo no quieres que se venda, es mejor <b>desactivarla</b>.`,
             escribir: n > 10 ? 'ELIMINAR' : null });
         if (!ok) return;
@@ -319,7 +329,7 @@ const OF = (() => {
 
     async function iniciar() {
         cat = await EVC.catalogos();
-        const destinos = await EV.api('/Ofertas/Destinos');
+        const destinos = await EV.api('/Ofertas/Destinos?tipo=' + TIPO);
         $('#fDestino').innerHTML += destinos.map(d => `<option value="${esc(d.valor)}">${esc(d.texto)} (${esc(d.extra)})</option>`).join('');
         $('#fCampanya').innerHTML += cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)} (#${esc(c.valor)})</option>`).join('');
         Object.assign(st, EV.filtrosURL.leer(DEF)); filtrosAPantalla();   // filtros guardados en la dirección
@@ -338,7 +348,7 @@ const OF = (() => {
             if (t.dataset.act) {
                 const id = +t.dataset.act;
                 try { const r = await EV.post('/Ofertas/Lote', { Ids: [id], Activo: t.checked }); t.closest('tr').classList.toggle('off', !t.checked);
-                      EV.toast(t.checked ? 'Oferta activada.' : 'Oferta desactivada.', 'ok', { texto: 'Deshacer', accion: async () => { await EV.post('/Ofertas/Lote', { Ids: [id], Activo: !t.checked }); cargar(); } }); }
+                      EV.toast(ES_PAQ ? (t.checked ? 'Paquete activado.' : 'Paquete desactivado.') : (t.checked ? 'Oferta activada.' : 'Oferta desactivada.'), 'ok', { texto: 'Deshacer', accion: async () => { await EV.post('/Ofertas/Lote', { Ids: [id], Activo: !t.checked }); cargar(); } }); }
                 catch (err) { t.checked = !t.checked; EV.toast(err.message, 'err'); }
             }
         });
@@ -374,17 +384,17 @@ const OF = (() => {
         limpiarFiltros: () => limpiarFiltros(),
         limpiarSel: () => { sel.clear(); $$('[data-sel]').forEach(c => { c.checked = false; c.closest('tr').classList.remove('sel'); }); if ($('#selTodo')) $('#selTodo').checked = false; barraLote(); },
         lote: async activo => {
-            if (!await EV.confirmar({ titulo: `¿${activo ? 'Activar' : 'Desactivar'} ${sel.size} oferta${sel.size === 1 ? '' : 's'}?`, icono: activo ? 'toggle-on' : 'toggle-off', si: activo ? 'Sí, activar' : 'Sí, desactivar',
+            if (!await EV.confirmar({ titulo: `¿${activo ? 'Activar' : 'Desactivar'} ${sel.size} ${OF1}${sel.size === 1 ? '' : 's'}?`, icono: activo ? 'toggle-on' : 'toggle-off', si: activo ? 'Sí, activar' : 'Sí, desactivar',
                 texto: activo ? 'Vuelven a estar a la venta y pueden salir en la web.' : 'Dejan de venderse y no salen en la web. Puedes volver a activarlas cuando quieras.' })) return;
             try { const r = await EV.post('/Ofertas/Lote', { Ids: [...sel], Activo: activo }); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
         },
         ajustar: async () => {
-            const v = await EV.pedir({ titulo: `Ajustar el precio de ${sel.size} oferta${sel.size === 1 ? '' : 's'}`, etiqueta: 'Cuánto sumar (o restar con -)', tipo: 'number', icono: 'currency-euro',
+            const v = await EV.pedir({ titulo: `Ajustar el precio de ${sel.size} ${OF1}${sel.size === 1 ? '' : 's'}`, etiqueta: 'Cuánto sumar (o restar con -)', tipo: 'number', icono: 'currency-euro',
                 ayuda: 'Ej: 50 suma 50 · -30 resta 30. Antes de aplicar te pedimos confirmación.', si: 'Continuar' });
             if (v == null) return;
             const n = parseFloat(String(v).replace(',', '.'));
             if (isNaN(n) || !n) { EV.toast('Escribe un número distinto de 0.', 'err'); return; }
-            if (!await EV.confirmar({ titulo: 'Ajustar precios', texto: `Se ${n > 0 ? 'sumarán' : 'restarán'} <b>${EV.fmt(Math.abs(n), 2)}</b> al precio de <b>${sel.size}</b> ofertas.`, si: 'Aplicar' })) return;
+            if (!await EV.confirmar({ titulo: 'Ajustar precios', texto: `Se ${n > 0 ? 'sumarán' : 'restarán'} <b>${EV.fmt(Math.abs(n), 2)}</b> al precio de <b>${sel.size}</b> ${OFS}.`, si: 'Aplicar' })) return;
             try { const r = await EV.post('/Ofertas/Lote', { Ids: [...sel], AjustePrecio: n }); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
         },
         eliminar: () => eliminarIds([...sel])
