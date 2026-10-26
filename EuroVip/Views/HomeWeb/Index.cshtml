@@ -72,6 +72,9 @@
     @@media (max-width: 700px) { .hw-slider .flecha { width: 32px; height: 32px; font-size: 15px; top: auto; bottom: 6px; transform: none; } .hw-slider .flecha:hover, .hw-slider .flecha:focus-visible { transform: scale(1.06); } .hw-slider .flecha.ant { left: 8px; } .hw-slider .flecha.sig { right: 8px; } }
     .hw-slider .precio { position: absolute; right: 14px; top: 14px; z-index: 2; padding: 8px 12px; border-radius: 14px; background: rgba(11,18,21,.82); color: #fff; font-weight: 800; font-size: 13px; backdrop-filter: blur(6px); }
     .hw-slider .precio b { color: var(--ev-aqua); font-size: 17px; }
+    /* todos los destinos del slide, uno por línea (antes solo salía el más barato) */
+    .hw-slider .precio:not([hidden]) { display: flex; flex-direction: column; gap: 3px; max-height: calc(100% - 50px); overflow: auto; right: 66px; }   /* a la izquierda de la flecha: no la tapa */
+    .hw-slider .precio .pl { display: flex; justify-content: space-between; gap: 12px; white-space: nowrap; }
     /* Botón "Editar carrusel": siempre visible (antes solo al pasar el ratón; en táctil no se veía) */
     .hw-slider .editar { position: absolute; left: 14px; top: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: 12px; border: 0; cursor: pointer;
                          background: rgba(11,18,21,.82); color: #fff; font: 800 12.5px var(--ev-font); box-shadow: 0 6px 18px -8px rgba(0,0,0,.5); transition: background .2s, transform .2s; }
@@ -381,8 +384,10 @@ const HW = (() => {
         let i = 0;
         const mostrar = k => {
             $$('#hwSlider img').forEach((im, j) => im.classList.toggle('on', j === k)); $$('#hwSlider .puntos i').forEach((p, j) => p.classList.toggle('on', j === k));
-            const pr = act[k].destinos.filter(d => d.precio > 0).sort((a, b) => a.precio - b.precio)[0];
-            const el = $('#hwPrecio'); el.hidden = !pr; if (pr) el.innerHTML = `${esc(pr.destino)} desde <b>${EV.dinero(pr.precio)}</b>`;
+            // Todos los destinos con precio del slide (del más barato al más caro), no solo el primero
+            const prs = act[k].destinos.filter(d => d.precio > 0).sort((a, b) => a.precio - b.precio);
+            const el = $('#hwPrecio'); el.hidden = !prs.length;
+            el.innerHTML = prs.map(pr => `<span class="pl"><span>${esc(pr.destino)} desde</span><b>${EV.dinero(pr.precio)}</b></span>`).join('');
         };
         const automatico = () => { clearInterval(rot); if (act.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) rot = setInterval(() => { i = (i + 1) % act.length; mostrar(i); }, 3800); };
         // Flechas y puntos: van al slide y el paso automático vuelve a empezar desde ahí
@@ -523,7 +528,7 @@ const HW = (() => {
                     ${s.activo ? `<span class="ord">${s.orden}</span>` : ''}<span class="ori">${s.orientacion === 'V' ? '▯ Vertical' : '▭ Horizontal'}</span></div>
                 <div class="cr-body"><div class="nombre" title="${esc(s.ruta)}">${esc(s.ruta)}</div>
                     <div class="cr-fmt"><span>Web</span><span class="${s.tieneTablet ? '' : 'no'}">Tablet</span><span class="${s.tieneMovil ? '' : 'no'}">Móvil</span>${s.url ? '<span style="background:var(--ev-surface-2);color:var(--ev-text)"><i class="bi bi-link-45deg"></i> enlace</span>' : ''}</div>
-                    <div class="cr-precios">${s.destinos.length ? s.destinos.slice(0, 3).map(d => `<span class="${d.precio > 0 && d.precio < PRECIO_ALERTA ? 'mal' : ''}" title="${esc(d.origen)} → ${esc(d.destino)} · campaña ${d.id_Campanya}">${esc(d.destino)} ${d.precio > 0 ? EV.dinero(d.precio) : 'sin precio'}</span>`).join('') + (s.destinos.length > 3 ? `<span>+${s.destinos.length - 3}</span>` : '') : '<span style="color:var(--ev-muted)">Sin precio "desde"</span>'}</div>
+                    <div class="cr-precios">${s.destinos.length ? s.destinos.map(d => `<span class="${d.precio > 0 && d.precio < PRECIO_ALERTA ? 'mal' : ''}" title="${esc(d.origen)} → ${esc(d.destino)} · campaña ${d.id_Campanya}">${esc(d.destino)} ${d.precio > 0 ? EV.dinero(d.precio) : 'sin precio'}</span>`).join('') : '<span style="color:var(--ev-muted)">Sin precio "desde"</span>'}</div>
                     ${malos ? `<div class="ui-help" style="color:#B54708;margin-top:6px"><i class="bi bi-exclamation-triangle"></i> ${malos} precio(s) menores a ${EV.dinero(PRECIO_ALERTA)}: revísalos</div>` : ''}
                     <div class="cr-pie"><label class="ui-switch" title="Activo en la web"><input type="checkbox" data-sact="${s.id_Carrusel}" ${s.activo ? 'checked' : ''}><span class="tr"></span> ${s.activo ? 'Activo' : 'Inactivo'}</label>
                         <span class="sp"></span>${s.activo ? `<span class="cr-mover" role="group" aria-label="Mover en el carrusel">
