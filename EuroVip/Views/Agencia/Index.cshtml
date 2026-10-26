@@ -1,0 +1,649 @@
+@* Flyer Agencia (como /Agencia de BackTiTan, sus pantallas en una): flyer, destinos, galería, agencias, links únicos, envío y monitor. *@
+@{
+    ViewData["Title"] = "Flyer Agencia";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+    .ag-hero { position: relative; overflow: hidden; border-radius: 30px; padding: 24px 30px; background: var(--ev-ink); color: #fff; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; isolation: isolate; }
+    .ag-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(560px 280px at 95% -20%, rgba(255,106,0,.45), transparent 60%), radial-gradient(380px 220px at 0% 130%, rgba(116,242,230,.22), transparent 60%); }
+    .ag-hero h1 { margin: 2px 0 0; font-size: clamp(26px, 3vw, 34px); font-weight: 800; letter-spacing: -1.2px; }
+    .ag-hero p { margin: 4px 0 0; color: rgba(232,255,251,.72); font-weight: 500; max-width: 64ch; }
+    .ag-hero .volver { color: rgba(232,255,251,.7); font-weight: 700; font-size: 13px; text-decoration: none; }
+    .ag-hero .sp { flex: 1; }
+    .ag-hero .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ag-hero .ev-btn.light { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,138,61,.4); }
+    .ag-kpis { display: flex; gap: 10px; flex-wrap: wrap; width: 100%; }
+    .ag-kpi { padding: 10px 16px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,138,61,.25); }
+    .ag-kpi b { font-size: 20px; font-weight: 800; display: block; line-height: 1.1; }
+    .ag-kpi small { color: rgba(232,255,251,.6); font-weight: 600; font-size: 12px; }
+    .ag-kpi.ok b { color: var(--ev-aqua); }
+    .ag-kpi.mal { border-color: #F79009; }
+
+    /* ---- pestaña Flyer: vista previa ---- */
+    .ag-ed { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+    .ag-ed-c { position: sticky; top: 16px; display: grid; gap: 12px; }
+    .ag-box { border-radius: 22px; background: var(--ev-surface); border: 1px solid var(--ev-line); padding: 16px 18px; }
+    .ag-box h3 { margin: 0 0 10px; font: 800 11.5px var(--ev-font); letter-spacing: .12em; text-transform: uppercase; color: var(--ev-muted); display: flex; gap: 8px; align-items: center; }
+    .ag-box .ev-btn { width: 100%; justify-content: center; }
+    .ag-box .ev-btn + .ev-btn { margin-top: 8px; }
+    .ag-stage { display: flex; justify-content: center; overflow: hidden; border-radius: 22px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); padding: 16px 0; }
+    .ag-scale { transform-origin: top center; }
+    @@media (max-width: 980px) { .ag-ed { grid-template-columns: 1fr; } .ag-ed-c { position: static; } }
+
+    /* Plantilla del flyer (igual que BackTiTan /Agencia/Index, con la marca de Eurovip) */
+    .flyer { width: 900px; min-height: 1200px; background: #fff; font-family: Arial, sans-serif; position: relative; overflow: hidden; box-shadow: 0 32px 80px rgba(0,61,82,.26); display: flex; flex-direction: column; }
+    .flyer-accent { height: 9px; background: linear-gradient(90deg, #e76f51, #f4a261, #f9c74f, #f4a261, #e76f51); flex-shrink: 0; }
+    .flyer-hero { background-color: #003d52; background-size: cover; background-position: center; min-height: 100px; padding: 16px 66px; flex-shrink: 0; position: relative; overflow: visible; display: flex; flex-direction: column; justify-content: flex-end; }
+    .flyer-title { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 6.5rem; line-height: 1; color: #fff; margin: 0 0 12px; letter-spacing: -.5px; text-shadow: 0 2px 18px rgba(0,0,0,.35); }
+    .flyer-subtitle { font-size: 1.1rem; color: rgba(255,255,255,.75); letter-spacing: .5px; margin-bottom: 36px; }
+    .flyer-section-title { font-size: .88rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: #e76f51; padding: 26px 66px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 14px; }
+    .flyer-section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, #f1f5f9, transparent); }
+    .flyer-hotels { flex: 1; }
+    .fh-row { display: flex; align-items: flex-start; gap: 10px; padding: 20px 66px 20px 20px; border-bottom: 1px solid #f8fafc; border-left: 3px solid transparent; }
+    .fh-row:last-child { border-bottom: none; }
+    .fh-row.best { background: linear-gradient(90deg, rgba(245,158,11,.06) 0%, transparent 55%); border-left: 3px solid #f59e0b; padding-left: 17px; }
+    .fh-pos { font-size: 2.1rem; font-weight: 900; min-width: 52px; text-align: center; color: #cbd5e1; }
+    .fh-pos.gold { color: #f5a623; text-shadow: 0 0 12px rgba(245,166,35,.45); }
+    .fh-pos.silver { color: #6ec6f5; text-shadow: 0 0 12px rgba(110,198,245,.35); }
+    .fh-pos.bronze { color: #e07b39; text-shadow: 0 0 12px rgba(224,123,57,.35); }
+    .fh-sep { width: 1px; height: 56px; background: #e2e8f0; flex-shrink: 0; }
+    .fh-info { flex: 1; min-width: 0; }
+    .fh-name { font-size: 2.1rem; font-weight: 700; color: #0f172a; }
+    .fh-meta { font-size: 1.85rem; font-weight: 700; color: #e07b39; margin-top: 4px; }
+    .fh-best-tag { display: inline-flex; align-items: center; gap: 4px; font-size: .95rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #f59e0b; margin-top: 5px; }
+    .fh-price { font-weight: 700; font-size: 2.75rem; color: #003d52; white-space: nowrap; text-align: right; align-self: flex-end; margin-top: auto; padding-top: 3.5rem; }
+    .fh-price.rank1 { color: #f59e0b; }
+    .flyer-no-data { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 60px; text-align: center; color: #94a3b8; font-size: 1.2rem; }
+    .flyer-footer { padding: 24px 66px; display: flex; align-items: center; gap: 26px; background: #fff; border-top: 1px solid #f1f5f9; flex-shrink: 0; }
+    .ff-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #00647a 40%, transparent); }
+    .ff-brand { display: flex; flex-direction: column; align-items: center; }
+    .ff-url { font-size: 1.15rem; font-weight: 800; color: #0B2A6F; letter-spacing: .5px; white-space: nowrap; }
+    .ff-tag { font-size: .86rem; color: #94a3b8; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
+    .fl-logo { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+    .fl-logo .ln { width: 70px; height: 1.5px; }
+    .fl-logo .marco { border: 1.5px solid rgba(249,199,79,.45); border-radius: 12px; padding: 6px 10px; background: rgba(255,255,255,.94); }
+    .fl-logo img { height: 92px; object-fit: contain; display: block; }
+
+    /* ---- destinos, galería, envío (mismo estilo que Flyer Editar) ---- */
+    .ag-dest { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); gap: 18px; }
+    .ag-card { border-radius: 24px; overflow: hidden; background: var(--ev-surface); border: 1px solid var(--ev-line); display: flex; flex-direction: column; }
+    .ag-card .foto { position: relative; height: 160px; background: linear-gradient(155deg, #003d52, #00647a); }
+    .ag-card .foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ag-card .foto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgba(11,18,21,.75)); }
+    .ag-card .foto h3 { position: absolute; left: 18px; right: 18px; bottom: 12px; margin: 0; color: #fff; font-size: 26px; font-weight: 800; z-index: 1; }
+    .ag-card .foto .desde { position: absolute; right: 12px; top: 12px; z-index: 1; padding: 7px 12px; border-radius: 13px; background: #FF8A3D; color: #fff; font-weight: 800; }
+    .ag-card .foto .sin { background: #FEF3C7; color: #92400E; }
+    .ag-card .foto label { position: absolute; left: 12px; top: 12px; z-index: 1; padding: 6px 10px; border-radius: 11px; background: rgba(255,255,255,.92); font: 800 11.5px var(--ev-font); cursor: pointer; }
+    .ag-card .cuerpo { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+    .ag-card .meta { display: flex; gap: 6px; flex-wrap: wrap; }
+    .ag-card .meta span { font: 700 12px var(--ev-font); padding: 4px 9px; border-radius: 9px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    .ag-card ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+    .ag-card li { display: flex; gap: 10px; font-size: 14px; font-weight: 600; align-items: center; padding: 7px 9px; border-radius: 11px; background: var(--ev-surface-2); }
+    .ag-card li:first-child { background: #FFF1E6; }
+    .ag-card li span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .ag-card li b { white-space: nowrap; font-weight: 800; }
+    .ag-card .pie { display: flex; gap: 6px; margin-top: auto; }
+    .ag-card .pie .sp { flex: 1; }
+    .ag-nuevo { border: 2px dashed var(--ev-line); border-radius: 24px; background: transparent; min-height: 260px; display: grid; place-items: center; color: var(--ev-muted); font: 800 14px var(--ev-font); cursor: pointer; }
+    .ag-nuevo:hover { border-color: #FF8A3D; color: #E25A00; }
+    .ag-nuevo i { font-size: 30px; display: block; margin-bottom: 6px; }
+    .ag-gal { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+    .ag-img { position: relative; border-radius: 18px; overflow: hidden; background: var(--ev-surface); border: 2px solid var(--ev-line); cursor: pointer; }
+    .ag-img.sel { border-color: #FF8A3D; box-shadow: 0 0 0 4px rgba(255,138,61,.3); }
+    .ag-img img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; object-position: top; display: block; background: var(--ev-surface-2); }
+    .ag-img .chk { position: absolute; left: 10px; top: 10px; width: 28px; height: 28px; border-radius: 9px; background: #FF8A3D; color: #fff; display: grid; place-items: center; }
+    .ag-img .tx { padding: 8px 10px; font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; gap: 6px; }
+    .ag-img .tx small { color: var(--ev-muted); font-weight: 600; }
+    .ag-img .tx .malo { color: #B42318; }
+    .ag-img .acc { position: absolute; right: 8px; top: 8px; display: flex; gap: 4px; }
+    .ag-img .acc a, .ag-img .acc button { width: 30px; height: 30px; border-radius: 9px; border: 0; background: rgba(255,255,255,.92); display: grid; place-items: center; cursor: pointer; color: var(--ev-text); }
+    .ag-env { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+    .ag-paso { border-radius: 24px; background: var(--ev-surface); border: 1px solid var(--ev-line); padding: 18px 20px; }
+    .ag-paso + .ag-paso { margin-top: 14px; }
+    .ag-paso h3 { margin: 0 0 12px; font-size: 16px; font-weight: 800; display: flex; gap: 10px; align-items: center; }
+    .ag-paso h3 span { width: 28px; height: 28px; border-radius: 9px; background: var(--ev-ink); color: #FF8A3D; display: grid; place-items: center; font-size: 13px; }
+    .ag-opc { display: grid; gap: 8px; }
+    .ag-opc label { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; border: 1.5px solid var(--ev-line); cursor: pointer; }
+    .ag-opc label:has(input:checked) { border-color: #FF8A3D; background: #FFF7F0; }
+    .ag-opc input[type=radio] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ev-ink); }
+    .ag-opc small { display: block; color: var(--ev-muted); font-weight: 600; }
+    .ag-costo { border-radius: 20px; padding: 16px 18px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .ag-costo div { font-weight: 600; color: var(--ev-muted); font-size: 13px; }
+    .ag-costo b { display: block; color: var(--ev-text); font-size: 20px; font-weight: 800; }
+    .ag-prog { border-radius: 24px; background: var(--ev-ink); color: #fff; padding: 20px 22px; }
+    .ag-prog .barra { height: 12px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; margin: 12px 0; }
+    .ag-prog .barra i { display: block; height: 100%; background: linear-gradient(90deg, #FF8A3D, #FFB27A); border-radius: 99px; transition: width .5s var(--ev-ease); }
+    .ag-prog .nums { display: flex; gap: 16px; flex-wrap: wrap; font-weight: 700; font-size: 13px; color: rgba(232,255,251,.75); }
+    .ag-prog .nums b { color: #fff; font-size: 18px; }
+    .ag-estado { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; font: 800 12px var(--ev-font); }
+    .ag-estado.ok { background: #DCFCE7; color: #166534; } .ag-estado.mal { background: #FEE4E2; color: #B42318; }
+    .ag-estado.va { background: #FFF1E6; color: #C2410C; } .ag-estado.gris { background: var(--ev-surface-2); color: var(--ev-muted); }
+    .ag-link { font: 600 12px ui-monospace, Consolas, monospace; color: var(--ev-deep); word-break: break-all; }
+    @@media (max-width: 1100px) { .ag-env { grid-template-columns: 1fr; } }
+</style>
+}
+
+@Html.AntiForgeryToken()
+
+<section class="ag-hero ev-rise">
+    <div>
+        <a href="/Flyer/Hub" class="volver"><i class="bi bi-arrow-left"></i> Centro de Flyers</a>
+        <h1><i class="bi bi-building-fill" style="color:#FF8A3D"></i> Flyer Agencia</h1>
+        <p>Flyers con los hoteles más baratos de cada destino para las agencias. Cada agencia recibe por WhatsApp un link único a su editor, donde pone su logo, ajusta precios y descarga su flyer.</p>
+    </div>
+    <span class="sp"></span>
+    <div class="acts">
+        <button type="button" class="ev-btn light sm" id="agPrecios"><i class="bi bi-arrow-repeat"></i> Actualizar precios</button>
+        <button type="button" class="ev-btn sm" id="agGuardar" style="background:#FF8A3D;color:#fff"><i class="bi bi-images"></i> Guardar imágenes de todos</button>
+    </div>
+    <div class="ag-kpis" id="agKpis"></div>
+</section>
+
+<div class="ui-tabs" id="agTabs" style="margin-top:18px">
+    <button type="button" data-tab="tFly" class="on"><i class="bi bi-file-earmark-richtext"></i> Flyer</button>
+    <button type="button" data-tab="tDes"><i class="bi bi-geo-alt"></i> Destinos <span class="n" id="nDes">0</span></button>
+    <button type="button" data-tab="tGal"><i class="bi bi-images"></i> Galería <span class="n" id="nGal">0</span></button>
+    <button type="button" data-tab="tAge"><i class="bi bi-people"></i> Agencias <span class="n" id="nAge">0</span></button>
+    <button type="button" data-tab="tLin"><i class="bi bi-link-45deg"></i> Links <span class="n" id="nLin">0</span></button>
+    <button type="button" data-tab="tEnv"><i class="bi bi-whatsapp"></i> Enviar</button>
+    <button type="button" data-tab="tMon"><i class="bi bi-activity"></i> Monitor</button>
+</div>
+
+<!-- FLYER -->
+<section class="ui-pane on" id="tFly" style="margin-top:14px">
+    <div class="ag-ed">
+        <div class="ag-ed-c">
+            <div class="ag-box"><h3><i class="bi bi-geo-alt-fill"></i> Destino</h3><select class="ui-select" id="fDestino" style="width:100%"></select></div>
+            <div class="ag-box"><h3><i class="bi bi-lightning-charge-fill"></i> Acciones</h3>
+                <button type="button" class="ev-btn ghost" id="fGuardarUno"><i class="bi bi-download"></i> Guardar este flyer</button>
+                <button type="button" class="ev-btn ghost" id="fDescargar"><i class="bi bi-file-earmark-image"></i> Descargar PNG</button>
+                <button type="button" class="ev-btn ghost" id="fLink"><i class="bi bi-link-45deg"></i> Generar link de agencia</button>
+            </div>
+            <div class="ag-box" id="fEstado"></div>
+        </div>
+        <div class="ag-stage" id="fStage"><div class="ag-scale" id="fScale"><div class="flyer" id="flyer"></div></div></div>
+    </div>
+</section>
+
+<!-- DESTINOS -->
+<section class="ui-pane" id="tDes" style="margin-top:14px">
+    <div class="ui-note info" style="margin-top:0"><i class="bi bi-info-circle"></i><div>Los destinos de <b>Flyer Agencia</b> son aparte de los de Flyer Editar. Cada uno toma los <b>5 hoteles más baratos</b> a la venta con su campaña, origen y régimen. El fondo (foto) es el mismo en los dos módulos.</div></div>
+    <div class="ag-dest" id="agDest"></div>
+</section>
+
+<!-- GALERÍA -->
+<section class="ui-pane" id="tGal" style="margin-top:14px">
+    <div class="ui-toolbar" style="margin-top:0">
+        <span style="color:var(--ev-muted);font-weight:600"><i class="bi bi-hand-index"></i> Toca las imágenes para elegir cuáles enviar (sin elegir = todas)</span>
+        <span style="flex:1"></span>
+        <span id="gSel" style="font-weight:800"></span>
+        <label class="ev-btn ghost sm" style="cursor:pointer"><i class="bi bi-upload"></i> Subir imágenes<input type="file" id="gSubir" accept="image/png,image/jpeg,image/webp" multiple hidden></label>
+        <button type="button" class="ev-btn sm" id="gEnviar"><i class="bi bi-whatsapp"></i> Enviar</button>
+    </div>
+    <div class="ag-gal" id="agGal"></div>
+</section>
+
+<!-- AGENCIAS -->
+<section class="ui-pane" id="tAge" style="margin-top:14px">
+    <div class="ui-toolbar" style="margin-top:0">
+        <label class="ui-search"><i class="bi bi-search"></i><input id="aQ" type="search" placeholder="Buscar agencia, WhatsApp o correo…"></label>
+        <select class="ui-select" id="aEst"><option value="">Todas</option><option value="1">Activas</option><option value="0">Pausadas</option></select>
+        <button type="button" class="ev-btn ghost sm" id="aPausar"><i class="bi bi-pause-circle"></i> Pausar todas</button>
+        <button type="button" class="ev-btn ghost sm" id="aImportar"><i class="bi bi-clipboard-plus"></i> Pegar lista</button>
+        <button type="button" class="ev-btn sm" id="aNueva"><i class="bi bi-plus-lg"></i> Nueva agencia</button>
+    </div>
+    <div id="agAge"></div>
+</section>
+
+<!-- LINKS -->
+<section class="ui-pane" id="tLin" style="margin-top:14px">
+    <div class="ui-note info" style="margin-top:0"><i class="bi bi-info-circle"></i><div>Cada mensaje del envío crea un <b>link único</b> para esa agencia y ese destino. También puedes crear uno a mano. Abre el editor de la agencia: <b>su logo, sus precios, descarga en PNG</b>. Puedes desactivarlo, darle más días o quitarle el vencimiento.</div></div>
+    <div class="ui-toolbar">
+        <label class="ui-search"><i class="bi bi-search"></i><input id="lQ" type="search" placeholder="Buscar agencia o destino…"></label>
+        <select class="ui-select" id="lEst"><option value="">Todos</option><option value="1">Activos</option><option value="0">Desactivados o vencidos</option></select>
+        <span style="flex:1"></span>
+        <button type="button" class="ev-btn ghost sm" id="lInfinitos"><i class="bi bi-infinity"></i> Que no venza ninguno</button>
+        <button type="button" class="ev-btn sm" id="lNuevo"><i class="bi bi-plus-lg"></i> Nuevo link</button>
+    </div>
+    <div id="agLin"></div>
+</section>
+
+<!-- ENVIAR -->
+<section class="ui-pane" id="tEnv" style="margin-top:14px">
+    <div class="ag-env">
+        <div>
+            <div class="ag-paso"><h3><span>1</span> Imágenes</h3><div id="eImgs"></div></div>
+            <div class="ag-paso"><h3><span>2</span> ¿A quién?</h3>
+                <div class="ag-opc">
+                    <label><input type="radio" name="aQuien" value="prueba" checked><span><b>Prueba a un número</b><small>Recomendado antes de enviar a todas: te llega el mensaje con tu link de editor.</small><input id="eNum" class="ui-input" placeholder="18095551234 (con código de país)" style="margin-top:8px;width:100%"></span></label>
+                    <label><input type="radio" name="aQuien" value="todas"><span><b>Todas las agencias activas</b><small id="eTotal"></small></span></label>
+                </div></div>
+            <div class="ag-paso"><h3><span>3</span> Qué recibe cada agencia</h3>
+                <div class="ui-help" style="margin:0">Plantilla aprobada <b id="ePlantilla"></b>: la imagen del flyer y el texto con <b>el nombre de la agencia</b>, <b>el destino</b>,
+                    <b>el link de su editor</b> (único para ella) y <b>la página del destino</b> en la web. Se envía imagen por imagen a todas las agencias, con pausas para que WhatsApp no corte el envío.</div></div>
+        </div>
+        <div>
+            <div class="ag-costo" id="eCosto"></div>
+            <div style="display:flex;gap:8px;margin:12px 0">
+                <button type="button" class="ev-btn" id="eEnviar" style="flex:1;justify-content:center"><i class="bi bi-send"></i> Enviar</button>
+            </div>
+            <div class="ag-prog" id="eProg" hidden>
+                <b id="pTit">Enviando…</b>
+                <div class="barra"><i id="pBar" style="width:0"></i></div>
+                <div class="nums"><span><b id="pOk">0</b> enviados</span><span><b id="pErr">0</b> errores</span><span><b id="pTot">0</b> mensajes</span></div>
+                <div id="pAct" style="margin-top:8px;font-weight:600;color:rgba(232,255,251,.75)"></div>
+                <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                    <button type="button" class="ev-btn sm" id="pCancel" style="background:rgba(255,255,255,.1);color:#fff"><i class="bi bi-stop-circle"></i> Cancelar envío</button>
+                    <a class="ev-btn sm" id="pReporte" target="_blank" style="background:rgba(255,255,255,.1);color:#fff" hidden><i class="bi bi-file-earmark-pdf"></i> Reporte</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- MONITOR -->
+<section class="ui-pane" id="tMon" style="margin-top:14px"><div id="agMon"></div></section>
+
+<!-- PANEL -->
+<aside class="ui-drawer" id="agDrawer" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px" id="dIco"><i class="bi bi-geo-alt"></i></div>
+        <div style="min-width:0"><h2 id="dTit"></h2><small id="dSub"></small></div>
+        <button class="ui-ibtn x" type="button" data-cerrar aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="dCuerpo"></div>
+    <div class="ui-df" id="dPie"></div>
+</aside>
+
+@section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+        integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script>
+(() => {
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+    const esc = EV.esc;
+    let D = null, cat = null, elegidas = new Set(), sondeo = null, actual = null;
+    const drawer = EV.drawer($('#agDrawer'));
+    const tabs = EV.tabs($('#agTabs'), id => { if (id === 'tFly') setTimeout(escalar, 30); if (id === 'tEnv') pintarEnvio(); });
+    const precio = n => n == null ? '—' : `RD$ ${EV.fmt(n)}`;
+    const clave = t => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9 -]/g, '').trim().replace(/ /g, '-');
+    const destinoDe = archivo => { const m = /^agencia_(.+?)(_\d{8}_\d{6}(_\d+)?)?\.\w+$/.exec(archivo); return m ? m[1] : null; };
+    const configDe = archivo => { const k = destinoDe(archivo); return k && D.configs.find(c => clave(c.id_Destino) === k || clave(c.nombre_Destino || '') === k); };
+
+    async function cargar() {
+        D = await EV.api('/Agencia/Datos');
+        const conPrecio = D.configs.filter(c => c.hoteles > 0).length, activas = D.agencias.filter(a => a.activo).length;
+        const linksAct = D.links.filter(l => l.vigente).length;
+        $('#agKpis').innerHTML = [
+            [D.configs.length, 'destinos'], [conPrecio, 'con precios', conPrecio < D.configs.length ? 'mal' : 'ok'], [D.galeria.length, 'imágenes listas'],
+            [activas, `agencias activas de ${D.agencias.length}`], [linksAct, 'links activos'], [D.whatsapp ? 'Lista' : 'Sin configurar', 'cuenta de WhatsApp', D.whatsapp ? 'ok' : 'mal']
+        ].map(([b, s, c]) => `<div class="ag-kpi ${c || ''}"><b>${typeof b === 'number' ? EV.fmt(b) : esc(b)}</b><small>${s}</small></div>`).join('');
+        $('#nDes').textContent = D.configs.length; $('#nGal').textContent = D.galeria.length; $('#nAge').textContent = D.agencias.length; $('#nLin').textContent = linksAct;
+        const sel = $('#fDestino'), antes = sel.value;
+        sel.innerHTML = D.destinos.length ? D.destinos.map(d => `<option value="${esc(d.id_Destino)}">${esc(d.nombre_Destino)}</option>`).join('') : '<option value="">Sin destinos con precios</option>';
+        if (antes && D.destinos.some(d => d.id_Destino === antes)) sel.value = antes;
+        actual = D.destinos.find(d => d.id_Destino === sel.value) || null;
+        pintarFlyer(actual); pintarEstado(); pintarDestinos(); pintarGaleria(); pintarAgencias(); pintarLinks(); pintarMonitor();
+        if (D.enCurso) { tabs.ir('tEnv'); seguir(D.enCurso); }
+    }
+
+    // ================= FLYER (HTML → PNG con html2canvas, como BackTiTan) =================
+    function pintarFlyer(d) {
+        const fl = $('#flyer');
+        if (!d) { fl.innerHTML = '<div class="flyer-accent"></div><div class="flyer-no-data"><i class="bi bi-image" style="font-size:3rem"></i><p>Agrega destinos en la pestaña <b>Destinos</b> y pulsa <b>Actualizar precios</b>.</p></div>'; setTimeout(escalar, 30); return; }
+        const fondo = d.fondo ? `linear-gradient(to bottom, rgba(0,30,42,.15) 0%, rgba(0,30,42,.72) 100%), url('${d.fondo}') center/cover no-repeat` : 'linear-gradient(155deg, #003d52 0%, #00647a 55%, #003d52 100%)';
+        const reg = (d.hoteles.find(h => h.regimen) || {}).regimen;
+        const sub = ['Oferta especial', reg, d.origen ? 'Salida ' + d.origen : null].filter(Boolean).map(esc).join(' &middot; ');
+        const filas = d.hoteles.map(h => {
+            const pos = h.posicion, best = pos === 1, pc = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+            return `<div class="fh-row${best ? ' best' : ''}"><div class="fh-pos ${pc}">${pos}</div><div class="fh-sep"></div>
+                <div class="fh-info"><div class="fh-name">${esc(h.nombre_Hotel)}</div><div class="fh-meta">${esc(h.regimen || '')}</div>${best ? '<div class="fh-best-tag">✦ mejor precio</div>' : ''}</div>
+                <div class="fh-price${best ? ' rank1' : ''}">${precio(h.precio_Final)}</div></div>`;
+        }).join('');
+        fl.innerHTML = `<div class="flyer-accent"></div>
+            <div class="flyer-hero" style="background:${fondo};background-color:#003d52">
+                <div class="fl-logo"><div class="ln" style="background:linear-gradient(90deg,transparent,rgba(249,199,79,.7))"></div>
+                    <div class="marco"><img src="${esc(D.logo)}" alt="Eurovip Travel"></div>
+                    <div class="ln" style="background:linear-gradient(90deg,rgba(249,199,79,.7),transparent)"></div></div>
+                <div style="height:260px;flex-shrink:0"></div>
+                <div class="flyer-title">${esc(d.nombre_Destino)}</div>
+                <div class="flyer-subtitle">${sub}</div><div style="height:33px"></div>
+            </div>
+            ${d.hoteles.length ? `<div class="flyer-section-title">Top hoteles más económicos</div><div class="flyer-hotels">${filas}</div>` : '<div class="flyer-no-data"><p>Sin hoteles a la venta para este destino.</p></div>'}
+            <div class="flyer-footer"><div class="ff-line"></div><div class="ff-brand"><div class="ff-url">${esc(D.web.replace(/^https?:\/\/(www\.)?/, ''))}</div><div class="ff-tag">tu agencia de confianza</div></div><div class="ff-line"></div></div>`;
+        setTimeout(escalar, 30);
+    }
+    function escalar() {
+        const st = $('#fStage'), wr = $('#fScale'), fl = $('#flyer');
+        if (!st.offsetWidth) return;
+        const s = Math.min(1, (st.clientWidth - 32) / 900);
+        wr.style.transform = `scale(${s})`;
+        wr.style.marginBottom = `${fl.offsetHeight * s - fl.offsetHeight}px`;
+    }
+    window.addEventListener('resize', escalar);
+
+    function pintarEstado() {
+        const f = D.destinos.map(d => d.fecha_Actualizacion).filter(Boolean).sort().pop();
+        $('#fEstado').innerHTML = `<h3><i class="bi bi-activity"></i> Estado</h3>
+            <div style="font-weight:700">${f ? '<span style="color:#16A34A">●</span> Precios del ' + new Date(f).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : 'Sin precios todavía'}</div>
+            <div class="ui-help" style="margin:6px 0 0">${D.configs.length} destino(s) · ${D.galeria.length} imagen(es) guardada(s)</div>`;
+    }
+
+    /** Dibuja el flyer de un destino y lo convierte en PNG (a tamaño real, sin la escala de la pantalla). */
+    async function png(d) {
+        pintarFlyer(d);
+        const wr = $('#fScale'), st = $('#fStage'), antes = [wr.style.transform, wr.style.marginBottom, st.style.overflow];
+        wr.style.transform = 'none'; wr.style.marginBottom = ''; st.style.overflow = 'visible';
+        await document.fonts.ready; await new Promise(r => setTimeout(r, 350));
+        try { return (await html2canvas($('#flyer'), { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false })).toDataURL('image/png'); }
+        finally { [wr.style.transform, wr.style.marginBottom, st.style.overflow] = antes; }
+    }
+    async function guardarPng(d) { return EV.post('/Agencia/GuardarImagen', { ImageData: await png(d), Id_Destino: d.id_Destino }); }
+
+    $('#fDestino').onchange = () => { actual = D.destinos.find(d => d.id_Destino === $('#fDestino').value) || null; pintarFlyer(actual); };
+    $('#fGuardarUno').onclick = async e => {
+        if (!actual) return EV.toast('No hay destino con precios.', 'err');
+        const b = e.currentTarget; b.disabled = true;
+        try { await guardarPng(actual); EV.toast('Flyer guardado en la galería.'); await cargar(); } catch (er) { EV.toast(er.message, 'err'); } finally { b.disabled = false; }
+    };
+    $('#fDescargar').onclick = async () => {
+        if (!actual) return;
+        const a = document.createElement('a'); a.href = await png(actual); a.download = `flyer_agencia_${clave(actual.nombre_Destino)}.png`; a.click(); pintarFlyer(actual);
+    };
+    $('#fLink').onclick = () => editarLink(actual?.id_Destino);
+    $('#agPrecios').onclick = async e => {
+        const b = e.currentTarget; b.disabled = true;
+        try { const r = await EV.post('/Agencia/ActualizarPrecios', {}); EV.toast(r.mensaje); await cargar(); } catch (er) { EV.toast(er.message, 'err'); } finally { b.disabled = false; }
+    };
+    $('#agGuardar').onclick = async e => {
+        if (!await EV.confirmar({ titulo: '¿Guardar las imágenes de todos los destinos?', texto: 'Se actualizan los precios, se borran los flyers guardados antes y se guarda uno nuevo por destino (las imágenes subidas a mano también se borran si empiezan por «agencia_»).', si: 'Sí, guardar', icono: 'images' })) return;
+        const b = e.currentTarget; b.disabled = true; tabs.ir('tFly');
+        try {
+            await EV.post('/Agencia/ActualizarPrecios', {}); await EV.post('/Agencia/LimpiarImagenes', {});
+            D = await EV.api('/Agencia/Datos');
+            let n = 0;
+            for (const d of D.destinos.filter(x => x.hoteles.length)) { EV.toast(`Guardando ${d.nombre_Destino}…`, 'info'); await guardarPng(d); n++; }
+            EV.toast(n ? `¡Listo! ${n} imagen(es) guardadas.` : 'Ningún destino tiene hoteles a la venta.', n ? 'ok' : 'err'); if (n) EV.confeti();
+        } catch (er) { EV.toast(er.message, 'err'); } finally { b.disabled = false; await cargar(); }
+    };
+
+    // ================= DESTINOS =================
+    function pintarDestinos() {
+        const datos = Object.fromEntries(D.destinos.map(d => [d.id_Destino.toLowerCase(), d]));
+        $('#agDest').innerHTML = `<button type="button" class="ag-nuevo" data-cfg="0"><span><i class="bi bi-plus-circle"></i>Agregar destino</span></button>` + D.configs.map(c => {
+            const d = datos[c.id_Destino.toLowerCase()], nombre = c.nombre_Destino || c.id_Destino;
+            return `<article class="ag-card"><div class="foto">${c.fondo ? `<img src="${esc(c.fondo)}" alt="" loading="lazy">` : ''}<h3>${esc(nombre)}</h3>
+                ${c.precioDesde ? `<span class="desde">desde ${precio(c.precioDesde)}</span>` : '<span class="desde sin">Sin precios</span>'}
+                <label title="Cambiar la foto de fondo"><input type="file" accept="image/jpeg,image/png" data-fondo="${esc(nombre)}" hidden><i class="bi bi-camera"></i> Fondo</label></div>
+                <div class="cuerpo"><div class="meta"><span><i class="bi bi-geo"></i> ${esc(c.origen)}</span><span>${esc(c.campanya || '#' + c.id_Campanya)}</span><span>${esc(c.id_Regimen)}</span><span>${esc(c.id_Tipo_Servicio)}</span></div>
+                ${d && d.hoteles.length ? `<ol>${d.hoteles.map(h => `<li><b style="width:20px">${h.posicion}</b><span>${esc(h.nombre_Hotel)}</span><b>${precio(h.precio_Final)}</b></li>`).join('')}</ol>`
+                    : '<div class="ui-help" style="margin:0">No hay ofertas a la venta con esta campaña, origen y régimen.</div>'}
+                <div class="pie"><button type="button" class="ev-btn ghost sm" data-actu="${c.id}"><i class="bi bi-arrow-repeat"></i> Precios</button><span class="sp"></span>
+                    <button type="button" class="ui-ibtn" data-cfg="${c.id}" title="Editar"><i class="bi bi-pencil"></i></button><button type="button" class="ui-ibtn danger" data-delcfg="${c.id}" title="Quitar"><i class="bi bi-trash3"></i></button></div></div></article>`;
+        }).join('');
+    }
+    async function editarConfig(id) {
+        cat ??= await EVC.catalogos();
+        const c = D.configs.find(x => x.id === id) || { id: 0, id_Tipo_Servicio: 'OFERTA', id_Moneda: EV.MONEDA, activo_Servicio: 1, origen: 'Madrid', id_Regimen: 'TI', id_Destino: '', nombre_Destino: '', id_Campanya: +(cat.campanyas[0]?.valor || 0) };
+        $('#dTit').textContent = id ? `Editar ${c.nombre_Destino || c.id_Destino}` : 'Nuevo destino de Flyer Agencia'; $('#dSub').textContent = 'Qué ofertas se usan para calcular los precios del flyer';
+        $('#dIco').innerHTML = '<i class="bi bi-geo-alt"></i>';
+        $('#dCuerpo').innerHTML = `<div class="ui-row r2"><div class="ui-f"><label>Destino *</label><input id="cDes" value="${esc(c.id_Destino)}" placeholder="Punta Cana"></div>
+                <div class="ui-f"><label>Nombre en el flyer</label><input id="cNom" maxlength="200" value="${esc(c.nombre_Destino || '')}" placeholder="Igual que el destino"></div></div>
+            <div class="ui-row r3"><div class="ui-f"><label>Tipo</label><select id="cTipo"><option>OFERTA</option><option>PAQUETE</option><option>CIRCUITO</option></select></div>
+                <div class="ui-f"><label>Campaña *</label><select id="cCam">${cat.campanyas.map(x => `<option value="${esc(x.valor)}">${esc(x.texto)}</option>`).join('')}</select></div>
+                <div class="ui-f"><label>Moneda</label><select id="cMon">${cat.monedas.map(m => `<option>${esc(m.valor)}</option>`).join('')}</select></div></div>
+            <div class="ui-row r2"><div class="ui-f"><label>Origen de venta *</label><input id="cOri" value="${esc(c.origen)}"></div>
+                <div class="ui-f"><label>Régimen *</label><select id="cReg">${cat.regimenes.map(r => `<option value="${esc(r.valor)}">${esc(r.valor)} · ${esc(r.texto)}</option>`).join('')}</select></div></div>
+            <label class="ui-switch"><input type="checkbox" id="cAct" ${c.activo_Servicio ? 'checked' : ''}><span class="tr"></span> Solo ofertas activas</label>`;
+        $('#cTipo').value = c.id_Tipo_Servicio; $('#cCam').value = String(c.id_Campanya); $('#cMon').value = c.id_Moneda; $('#cReg').value = c.id_Regimen.trim();
+        EV.picker($('#cDes'), { url: q => `/Circuitos/Destinos?q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: x.extra, icono: 'bi-geo-alt' }), onSelect: m => $('#cDes').value = m.valor });
+        EV.picker($('#cOri'), { url: q => `/Circuitos/Destinos?pais=ES&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo' }), onSelect: m => $('#cOri').value = m.valor });
+        $('#dPie').innerHTML = `<button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button><span style="flex:1"></span><button class="ev-btn" type="button" id="dOk"><i class="bi bi-check2-circle"></i> Guardar y calcular precios</button>`;
+        $$('#agDrawer [data-cerrar]').forEach(b => b.onclick = () => drawer.cerrar());
+        $('#dOk').onclick = async () => {
+            const dto = { Id: c.id, Id_Destino: $('#cDes').value.trim(), Nombre_Destino: $('#cNom').value.trim() || null, Id_Tipo_Servicio: $('#cTipo').value, Id_Campanya: +$('#cCam').value,
+                Id_Moneda: $('#cMon').value, Origen: $('#cOri').value.trim(), Id_Regimen: $('#cReg').value, Activo_Servicio: $('#cAct').checked ? 1 : 0, Url_Destino: c.url_Destino || null, Tipo: 'Agencia' };
+            if (!dto.Id_Destino || !dto.Origen) return EV.toast('Escribe el destino y el origen.', 'err');
+            try { const r = await EV.post('/Agencia/Config', dto); await EV.post(`/Agencia/ActualizarPrecios?id=${r.id}`, {}); EV.toast(r.mensaje); drawer.cerrar(); cargar(); }
+            catch (e) { EV.toast(e.message, 'err'); }
+        };
+        drawer.abrir();
+    }
+    $('#agDest').addEventListener('click', async e => {
+        const b = e.target.closest('[data-cfg],[data-delcfg],[data-actu]'); if (!b) return;
+        if (b.dataset.cfg) return editarConfig(+b.dataset.cfg);
+        if (b.dataset.actu) { b.disabled = true; try { EV.toast((await EV.post(`/Agencia/ActualizarPrecios?id=${b.dataset.actu}`, {})).mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); b.disabled = false; } return; }
+        if (!await EV.confirmar({ titulo: '¿Quitar este destino de Flyer Agencia?', texto: 'Se borran sus precios de agencia. Flyer Editar no cambia.', si: 'Sí, quitar', peligro: true })) return;
+        try { EV.toast((await EV.post(`/Agencia/EliminarConfig?id=${b.dataset.delcfg}`, {})).mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); }
+    });
+    $('#agDest').addEventListener('change', async e => {
+        const i = e.target.closest('[data-fondo]'); if (!i || !i.files[0]) return;
+        const fd = new FormData(); fd.append('destino', i.dataset.fondo); fd.append('archivo', i.files[0]);
+        try { EV.toast((await EV.post('/Agencia/Fondo', fd)).mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); }
+    });
+
+    // ================= GALERÍA =================
+    function pintarGaleria() {
+        [...elegidas].filter(a => !D.galeria.some(g => g.archivo === a)).forEach(a => elegidas.delete(a));
+        $('#gSel').textContent = elegidas.size ? `${elegidas.size} elegida(s)` : '';
+        if (!D.galeria.length) { $('#agGal').innerHTML = '<div class="ui-empty" style="grid-column:1/-1"><i class="bi bi-images big"></i><h3>Todavía no hay imágenes</h3><p>Pulsa «Guardar imágenes de todos» arriba, o sube las tuyas.</p></div>'; return; }
+        $('#agGal').innerHTML = D.galeria.map(g => {
+            const c = configDe(g.archivo), sel = elegidas.has(g.archivo);
+            return `<div class="ag-img ${sel ? 'sel' : ''}" data-img="${esc(g.archivo)}"><img src="${esc(g.url)}" alt="${esc(g.archivo)}" loading="lazy">${sel ? '<span class="chk"><i class="bi bi-check-lg"></i></span>' : ''}
+                <div class="acc"><a href="${esc(g.url)}" target="_blank" title="Ver grande" onclick="event.stopPropagation()"><i class="bi bi-arrows-fullscreen"></i></a><a href="${esc(g.url)}" download="${esc(g.archivo)}" title="Descargar" onclick="event.stopPropagation()"><i class="bi bi-download"></i></a><button type="button" data-delimg="${esc(g.archivo)}" title="Eliminar"><i class="bi bi-trash3"></i></button></div>
+                <div class="tx">${c ? `<span>${esc(c.nombre_Destino || c.id_Destino)}</span>` : '<span class="malo" title="El nombre no corresponde a ningún destino de Flyer Agencia: no se puede enviar">Sin destino</span>'}<small>${new Date(g.fecha).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div></div>`;
+        }).join('');
+    }
+    $('#agGal').addEventListener('click', async e => {
+        const del = e.target.closest('[data-delimg]');
+        if (del) {
+            e.stopPropagation();
+            if (!await EV.confirmar({ titulo: '¿Eliminar esta imagen?', si: 'Sí, eliminar', peligro: true })) return;
+            try { EV.toast((await EV.post(`/Agencia/EliminarImagen?archivo=${encodeURIComponent(del.dataset.delimg)}`, {})).mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); }
+            return;
+        }
+        const it = e.target.closest('[data-img]'); if (!it) return;
+        elegidas.has(it.dataset.img) ? elegidas.delete(it.dataset.img) : elegidas.add(it.dataset.img);
+        pintarGaleria();
+    });
+    $('#gSubir').onchange = async e => {
+        const files = [...e.target.files]; if (!files.length) return;
+        const opciones = D.configs.map(c => c.nombre_Destino || c.id_Destino);
+        const dest = await EV.pedir({ titulo: '¿De qué destino son estas imágenes?', etiqueta: 'Destino (para el link y el texto del mensaje)', valor: opciones[0] || '', ayuda: 'Opciones: ' + opciones.join(', '), icono: 'geo-alt' });
+        if (dest === null || dest === false) { e.target.value = ''; return; }
+        const fd = new FormData(); files.forEach(f => fd.append('archivos', f)); fd.append('destino', dest);
+        try { EV.toast((await EV.post('/Agencia/SubirImagenes', fd)).mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); } finally { e.target.value = ''; }
+    };
+    $('#gEnviar').onclick = () => tabs.ir('tEnv');
+
+    // ================= AGENCIAS =================
+    function pintarAgencias() {
+        const q = $('#aQ').value.trim().toLowerCase(), est = $('#aEst').value;
+        const l = D.agencias.filter(a => (!q || `${a.nombre} ${a.telefono} ${a.email || ''}`.toLowerCase().includes(q)) && (est === '' || String(+a.activo) === est));
+        $('#agAge').innerHTML = !l.length ? '<div class="ui-empty"><p>No hay agencias con ese filtro.</p></div>' : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Agencia</th><th>WhatsApp</th><th>Correo</th><th>Origen</th><th>Alta</th><th>Activa</th><th style="width:90px"></th></tr></thead><tbody>
+            ${l.map(a => `<tr><td><b>${esc(a.nombre)}</b></td><td style="font-family:ui-monospace,Consolas,monospace">+${esc(a.telefono)}</td><td>${esc(a.email || '—')}</td><td>${esc(a.origen || '—')}</td><td>${EV.fecha(a.fecha_Creacion)}</td>
+                <td><label class="ui-switch"><input type="checkbox" data-act="${a.id}" ${a.activo ? 'checked' : ''}><span class="tr"></span></label></td>
+                <td style="white-space:nowrap"><button type="button" class="ui-ibtn" data-edage="${a.id}" title="Editar"><i class="bi bi-pencil"></i></button><button type="button" class="ui-ibtn danger" data-delage="${a.id}" title="Eliminar"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
+            </tbody></table></div>`;
+    }
+    $('#aQ').oninput = EV.debounce(pintarAgencias, 200); $('#aEst').onchange = pintarAgencias;
+    function editarAgencia(id) {
+        const a = D.agencias.find(x => x.id === id) || { id: 0, nombre: '', telefono: '', email: '', activo: true };
+        $('#dTit').textContent = id ? 'Editar agencia' : 'Nueva agencia'; $('#dSub').textContent = 'A quién se envían los flyers por WhatsApp'; $('#dIco').innerHTML = '<i class="bi bi-building"></i>';
+        $('#dCuerpo').innerHTML = `<div class="ui-f"><label>Nombre de la agencia *</label><input id="gNom" maxlength="200" value="${esc(a.nombre)}" placeholder="Ej. Agencia García"></div>
+            <div class="ui-f"><label>WhatsApp * <em>con el código del país, sin espacios</em></label><input id="gTel" maxlength="30" value="${esc(a.telefono)}" placeholder="18095551234"></div>
+            <div class="ui-f"><label>Correo <em>opcional</em></label><input id="gMail" maxlength="200" value="${esc(a.email || '')}"></div>
+            <label class="ui-switch"><input type="checkbox" id="gAct" ${a.activo ? 'checked' : ''}><span class="tr"></span> Activa (recibe los envíos)</label>`;
+        $('#dPie').innerHTML = `<button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button><span style="flex:1"></span><button class="ev-btn" type="button" id="dOk"><i class="bi bi-check2-circle"></i> Guardar</button>`;
+        $$('#agDrawer [data-cerrar]').forEach(b => b.onclick = () => drawer.cerrar());
+        $('#dOk').onclick = async () => {
+            try { const r = await EV.post('/Agencia/Agencia', { Id: a.id, Nombre: $('#gNom').value.trim(), Telefono: $('#gTel').value.trim(), Email: $('#gMail').value.trim() || null, Activo: $('#gAct').checked });
+                  EV.toast(r.mensaje); drawer.cerrar(); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
+        };
+        drawer.abrir();
+    }
+    $('#aNueva').onclick = () => editarAgencia(0);
+    $('#agAge').addEventListener('click', async e => {
+        const ed = e.target.closest('[data-edage]'); if (ed) return editarAgencia(+ed.dataset.edage);
+        const del = e.target.closest('[data-delage]'); if (!del) return;
+        if (!await EV.confirmar({ titulo: '¿Eliminar esta agencia?', texto: 'Deja de recibir los envíos. Sus links siguen funcionando hasta que los desactives.', si: 'Sí, eliminar', peligro: true })) return;
+        try { EV.toast((await EV.post(`/Agencia/EliminarAgencia?id=${del.dataset.delage}`, {})).mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); }
+    });
+    $('#agAge').addEventListener('change', async e => {
+        const t = e.target.closest('[data-act]'); if (!t) return;
+        try { await EV.post('/Agencia/EstadoAgencias', { Ids: [+t.dataset.act], Activo: t.checked }); const a = D.agencias.find(x => x.id === +t.dataset.act); if (a) a.activo = t.checked; EV.toast(t.checked ? 'Agencia activa.' : 'Agencia pausada.'); }
+        catch (er) { t.checked = !t.checked; EV.toast(er.message, 'err'); }
+    });
+    $('#aPausar').onclick = async () => {
+        if (!await EV.confirmar({ titulo: '¿Pausar TODAS las agencias?', texto: 'Ninguna recibirá envíos hasta que las vuelvas a activar.', si: 'Sí, pausar todas', peligro: true })) return;
+        try { EV.toast((await EV.post('/Agencia/EstadoAgencias', { Ids: null, Activo: false })).mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); }
+    };
+    $('#aImportar').onclick = () => {
+        $('#dTit').textContent = 'Pegar lista de agencias'; $('#dSub').textContent = 'Una agencia por línea: el nombre y el WhatsApp al final'; $('#dIco').innerHTML = '<i class="bi bi-clipboard-plus"></i>';
+        $('#dCuerpo').innerHTML = `<div class="ui-f"><label>Lista</label><textarea id="iTxt" rows="12" style="width:100%" placeholder="Agencia García 18095551234&#10;Viajes del Sol, 34612345678"></textarea><span class="ui-help">Los WhatsApp que ya están se saltan. De República Dominicana puedes poner 809/829/849 sin el 1.</span></div>`;
+        $('#dPie').innerHTML = `<button class="ev-btn ghost" type="button" data-cerrar>Cancelar</button><span style="flex:1"></span><button class="ev-btn" type="button" id="dOk"><i class="bi bi-plus-lg"></i> Agregar</button>`;
+        $$('#agDrawer [data-cerrar]').forEach(b => b.onclick = () => drawer.cerrar());
+        $('#dOk').onclick = async () => { try { EV.toast((await EV.post('/Agencia/ImportarAgencias', { Texto: $('#iTxt').value })).mensaje); drawer.cerrar(); cargar(); } catch (er) { EV.toast(er.message, 'err'); } };
+        drawer.abrir();
+    };
+
+    // ================= LINKS =================
+    function pintarLinks() {
+        const q = $('#lQ').value.trim().toLowerCase(), est = $('#lEst').value;
+        const l = D.links.filter(x => (!q || `${x.nombre_Agencia || ''} ${x.nombre_Destino || ''} ${x.id_Destino}`.toLowerCase().includes(q)) && (est === '' || String(+x.vigente) === est));
+        $('#agLin').innerHTML = !l.length ? '<div class="ui-empty"><p>No hay links con ese filtro.</p></div>' : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Agencia</th><th>Destino</th><th>Creado</th><th>Vence</th><th class="num">Visitas</th><th>Estado</th><th>Link</th><th style="width:150px"></th></tr></thead><tbody>
+            ${l.map(x => `<tr><td><b>${esc(x.nombre_Agencia || '—')}</b>${x.id_Envio ? `<br><small style="color:var(--ev-muted)">envío #${x.id_Envio}</small>` : ''}</td><td>${esc(x.nombre_Destino || x.id_Destino)}</td>
+                <td>${EV.fecha(x.fecha_Creacion)}</td><td>${x.fecha_Expiracion ? EV.fecha(x.fecha_Expiracion) : '<i class="bi bi-infinity" title="No vence"></i>'}</td>
+                <td class="num">${x.visitas}${x.ultima_Visita ? `<br><small style="font-weight:600;color:var(--ev-muted)">${EV.fecha(x.ultima_Visita)}</small>` : ''}</td>
+                <td>${x.vigente ? '<span class="ag-estado ok">Activo</span>' : x.activo ? '<span class="ag-estado va">Vencido</span>' : '<span class="ag-estado gris">Desactivado</span>'}</td>
+                <td><a class="ag-link" href="${esc(x.url)}" target="_blank">abrir</a> <button type="button" class="ui-ibtn" data-copiar="${esc(x.url)}" title="Copiar"><i class="bi bi-copy"></i></button></td>
+                <td style="white-space:nowrap">${x.vigente ? `<button type="button" class="ui-ibtn danger" data-revocar="${x.id}" title="Desactivar"><i class="bi bi-slash-circle"></i></button>` : ''}
+                    <button type="button" class="ui-ibtn" data-extender="${x.id}" title="10 días más"><i class="bi bi-calendar-plus"></i></button>
+                    <button type="button" class="ui-ibtn" data-infinito="${x.id}" title="Que no venza"><i class="bi bi-infinity"></i></button></td></tr>`).join('')}
+            </tbody></table></div>`;
+    }
+    $('#lQ').oninput = EV.debounce(pintarLinks, 200); $('#lEst').onchange = pintarLinks;
+    $('#agLin').addEventListener('click', async e => {
+        const b = e.target.closest('[data-copiar],[data-revocar],[data-extender],[data-infinito]'); if (!b) return;
+        if (b.dataset.copiar) { try { await navigator.clipboard.writeText(b.dataset.copiar); EV.toast('Link copiado.'); } catch { EV.toast(b.dataset.copiar, 'info'); } return; }
+        try {
+            if (b.dataset.revocar) { if (!await EV.confirmar({ titulo: '¿Desactivar este link?', texto: 'La agencia ya no podrá abrir su editor con él.', si: 'Sí, desactivar', peligro: true })) return; EV.toast((await EV.post(`/Agencia/RevocarLink?id=${b.dataset.revocar}`, {})).mensaje); }
+            if (b.dataset.extender) EV.toast((await EV.post(`/Agencia/ExtenderLink?id=${b.dataset.extender}&dias=10`, {})).mensaje);
+            if (b.dataset.infinito) EV.toast((await EV.post(`/Agencia/LinkSinVencer?id=${b.dataset.infinito}`, {})).mensaje);
+            cargar();
+        } catch (er) { EV.toast(er.message, 'err'); }
+    });
+    $('#lInfinitos').onclick = async () => {
+        if (!await EV.confirmar({ titulo: '¿Quitar el vencimiento a todos los links activos?', si: 'Sí, que no venzan' })) return;
+        try { EV.toast((await EV.post('/Agencia/LinkSinVencer', {})).mensaje); cargar(); } catch (er) { EV.toast(er.message, 'err'); }
+    };
+    function editarLink(idDestino) {
+        if (!D.configs.length) return EV.toast('Primero agrega un destino en la pestaña Destinos.', 'err');
+        $('#dTit').textContent = 'Nuevo link de agencia'; $('#dSub').textContent = 'Abre el editor del flyer de un destino para una agencia'; $('#dIco').innerHTML = '<i class="bi bi-link-45deg"></i>';
+        $('#dCuerpo').innerHTML = `<div class="ui-f"><label>Destino *</label><select id="kDes">${D.configs.map(c => `<option value="${esc(c.id_Destino)}">${esc(c.nombre_Destino || c.id_Destino)}</option>`).join('')}</select></div>
+            <div class="ui-f"><label>Agencia</label><select id="kAge"><option value="">— Otra (escribe el nombre abajo) —</option>${D.agencias.map(a => `<option value="${a.id}">${esc(a.nombre)}</option>`).join('')}</select></div>
+            <div class="ui-row r2"><div class="ui-f"><label>Nombre de la agencia</label><input id="kNom" maxlength="200"></div><div class="ui-f"><label>Correo <em>opcional</em></label><input id="kMail" maxlength="200"></div></div>
+            <div class="ui-f"><label>¿Cuánto dura?</label><select id="kDias"><option value="">No vence</option><option>7</option><option>10</option><option>30</option><option>90</option></select></div>
+            <div id="kRes"></div>`;
+        if (idDestino) $('#kDes').value = idDestino;
+        $('#dPie').innerHTML = `<button class="ev-btn ghost" type="button" data-cerrar>Cerrar</button><span style="flex:1"></span><button class="ev-btn" type="button" id="dOk"><i class="bi bi-link-45deg"></i> Crear link</button>`;
+        $$('#agDrawer [data-cerrar]').forEach(b => b.onclick = () => drawer.cerrar());
+        $('#dOk').onclick = async () => {
+            try {
+                const r = await EV.post('/Agencia/Link', { Id_Destino: $('#kDes').value, Id_Agencia: $('#kAge').value ? +$('#kAge').value : null, Nombre_Agencia: $('#kNom').value.trim() || null,
+                    Email_Agencia: $('#kMail').value.trim() || null, Dias: $('#kDias').value ? +$('#kDias').value : null });
+                $('#kRes').innerHTML = `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div>${esc(r.mensaje)}<br><a class="ag-link" href="${esc(r.url)}" target="_blank">${esc(r.url)}</a></div></div>`;
+                try { await navigator.clipboard.writeText(r.url); EV.toast('Link creado y copiado.'); } catch { EV.toast('Link creado.'); }
+                D = await EV.api('/Agencia/Datos'); pintarLinks();
+            } catch (er) { EV.toast(er.message, 'err'); }
+        };
+        drawer.abrir();
+    }
+    $('#lNuevo').onclick = () => editarLink(null);
+
+    // ================= ENVIAR =================
+    const quien = () => $('[name=aQuien]:checked').value;
+    const dtoEnvio = () => ({ Imagenes: [...elegidas], Agencias: [], Prueba: quien() === 'prueba' ? $('#eNum').value.trim() : null });
+    function pintarEnvio() {
+        const imgs = D.galeria.filter(g => !elegidas.size || elegidas.has(g.archivo));
+        $('#eImgs').innerHTML = imgs.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap">${imgs.map(g => `<img src="${esc(g.url)}" alt="" style="width:70px;height:92px;object-fit:cover;object-position:top;border-radius:10px;border:1px solid var(--ev-line)" title="${esc(g.archivo)}">`).join('')}</div>
+            <div class="ui-help">${elegidas.size ? `${elegidas.size} elegida(s) en la Galería.` : 'Todas las de la Galería (elige algunas allí si no quieres enviar todas).'}</div>`
+            : '<div class="ui-help" style="margin:0">No hay imágenes. Pulsa «Guardar imágenes de todos» arriba.</div>';
+        $('#eTotal').textContent = `${D.agencias.filter(a => a.activo).length} agencia(s) activa(s).`;
+        $('#ePlantilla').textContent = '«' + D.plantilla + '»';
+        costo();
+    }
+    const costo = EV.debounce(async () => {
+        try {
+            const c = await EV.post('/Agencia/Costo', dtoEnvio());
+            $('#eCosto').innerHTML = `<div><b>${EV.fmt(c.imagenes)}</b>imagen(es)</div><div><b>${EV.fmt(c.agencias)}</b>agencia(s)</div>
+                <div><b>${EV.fmt(c.mensajes)}</b>mensajes</div><div><b>US$ ${EV.fmt(c.costoTotal, 2)}</b>costo aprox. (${EV.fmt(c.costoUnitario, 2)} c/u)</div>
+                <div style="grid-column:1/-1">Tarda unos <b style="display:inline;font-size:15px">${EV.fmt(c.minutos)} min</b> (pausas para que WhatsApp no corte el envío).
+                ${c.sinDestino.length ? `<br><span style="color:#B42318">${c.sinDestino.length} imagen(es) no son de ningún destino y no se envían.</span>` : ''}</div>`;
+        } catch { $('#eCosto').innerHTML = ''; }
+    }, 300);
+    $$('[name=aQuien]').forEach(r => r.onchange = costo); $('#eNum').oninput = costo;
+    $('#eEnviar').onclick = async () => {
+        if (!D.whatsapp) return EV.toast('WhatsApp no está configurado en este servidor.', 'err');
+        if (!D.puedeEnviar) return EV.toast('No tienes el permiso «Enviar flyers por WhatsApp».', 'err');
+        const dto = dtoEnvio();
+        if (quien() === 'prueba' && !dto.Prueba) { $('#eNum').focus(); return EV.toast('Escribe el número de prueba.', 'err'); }
+        const c = await EV.post('/Agencia/Costo', dto);
+        if (!c.mensajes) return EV.toast('No hay nada que enviar.', 'err');
+        if (!await EV.confirmar({ titulo: `¿Enviar ${c.mensajes} mensaje(s)?`, texto: `${c.imagenes} imagen(es) a ${c.agencias} agencia(s). Costo aprox. <b>US$ ${EV.fmt(c.costoTotal, 2)}</b>, tarda unos ${c.minutos} min. Puedes cerrar esta pantalla: el envío sigue.`, si: 'Sí, enviar', icono: 'whatsapp' })) return;
+        try { const r = await EV.post('/Agencia/Enviar', dto); EV.toast(r.mensaje); seguir(r.id); } catch (er) { EV.toast(er.message, 'err'); }
+    };
+    function seguir(id) {
+        clearInterval(sondeo); $('#eProg').hidden = false; $('#pReporte').href = `/Agencia/Reporte/${id}`;
+        const paso = async () => {
+            try {
+                const r = await EV.api(`/Agencia/Envio?id=${id}`), e = r.envio;
+                $('#pTit').textContent = r.enCurso ? `Envío #${e.id} en curso…` : `Envío #${e.id}: ${e.estado}`;
+                $('#pBar').style.width = e.porcentaje + '%'; $('#pOk').textContent = e.enviados_Ok; $('#pErr').textContent = e.enviados_Error; $('#pTot').textContent = e.total_Mensajes;
+                $('#pAct').textContent = r.enCurso && e.contacto_Actual ? `Ahora: ${e.contacto_Actual} · ${e.imagen_Actual || ''}` : (e.mensaje_Error || '');
+                $('#pCancel').hidden = !r.enCurso; $('#pReporte').hidden = r.enCurso;
+                if (!r.enCurso) { clearInterval(sondeo); D.enCurso = null; cargar(); if (e.estado === 'Completado') EV.confeti(); }
+            } catch { }
+        };
+        paso(); sondeo = setInterval(paso, 3000);
+    }
+    $('#pCancel').onclick = async () => {
+        if (!await EV.confirmar({ titulo: '¿Cancelar el envío?', texto: 'Termina el mensaje actual y se detiene. Lo ya enviado no se puede deshacer.', si: 'Sí, cancelar', peligro: true })) return;
+        try { EV.toast((await EV.post('/Agencia/Cancelar', {})).mensaje); } catch (er) { EV.toast(er.message, 'err'); }
+    };
+
+    // ================= MONITOR =================
+    const estado = s => ({ Completado: 'ok', ConErrores: 'mal', Cancelado: 'gris', Interrumpido: 'mal', EnProceso: 'va', Pendiente: 'va' }[s] || 'gris');
+    function pintarMonitor() {
+        $('#agMon').innerHTML = !D.envios.length ? '<div class="ui-empty"><i class="bi bi-activity big"></i><p>Todavía no hay envíos a agencias.</p></div>' : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Inicio</th><th>Usuario</th><th>Tipo</th><th class="num">Imágenes</th><th class="num">Agencias</th><th class="num">Enviados</th><th class="num">Errores</th><th>Estado</th><th>Duración</th><th class="num">Costo</th><th style="width:90px"></th></tr></thead><tbody>
+            ${D.envios.map(e => {
+                const dur = e.fecha_Inicio && e.fecha_Fin ? Math.max(1, Math.round((new Date(e.fecha_Fin) - new Date(e.fecha_Inicio)) / 60000)) + ' min' : '—';
+                return `<tr><td><b>${e.id}</b></td><td>${new Date(e.fecha_Creacion).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}</td><td>${esc(e.usuario || '—')}</td><td>${esc(e.subtipo || '')}</td>
+                    <td class="num">${e.total_Imagenes}</td><td class="num">${e.total_Contactos}</td><td class="num">${e.enviados_Ok}</td><td class="num">${e.enviados_Error}</td>
+                    <td><span class="ag-estado ${estado(e.estado)}">${esc(e.estado)}</span></td><td>${dur}</td><td class="num">${e.costo != null ? 'US$ ' + EV.fmt(e.costo, 2) : '—'}</td>
+                    <td style="white-space:nowrap"><button type="button" class="ui-ibtn" data-det="${e.id}" title="Detalle por agencia"><i class="bi bi-list-check"></i></button><a class="ui-ibtn" href="/Agencia/Reporte/${e.id}" target="_blank" title="Reporte para imprimir o PDF"><i class="bi bi-file-earmark-pdf"></i></a></td></tr>`;
+            }).join('')}</tbody></table></div>`;
+    }
+    $('#agMon').addEventListener('click', async e => {
+        const b = e.target.closest('[data-det]'); if (!b) return;
+        const det = await EV.api(`/Agencia/EnvioDetalle?id=${b.dataset.det}`);
+        $('#dTit').textContent = `Envío #${b.dataset.det}`; $('#dSub').textContent = 'Qué pasó con cada mensaje'; $('#dIco').innerHTML = '<i class="bi bi-list-check"></i>';
+        $('#dCuerpo').innerHTML = !det.length ? '<div class="ui-empty"><p>Sin mensajes registrados.</p></div>' : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Agencia</th><th>Imagen</th><th>Estado</th></tr></thead><tbody>
+            ${det.map(x => `<tr><td><b>${esc(x.nombre_Contacto || '—')}</b><br><small>+${esc(x.telefono || '')}</small></td><td><small>${esc(x.nombre_Imagen || '')}</small></td>
+                <td>${x.estado === 'OK' ? '<span class="ag-estado ok">Enviado</span>' : `<span class="ag-estado mal">Error</span><br><small style="color:#B42318">${esc(x.mensaje_Error || '')}</small>`}</td></tr>`).join('')}</tbody></table></div>`;
+        $('#dPie').innerHTML = `<a class="ev-btn ghost" href="/Agencia/Reporte/${b.dataset.det}" target="_blank"><i class="bi bi-file-earmark-pdf"></i> Reporte</a><span style="flex:1"></span><button class="ev-btn" type="button" data-cerrar>Cerrar</button>`;
+        $$('#agDrawer [data-cerrar]').forEach(x => x.onclick = () => drawer.cerrar());
+        drawer.abrir();
+    });
+
+    cargar().catch(e => EV.toast(e.message, 'err'));
+})();
+</script>
+}

@@ -99,6 +99,38 @@ namespace EuroVip.Services
                 }
             });
 
+        /// <summary>
+        /// Cualquier plantilla aprobada con cabecera de imagen y textos en el cuerpo ({{1}}, {{2}}…); si lleva botón con URL dinámica,
+        /// <paramref name="botonUrl"/> es la parte variable. NO lanza error: devuelve el código y la respuesta de Meta para decidir reintentos.
+        /// </summary>
+        public async Task<(bool Ok, int Status, string Respuesta)> EnviarPlantillaAsync(string numero, string plantilla, string? mediaId, IEnumerable<string> textos,
+                                                                                         string? botonUrl = null, string? idioma = null)
+        {
+            var componentes = new List<object>();
+            if (!string.IsNullOrEmpty(mediaId))
+                componentes.Add(new { type = "header", parameters = new object[] { new { type = "image", image = new { id = mediaId } } } });
+            var cuerpo = textos.Select(t => (object)new { type = "text", text = string.IsNullOrWhiteSpace(t) ? "-" : t.Trim() }).ToArray();
+            if (cuerpo.Length > 0) componentes.Add(new { type = "body", parameters = cuerpo });
+            if (!string.IsNullOrWhiteSpace(botonUrl))
+                componentes.Add(new { type = "button", sub_type = "url", index = "0", parameters = new object[] { new { type = "text", text = botonUrl } } });
+            var json = JsonSerializer.Serialize(new
+            {
+                messaging_product = "whatsapp", to = numero, type = "template",
+                template = new { name = plantilla, language = new { code = string.IsNullOrWhiteSpace(idioma) ? IdiomaPlantilla : idioma }, components = componentes }
+            });
+            try
+            {
+                var r = await Cliente().PostAsync($"{Base}/messages", new StringContent(json, Encoding.UTF8, "application/json"));
+                var resp = await r.Content.ReadAsStringAsync();
+                _logger.LogInformation("WhatsApp {Plantilla} → {Numero}: {Status} {Respuesta}", plantilla, numero, (int)r.StatusCode, resp.Length > 400 ? resp[..400] : resp);
+                return (r.IsSuccessStatusCode, (int)r.StatusCode, resp);
+            }
+            catch (Exception ex) { return (false, 0, ex.Message); }
+        }
+
+        /// <summary>El mensaje de error de una respuesta de Meta (o el texto tal cual).</summary>
+        public static string ErrorDe(string json) => Error(json);
+
         private async Task Mandar(object cuerpo)
         {
             var r = await Cliente().PostAsync($"{Base}/messages", new StringContent(JsonSerializer.Serialize(cuerpo), Encoding.UTF8, "application/json"));

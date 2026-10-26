@@ -1,0 +1,1621 @@
+@model EuroVip.Models.AgenciaPublicoModelo
+@* Editor público de la agencia: copia de AgenciaPublico/Ver.cshtml de BackTiTan con la marca de Eurovip (logo, web, RD$, origen real). *@
+@{
+    Layout = null;
+    var d       = Model.Destino;
+    var hoteles = d.Hoteles.ToList();
+    var heroBg  = string.IsNullOrEmpty(d.Fondo)
+        ? "linear-gradient(155deg, #003d52 0%, #00647a 55%, #003d52 100%)"
+        : $"linear-gradient(to bottom, rgba(0,30,42,.15) 0%, rgba(0,30,42,.72) 100%), url('{d.Fondo}') center/cover no-repeat";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>✈️ @d.Nombre_Destino</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+
+/* ── Página ── */
+.flyerpage { padding: 20px 16px 60px; background: #ffffff; min-height: 100vh; }
+
+/* ── Barra superior de la página ── */
+.fn-nav {
+    background: linear-gradient(135deg, #012030 0%, #023047 100%);
+    padding: 12px 20px; display: flex; align-items: center;
+    justify-content: space-between; border-radius: 12px; margin-bottom: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+}
+.fn-brand { display: flex; align-items: center; gap: 10px; color: #FFD166; font-size: 1rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.fn-brand i { font-size: 1.2rem; }
+.fn-agency {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+    border-radius: 20px; padding: 5px 14px;
+    color: #fff; font-size: .85rem; font-weight: 700;
+    letter-spacing: .3px;
+}
+.fn-agency::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: #FFD166; flex-shrink: 0;
+    box-shadow: 0 0 6px rgba(255,209,102,.6);
+}
+
+/* ── Instrucciones ── */
+.instr-bar {
+    background: #fff; border: 1px solid #e2e8f0; border-left: 4px solid #FFD166;
+    border-radius: 10px; margin-bottom: 14px; overflow: hidden;
+}
+.instr-toggle {
+    padding: 10px 16px; display: flex; align-items: center; gap: 8px;
+    cursor: pointer; font-size: .83rem; font-weight: 600; color: #334155;
+    user-select: none;
+}
+.instr-toggle i { color: #FFD166; }
+.instr-body {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    padding: 0 16px 12px;
+}
+@@media (max-width: 500px) { .instr-body { grid-template-columns: 1fr; } }
+.instr-body.d-none { display: none !important; }
+.instr-item {
+    background: #f8fafc; border-radius: 8px; padding: 7px 11px;
+    font-size: .78rem; color: #475569;
+    display: flex; align-items: center; gap: 7px;
+}
+
+/* ── Barra de controles (NO en el PNG) ── */
+.ctrl-bar {
+    background: #fff;
+    border: 1px solid #e8edf2;
+    border-top: 3px solid #FFD166;
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    display: flex; flex-wrap: wrap; gap: 10px 8px; align-items: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,.07);
+}
+/* Cada grupo se ve como una tarjetita para no confundir botones entre grupos */
+.ctrl-group {
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+    border-radius: 10px;
+    padding: 6px 10px;
+}
+.ctrl-sep {
+    width: 1px; height: 24px; background: transparent;
+    flex-shrink: 0; align-self: center;
+}
+.btn-ctrl {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 9px; font-size: .78rem; font-weight: 600;
+    cursor: pointer; border: none; text-decoration: none;
+    transition: all .18s; white-space: nowrap; line-height: 1.2;
+}
+/* Logo: amarillo cálido */
+.btn-ctrl.logo {
+    background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+    color: #92400e; border: 1.5px solid #fde68a;
+    box-shadow: 0 1px 4px rgba(245,158,11,.18);
+}
+.btn-ctrl.logo:hover {
+    background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%);
+    box-shadow: 0 3px 10px rgba(245,158,11,.28); transform: translateY(-1px);
+}
+/* Quitar logo: rojo suave */
+.btn-ctrl.clear {
+    background: #fff; color: #dc2626;
+    border: 1.5px solid #fca5a5;
+    box-shadow: 0 1px 4px rgba(220,38,38,.10);
+}
+.btn-ctrl.clear:hover { background: #fef2f2; transform: translateY(-1px); }
+/* Suprimir: pizarra neutra */
+.btn-ctrl.suprimir {
+    background: #f8fafc; color: #475569;
+    border: 1.5px solid #e2e8f0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.btn-ctrl.suprimir:hover { background: #f1f5f9; color: #334155; transform: translateY(-1px); }
+.btn-ctrl.suprimir.activo {
+    background: #fef2f2; color: #dc2626; border-color: #fca5a5;
+    box-shadow: 0 0 0 3px rgba(220,38,38,.09);
+}
+/* Descargar: CTA principal */
+.btn-ctrl.dl {
+    background: linear-gradient(135deg, #023047 0%, #034e74 100%);
+    color: #FFD166; margin-left: auto;
+    box-shadow: 0 3px 12px rgba(2,48,71,.35);
+    padding: 10px 22px; font-size: .86rem;
+}
+.btn-ctrl.dl:hover {
+    background: linear-gradient(135deg, #012030 0%, #023047 100%);
+    box-shadow: 0 5px 18px rgba(2,48,71,.45); transform: translateY(-1px);
+}
+.btn-ctrl.dl:disabled { background: #94a3b8; color: #fff; cursor: not-allowed; box-shadow: none; transform: none; }
+
+/* ── Panel hoteles ocultos ── */
+.panel-ocultos {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 14px; display: none;
+}
+.panel-ocultos .po-title { font-size: .73rem; font-weight: 700; color: #92400e; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.btn-restaurar {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #fff; border: 1px solid #fcd34d; border-radius: 20px;
+    padding: 4px 10px; font-size: .78rem; color: #92400e; cursor: pointer; margin: 2px;
+}
+.btn-restaurar:hover { background: #fef3c7; }
+
+/* ── Stage del flyer ── */
+.fb-stage { display: flex; justify-content: center; padding: 4px 0 40px; }
+.fb-scale-wrap { transform-origin: top center; }
+
+/* ════════════════════════════════════════
+   PLANTILLA — IDÉNTICA A /Agencia/Index
+════════════════════════════════════════ */
+.flyer {
+    width: 900px; min-height: 1200px;
+    background: #fff; font-family: Arial, sans-serif;
+    position: relative; overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,61,82,.26);
+    display: flex; flex-direction: column;
+}
+.flyer-accent {
+    height: 9px;
+    background: linear-gradient(90deg, #e76f51, #f4a261, #f9c74f, #f4a261, #e76f51);
+    flex-shrink: 0;
+}
+.flyer-hero {
+    background-color: #003d52; background-size: cover; background-position: center;
+    min-height: 100px; padding: 16px 66px;
+    flex-shrink: 0; position: relative; overflow: visible;
+    display: flex; flex-direction: column; justify-content: flex-end;
+}
+.flyer-hero::before {
+    content:''; position:absolute; top:-90px; right:-90px;
+    width:390px; height:390px; border-radius:50%;
+    background: rgba(249,199,79,.06); pointer-events:none;
+}
+.flyer-hero::after {
+    content:''; position:absolute; bottom:-75px; left:-60px;
+    width:300px; height:300px; border-radius:50%;
+    background: rgba(231,111,81,.06); pointer-events:none;
+}
+.flyer-title {
+    font-family:'Playfair Display',serif; font-weight:900; font-size: 6.5rem; line-height: 1;
+    color: #fff; margin: 0 0 12px; letter-spacing: -.5px; text-shadow: 0 2px 18px rgba(0,0,0,.35);
+}
+.flyer-subtitle { font-size: 1.1rem; color: rgba(255,255,255,.5); letter-spacing: .5px; margin-bottom: 36px; }
+.flyer-section-title {
+    font-size: .88rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+    color: #e76f51; padding: 26px 66px 18px; border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: 14px;
+}
+.flyer-section-title::after { content:''; flex:1; height:1px; background: linear-gradient(90deg,#f1f5f9,transparent); }
+.flyer-hotels { flex: 1; }
+.fh-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 20px 66px 20px 20px;
+    border-bottom: 1px solid #f8fafc; border-left: 3px solid transparent;
+    position: relative;
+}
+.fh-row:last-child { border-bottom: none; }
+.fh-row.best { background: linear-gradient(90deg, rgba(245,158,11,.06) 0%, transparent 55%); border-left: 3px solid #f59e0b; padding-left: 17px; }
+.fh-row.hotel-oculto { display: none !important; }
+.fh-pos { font-family: Arial, sans-serif; font-size: 2.1rem; font-weight: 900; min-width: 52px; text-align: center; color: #cbd5e1; }
+.fh-pos.gold   { color: #f5a623; text-shadow: 0 0 12px rgba(245,166,35,.45); }
+.fh-pos.silver { color: #6ec6f5; text-shadow: 0 0 12px rgba(110,198,245,.35); }
+.fh-pos.bronze { color: #e07b39; text-shadow: 0 0 12px rgba(224,123,57,.35); }
+.fh-sep { width: 1px; height: 56px; background: #e2e8f0; flex-shrink: 0; }
+.fh-info { flex: 1; min-width: 0; }
+.fh-name { font-size: 2.1rem; font-weight: 700; color: #0f172a; white-space: normal; overflow: visible; }
+.fh-meta { font-size: 1.85rem; font-weight: 700; color: #e07b39; margin-top: 4px; }
+.fh-best-tag { display:inline-flex; align-items:center; gap:4px; font-size:.95rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:#f59e0b; margin-top:5px; }
+.fh-price { font-family: Arial, sans-serif; font-weight: 700; font-size: 2.75rem; color: #003d52; white-space: nowrap; text-align: right; align-self: flex-end; margin-top: auto; padding-top: 3.5rem; }
+.fh-price.rank1 { color: #f59e0b; }
+.fh-pp { font-size: .9rem; font-family: Arial, sans-serif; font-weight: 400; color: #94a3b8; display: block; }
+.flyer-no-data { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 60px; text-align:center; }
+.flyer-no-data i { font-size:3.6rem; color:#cbd5e1; display:block; margin-bottom:20px; }
+.flyer-no-data p { font-size:1.1rem; color:#94a3b8; }
+.flyer-footer { padding: 24px 66px; display: flex; align-items: center; gap: 26px; background: #fff; border-top: 1px solid #f1f5f9; flex-shrink: 0; }
+.ff-line { flex:1; height:1px; background:linear-gradient(90deg,transparent,#00647a 40%,transparent); }
+.ff-brand { display:flex; flex-direction:column; align-items:center; }
+.ff-url  { font-family: Arial, sans-serif; font-size: 0.6rem; font-weight: 700; color: #003d52; letter-spacing: .5px; white-space: nowrap; }
+.ff-tag  { font-size: .86rem; color: #94a3b8; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
+
+/* ── Precio editable ── */
+.precio-edit {
+    display: inline; cursor: text; outline: none;
+    border-bottom: 2px dashed transparent; border-radius: 3px; padding: 0 2px;
+    transition: border-color .15s, background .15s;
+}
+.precio-edit:hover { border-bottom-color: rgba(0,61,82,.3); }
+.precio-edit:focus { border-bottom-color: #f9c74f; background: rgba(249,199,79,.1); }
+
+/* ── Lápiz indicador (position:absolute — fuera del flujo, no afecta html2canvas) ── */
+.fh-price { position: relative; }
+.precio-pencil {
+    position: absolute; top: 1.1rem; right: 0;
+    font-size: 1.7rem; color: rgba(0,61,82,.4);
+    transition: color .2s, transform .15s; cursor: pointer; pointer-events: auto;
+}
+.fh-row:hover .precio-pencil { color: rgba(0,61,82,.7); transform: scale(1.12); }
+.fh-price:focus-within .precio-pencil { color: #f59e0b; transform: scale(1.12); }
+body.modo-suprimir .precio-pencil { display: none !important; }
+
+/* ── Botón ocultar hotel (NO aparece en el PNG) ── */
+.btn-ocultar {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(255,255,255,.95); border: 2px solid #fca5a5;
+    border-radius: 10px; cursor: pointer; padding: 12px 16px;
+    color: #dc2626; font-size: 1.8rem; line-height: 1;
+    transition: all .15s; z-index: 5;
+    box-shadow: 0 3px 12px rgba(220,38,38,.25);
+    display: none; /* ocultos por defecto — el modo suprimir los muestra */
+}
+.btn-ocultar:hover { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+/* Cuando el modo suprimir está activo */
+body.modo-suprimir .btn-ocultar { display: block; }
+/* Botón toggle suprimir */
+.btn-ctrl.suprimir        { background: #f1f5f9; color: #334155; border: 1.5px solid #e2e8f0; }
+.btn-ctrl.suprimir.activo { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+
+/* ── Logo agencia (esquina superior derecha del hero por defecto) ── */
+#logo-agencia {
+    position: absolute; top: 16px; right: 20px; left: auto;
+    transform: none; z-index: 10;
+    max-height: 180px; max-width: 300px; object-fit: contain;
+    display: none;
+    filter: drop-shadow(0 3px 12px rgba(0,0,0,.6));
+    transition: top .2s, left .2s, right .2s, transform .2s;
+}
+/* Posición CENTRO GRANDE: reemplaza al logo Eurovip en el hueco central del hero.
+   Usa EXACTAMENTE la misma posición que #logoCentroWrap (top:-18px) para ocupar
+   el mismo lugar visual que Logo1.png cuando el usuario lo quita. */
+#logo-agencia.pos-center {
+    top: -18px; left: 50%; right: auto;
+    transform: translateX(-50%);
+    max-height: 110px; max-width: 360px;
+}
+
+/* ── Panel Dimensiones (Instagram formats) ── */
+.panel-dimensiones {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: #fff; border-radius: 14px; box-shadow: 0 12px 40px rgba(15,23,42,.25);
+    z-index: 9999; width: min(720px, 92vw); max-height: 88vh; overflow: hidden;
+    display: flex; flex-direction: column;
+}
+.pd-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px; border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg,#eff6ff,#dbeafe); color: #1e3a8a; font-weight: 700;
+}
+.pd-header i.bi { font-size: 1.2rem; }
+.pd-header span { flex: 1; }
+.pd-close {
+    background: transparent; border: none; color: #64748b; cursor: pointer;
+    padding: 4px 8px; border-radius: 6px; transition: background .15s;
+}
+.pd-close:hover { background: rgba(0,0,0,.06); color: #0f172a; }
+.pd-body { padding: 14px 18px; overflow-y: auto; }
+.pd-hint {
+    font-size: .82rem; color: #475569; background: #f8fafc;
+    border-left: 3px solid #3b82f6; padding: 8px 12px; border-radius: 6px;
+    margin-bottom: 14px;
+}
+.pd-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;
+}
+.pd-grid-sm { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+
+/* Slider (Hero / Hoteles) — fila con label + range + valor */
+.pd-slider-wrap {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 16px; padding: 12px 14px;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+}
+.pd-slider-lbl { font-size: .78rem; font-weight: 700; color: #475569; min-width: 90px; }
+.pd-slider {
+    flex: 1; height: 6px; -webkit-appearance: none; appearance: none;
+    background: linear-gradient(90deg,#93c5fd,#2563eb); border-radius: 999px; outline: none; cursor: pointer;
+}
+.pd-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: #2563eb; cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(37,99,235,.4);
+}
+.pd-slider::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%; background: #2563eb; cursor: pointer;
+    border: 2px solid #fff; box-shadow: 0 2px 6px rgba(37,99,235,.4);
+}
+.pd-slider-val { font-size: .82rem; font-weight: 700; color: #1e3a8a; min-width: 60px; text-align: right; }
+.pd-item {
+    background: #fff; border: 2px solid #e2e8f0; border-radius: 10px;
+    padding: 10px 8px; cursor: pointer; text-align: center;
+    transition: border-color .15s, transform .15s, box-shadow .15s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.pd-item:hover { border-color: #93c5fd; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(59,130,246,.15); }
+.pd-item.selected { border-color: #2563eb; background: linear-gradient(180deg,#eff6ff,#fff); box-shadow: 0 4px 12px rgba(37,99,235,.2); }
+.pd-thumb {
+    width: 60px; max-height: 80px; background: linear-gradient(135deg,#dbeafe,#93c5fd);
+    border-radius: 4px; border: 1px solid #60a5fa;
+}
+.pd-name { font-size: .82rem; font-weight: 700; color: #0f172a; }
+.pd-size { font-size: .7rem; color: #64748b; }
+
+/* Estilo del botón Dimensiones */
+.btn-ctrl.dimens { background: #eff6ff; color: #1e3a8a; border: 1.5px solid #bfdbfe; }
+.btn-ctrl.dimens:hover { background: #dbeafe; }
+
+/* Botón "Quitar logo Eurovip" — mismo look que .btn-ctrl.clear pero un poco diferenciado */
+#btnQuitarLogoDT { background: #fff7ed; color: #9a3412; border: 1.5px solid #fed7aa; }
+#btnQuitarLogoDT:hover { background: #ffedd5; }
+#btnQuitarLogoDT.activo { background: #dcfce7; color: #166534; border-color: #86efac; }
+
+/* ── Selector de posición del logo ── */
+.logo-pos-wrap {
+    display: none; align-items: center; gap: 4px;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 3px 6px;
+}
+.logo-pos-wrap .lp-label {
+    font-size: .72rem; color: #94a3b8; font-weight: 600;
+    white-space: nowrap; padding-right: 4px;
+    border-right: 1px solid #e2e8f0; margin-right: 2px;
+}
+.btn-pos {
+    background: none; border: 1.5px solid transparent;
+    border-radius: 6px; cursor: pointer; padding: 4px 6px;
+    color: #64748b; font-size: .85rem; transition: all .15s;
+    display: flex; align-items: center; justify-content: center;
+}
+.btn-pos:hover  { background: #f1f5f9; color: #0f172a; border-color: #cbd5e1; }
+.btn-pos.activo { background: #023047; color: #FFD166; border-color: #023047; }
+
+/* Revertir */
+.btn-ctrl.revertir {
+    background: #fff; color: #64748b; border: 1.5px solid #e2e8f0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.btn-ctrl.revertir:hover { background: #fef2f2; color: #dc2626; border-color: #fca5a5; transform: translateY(-1px); }
+
+/* Spinner */
+.spin { animation: tspin .7s linear infinite; display: inline-block; }
+@@keyframes tspin { to { transform: rotate(360deg); } }
+
+/* ── Grupos de controles ── */
+.ctrl-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; background: #f8fafc; border: 1px solid #eef2f7; border-radius: 10px; padding: 6px 10px; }
+.ctrl-label  { font-size: .62rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; padding-right: 4px; border-right: 1px solid #e2e8f0; margin-right: 4px; }
+
+/* Botón colores */
+.btn-ctrl.colores { background: #f5f3ff; color: #7c3aed; border: 1.5px solid #ddd6fe; box-shadow: 0 1px 4px rgba(124,58,237,.10); }
+.btn-ctrl.colores:hover { background: #ede9fe; border-color: #c4b5fd; transform: translateY(-1px); }
+.btn-ctrl.colores.activo { background: #ede9fe; border-color: #c4b5fd; box-shadow: 0 0 0 3px rgba(124,58,237,.15); }
+
+/* Botón pie */
+.btn-ctrl.pie { background: #f0fdf4; color: #16a34a; border: 1.5px solid #bbf7d0; box-shadow: 0 1px 4px rgba(22,163,74,.10); }
+.btn-ctrl.pie:hover { background: #dcfce7; border-color: #86efac; transform: translateY(-1px); }
+.btn-ctrl.pie.activo { background: #dcfce7; border-color: #86efac; box-shadow: 0 0 0 3px rgba(22,163,74,.15); }
+
+/* Panel colores */
+.panel-colores {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 16px; padding: 0; margin-bottom: 14px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.12);
+    overflow: hidden;
+}
+.pc-header {
+    background: linear-gradient(135deg, #312e81 0%, #4f46e5 100%);
+    padding: 12px 16px; display: flex; align-items: center; gap: 9px; color: #fff;
+}
+.pc-header > i { font-size: 1rem; opacity: .9; }
+.pc-header > span { font-size: .82rem; font-weight: 700; letter-spacing: .4px; flex: 1; }
+.pc-close {
+    background: rgba(255,255,255,.15); border: none; border-radius: 7px;
+    color: #fff; cursor: pointer; padding: 4px 9px; font-size: .78rem; line-height: 1.4;
+    transition: background .15s;
+}
+.pc-close:hover { background: rgba(255,255,255,.3); }
+.pc-body { padding: 16px 16px 8px; }
+.pc-section { margin-bottom: 14px; }
+.pc-section:last-child { margin-bottom: 0; }
+.pc-section-label {
+    font-size: .72rem; font-weight: 700; color: #475569; letter-spacing: .8px;
+    text-transform: uppercase; margin-bottom: 9px;
+    display: flex; align-items: center; gap: 7px;
+}
+.pc-dot {
+    width: 13px; height: 13px; border-radius: 50%; display: inline-block;
+    border: 2px solid rgba(0,0,0,.18); flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.18);
+    transition: background .2s;
+}
+.pc-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.pc-color {
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    border: 3px solid transparent; outline: none;
+    transition: transform .15s, box-shadow .15s, border-color .15s;
+    box-shadow: 0 2px 6px rgba(0,0,0,.2); flex-shrink: 0; position: relative;
+}
+.pc-color:hover { transform: scale(1.2); box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+.pc-color.selected {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,.35), 0 2px 8px rgba(0,0,0,.25);
+    transform: scale(1.13);
+}
+.pc-color.selected::after {
+    content: '✓'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem; font-weight: 900;
+    color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.7);
+}
+.pc-footer {
+    padding: 10px 16px 14px; display: flex; justify-content: flex-end;
+    border-top: 1px solid #f1f5f9;
+}
+.btn-pc-reset {
+    padding: 5px 14px; border-radius: 8px; font-size: .78rem;
+    border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;
+    cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 5px;
+}
+.btn-pc-reset:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+
+/* Footer editable */
+#footerUrl[contenteditable=true], #footerTag[contenteditable=true] {
+    border-bottom: 2px dashed rgba(22,163,74,.5); padding: 1px 4px;
+    border-radius: 3px; outline: none; background: rgba(22,163,74,.06); cursor: text;
+}
+
+    </style>
+</head>
+<body>
+<div class="flyerpage">
+
+    <!-- Barra superior -->
+    <div class="fn-nav">
+        <div class="fn-brand">
+            <i class="bi bi-building"></i> Flyer Agencia
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.Nombre_Agencia))
+        {
+            <div class="fn-agency">@Model.Nombre_Agencia</div>
+        }
+    </div>
+
+    <!-- Instrucciones -->
+    <div class="instr-bar" data-html2canvas-ignore="true">
+        <div class="instr-toggle" onclick="toggleInstr(this)">
+            <i class="bi bi-pencil-square"></i>
+            <span>✏️ Cómo personalizar tu flyer</span>
+            <i class="bi bi-chevron-down ms-auto" id="instrChevron"></i>
+        </div>
+        <div class="instr-body d-none" id="instrBody">
+            <div class="instr-item"><i class="bi bi-pencil text-warning"></i> Toca un precio para editarlo</div>
+            <div class="instr-item"><i class="bi bi-eye-slash text-danger"></i> Pulsa "Suprimir hotel" y luego toca el ojo rojo</div>
+            <div class="instr-item"><i class="bi bi-eye text-success"></i> Toca el nombre para restaurarlo</div>
+            <div class="instr-item"><i class="bi bi-image text-primary"></i> Carga tu logo con el botón amarillo</div>
+            <div class="instr-item"><i class="bi bi-download text-info"></i> Descarga tu imagen en PNG</div>
+            <div class="instr-item"><i class="bi bi-phone text-secondary"></i> Comparte por WhatsApp o email</div>
+        </div>
+    </div>
+
+    <!-- Controles -->
+    <div class="ctrl-bar" data-html2canvas-ignore="true">
+
+        <!-- Grupo: Logo -->
+        <div class="ctrl-group">
+            <span class="ctrl-label">Logo</span>
+            <button class="btn-ctrl logo" onclick="document.getElementById('logoInput').click()">
+                <i class="bi bi-image-fill"></i> Mi logo
+            </button>
+            <input type="file" id="logoInput" accept="image/*" style="display:none">
+            <button class="btn-ctrl clear" id="btnQuitarLogo" style="display:none" onclick="quitarLogo()">
+                <i class="bi bi-trash3"></i> Quitar
+            </button>
+            <div class="logo-pos-wrap" id="logoPosWrap">
+                <span class="lp-label">Posición</span>
+                <button class="btn-pos" id="pos-tl" onclick="posLogo('tl')" title="Arriba izquierda">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <rect x="2" y="2" width="7" height="5" rx="1.5" fill="currentColor" opacity=".9"/>
+                        <rect x="2" y="9" width="14" height="2" rx="1" fill="currentColor" opacity=".25"/>
+                        <rect x="2" y="13" width="10" height="2" rx="1" fill="currentColor" opacity=".25"/>
+                    </svg>
+                </button>
+                <button class="btn-pos activo" id="pos-tr" onclick="posLogo('tr')" title="Arriba derecha">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <rect x="9" y="2" width="7" height="5" rx="1.5" fill="currentColor" opacity=".9"/>
+                        <rect x="2" y="9" width="14" height="2" rx="1" fill="currentColor" opacity=".25"/>
+                        <rect x="2" y="13" width="10" height="2" rx="1" fill="currentColor" opacity=".25"/>
+                    </svg>
+                </button>
+                <button class="btn-pos" id="pos-tc" onclick="posLogo('tc')" title="Arriba centro">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <rect x="5.5" y="2" width="7" height="5" rx="1.5" fill="currentColor" opacity=".9"/>
+                        <rect x="2" y="9" width="14" height="2" rx="1" fill="currentColor" opacity=".25"/>
+                        <rect x="2" y="13" width="10" height="2" rx="1" fill="currentColor" opacity=".25"/>
+                    </svg>
+                </button>
+                <!-- Posición CENTRO GRANDE: reemplaza al logo Eurovip (requiere haberlo quitado) -->
+                <button class="btn-pos" id="pos-center" onclick="posLogo('center')" title="Centro grande (reemplaza al logo Eurovip)">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <rect x="4" y="5" width="10" height="8" rx="1.5" fill="currentColor" opacity=".9"/>
+                    </svg>
+                </button>
+            </div>
+            <!-- Botón para quitar el logo Eurovip del centro (deja el hueco libre para el logo del usuario) -->
+            <button class="btn-ctrl clear" id="btnQuitarLogoDT" onclick="toggleLogoCentroDT()" title="Ocultar / mostrar el logo Eurovip del centro">
+                <i class="bi bi-eye-slash" id="icoLogoCentroDT"></i> <span id="txtLogoCentroDT">Quitar logo Eurovip</span>
+            </button>
+        </div>
+
+        <div class="ctrl-sep"></div>
+
+        <!-- Grupo: Hoteles -->
+        <div class="ctrl-group">
+            <span class="ctrl-label">Hoteles</span>
+            <button class="btn-ctrl suprimir" id="btnSuprimir" onclick="toggleSuprimir()" data-html2canvas-ignore="true">
+                <i class="bi bi-eye-slash" id="icoSuprimir"></i> Suprimir
+            </button>
+        </div>
+
+        <div class="ctrl-sep"></div>
+
+        <!-- Grupo: Tamaños (dimensiones del lienzo, hero e hoteles) -->
+        <div class="ctrl-group">
+            <span class="ctrl-label">Tamaños</span>
+            <button class="btn-ctrl dimens" id="btnDimensiones" onclick="togglePanelDimensiones()" title="Formato del flyer (Instagram Post, Story, Reel...)">
+                <i class="bi bi-aspect-ratio"></i> Formato
+            </button>
+            <button class="btn-ctrl dimens" id="btnHero" onclick="togglePanelHero()" title="Tamaño de la imagen de fondo (hero)">
+                <i class="bi bi-image-alt"></i> Hero
+            </button>
+            <button class="btn-ctrl dimens" id="btnHoteles" onclick="togglePanelHoteles()" title="Tamaño de las filas de hoteles">
+                <i class="bi bi-list-check"></i> Hoteles
+            </button>
+        </div>
+
+        <div class="ctrl-sep"></div>
+
+        <!-- Grupo: Estilo -->
+        <div class="ctrl-group">
+            <span class="ctrl-label">Estilo</span>
+            <button class="btn-ctrl colores" id="btnColores" onclick="togglePanelColores()">
+                <i class="bi bi-palette"></i> Colores
+            </button>
+            <button class="btn-ctrl pie" id="btnPie" onclick="toggleEditarPie()">
+                <i class="bi bi-pencil-square"></i> Pie
+            </button>
+        </div>
+
+        <div class="ctrl-sep"></div>
+
+        <!-- Grupo: Acciones -->
+        <div class="ctrl-group">
+            <span class="ctrl-label">Acciones</span>
+            <button class="btn-ctrl revertir" onclick="revertirCambios()" title="Restaurar precios, colores y hoteles originales">
+                <i class="bi bi-arrow-counterclockwise"></i> Revertir
+            </button>
+        </div>
+
+        <!-- CTA -->
+        <button class="btn-ctrl dl" id="btnDescargar" onclick="descargarPNG()">
+            <i class="bi bi-download" id="icoDescarga"></i> Descargar imagen
+        </button>
+
+    </div>
+
+    <!-- Panel colores de precios (NO en el PNG) -->
+    <div id="panelColores" class="panel-colores" style="display:none;" data-html2canvas-ignore="true">
+        <input type="hidden" id="colorRank1" value="#f59e0b">
+        <input type="hidden" id="colorResto"  value="#003d52">
+        <div class="pc-header">
+            <i class="bi bi-palette2"></i>
+            <span>Personalizar colores de precios</span>
+            <button class="pc-close" onclick="togglePanelColores()" title="Cerrar"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="pc-body">
+            <div class="pc-section">
+                <div class="pc-section-label">
+                    <span class="pc-dot" id="dotRank1" style="background:#f59e0b;"></span>
+                    Mejor precio
+                </div>
+                <div class="pc-swatches" id="swatchesRank1">
+                    <button class="pc-color selected" data-color="#f59e0b" style="background:#f59e0b;" onclick="selectColor('rank1','#f59e0b')" title="Ámbar"></button>
+                    <button class="pc-color"          data-color="#ef4444" style="background:#ef4444;" onclick="selectColor('rank1','#ef4444')" title="Rojo"></button>
+                    <button class="pc-color"          data-color="#f97316" style="background:#f97316;" onclick="selectColor('rank1','#f97316')" title="Naranja"></button>
+                    <button class="pc-color"          data-color="#eab308" style="background:#eab308;" onclick="selectColor('rank1','#eab308')" title="Amarillo"></button>
+                    <button class="pc-color"          data-color="#22c55e" style="background:#22c55e;" onclick="selectColor('rank1','#22c55e')" title="Verde"></button>
+                    <button class="pc-color"          data-color="#06b6d4" style="background:#06b6d4;" onclick="selectColor('rank1','#06b6d4')" title="Cian"></button>
+                    <button class="pc-color"          data-color="#3b82f6" style="background:#3b82f6;" onclick="selectColor('rank1','#3b82f6')" title="Azul"></button>
+                    <button class="pc-color"          data-color="#a855f7" style="background:#a855f7;" onclick="selectColor('rank1','#a855f7')" title="Morado"></button>
+                    <button class="pc-color"          data-color="#ec4899" style="background:#ec4899;" onclick="selectColor('rank1','#ec4899')" title="Rosa"></button>
+                    <button class="pc-color"          data-color="#ffffff" style="background:#fff;border-color:#cbd5e1;" onclick="selectColor('rank1','#ffffff')" title="Blanco"></button>
+                </div>
+            </div>
+            <div class="pc-section">
+                <div class="pc-section-label">
+                    <span class="pc-dot" id="dotResto" style="background:#003d52;"></span>
+                    Resto de precios
+                </div>
+                <div class="pc-swatches" id="swatchesResto">
+                    <button class="pc-color selected" data-color="#003d52" style="background:#003d52;" onclick="selectColor('resto','#003d52')" title="Petróleo"></button>
+                    <button class="pc-color"          data-color="#0f172a" style="background:#0f172a;" onclick="selectColor('resto','#0f172a')" title="Marino profundo"></button>
+                    <button class="pc-color"          data-color="#1e3a5f" style="background:#1e3a5f;" onclick="selectColor('resto','#1e3a5f')" title="Azul marino"></button>
+                    <button class="pc-color"          data-color="#374151" style="background:#374151;" onclick="selectColor('resto','#374151')" title="Gris oscuro"></button>
+                    <button class="pc-color"          data-color="#7f1d1d" style="background:#7f1d1d;" onclick="selectColor('resto','#7f1d1d')" title="Granate"></button>
+                    <button class="pc-color"          data-color="#14532d" style="background:#14532d;" onclick="selectColor('resto','#14532d')" title="Verde oscuro"></button>
+                    <button class="pc-color"          data-color="#312e81" style="background:#312e81;" onclick="selectColor('resto','#312e81')" title="Índigo"></button>
+                    <button class="pc-color"          data-color="#78350f" style="background:#78350f;" onclick="selectColor('resto','#78350f')" title="Marrón"></button>
+                    <button class="pc-color"          data-color="#831843" style="background:#831843;" onclick="selectColor('resto','#831843')" title="Fucsia oscuro"></button>
+                    <button class="pc-color"          data-color="#111827" style="background:#111827;" onclick="selectColor('resto','#111827')" title="Negro"></button>
+                </div>
+            </div>
+        </div>
+        <div class="pc-footer">
+            <button class="btn-pc-reset" onclick="resetColores()">
+                <i class="bi bi-arrow-counterclockwise"></i> Restablecer
+            </button>
+        </div>
+    </div>
+
+    <!-- Panel dimensiones (Instagram formats) — NO en el PNG -->
+    <div id="panelDimensiones" class="panel-dimensiones" style="display:none;" data-html2canvas-ignore="true">
+        <div class="pd-header">
+            <i class="bi bi-aspect-ratio"></i>
+            <span>Elige el formato del flyer</span>
+            <button class="pd-close" onclick="togglePanelDimensiones()" title="Cerrar"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="pd-body">
+            <div class="pd-hint"><i class="bi bi-info-circle me-1"></i> Selecciona un formato optimizado para Instagram. El flyer se adapta al tamaño elegido.</div>
+            <div class="pd-grid">
+                <button class="pd-item selected" data-dim="original" data-w="900"  data-h="1200" onclick="aplicarDimension('original')">
+                    <div class="pd-thumb" style="aspect-ratio: 3/4;"></div>
+                    <div class="pd-name">Original</div>
+                    <div class="pd-size">900 × 1200</div>
+                </button>
+                <button class="pd-item" data-dim="ig-post-square" data-w="1080" data-h="1080" onclick="aplicarDimension('ig-post-square')">
+                    <div class="pd-thumb" style="aspect-ratio: 1/1;"></div>
+                    <div class="pd-name">Post cuadrado</div>
+                    <div class="pd-size">1080 × 1080 (1:1)</div>
+                </button>
+                <button class="pd-item" data-dim="ig-post-portrait" data-w="1080" data-h="1350" onclick="aplicarDimension('ig-post-portrait')">
+                    <div class="pd-thumb" style="aspect-ratio: 4/5;"></div>
+                    <div class="pd-name">Post retrato</div>
+                    <div class="pd-size">1080 × 1350 (4:5)</div>
+                </button>
+                <button class="pd-item" data-dim="ig-story" data-w="1080" data-h="1920" onclick="aplicarDimension('ig-story')">
+                    <div class="pd-thumb" style="aspect-ratio: 9/16;"></div>
+                    <div class="pd-name">Story</div>
+                    <div class="pd-size">1080 × 1920 (9:16)</div>
+                </button>
+                <button class="pd-item" data-dim="ig-reel" data-w="1080" data-h="1920" onclick="aplicarDimension('ig-reel')">
+                    <div class="pd-thumb" style="aspect-ratio: 9/16;"></div>
+                    <div class="pd-name">Reel</div>
+                    <div class="pd-size">1080 × 1920 (9:16)</div>
+                </button>
+                <button class="pd-item" data-dim="ig-landscape" data-w="1080" data-h="566" onclick="aplicarDimension('ig-landscape')">
+                    <div class="pd-thumb" style="aspect-ratio: 1080/566;"></div>
+                    <div class="pd-name">Post horizontal</div>
+                    <div class="pd-size">1080 × 566 (1.91:1)</div>
+                </button>
+                <button class="pd-item" data-dim="ig-portrait-classic" data-w="1080" data-h="1440" onclick="aplicarDimension('ig-portrait-classic')">
+                    <div class="pd-thumb" style="aspect-ratio: 3/4;"></div>
+                    <div class="pd-name">Post 3:4</div>
+                    <div class="pd-size">1080 × 1440 (3:4)</div>
+                </button>
+                <button class="pd-item" data-dim="ig-carousel-portrait" data-w="1080" data-h="1350" onclick="aplicarDimension('ig-carousel-portrait')">
+                    <div class="pd-thumb" style="aspect-ratio: 4/5;"></div>
+                    <div class="pd-name">Carrusel</div>
+                    <div class="pd-size">1080 × 1350 (4:5)</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Hero (tamaño de la imagen de fondo del hero) -->
+    <div id="panelHero" class="panel-dimensiones" style="display:none;" data-html2canvas-ignore="true">
+        <div class="pd-header">
+            <i class="bi bi-image-alt"></i>
+            <span>Tamaño del Hero (imagen de fondo)</span>
+            <button class="pd-close" onclick="togglePanelHero()" title="Cerrar"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="pd-body">
+            <div class="pd-hint"><i class="bi bi-info-circle me-1"></i> Ajusta cuánto espacio ocupa la sección superior con la imagen de fondo del destino.</div>
+            <div class="pd-grid pd-grid-sm">
+                <button class="pd-item" data-hero="80"  onclick="aplicarHeroSize(80)">  <div class="pd-thumb" style="height:22px;"></div><div class="pd-name">Compacto</div><div class="pd-size">80 px</div></button>
+                <button class="pd-item" data-hero="160" onclick="aplicarHeroSize(160)"> <div class="pd-thumb" style="height:34px;"></div><div class="pd-name">Pequeño</div><div class="pd-size">160 px</div></button>
+                <button class="pd-item selected" data-hero="260" onclick="aplicarHeroSize(260)"> <div class="pd-thumb" style="height:46px;"></div><div class="pd-name">Normal</div><div class="pd-size">260 px</div></button>
+                <button class="pd-item" data-hero="360" onclick="aplicarHeroSize(360)"> <div class="pd-thumb" style="height:58px;"></div><div class="pd-name">Grande</div><div class="pd-size">360 px</div></button>
+                <button class="pd-item" data-hero="480" onclick="aplicarHeroSize(480)"> <div class="pd-thumb" style="height:70px;"></div><div class="pd-name">Extra grande</div><div class="pd-size">480 px</div></button>
+            </div>
+            <div class="pd-slider-wrap">
+                <label class="pd-slider-lbl">Ajuste fino</label>
+                <input type="range" id="heroSlider" min="0" max="700" value="260" step="10" oninput="aplicarHeroSize(this.value)" class="pd-slider">
+                <span class="pd-slider-val" id="heroSliderVal">260 px</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Hoteles (tamaño de las filas) -->
+    <div id="panelHoteles2" class="panel-dimensiones" style="display:none;" data-html2canvas-ignore="true">
+        <div class="pd-header">
+            <i class="bi bi-list-check"></i>
+            <span>Tamaño de las filas de hoteles</span>
+            <button class="pd-close" onclick="togglePanelHoteles()" title="Cerrar"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="pd-body">
+            <div class="pd-hint"><i class="bi bi-info-circle me-1"></i> Cambia el tamaño de texto y espaciado de cada fila de hotel.</div>
+            <div class="pd-grid pd-grid-sm">
+                <button class="pd-item" data-scale="0.75" onclick="aplicarHotelSize(0.75)"> <div class="pd-thumb" style="height:24px;"></div><div class="pd-name">Compacto</div><div class="pd-size">75 %</div></button>
+                <button class="pd-item" data-scale="0.9"  onclick="aplicarHotelSize(0.9)">  <div class="pd-thumb" style="height:32px;"></div><div class="pd-name">Pequeño</div><div class="pd-size">90 %</div></button>
+                <button class="pd-item selected" data-scale="1" onclick="aplicarHotelSize(1)"> <div class="pd-thumb" style="height:40px;"></div><div class="pd-name">Normal</div><div class="pd-size">100 %</div></button>
+                <button class="pd-item" data-scale="1.15" onclick="aplicarHotelSize(1.15)"> <div class="pd-thumb" style="height:50px;"></div><div class="pd-name">Grande</div><div class="pd-size">115 %</div></button>
+                <button class="pd-item" data-scale="1.3"  onclick="aplicarHotelSize(1.3)">  <div class="pd-thumb" style="height:60px;"></div><div class="pd-name">Extra grande</div><div class="pd-size">130 %</div></button>
+            </div>
+            <div class="pd-slider-wrap">
+                <label class="pd-slider-lbl">Ajuste fino</label>
+                <input type="range" id="hotelSlider" min="50" max="200" value="100" step="5" oninput="aplicarHotelSize(this.value/100)" class="pd-slider">
+                <span class="pd-slider-val" id="hotelSliderVal">100 %</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel hoteles ocultos -->
+    <div class="panel-ocultos" id="panelOcultos" data-html2canvas-ignore="true">
+        <div class="po-title"><i class="bi bi-eye-slash me-1"></i>Hoteles ocultos — toca para restaurar</div>
+        <div id="listaOcultos"></div>
+    </div>
+
+    <!-- FLYER (mismo que /Agencia/Index) -->
+    <div class="fb-stage" id="fbStage">
+        <div id="flyerScaleWrap" class="fb-scale-wrap">
+            <div class="flyer" id="flyerTemplate">
+
+                <div class="flyer-accent"></div>
+
+                <div class="flyer-hero"
+                     style="background: @heroBg; background-color:#003d52;">
+
+                    <!-- Logo Eurovip (centrado, igual que en /Agencia/Index) -->
+                    <div id="logoCentroWrap" style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;white-space:nowrap;">
+                        <div style="width:70px;height:1.5px;background:linear-gradient(90deg,transparent,rgba(249,199,79,.7));"></div>
+                        <div style="border:1.5px solid rgba(249,199,79,.45);border-radius:10px;padding:4px 10px;background:rgba(0,40,60,.35);backdrop-filter:blur(6px);">
+                            <img src="@Model.Logo" alt="Eurovip Travel" style="height:100px;object-fit:contain;display:block;background:#fff;border-radius:8px;padding:6px 10px;">
+                        </div>
+                        <div style="width:70px;height:1.5px;background:linear-gradient(90deg,rgba(249,199,79,.7),transparent);"></div>
+                    </div>
+
+                    <!-- Logo agencia (esquina superior derecha, solo si el usuario lo sube) -->
+                    <img id="logo-agencia" alt="Logo Agencia">
+
+                    <div id="heroSpacer" style="height:260px;flex-shrink:0;"></div>
+                    <div class="flyer-title">@d.Nombre_Destino</div>
+                    <div class="flyer-subtitle">@Model.Subtitulo</div>
+                    <div style="height:33px;"></div>
+                </div>
+
+                @if (hoteles.Any())
+                {
+                    <div class="flyer-section-title">Top hoteles más económicos</div>
+                    <div class="flyer-hotels" id="flyerHoteles">
+                        @for (int i = 0; i < hoteles.Count; i++)
+                        {
+                            var h      = hoteles[i];
+                            var pos    = h.Posicion > 0 ? h.Posicion : (i + 1);
+                            var pc     = pos == 1 ? "gold" : pos == 2 ? "silver" : pos == 3 ? "bronze" : "";
+                            var esBest = pos == 1;
+                            <div class="fh-row @(esBest ? "best" : "")" id="hotel-@i">
+
+                                <!-- Botón ocultar — NO aparece en el PNG -->
+                                <button class="btn-ocultar"
+                                        data-html2canvas-ignore="true"
+                                        onclick="ocultarHotel(@i, '@(h.Nombre_Hotel ?? "Hotel")')"
+                                        title="Ocultar este hotel">
+                                    <i class="bi bi-eye-slash"></i>
+                                </button>
+
+                                <div class="fh-pos @pc">@pos</div>
+                                <div class="fh-sep"></div>
+                                <div class="fh-info">
+                                    <div class="fh-name" title="@h.Nombre_Hotel">@h.Nombre_Hotel</div>
+                                    <div class="fh-meta">@h.Regimen</div>
+                                    <div class="fh-best-tag" @(esBest ? "" : "style=\"display:none\"")>🏆 mejor precio</div>
+                                </div>
+                                <!-- Precio editable -->
+                                <div class="fh-price @(esBest ? "rank1" : "")">
+                                    <i class="bi bi-pencil-fill precio-pencil" data-html2canvas-ignore="true"></i>
+                                    <span class="fh-moneda">@Model.Simbolo&nbsp;</span>
+                                    <span class="precio-edit"
+                                          contenteditable="true"
+                                          data-original="@h.Precio_Final.ToString("0")"
+                                          title="Toca para editar el precio">@h.Precio_Final.ToString("0")</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="flyer-no-data">
+                        <i class="bi bi-hourglass-split"></i>
+                        <p>Los precios se actualizarán pronto.</p>
+                    </div>
+                }
+
+                <div class="flyer-footer">
+                    <div class="ff-line"></div>
+                    <div class="ff-brand">
+                        <div class="ff-url" id="footerUrl" contenteditable="false" spellcheck="false">@Model.WebTexto</div>
+                        <div class="ff-tag" id="footerTag" contenteditable="false" spellcheck="false">tu agencia de confianza</div>
+                    </div>
+                    <div class="ff-line"></div>
+                </div>
+
+            </div><!-- /.flyer -->
+        </div><!-- /.fb-scale-wrap -->
+    </div><!-- /.fb-stage -->
+
+    <!-- Botón descarga inferior (cómodo en móvil) -->
+    <div class="text-center mt-2" data-html2canvas-ignore="true">
+        <button class="btn-ctrl dl" onclick="descargarPNG()"
+                style="font-size:.88rem;padding:10px 28px;border-radius:10px;display:inline-flex;">
+            <i class="bi bi-download me-2"></i> Descargar imagen PNG
+        </button>
+        @if (d.Fecha_Actualizacion.HasValue)
+        {
+            <div style="color:#94a3b8;font-size:.71rem;margin-top:8px;">
+                Precios actualizados: @d.Fecha_Actualizacion.Value.ToString("dd/MM/yyyy HH:mm")
+            </div>
+        }
+    </div>
+
+</div><!-- /.flyerpage -->
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+        integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+(function () {
+
+    /* ── Token / clave localStorage (definidos primero para que guardarEstado/cargarEstado los vean) ── */
+    var TOKEN     = '@Model.Token';
+    var STORE_KEY = 'flyer_' + TOKEN;
+
+    /* ── Escalar flyer al ancho disponible ── */
+    function scaleFlyer() {
+        var stage = document.getElementById('fbStage');
+        var wrap  = document.getElementById('flyerScaleWrap');
+        var flyer = document.getElementById('flyerTemplate');
+        var avail = stage.clientWidth - 32;
+        // Usa el ancho REAL del flyer (varía si el usuario cambió la dimensión con "Dimensiones")
+        var flyerW = flyer.offsetWidth || 900;
+        var scale  = Math.min(1, avail / flyerW);
+        wrap.style.transform    = 'scale(' + scale + ')';
+        wrap.style.marginBottom = ((flyer.offsetHeight * scale) - flyer.offsetHeight) + 'px';
+    }
+    scaleFlyer();
+    window.addEventListener('resize', scaleFlyer);
+
+    /* ── Toggle instrucciones ── */
+    window.toggleInstr = function () {
+        var body    = document.getElementById('instrBody');
+        var chevron = document.getElementById('instrChevron');
+        body.classList.toggle('d-none');
+        chevron.style.transform = body.classList.contains('d-none') ? 'rotate(0deg)' : 'rotate(180deg)';
+    };
+
+    /* ── Colores de precios ── */
+    function getColores() {
+        var inp1 = document.getElementById('colorRank1');
+        var inpR = document.getElementById('colorResto');
+        return { c1: inp1 ? inp1.value : '#f59e0b', cR: inpR ? inpR.value : '#003d52' };
+    }
+
+    function aplicarColores(c1, cR) {
+        document.querySelectorAll('.fh-price').forEach(function (el) {
+            el.style.color = el.classList.contains('rank1') ? c1 : cR;
+        });
+        var d1 = document.getElementById('dotRank1');
+        var dR = document.getElementById('dotResto');
+        if (d1) d1.style.background = c1;
+        if (dR) dR.style.background = cR;
+        var i1 = document.getElementById('colorRank1');
+        var iR = document.getElementById('colorResto');
+        if (i1) i1.value = c1;
+        if (iR) iR.value = cR;
+    }
+
+    function updateSwatchSelections(c1, cR) {
+        document.querySelectorAll('#swatchesRank1 .pc-color').forEach(function (btn) {
+            btn.classList.toggle('selected', btn.dataset.color === c1);
+        });
+        document.querySelectorAll('#swatchesResto .pc-color').forEach(function (btn) {
+            btn.classList.toggle('selected', btn.dataset.color === cR);
+        });
+    }
+
+    window.selectColor = function (target, color) {
+        var c1 = document.getElementById('colorRank1').value || '#f59e0b';
+        var cR = document.getElementById('colorResto').value  || '#003d52';
+        if (target === 'rank1') c1 = color; else cR = color;
+        aplicarColores(c1, cR);
+        updateSwatchSelections(c1, cR);
+        guardarEstado();
+    };
+
+    /* ── Reordenar hoteles de menor a mayor precio ── */
+    function reordenarPorPrecio() {
+        var container = document.getElementById('flyerHoteles');
+        if (!container) return;
+        var rows = Array.prototype.slice.call(container.querySelectorAll('.fh-row'));
+        rows.sort(function (a, b) {
+            var aOc = a.classList.contains('hotel-oculto');
+            var bOc = b.classList.contains('hotel-oculto');
+            if (aOc && !bOc) return 1;
+            if (!aOc && bOc) return -1;
+            if (aOc && bOc)  return 0;
+            var aV = parseInt(((a.querySelector('.precio-edit') || {}).textContent || '0').replace(/\D/g, ''), 10) || 0;
+            var bV = parseInt(((b.querySelector('.precio-edit') || {}).textContent || '0').replace(/\D/g, ''), 10) || 0;
+            return aV - bV;
+        });
+        rows.forEach(function (r) { container.appendChild(r); });
+        renumerarHoteles();
+        setTimeout(scaleFlyer, 60);
+    }
+
+    /* ── Precios editables — solo números, Enter confirma ── */
+    document.querySelectorAll('.precio-edit').forEach(function (span) {
+        span.addEventListener('keydown', function (e) {
+            if (e.keyCode === 13) { e.preventDefault(); this.blur(); return; }
+            if ([8, 9, 27, 37, 38, 39, 40, 46].indexOf(e.keyCode) !== -1) return;
+            if (e.keyCode >= 48 && e.keyCode <= 57) return;
+            if (e.keyCode >= 96 && e.keyCode <= 105) return;
+            e.preventDefault();
+        });
+        span.addEventListener('blur', function () {
+            var val = parseInt((this.textContent || '').replace(/\D/g, ''), 10);
+            if (isNaN(val) || val <= 0) this.textContent = this.dataset.original || '0';
+            reordenarPorPrecio();
+            guardarEstado();
+        });
+        span.addEventListener('focus', function () {
+            var range = document.createRange();
+            range.selectNodeContents(this);
+            var sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        });
+    });
+
+    /* ── Lápiz: clic enfoca el precio y avisa que es editable ── */
+    document.querySelectorAll('.precio-pencil').forEach(function (pencil) {
+        pencil.addEventListener('click', function () {
+            var priceDiv = this.closest('.fh-price');
+            if (!priceDiv) return;
+            var span = priceDiv.querySelector('.precio-edit');
+            if (span) span.focus();
+        });
+    });
+
+    /* ── Toggle modo suprimir ── */
+    window.toggleSuprimir = function () {
+        var activo = document.body.classList.toggle('modo-suprimir');
+        var btn    = document.getElementById('btnSuprimir');
+        var ico    = document.getElementById('icoSuprimir');
+        btn.classList.toggle('activo', activo);
+        ico.className = activo ? 'bi bi-eye-slash-fill' : 'bi bi-eye-slash';
+        btn.childNodes[btn.childNodes.length - 1].textContent = activo ? ' Salir' : ' Suprimir';
+    };
+
+    /* ── Ocultar / restaurar hoteles ── */
+    var ocultos = {};
+
+    /* ── Persistencia: guardar/cargar estado en localStorage por token ── */
+    function guardarEstado() {
+        var col  = getColores();
+        var fUrl = document.getElementById('footerUrl');
+        var fTag = document.getElementById('footerTag');
+        var estado = {
+            precios: {}, ocultos: {},
+            colorRank1: col.c1, colorResto: col.cR,
+            footerUrl: fUrl ? fUrl.textContent.trim() : '',
+            footerTag: fTag ? fTag.textContent.trim() : '',
+            logoDT:    (typeof logoCentroDTVisible !== 'undefined') ? logoCentroDTVisible : true,
+            posLogo:   (typeof posActual !== 'undefined') ? posActual : 'tr',
+            dimension: (typeof dimActual !== 'undefined') ? dimActual : 'original',
+            heroSize:  (typeof heroSizeActual !== 'undefined') ? heroSizeActual : 260,
+            hotelScale:(typeof hotelScaleActual !== 'undefined') ? hotelScaleActual : 1
+        };
+        document.querySelectorAll('#flyerHoteles .fh-row').forEach(function (row) {
+            var i    = row.id.replace('hotel-', '');
+            var span = row.querySelector('.precio-edit');
+            if (span) estado.precios[i] = span.textContent.trim();
+        });
+        Object.keys(ocultos).forEach(function (k) { estado.ocultos[k] = ocultos[k]; });
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(estado)); } catch (e) {}
+    }
+
+    function cargarEstado() {
+        try {
+            var raw = localStorage.getItem(STORE_KEY);
+            if (!raw) return;
+            var estado = JSON.parse(raw);
+            if (estado.precios) {
+                Object.keys(estado.precios).forEach(function (i) {
+                    var row = document.getElementById('hotel-' + i);
+                    if (!row) return;
+                    var span = row.querySelector('.precio-edit');
+                    if (span) span.textContent = estado.precios[i];
+                });
+            }
+            if (estado.ocultos && Object.keys(estado.ocultos).length) {
+                Object.keys(estado.ocultos).forEach(function (i) {
+                    var row = document.getElementById('hotel-' + i);
+                    if (row) row.classList.add('hotel-oculto');
+                    ocultos[i] = estado.ocultos[i];
+                });
+                renderOcultos();
+                renumerarHoteles();
+            }
+            if (estado.colorRank1 || estado.colorResto) {
+                var c1 = estado.colorRank1 || '#f59e0b';
+                var cR = estado.colorResto  || '#003d52';
+                aplicarColores(c1, cR);
+                updateSwatchSelections(c1, cR);
+            }
+            if (estado.footerUrl) { var fU = document.getElementById('footerUrl'); if (fU) fU.textContent = estado.footerUrl; }
+            if (estado.footerTag) { var fT = document.getElementById('footerTag'); if (fT) fT.textContent = estado.footerTag; }
+
+            // Logo Eurovip (visible por defecto — solo aplicamos si guardó "false")
+            if (estado.logoDT === false) {
+                var wrap = document.getElementById('logoCentroWrap');
+                var btn  = document.getElementById('btnQuitarLogoDT');
+                var ico  = document.getElementById('icoLogoCentroDT');
+                var txt  = document.getElementById('txtLogoCentroDT');
+                if (wrap) wrap.style.display = 'none';
+                if (btn) btn.classList.add('activo');
+                if (ico) ico.className = 'bi bi-eye';
+                if (txt) txt.textContent = 'Mostrar logo DT';
+                logoCentroDTVisible = false;
+            }
+
+            // Posición del logo de agencia (se aplicará dentro de mostrarLogo cuando el logo se cargue)
+            if (estado.posLogo) {
+                posActual = estado.posLogo;
+                var btnPos = document.getElementById('pos-' + posActual);
+                if (btnPos) {
+                    document.querySelectorAll('.btn-pos').forEach(function (b) { b.classList.remove('activo'); });
+                    btnPos.classList.add('activo');
+                }
+            }
+
+            // Dimensión del flyer (aplica ancho/alto y reescala)
+            if (estado.dimension && estado.dimension !== 'original') {
+                aplicarDimension(estado.dimension);
+            }
+
+            // Tamaño del hero
+            if (typeof estado.heroSize === 'number' && estado.heroSize !== 260) {
+                aplicarHeroSize(estado.heroSize);
+            }
+
+            // Tamaño de filas de hoteles
+            if (typeof estado.hotelScale === 'number' && Math.abs(estado.hotelScale - 1) > 0.01) {
+                aplicarHotelSize(estado.hotelScale);
+            }
+
+            reordenarPorPrecio();
+        } catch (e) {}
+    }
+    cargarEstado();
+
+    window.revertirCambios = function () {
+        Swal.fire({
+            icon: 'warning',
+            title: '¿Revertir todos los cambios?',
+            html: 'Se restaurarán los <b>precios</b>, hoteles ocultos, colores y pie de página a sus valores originales.',
+            confirmButtonText: 'Sí, revertir',
+            cancelButtonText: 'Cancelar',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b'
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+            document.querySelectorAll('.precio-edit').forEach(function (span) {
+                span.textContent = span.dataset.original || '0';
+            });
+            document.querySelectorAll('.fh-row').forEach(function (row) {
+                row.classList.remove('hotel-oculto');
+            });
+            ocultos = {};
+            renderOcultos();
+            // Reset colores
+            aplicarColores('#f59e0b', '#003d52');
+            updateSwatchSelections('#f59e0b', '#003d52');
+            // Reset footer
+            var fUrl = document.getElementById('footerUrl');
+            var fTag = document.getElementById('footerTag');
+            if (fUrl) fUrl.textContent = '@Model.WebTexto';
+            if (fTag) fTag.textContent = 'tu agencia de confianza';
+            reordenarPorPrecio();
+        });
+    };
+
+    window.ocultarHotel = function (idx, nombre) {
+        var row = document.getElementById('hotel-' + idx);
+        if (row) row.classList.add('hotel-oculto');
+        ocultos[idx] = nombre;
+        renderOcultos();
+        renumerarHoteles();
+        setTimeout(scaleFlyer, 60);
+        guardarEstado();
+    };
+
+    window.restaurarHotel = function (idx) {
+        var row = document.getElementById('hotel-' + idx);
+        if (row) row.classList.remove('hotel-oculto');
+        delete ocultos[idx];
+        renderOcultos();
+        reordenarPorPrecio();
+        guardarEstado();
+    };
+
+    function renumerarHoteles() {
+        var posClases = ['gold', 'silver', 'bronze'];
+        var visibles = Array.prototype.slice.call(
+            document.querySelectorAll('#flyerHoteles .fh-row:not(.hotel-oculto)')
+        );
+        visibles.forEach(function (row, idx) {
+            var num     = idx + 1;
+            var posEl   = row.querySelector('.fh-pos');
+            var priceEl = row.querySelector('.fh-price');
+            var tagEl   = row.querySelector('.fh-best-tag');
+
+            if (posEl) {
+                posEl.textContent = num;
+                posEl.className   = 'fh-pos' + (posClases[idx] ? ' ' + posClases[idx] : '');
+            }
+            if (idx === 0) {
+                row.classList.add('best');
+                if (priceEl) priceEl.classList.add('rank1');
+                if (tagEl)   tagEl.style.display = '';
+            } else {
+                row.classList.remove('best');
+                if (priceEl) priceEl.classList.remove('rank1');
+                if (tagEl)   tagEl.style.display = 'none';
+            }
+        });
+        // Re-aplicar colores personalizados tras cambio de rank
+        var col = getColores();
+        aplicarColores(col.c1, col.cR);
+    }
+
+    function renderOcultos() {
+        var panel = document.getElementById('panelOcultos');
+        var lista = document.getElementById('listaOcultos');
+        var keys  = Object.keys(ocultos);
+        if (!keys.length) { panel.style.display = 'none'; return; }
+        panel.style.display = 'block';
+        lista.innerHTML = keys.map(function (k) {
+            return '<button class="btn-restaurar" onclick="restaurarHotel(' + k + ')">'
+                + '<i class="bi bi-eye me-1"></i>' + ocultos[k] + '</button>';
+        }).join('');
+    }
+
+    /* ── Panel colores ── */
+    window.togglePanelColores = function () {
+        var panel = document.getElementById('panelColores');
+        var btn   = document.getElementById('btnColores');
+        var show  = panel.style.display === 'none';
+        panel.style.display = show ? 'block' : 'none';
+        btn.classList.toggle('activo', show);
+    };
+
+    window.resetColores = function () {
+        aplicarColores('#f59e0b', '#003d52');
+        updateSwatchSelections('#f59e0b', '#003d52');
+        guardarEstado();
+    };
+
+    /* ── Editar pie de página ── */
+    var modoEditarPie = false;
+    window.toggleEditarPie = function () {
+        modoEditarPie = !modoEditarPie;
+        var fUrl = document.getElementById('footerUrl');
+        var fTag = document.getElementById('footerTag');
+        var btn  = document.getElementById('btnPie');
+        if (fUrl) fUrl.contentEditable = modoEditarPie ? 'true' : 'false';
+        if (fTag) fTag.contentEditable = modoEditarPie ? 'true' : 'false';
+        btn.classList.toggle('activo', modoEditarPie);
+        if (modoEditarPie && fUrl) {
+            fUrl.focus();
+            var r = document.createRange(); r.selectNodeContents(fUrl);
+            var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        } else {
+            guardarEstado();
+        }
+    };
+    ['footerUrl', 'footerTag'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('blur', function () { if (modoEditarPie) guardarEstado(); });
+        el.addEventListener('keydown', function (e) { if (e.keyCode === 13) { e.preventDefault(); this.blur(); } });
+    });
+
+    /* ── Logo de agencia ── */
+    var logoInput   = document.getElementById('logoInput');
+    var logoImg     = document.getElementById('logo-agencia');
+    var btnQuitar   = document.getElementById('btnQuitarLogo');
+    var logoPosWrap = document.getElementById('logoPosWrap');
+    var posActual   = 'tr';
+
+    function mostrarLogo(src) {
+        logoImg.src               = src;
+        logoImg.style.display     = 'block';
+        btnQuitar.style.display   = 'inline-flex';
+        logoPosWrap.style.display = 'flex';
+        posLogo(posActual);
+    }
+
+    fetch('/agencia/logo/obtener?token=' + TOKEN)
+        .then(function (r) { return r.json(); })
+        .then(function (data) { if (data.url) mostrarLogo(data.url + '?v=' + Date.now()); })
+        .catch(function () {});
+
+    logoInput.addEventListener('change', function (e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (ev) { mostrarLogo(ev.target.result); };
+        reader.readAsDataURL(file);
+        var fd = new FormData();
+        fd.append('logo', file);
+        fd.append('token', TOKEN);
+        fetch('/agencia/logo/subir', { method: 'POST', body: fd })
+            .catch(function () {});
+    });
+
+    window.quitarLogo = function () {
+        logoImg.src = ''; logoImg.style.display = 'none';
+        logoInput.value = '';
+        btnQuitar.style.display   = 'none';
+        logoPosWrap.style.display = 'none';
+        // Sin logo de agencia ya no hay conflicto con el logo DT → aplicamos la
+        // preferencia manual del usuario (si tenía DT oculto, sigue oculto).
+        if (typeof aplicarVisibilidadLogoDT === 'function') aplicarVisibilidadLogoDT();
+    };
+
+    /* ── Posición del logo ── */
+    // Aplica visibilidad del logo Eurovip según:
+    //   - Preferencia manual del usuario (logoCentroDTVisible)
+    //   - Si pos-center está activa, se OCULTA aunque el usuario lo tuviera visible
+    //     (porque el logo de agencia lo tapa en ese lugar).
+    function aplicarVisibilidadLogoDT() {
+        var wrap = document.getElementById('logoCentroWrap');
+        if (!wrap) return;
+        // Sólo ocultamos el DT si hay un logo de agencia visible en pos-center
+        // (si no hay logo de agencia, no hay conflicto → mostramos según preferencia).
+        var hayLogoAgencia = logoImg && logoImg.src && logoImg.style.display !== 'none';
+        var ocultarPorPos  = (posActual === 'center' && hayLogoAgencia);
+        var visible        = logoCentroDTVisible && !ocultarPorPos;
+        wrap.style.display = visible ? '' : 'none';
+
+        // Reflejar en el botón "Quitar logo Eurovip" si existe
+        var btn = document.getElementById('btnQuitarLogoDT');
+        var ico = document.getElementById('icoLogoCentroDT');
+        var txt = document.getElementById('txtLogoCentroDT');
+        if (btn) {
+            btn.classList.toggle('activo', !logoCentroDTVisible);
+            btn.disabled = ocultarPorPos;
+            btn.title    = ocultarPorPos
+                ? 'El logo DT queda oculto mientras la posición 4 (centro grande) esté activa'
+                : '';
+        }
+        if (ico) ico.className = logoCentroDTVisible ? 'bi bi-eye-slash' : 'bi bi-eye';
+        if (txt) txt.textContent = logoCentroDTVisible ? 'Quitar logo Eurovip' : 'Mostrar logo DT';
+    }
+
+    window.posLogo = function (pos) {
+        posActual = pos;
+        ['tl','tr','tc','center'].forEach(function (p) {
+            var btn = document.getElementById('pos-' + p);
+            if (btn) btn.classList.remove('activo');
+        });
+        var btnActivo = document.getElementById('pos-' + pos);
+        if (btnActivo) btnActivo.classList.add('activo');
+
+        // Reset de estilos inline (los pisan las reglas del pos, o la clase .pos-center)
+        logoImg.classList.remove('pos-center');
+        logoImg.style.left      = 'auto';
+        logoImg.style.right     = 'auto';
+        logoImg.style.transform = 'none';
+        logoImg.style.top       = '';
+
+        if (pos === 'tr') {
+            logoImg.style.top   = '16px';
+            logoImg.style.right = '20px';
+        } else if (pos === 'tl') {
+            logoImg.style.top  = '16px';
+            logoImg.style.left = '20px';
+        } else if (pos === 'tc') {
+            logoImg.style.top       = '110px';
+            logoImg.style.left      = '50%';
+            logoImg.style.transform = 'translateX(-50%)';
+        } else if (pos === 'center') {
+            // Centro grande: reemplaza al logo Eurovip en el lugar exacto
+            // donde estaba Logo1.png (top:-18px). Como las líneas de arriba dejaron
+            // inline styles ('auto', 'none'), hay que LIMPIARLOS para que las reglas
+            // de #logo-agencia.pos-center puedan aplicarse.
+            logoImg.style.left      = '';
+            logoImg.style.right     = '';
+            logoImg.style.top       = '';
+            logoImg.style.transform = '';
+            logoImg.classList.add('pos-center');
+        }
+
+        // Ocultar el logo DT si estamos en pos-center; restaurarlo si salimos
+        aplicarVisibilidadLogoDT();
+
+        guardarEstado();
+    };
+
+    /* ── Ocultar / mostrar el logo Eurovip del centro ── */
+    var logoCentroDTVisible = true;
+    window.toggleLogoCentroDT = function () {
+        // Si la posición 4 (centro grande) está activa, el logo DT está oculto
+        // forzosamente; el toggle no hace nada visualmente (el botón está disabled).
+        if (posActual === 'center') return;
+        logoCentroDTVisible = !logoCentroDTVisible;
+        aplicarVisibilidadLogoDT();
+        guardarEstado();
+    };
+
+    /* ── Panel Dimensiones (Instagram formats) ── */
+    var dimActual = 'original';
+    window.togglePanelDimensiones = function () {
+        cerrarPanelesTamano('panelDimensiones');
+        var p = document.getElementById('panelDimensiones');
+        if (!p) return;
+        p.style.display = (p.style.display === 'none' || !p.style.display) ? 'flex' : 'none';
+    };
+
+    /* Cerrar cualquier otro panel de tamaño para que solo uno esté abierto a la vez */
+    function cerrarPanelesTamano(excepto) {
+        ['panelDimensiones','panelHero','panelHoteles2'].forEach(function (id) {
+            if (id === excepto) return;
+            var p = document.getElementById(id);
+            if (p) p.style.display = 'none';
+        });
+    }
+
+    /* ── Panel Hero (tamaño del hero) ── */
+    var heroSizeActual = 260;
+    window.togglePanelHero = function () {
+        cerrarPanelesTamano('panelHero');
+        var p = document.getElementById('panelHero');
+        if (!p) return;
+        p.style.display = (p.style.display === 'none' || !p.style.display) ? 'flex' : 'none';
+    };
+    window.aplicarHeroSize = function (px) {
+        var val = parseInt(px, 10);
+        if (isNaN(val)) val = 260;
+        val = Math.max(0, Math.min(1000, val));
+        heroSizeActual = val;
+
+        var spacer = document.getElementById('heroSpacer');
+        if (spacer) spacer.style.height = val + 'px';
+
+        // Sincronizar slider + valor mostrado
+        var slider = document.getElementById('heroSlider');
+        var sVal   = document.getElementById('heroSliderVal');
+        if (slider) slider.value = val;
+        if (sVal) sVal.textContent = val + ' px';
+
+        // Marcar preset seleccionado si coincide
+        document.querySelectorAll('#panelHero .pd-item').forEach(function (b) {
+            b.classList.toggle('selected', parseInt(b.dataset.hero, 10) === val);
+        });
+
+        if (typeof scaleFlyer === 'function') scaleFlyer();
+        guardarEstado();
+    };
+
+    /* ── Panel Hoteles (tamaño de las filas) ── */
+    var hotelScaleActual = 1;
+    window.togglePanelHoteles = function () {
+        cerrarPanelesTamano('panelHoteles2');
+        var p = document.getElementById('panelHoteles2');
+        if (!p) return;
+        p.style.display = (p.style.display === 'none' || !p.style.display) ? 'flex' : 'none';
+    };
+    window.aplicarHotelSize = function (scale) {
+        var s = parseFloat(scale);
+        if (isNaN(s) || s <= 0) s = 1;
+        s = Math.max(0.5, Math.min(2, s));
+        hotelScaleActual = s;
+
+        // Ajustar padding y font-size proporcionalmente en cada fila
+        document.querySelectorAll('#flyerHoteles .fh-row').forEach(function (row) {
+            row.style.paddingTop    = (20 * s) + 'px';
+            row.style.paddingBottom = (20 * s) + 'px';
+        });
+        document.querySelectorAll('.fh-name').forEach(function (el)  { el.style.fontSize = (2.1  * s) + 'rem'; });
+        document.querySelectorAll('.fh-meta').forEach(function (el)  { el.style.fontSize = (1.85 * s) + 'rem'; });
+        document.querySelectorAll('.fh-price').forEach(function (el) { el.style.fontSize = (2.75 * s) + 'rem'; });
+        document.querySelectorAll('.fh-pos').forEach(function (el)   { el.style.fontSize = (2.1  * s) + 'rem'; });
+
+        // Sincronizar slider
+        var slider = document.getElementById('hotelSlider');
+        var sVal   = document.getElementById('hotelSliderVal');
+        if (slider) slider.value = Math.round(s * 100);
+        if (sVal) sVal.textContent = Math.round(s * 100) + ' %';
+
+        // Marcar preset
+        document.querySelectorAll('#panelHoteles2 .pd-item').forEach(function (b) {
+            b.classList.toggle('selected', Math.abs(parseFloat(b.dataset.scale) - s) < 0.01);
+        });
+
+        if (typeof scaleFlyer === 'function') scaleFlyer();
+        guardarEstado();
+    };
+
+    // ─── Auto-ajuste de hero + filas de hoteles por formato ───
+    // Base recomendada por formato (punto de partida — luego se REFINA
+    // midiendo el DOM real para garantizar que el pie de página nunca se
+    // recorte por overflow:hidden del .flyer).
+    var AJUSTES_POR_FORMATO = {
+        'original':              { heroPx: 260, hotelScale: 1.00 },
+        'ig-post-square':        { heroPx: 180, hotelScale: 0.78 },
+        'ig-post-portrait':      { heroPx: 220, hotelScale: 0.95 },
+        'ig-story':              { heroPx: 340, hotelScale: 1.30 },
+        'ig-reel':               { heroPx: 340, hotelScale: 1.30 },
+        'ig-landscape':          { heroPx:  60, hotelScale: 0.55 },
+        'ig-portrait-classic':   { heroPx: 240, hotelScale: 1.05 },
+        'ig-carousel-portrait':  { heroPx: 220, hotelScale: 0.95 }
+    };
+
+    // Encoge la escala de hoteles (y si hace falta, también el hero) HASTA que
+    // el contenido del flyer entre completo dentro de su altura, midiendo el
+    // DOM real. Sin esto, en formatos cortos (Post horizontal 566px) el pie
+    // de página quedaba cortado por overflow:hidden.
+    function ajustarParaCaber() {
+        var flyer = document.getElementById('flyerTemplate');
+        if (!flyer) return;
+
+        // 'original' no tiene altura fija → nada que encajar
+        var hFlyer = parseInt(flyer.dataset.dimH, 10);
+        if (!hFlyer || hFlyer === 0) return;
+
+        // Iteración 1: bajar hotelScale (mínimo 0.28 — sigue legible al zoom)
+        var scale = (typeof hotelScaleActual === 'number') ? hotelScaleActual : 1;
+        var maxIter = 40;
+        while (maxIter-- > 0 && flyer.scrollHeight > hFlyer + 2 && scale > 0.28) {
+            scale = Math.max(0.28, scale - 0.05);
+            aplicarHotelSize(scale);
+        }
+
+        // Iteración 2: si aún desborda, achicar el hero (mínimo 40 px)
+        var spacer = document.getElementById('heroSpacer');
+        if (spacer && flyer.scrollHeight > hFlyer + 2) {
+            var hero = parseInt(spacer.style.height, 10);
+            if (isNaN(hero) || hero === 0) hero = 260;
+            var maxIter2 = 30;
+            while (maxIter2-- > 0 && flyer.scrollHeight > hFlyer + 2 && hero > 40) {
+                hero = Math.max(40, hero - 20);
+                aplicarHeroSize(hero);
+            }
+        }
+    }
+
+    // Aplica el tamaño al .flyer. Todas las medidas son en píxeles CSS del template original.
+    // El scaleFlyer() se encarga de escalar el flyer al ancho disponible del stage.
+    window.aplicarDimension = function (dim) {
+        var flyer = document.getElementById('flyerTemplate');
+        if (!flyer) return;
+        var btnSel = document.querySelector('#panelDimensiones .pd-item[data-dim="' + dim + '"]');
+        if (!btnSel) return;
+
+        // Marcar seleccionado
+        document.querySelectorAll('#panelDimensiones .pd-item').forEach(function (b) { b.classList.remove('selected'); });
+        btnSel.classList.add('selected');
+
+        var wFmt, hFmt;
+        if (dim === 'original') {
+            // "Original" debe LIBERAR el flyer para que use el tamaño natural del CSS
+            // (.flyer { width: 900px; min-height: 1200px }) — sin height fijo, el flyer
+            // crece con su contenido. Si dejo inline height:1200px el flyer queda
+            // recortado o con espacio en blanco y se ve DIFERENTE del original real.
+            flyer.style.width      = '';
+            flyer.style.minHeight  = '';
+            flyer.style.height     = '';
+            delete flyer.dataset.dimW;
+            delete flyer.dataset.dimH;
+            wFmt = 900; hFmt = 1200;
+        } else {
+            wFmt = parseInt(btnSel.dataset.w, 10) || 900;
+            hFmt = parseInt(btnSel.dataset.h, 10) || 1200;
+            flyer.style.width      = wFmt + 'px';
+            flyer.style.minHeight  = hFmt + 'px';
+            flyer.style.height     = hFmt + 'px';
+            flyer.dataset.dimW     = wFmt;
+            flyer.dataset.dimH     = hFmt;
+        }
+
+        dimActual = dim;
+
+        // ─── Auto-ajustar hero y filas de hoteles al nuevo formato ───
+        // Paso 1: aplicar preset base (heroPx + hotelScale recomendados)
+        // Paso 2: medir el DOM y encoger MÁS si el contenido no cabe
+        //         (evita que el pie de página quede recortado)
+        var preset = AJUSTES_POR_FORMATO[dim] || AJUSTES_POR_FORMATO.original;
+        if (typeof aplicarHeroSize === 'function')  aplicarHeroSize(preset.heroPx);
+        if (typeof aplicarHotelSize === 'function') aplicarHotelSize(preset.hotelScale);
+
+        // El browser necesita reflow antes de que scrollHeight sea correcto.
+        // Doble rAF garantiza que el layout ya se aplicó.
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                ajustarParaCaber();
+                if (typeof scaleFlyer === 'function') scaleFlyer();
+                guardarEstado();
+            });
+        });
+
+        // Reescalar al viewport (primer render, antes del ajuste fino)
+        if (typeof scaleFlyer === 'function') scaleFlyer();
+        guardarEstado();
+    };
+
+    /* ── Descargar PNG ── */
+    window.descargarPNG = function () {
+        var btn = document.getElementById('btnDescargar');
+        var ico = document.getElementById('icoDescarga');
+        if (btn) btn.disabled = true;
+        if (ico) ico.className = 'bi bi-hourglass-split spin me-1';
+
+        var wrap  = document.getElementById('flyerScaleWrap');
+        var flyer = document.getElementById('flyerTemplate');
+        var prevT = wrap.style.transform;
+        var prevM = wrap.style.marginBottom;
+        wrap.style.transform    = 'scale(1)';
+        wrap.style.marginBottom = '0';
+
+        document.fonts.ready.then(function () {
+            html2canvas(flyer, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                logging: false,
+                ignoreElements: function (el) {
+                    return el.hasAttribute('data-html2canvas-ignore');
+                }
+            }).then(function (canvas) {
+                var link    = document.createElement('a');
+                var dest    = '@d.Nombre_Destino'.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+                var fecha   = new Date().toISOString().slice(0, 10);
+                link.download = 'flyer_' + dest + '_' + fecha + '.png';
+                link.href   = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(function (err) {
+                console.error(err);
+                alert('Error al generar imagen. Intenta de nuevo.');
+            }).finally(function () {
+                wrap.style.transform    = prevT;
+                wrap.style.marginBottom = prevM;
+                if (btn) btn.disabled = false;
+                if (ico) ico.className = 'bi bi-download me-1';
+                scaleFlyer();
+            });
+        });
+    };
+
+}());
+</script>
+</body>
+</html>

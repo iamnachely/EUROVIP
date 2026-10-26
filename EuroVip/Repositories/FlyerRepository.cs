@@ -8,11 +8,14 @@ namespace EuroVip.Repositories
     {
         /// <summary>El destino del flyer tiene que existir en Herramientas › Destinos. Devuelve el error o null.</summary>
         Task<string?> ErrorDestinoAsync(string? destino);
-        Task<List<FlyerConfig>> ConfigsAsync();
+        /// <summary>tipo: «Cliente» (Flyer Editar, por defecto) o «Agencia» (Flyer Agencia): cada uno tiene sus destinos y sus precios.</summary>
+        Task<List<FlyerConfig>> ConfigsAsync(string tipo = Cliente);
         Task<int> GuardarConfigAsync(FlyerConfig c);
         Task<bool> EliminarConfigAsync(int id);
-        Task<List<FlyerDestino>> DestinosAsync();
-        Task<int> ActualizarPreciosAsync(int? soloConfig = null);
+        Task<List<FlyerDestino>> DestinosAsync(string tipo = Cliente);
+        Task<int> ActualizarPreciosAsync(int? soloConfig = null, string tipo = Cliente);
+        const string Cliente = "Cliente";
+        const string Agencia = "Agencia";
         Task<List<FlyerContacto>> ContactosAsync();
         Task<int> GuardarContactoAsync(FlyerContacto c);
         Task<bool> EliminarContactoAsync(int id);
@@ -52,15 +55,19 @@ namespace EuroVip.Repositories
             ), ranked AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY id_alojamiento ORDER BY Precio_Final) AS rn FROM precios)
             SELECT TOP 5 Id_Pais, Nombre_Hotel, Nombre_Habitacion, Regimen, Precio_Final FROM ranked WHERE rn = 1 ORDER BY Precio_Final";
 
-        public async Task<List<FlyerConfig>> ConfigsAsync()
+        /// <summary>«Agencia» o «Cliente» (cualquier otro valor = Cliente, que es lo que había antes de Flyer Agencia).</summary>
+        public static string Tipo(string? tipo) => string.Equals(tipo?.Trim(), IFlyerRepository.Agencia, StringComparison.OrdinalIgnoreCase) ? IFlyerRepository.Agencia : IFlyerRepository.Cliente;
+
+        public async Task<List<FlyerConfig>> ConfigsAsync(string tipo = IFlyerRepository.Cliente)
         {
             using var cn = _db.Conexion();
             return (await cn.QueryAsync<FlyerConfig>(@"
                 SELECT f.*, c.nombre AS Campanya,
-                       (SELECT COUNT(*) FROM Eurovip.flyer_datos d WHERE d.id_destino = f.id_destino) AS Hoteles,
-                       (SELECT MIN(precio_final) FROM Eurovip.flyer_datos d WHERE d.id_destino = f.id_destino) AS PrecioDesde
+                       (SELECT COUNT(*) FROM Eurovip.flyer_datos d WHERE d.id_destino = f.id_destino AND ISNULL(d.tipo, 'Cliente') = @tipo) AS Hoteles,
+                       (SELECT MIN(precio_final) FROM Eurovip.flyer_datos d WHERE d.id_destino = f.id_destino AND ISNULL(d.tipo, 'Cliente') = @tipo) AS PrecioDesde
                 FROM Eurovip.flyer_config f LEFT JOIN Eurovip.campanya c ON c.id_campanya = f.id_campanya AND c.id_idioma = 'ES'
-                ORDER BY ISNULL(f.nombre_destino, f.id_destino)")).ToList();
+                WHERE ISNULL(f.tipo, 'Cliente') = @tipo
+                ORDER BY ISNULL(f.nombre_destino, f.id_destino)", new { tipo = Tipo(tipo) })).ToList();
         }
 
         public async Task<string?> ErrorDestinoAsync(string? destino)
@@ -76,7 +83,7 @@ namespace EuroVip.Repositories
             {
                 c.Id, Nombre_Config = Vacio(c.Nombre_Config) ?? $"{c.Nombre_Destino ?? c.Id_Destino} {c.Id_Regimen}", Id_Tipo_Servicio = c.Id_Tipo_Servicio.ToUpperInvariant(), c.Id_Campanya,
                 Id_Idioma = "ES", Id_Moneda = c.Id_Moneda.ToUpperInvariant(), c.Activo_Servicio, Origen = c.Origen.Trim(), Id_Regimen = c.Id_Regimen.Trim(), Id_Destino = c.Id_Destino.Trim(),
-                Nombre_Destino = Vacio(c.Nombre_Destino) ?? c.Id_Destino.Trim(), Url_Destino = Vacio(c.Url_Destino), Tipo = Vacio(c.Tipo)
+                Nombre_Destino = Vacio(c.Nombre_Destino) ?? c.Id_Destino.Trim(), Url_Destino = Vacio(c.Url_Destino), Tipo = Tipo(c.Tipo)
             };
             if (c.Id > 0)
             {
@@ -95,17 +102,18 @@ namespace EuroVip.Repositories
         {
             using var cn = _db.Conexion();
             return await cn.ExecuteAsync(@"
-                DELETE d FROM Eurovip.flyer_datos d JOIN Eurovip.flyer_config f ON f.id_destino = d.id_destino WHERE f.id = @id
-                    AND NOT EXISTS (SELECT 1 FROM Eurovip.flyer_config o WHERE o.id_destino = f.id_destino AND o.id <> f.id);
+                DELETE d FROM Eurovip.flyer_datos d JOIN Eurovip.flyer_config f ON f.id_destino = d.id_destino AND ISNULL(d.tipo, 'Cliente') = ISNULL(f.tipo, 'Cliente') WHERE f.id = @id
+                    AND NOT EXISTS (SELECT 1 FROM Eurovip.flyer_config o WHERE o.id_destino = f.id_destino AND ISNULL(o.tipo, 'Cliente') = ISNULL(f.tipo, 'Cliente') AND o.id <> f.id);
                 DELETE FROM Eurovip.flyer_config WHERE id = @id;", new { id }) > 0;
         }
 
         /// <summary>Lo que se va a pintar: cada destino con sus 5 hoteles (de flyer_datos).</summary>
-        public async Task<List<FlyerDestino>> DestinosAsync()
+        public async Task<List<FlyerDestino>> DestinosAsync(string tipo = IFlyerRepository.Cliente)
         {
             using var cn = _db.Conexion();
-            var conf = (await cn.QueryAsync<FlyerConfig>("SELECT * FROM Eurovip.flyer_config")).ToList();
-            var datos = (await cn.QueryAsync<FlyerHotel>("SELECT * FROM Eurovip.flyer_datos WHERE ISNULL(activo, 1) = 1 ORDER BY id_destino, posicion")).ToList();
+            var p = new { tipo = Tipo(tipo) };
+            var conf = (await cn.QueryAsync<FlyerConfig>("SELECT * FROM Eurovip.flyer_config WHERE ISNULL(tipo, 'Cliente') = @tipo", p)).ToList();
+            var datos = (await cn.QueryAsync<FlyerHotel>("SELECT * FROM Eurovip.flyer_datos WHERE ISNULL(activo, 1) = 1 AND ISNULL(tipo, 'Cliente') = @tipo ORDER BY id_destino, posicion", p)).ToList();
             return datos.GroupBy(d => d.Id_Destino ?? "").Select(g =>
             {
                 var c = conf.FirstOrDefault(x => string.Equals(x.Id_Destino, g.Key, StringComparison.OrdinalIgnoreCase));
@@ -118,17 +126,18 @@ namespace EuroVip.Repositories
         }
 
         /// <summary>Recalcula flyer_datos con las ofertas a la venta. Devuelve cuántos destinos quedaron con precios.</summary>
-        public async Task<int> ActualizarPreciosAsync(int? soloConfig = null)
+        public async Task<int> ActualizarPreciosAsync(int? soloConfig = null, string tipo = IFlyerRepository.Cliente)
         {
             using var cn = _db.Conexion();
             await cn.OpenAsync();
-            var configs = (await cn.QueryAsync<FlyerConfig>("SELECT * FROM Eurovip.flyer_config WHERE @id IS NULL OR id = @id", new { id = soloConfig })).ToList();
+            tipo = Tipo(tipo);
+            var configs = (await cn.QueryAsync<FlyerConfig>("SELECT * FROM Eurovip.flyer_config WHERE ISNULL(tipo, 'Cliente') = @tipo AND (@id IS NULL OR id = @id)", new { id = soloConfig, tipo })).ToList();
             var ahora = DateTime.Now;
             var conPrecios = 0;
             // Un destino puede tener varias configuraciones (p. ej. dos campañas): se juntan y quedan los 5 hoteles más baratos.
             // Si solo se recalcula una, se incluyen las demás del mismo destino para no pisar sus precios.
             if (soloConfig is not null && configs.Count > 0)
-                configs = (await cn.QueryAsync<FlyerConfig>("SELECT * FROM Eurovip.flyer_config WHERE id_destino = @Id_Destino", new { configs[0].Id_Destino })).ToList();
+                configs = (await cn.QueryAsync<FlyerConfig>("SELECT * FROM Eurovip.flyer_config WHERE id_destino = @Id_Destino AND ISNULL(tipo, 'Cliente') = @tipo", new { configs[0].Id_Destino, tipo })).ToList();
             using var tx = cn.BeginTransaction();
             foreach (var grupo in configs.GroupBy(c => c.Id_Destino.Trim(), StringComparer.OrdinalIgnoreCase))
             {
@@ -138,11 +147,11 @@ namespace EuroVip.Repositories
                 var top = todos.GroupBy(h => h.Nombre_Hotel).Select(g => g.MinBy(h => h.Precio_Final)!).OrderBy(h => h.Precio_Final).Take(5).ToList();
                 var c0 = grupo.First();
                 var nombre = grupo.Select(c => c.Nombre_Destino).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n)) ?? c0.Id_Destino;
-                await cn.ExecuteAsync("DELETE FROM Eurovip.flyer_datos WHERE id_destino = @Id_Destino", new { c0.Id_Destino }, tx);
+                await cn.ExecuteAsync("DELETE FROM Eurovip.flyer_datos WHERE id_destino = @Id_Destino AND ISNULL(tipo, 'Cliente') = @tipo", new { c0.Id_Destino, tipo }, tx);
                 for (var i = 0; i < top.Count; i++)
-                    await cn.ExecuteAsync(@"INSERT INTO Eurovip.flyer_datos (id_destino, nombre_destino, nombre_hotel, nombre_habitacion, regimen, precio_final, posicion, fecha_actualizacion, activo)
-                        VALUES (@id, @nom, @hotel, @hab, @reg, @precio, @pos, @ahora, 1)",
-                        new { id = c0.Id_Destino, nom = nombre, hotel = top[i].Nombre_Hotel, hab = top[i].Nombre_Habitacion, reg = top[i].Regimen, precio = top[i].Precio_Final, pos = i + 1, ahora }, tx);
+                    await cn.ExecuteAsync(@"INSERT INTO Eurovip.flyer_datos (id_destino, nombre_destino, nombre_hotel, nombre_habitacion, regimen, precio_final, posicion, fecha_actualizacion, activo, tipo)
+                        VALUES (@id, @nom, @hotel, @hab, @reg, @precio, @pos, @ahora, 1, @tipo)",
+                        new { tipo, id = c0.Id_Destino, nom = nombre, hotel = top[i].Nombre_Hotel, hab = top[i].Nombre_Habitacion, reg = top[i].Regimen, precio = top[i].Precio_Final, pos = i + 1, ahora }, tx);
                 if (top.Count > 0) conPrecios++;
             }
             tx.Commit();

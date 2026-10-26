@@ -33,7 +33,10 @@ namespace EuroVip.Controllers
         /// <summary>Permiso especial "Enviar flyers por WhatsApp" (Usuarios y accesos). Superadministrador siempre puede.</summary>
         private bool PuedeEnviar => HttpContext.Items[AccesoModuloFilter.ClavePermisos] is PermisosUsuario p && p.Puede(Modulos.FlyersEnviar);
 
+        /// <summary>Centro de Flyers: elige Flyer Agencia (/Agencia) o Flyer Editar (clientes).</summary>
         public IActionResult Hub() => View();
+        /// <summary>Flyer Editar: flyers para clientes (destinos tipo «Cliente»), galería, contactos y envío por WhatsApp.</summary>
+        public IActionResult Editar() => View();
         public IActionResult Index() => RedirectToAction(nameof(Hub));
 
         [HttpGet]

@@ -67,6 +67,10 @@ builder.Services.AddSingleton<EuroVip.Services.IImagenesLocales, EuroVip.Service
 builder.Services.AddScoped<EuroVip.Services.IMultimedia, EuroVip.Services.Multimedia>();
 builder.Services.AddScoped<EuroVip.Services.WhatsAppService>();
 builder.Services.AddSingleton<EuroVip.Services.FlyerEnvioJob>();
+// Flyer Agencia (/Agencia y el editor público /agencia/editor/{token})
+builder.Services.AddScoped<EuroVip.Repositories.IAgenciaRepository, EuroVip.Repositories.AgenciaRepository>();
+builder.Services.AddSingleton<EuroVip.Services.AgenciaImagenes>();
+builder.Services.AddSingleton<EuroVip.Services.AgenciaEnvioJob>();
 builder.Services.AddSingleton<EuroVip.Services.IProgresoCargas, EuroVip.Services.ProgresoCargas>();   // barra de progreso de las cargas
 builder.Services.AddHttpClient("whatsapp");
 builder.Services.AddMemoryCache();

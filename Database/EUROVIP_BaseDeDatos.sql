@@ -4446,6 +4446,120 @@ GO
 
 
 /* ##########################################################################################
+   FASE 27 — FLYER AGENCIA  (26/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «en /Flyer/Hub una opción para Agencia y la de clientes (Flyer Editar); duplica lo que
+   falte de BackTiTan» (BackTiTan: /Flyer/Hub → Flyer Agencia y Flyer Cliente).
+   Explicado fácil:
+     • Flyer Agencia = flyers con los hoteles más baratos de cada destino que se mandan por WhatsApp a las AGENCIAS.
+       Cada agencia recibe además un LINK ÚNICO a un editor donde pone su logo, cambia precios y descarga el flyer.
+     • Flyer Editar = lo que ya había (flyers para clientes); sus destinos son los de tipo «Cliente».
+   Cambios:
+     • CAMBIO 95: flyer_datos.tipo — los precios de Agencia y de Cliente se guardan por separado (no se pisan).
+     • CAMBIO 96: flyer_agencia — las agencias a las que se envía (nombre, WhatsApp, correo, activa).
+     • CAMBIO 97: flyer_agencia_link — links únicos del editor de la agencia (token, destino, vence o no, visitas).
+     • CAMBIO 98: flyer_envio_masivo + flyer_envio_masivo_detalle — cada envío masivo y qué pasó con cada contacto
+       (para el progreso, el monitor y el reporte del envío).
+     • CAMBIO 99: el módulo «Flyers» incluye la pantalla Agencia.
+   ########################################################################################## */
+
+/* ---------- CAMBIO 95: precios de flyers separados por tipo (Agencia / Cliente) ---------- */
+IF COL_LENGTH('Eurovip.flyer_datos', 'tipo') IS NULL
+    ALTER TABLE Eurovip.flyer_datos ADD tipo NVARCHAR(20) NULL;
+GO
+UPDATE Eurovip.flyer_datos SET tipo = 'Cliente' WHERE tipo IS NULL;
+UPDATE Eurovip.flyer_config SET tipo = 'Cliente' WHERE tipo IS NULL OR tipo NOT IN ('Agencia', 'Cliente');
+GO
+
+/* ---------- CAMBIO 96: agencias ---------- */
+IF OBJECT_ID('Eurovip.flyer_agencia') IS NULL
+CREATE TABLE Eurovip.flyer_agencia (
+    id             INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_flyer_agencia PRIMARY KEY,
+    nombre         NVARCHAR(200) NOT NULL,
+    telefono       VARCHAR(30)   NOT NULL,                 -- solo números, con el código del país
+    email          NVARCHAR(200) NULL,
+    activo         BIT           NOT NULL CONSTRAINT DF_Eurovip_flyer_agencia_activo DEFAULT (1),
+    origen         VARCHAR(20)   NULL,                     -- manual · pegado · reservas
+    fecha_creacion DATETIME      NOT NULL CONSTRAINT DF_Eurovip_flyer_agencia_fecha DEFAULT (GETDATE()),
+    CONSTRAINT CK_Eurovip_flyer_agencia_tel CHECK (telefono NOT LIKE '%[^0-9]%' AND LEN(telefono) BETWEEN 8 AND 15)
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Eurovip_flyer_agencia_tel')
+    CREATE UNIQUE INDEX UX_Eurovip_flyer_agencia_tel ON Eurovip.flyer_agencia (telefono);
+GO
+
+/* ---------- CAMBIO 97: links únicos del editor de la agencia ---------- */
+IF OBJECT_ID('Eurovip.flyer_agencia_link') IS NULL
+CREATE TABLE Eurovip.flyer_agencia_link (
+    id               INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_flyer_agencia_link PRIMARY KEY,
+    token            VARCHAR(32)   NOT NULL,
+    id_destino       NVARCHAR(100) NOT NULL,                -- el destino (como en flyer_config.id_destino)
+    nombre_destino   NVARCHAR(200) NULL,
+    id_agencia       INT           NULL CONSTRAINT FK_Eurovip_flyer_agencia_link_agencia REFERENCES Eurovip.flyer_agencia (id) ON DELETE SET NULL,
+    nombre_agencia   NVARCHAR(200) NULL,
+    email_agencia    NVARCHAR(200) NULL,
+    nombre_imagen    NVARCHAR(260) NULL,                    -- imagen con la que se envió (si vino de un envío)
+    id_envio         INT           NULL,
+    fecha_creacion   DATETIME      NOT NULL CONSTRAINT DF_Eurovip_flyer_agencia_link_fecha DEFAULT (GETDATE()),
+    fecha_expiracion DATETIME      NULL,                    -- NULL = no vence
+    activo           BIT           NOT NULL CONSTRAINT DF_Eurovip_flyer_agencia_link_activo DEFAULT (1),
+    visitas          INT           NOT NULL CONSTRAINT DF_Eurovip_flyer_agencia_link_visitas DEFAULT (0),
+    ultima_visita    DATETIME      NULL,
+    creado_por       NVARCHAR(100) NULL
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Eurovip_flyer_agencia_link_token')
+    CREATE UNIQUE INDEX UX_Eurovip_flyer_agencia_link_token ON Eurovip.flyer_agencia_link (token);
+GO
+
+/* ---------- CAMBIO 98: envíos masivos con detalle por contacto ---------- */
+IF OBJECT_ID('Eurovip.flyer_envio_masivo') IS NULL
+CREATE TABLE Eurovip.flyer_envio_masivo (
+    id              INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_flyer_envio_masivo PRIMARY KEY,
+    modulo          VARCHAR(20)    NOT NULL,                -- Agencia · Cliente
+    subtipo         VARCHAR(20)    NULL,                    -- ConLink · SinLink
+    estado          VARCHAR(20)    NOT NULL CONSTRAINT DF_Eurovip_flyer_envio_masivo_estado DEFAULT ('Pendiente'),
+                                                            -- Pendiente · EnProceso · Completado · ConErrores · Cancelado · Interrumpido
+    plantilla       VARCHAR(60)    NULL,
+    total_mensajes  INT            NOT NULL CONSTRAINT DF_Eurovip_flyer_envio_masivo_tm DEFAULT (0),
+    total_contactos INT            NOT NULL CONSTRAINT DF_Eurovip_flyer_envio_masivo_tc DEFAULT (0),
+    total_imagenes  INT            NOT NULL CONSTRAINT DF_Eurovip_flyer_envio_masivo_ti DEFAULT (0),
+    enviados_ok     INT            NOT NULL CONSTRAINT DF_Eurovip_flyer_envio_masivo_ok DEFAULT (0),
+    enviados_error  INT            NOT NULL CONSTRAINT DF_Eurovip_flyer_envio_masivo_er DEFAULT (0),
+    contacto_actual NVARCHAR(200)  NULL,
+    imagen_actual   NVARCHAR(260)  NULL,
+    costo_unitario  DECIMAL(9, 4)  NULL,                    -- USD por mensaje (aprox., para el reporte)
+    usuario         NVARCHAR(100)  NULL,
+    fecha_creacion  DATETIME       NOT NULL CONSTRAINT DF_Eurovip_flyer_envio_masivo_fc DEFAULT (GETDATE()),
+    fecha_inicio    DATETIME       NULL,
+    fecha_fin       DATETIME       NULL,
+    mensaje_error   NVARCHAR(2000) NULL
+);
+GO
+IF OBJECT_ID('Eurovip.flyer_envio_masivo_detalle') IS NULL
+CREATE TABLE Eurovip.flyer_envio_masivo_detalle (
+    id              INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_flyer_envio_masivo_detalle PRIMARY KEY,
+    id_envio        INT            NOT NULL CONSTRAINT FK_Eurovip_flyer_envio_masivo_detalle_envio REFERENCES Eurovip.flyer_envio_masivo (id) ON DELETE CASCADE,
+    nombre_contacto NVARCHAR(200)  NULL,
+    telefono        VARCHAR(30)    NULL,
+    nombre_imagen   NVARCHAR(260)  NULL,
+    estado          VARCHAR(10)    NOT NULL,                -- OK · Error
+    mensaje_error   NVARCHAR(2000) NULL,
+    token           VARCHAR(32)    NULL,                    -- link único que llevó el mensaje (Agencia)
+    fecha           DATETIME       NOT NULL CONSTRAINT DF_Eurovip_flyer_envio_masivo_detalle_f DEFAULT (GETDATE())
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_flyer_envio_masivo_detalle_envio')
+    CREATE INDEX IX_Eurovip_flyer_envio_masivo_detalle_envio ON Eurovip.flyer_envio_masivo_detalle (id_envio);
+GO
+
+/* ---------- CAMBIO 99: el módulo Flyers incluye la pantalla Agencia ---------- */
+UPDATE Eurovip.UsuarioAcceso SET controladores = 'Flyer,Agencia'
+ WHERE clave = 'flyers' AND ISNULL(controladores, '') NOT LIKE '%Agencia%';
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -4910,6 +5024,14 @@ GO
                Solo Hotel pero guarda id_tipo_servicio = PAQUETE), un hotel por salida en paquetes (fnSecuencia) y foto del
                destino en sus tarjetas de la Home (spActualizaInicio). Probado con una carga real de 1 paquete (servicio 3062,
                tipo PAQUETE, «Carga Express Paquetes» en Log_Cargas) que después se borró. No cambió ningún dato existente.
+   26/10/2026  FASE 27 aplicada SOLO en el 93 (CAMBIO 95-99): Flyer Agencia. flyer_datos.tipo (los 8 precios que había quedaron
+               como Cliente) y flyer_config.tipo = Cliente en las 6 configuraciones que había; tablas flyer_agencia, flyer_agencia_link,
+               flyer_envio_masivo y flyer_envio_masivo_detalle; módulo Flyers con controladores Flyer,Agencia.
+   26/10/2026  AGENCIAS COPIADAS de ViajeVDT (.29, solo lectura; pedido de la usuaria: «importar desde ViajeVDT»): las 13 agencias de
+               dbo.Agencia_Info (9 activas) → Eurovip.flyer_agencia (origen = viajevdt), con su estado y fecha de alta. En VDTDESA no hay
+               reservas de una web de Eurovip (solo DominicanaTours y otras marcas), por eso no se importa desde reservas.
+   26/10/2026  DESTINOS DE FLYER AGENCIA: se copiaron las 6 configuraciones de Flyer Editar (Punta Cana, La Romana, Puerto Plata, Samaná,
+               Miches, Riviera Maya; OFERTA, campaña 99, DOP, Madrid, TI) como tipo Agencia y se calcularon sus precios (4 con hoteles).
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

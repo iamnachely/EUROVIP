@@ -1,0 +1,87 @@
+@* Reporte de un envío masivo a agencias (equivale al PDF de BackTiTan): se imprime o se guarda como PDF desde el navegador. *@
+@model EuroVip.Models.FlyerEnvioMasivo
+@{
+    Layout = null;
+    var detalle = (ViewData["Detalle"] as System.Collections.Generic.List<EuroVip.Models.FlyerEnvioMasivoDetalle>) ?? new System.Collections.Generic.List<EuroVip.Models.FlyerEnvioMasivoDetalle>();
+    var duracion = Model.Fecha_Inicio is System.DateTime i && Model.Fecha_Fin is System.DateTime f ? $"{System.Math.Max(1, (int)System.Math.Round((f - i).TotalMinutes))} min" : "—";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Envío a agencias #@Model.Id · Eurovip</title>
+    <style>
+        :root { --tinta: #0B1215; --gris: #66807C; --linea: #E2EFED; --naranja: #FF6A00; --azul: #0B2A6F; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #F5FBFA; color: var(--tinta); font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+        .hoja { max-width: 960px; margin: 24px auto; background: #fff; border: 1px solid var(--linea); border-radius: 18px; padding: 32px 36px; }
+        .cab { display: flex; align-items: center; gap: 18px; border-bottom: 3px solid var(--naranja); padding-bottom: 16px; }
+        .cab img { height: 54px; }
+        .cab h1 { margin: 0; font-size: 22px; } .cab small { color: var(--gris); font-weight: 600; }
+        .cab .sp { flex: 1; }
+        .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
+        .kpi { border: 1px solid var(--linea); border-radius: 12px; padding: 10px 12px; }
+        .kpi b { display: block; font-size: 20px; } .kpi small { color: var(--gris); font-weight: 600; }
+        dl { display: grid; grid-template-columns: 170px 1fr; gap: 6px 12px; margin: 0 0 18px; }
+        dt { color: var(--gris); font-weight: 600; } dd { margin: 0; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; background: #F5FBFA; color: var(--gris); font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px; }
+        td { border-top: 1px solid var(--linea); padding: 7px 10px; vertical-align: top; }
+        .ok { color: #166534; font-weight: 700; } .mal { color: #B42318; font-weight: 700; }
+        .err { color: #B42318; font-size: 12px; white-space: pre-wrap; }
+        .botones { max-width: 960px; margin: 0 auto; display: flex; gap: 8px; justify-content: flex-end; padding: 0 4px; }
+        .botones button { border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 700; cursor: pointer; background: var(--tinta); color: #fff; }
+        @@media print { body { background: #fff; } .hoja { border: 0; margin: 0; padding: 0; max-width: none; } .botones { display: none; } tr { break-inside: avoid; } }
+    </style>
+</head>
+<body>
+    <div class="botones" style="margin-top:16px"><button type="button" onclick="window.print()">Imprimir / Guardar como PDF</button></div>
+    <div class="hoja">
+        <div class="cab">
+            <img src="/img/flyer/logo-eurovip-travel.png" alt="Eurovip Travel">
+            <div><h1>Envío a agencias #@Model.Id</h1><small>Reporte del envío masivo por WhatsApp · generado el @System.DateTime.Now.ToString("dd/MM/yyyy HH:mm")</small></div>
+            <span class="sp"></span>
+            <b class="@(Model.Estado == "Completado" ? "ok" : "mal")">@Model.Estado</b>
+        </div>
+        <div class="kpis">
+            <div class="kpi"><b>@Model.Enviados_Ok</b><small>enviados</small></div>
+            <div class="kpi"><b>@Model.Enviados_Error</b><small>con error</small></div>
+            <div class="kpi"><b>@Model.Total_Contactos</b><small>agencias · @Model.Total_Imagenes imagen(es)</small></div>
+            <div class="kpi"><b>@(Model.Costo is decimal c ? "US$ " + c.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("es-ES")) : "—")</b><small>costo aprox. (@(Model.Costo_Unitario?.ToString("0.00##", System.Globalization.CultureInfo.InvariantCulture) ?? "—") por mensaje)</small></div>
+        </div>
+        <dl>
+            <dt>Usuario</dt><dd>@(Model.Usuario ?? "—")</dd>
+            <dt>Tipo</dt><dd>@(Model.Subtipo ?? "—") · plantilla «@Model.Plantilla»</dd>
+            <dt>Inicio</dt><dd>@(Model.Fecha_Inicio?.ToString("dd/MM/yyyy HH:mm:ss") ?? "—")</dd>
+            <dt>Fin</dt><dd>@(Model.Fecha_Fin?.ToString("dd/MM/yyyy HH:mm:ss") ?? "—") · @duracion</dd>
+            <dt>Mensajes previstos</dt><dd>@Model.Total_Mensajes</dd>
+            @if (!string.IsNullOrWhiteSpace(Model.Mensaje_Error))
+            {
+                <dt>Observaciones</dt><dd class="err">@Model.Mensaje_Error</dd>
+            }
+        </dl>
+        <table>
+            <thead><tr><th>#</th><th>Agencia</th><th>WhatsApp</th><th>Imagen</th><th>Hora</th><th>Resultado</th></tr></thead>
+            <tbody>
+                @for (var n = 0; n < detalle.Count; n++)
+                {
+                    var x = detalle[n];
+                    <tr>
+                        <td>@(n + 1)</td>
+                        <td>@x.Nombre_Contacto</td>
+                        <td>@(string.IsNullOrEmpty(x.Telefono) || x.Telefono == "-" ? "—" : "+" + x.Telefono)</td>
+                        <td>@x.Nombre_Imagen</td>
+                        <td>@x.Fecha.ToString("HH:mm:ss")</td>
+                        <td>@if (x.Estado == "OK") { <span class="ok">Enviado</span> } else { <span class="mal">Error</span><div class="err">@x.Mensaje_Error</div> }</td>
+                    </tr>
+                }
+                @if (detalle.Count == 0)
+                {
+                    <tr><td colspan="6" style="text-align:center;color:#66807C">Sin mensajes registrados.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
