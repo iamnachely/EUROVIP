@@ -29,7 +29,7 @@ namespace EuroVip.Helpers
 
         private static string Tabla => $"[{Esquema}].[{typeof(T).Name}]";
 
-        private IDbConnection Conexion() => new SqlConnection(_connectionString);
+        private IDbConnection Conexion() => EuroVip.Services.UsuarioSql.Marcar(new SqlConnection(_connectionString));   // FASE 33: quién hace el cambio
 
         // columnaId se interpola en el SQL: solo se aceptan nombres de columna simples.
         private static string Columna(string columna)

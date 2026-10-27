@@ -103,7 +103,9 @@ namespace EuroVip.Repositories
         {
             var (where, p) = PorClave(c, clave);
             using var cn = _db.Conexion();
-            var r = await cn.QueryFirstOrDefaultAsync($"SELECT {SelectCols(c)} FROM {Tabla(c)} t WHERE {where}", p);
+            // FASE 33: quién y cuándo lo creó / cambió (lo anotan los triggers trEurovip_*_quien)
+            var r = await cn.QueryFirstOrDefaultAsync($"SELECT {SelectCols(c)}, t.usuario_alta AS [_usuario_alta], t.fecha_alta AS [_fecha_alta], " +
+                $"t.usuario_modificacion AS [_usuario_modificacion], t.fecha_modificacion AS [_fecha_modificacion] FROM {Tabla(c)} t WHERE {where}", p);
             return r is null ? null : Fila(r);
         }
 

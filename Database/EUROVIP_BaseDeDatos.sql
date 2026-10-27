@@ -4835,6 +4835,111 @@ GO
 
 
 /* ##########################################################################################
+   FASE 33 — QUIÉN Y CUÁNDO: USUARIO Y FECHA AL CREAR, EDITAR Y ELIMINAR  (27/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «Alojamientos, destinos, países, estaciones, campañas, monedas, tasas y suplementos,
+   regímenes, idiomas, proveedores, habitaciones; y en cargas Hoteles, Solo Hotel, Circuitos, Excursiones, Traslados y
+   Cruceros: cuando el usuario cree uno que se guarde usuario y fecha, igual si edita o elimina».
+   Explicado fácil:
+     • Cada tabla tiene 4 columnas: usuario_alta / fecha_alta (quién y cuándo lo creó) y usuario_modificacion /
+       fecha_modificacion (el último que lo cambió). Las filas que ya existían quedan vacías (no se sabe quién las hizo).
+     • Lo que se ELIMINA se guarda en Eurovip.registro_eliminado: tabla, clave, nombre, la fila completa (JSON),
+       quién y cuándo. Así se puede ver (y recuperar a mano) lo borrado.
+     • Lo hace un trigger en cada tabla (trEurovip_<tabla>_quien), así vale venga de donde venga el cambio: pantallas,
+       Carga Express, Cargar Excel o procedimientos. El usuario lo pone el back en la conexión (SESSION_CONTEXT 'usuario');
+       un cambio hecho a mano en SQL queda como «sql:<login>».
+     • Solo cuenta lo que hace el usuario: lo que hacen otros triggers por dentro no cuenta como edición.
+     • Tarjetas de la Home (inicio): solo se anotan las bajas de Hoteles (tipo HOTEL); las demás tarjetas las borra y
+       crea solo el refresco de precios.
+   Tablas: pais, destino, estacion, campanya, moneda, tasa, regimen, idioma, proveedor, alojamiento,
+   alojamiento_habitacion, inicio (Hoteles), servicio (Solo Hotel, Paquetes y salidas de circuitos), circuito,
+   servicio_excursion, traslado y crucero.
+   Cambios: CAMBIO 108 (columnas), CAMBIO 109 (registro_eliminado), CAMBIO 110 (triggers). No cambia ningún dato.
+   ########################################################################################## */
+SET XACT_ABORT ON;
+GO
+/* ---------- CAMBIO 109 ---------- */
+IF OBJECT_ID('Eurovip.registro_eliminado') IS NULL
+CREATE TABLE Eurovip.registro_eliminado (
+    id          bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_registro_eliminado PRIMARY KEY,
+    tabla       sysname        NOT NULL,
+    clave       nvarchar(400)  NOT NULL,      -- valores de la clave separados por |
+    nombre      nvarchar(400)  NULL,          -- nombre / descripción para reconocerlo
+    datos       nvarchar(max)  NULL,          -- la fila completa como estaba (JSON)
+    usuario     varchar(50)    NOT NULL,
+    fecha       datetime2(0)   NOT NULL CONSTRAINT DF_Eurovip_registro_eliminado_fecha DEFAULT (SYSDATETIME())
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_registro_eliminado_tabla')
+    CREATE INDEX IX_Eurovip_registro_eliminado_tabla ON Eurovip.registro_eliminado (tabla, fecha DESC);
+GO
+/* ---------- CAMBIO 108 y 110 ---------- */
+DECLARE @t TABLE (n int IDENTITY, tabla sysname, filtro_baja nvarchar(200) NULL);
+INSERT INTO @t (tabla, filtro_baja) VALUES
+ ('pais', NULL), ('destino', NULL), ('estacion', NULL), ('campanya', NULL), ('moneda', NULL), ('tasa', NULL), ('regimen', NULL),
+ ('idioma', NULL), ('proveedor', NULL), ('alojamiento', NULL), ('alojamiento_habitacion', NULL),
+ ('inicio', N' AND d.tipo_servicio = ''HOTEL'''), ('servicio', NULL), ('circuito', NULL), ('servicio_excursion', NULL), ('traslado', NULL), ('crucero', NULL);
+DECLARE @i int = 1, @max int = (SELECT MAX(n) FROM @t), @tab sysname, @fb nvarchar(200), @sql nvarchar(max), @on nvarchar(max), @onD nvarchar(max),
+        @clave nvarchar(max), @nombre nvarchar(200);
+WHILE @i <= @max
+BEGIN
+    SELECT @tab = tabla, @fb = ISNULL(filtro_baja, N'') FROM @t WHERE n = @i;
+    IF OBJECT_ID(N'Eurovip.' + @tab) IS NULL THROW 50108, 'CAMBIO 108: falta una tabla', 1;
+    -- columnas que falten
+    IF COL_LENGTH(N'Eurovip.' + @tab, 'usuario_alta') IS NULL
+        BEGIN SET @sql = N'ALTER TABLE Eurovip.' + QUOTENAME(@tab) + N' ADD usuario_alta varchar(50) NULL;'; EXEC sp_executesql @sql; END
+    IF COL_LENGTH(N'Eurovip.' + @tab, 'fecha_alta') IS NULL
+        BEGIN SET @sql = N'ALTER TABLE Eurovip.' + QUOTENAME(@tab) + N' ADD fecha_alta datetime2(0) NULL;'; EXEC sp_executesql @sql; END
+    IF COL_LENGTH(N'Eurovip.' + @tab, 'usuario_modificacion') IS NULL
+        BEGIN SET @sql = N'ALTER TABLE Eurovip.' + QUOTENAME(@tab) + N' ADD usuario_modificacion varchar(50) NULL;'; EXEC sp_executesql @sql; END
+    IF COL_LENGTH(N'Eurovip.' + @tab, 'fecha_modificacion') IS NULL
+        BEGIN SET @sql = N'ALTER TABLE Eurovip.' + QUOTENAME(@tab) + N' ADD fecha_modificacion datetime2(0) NULL;'; EXEC sp_executesql @sql; END
+    -- clave primaria
+    SELECT @on = STRING_AGG(N'x.' + QUOTENAME(c.name) + N' = t.' + QUOTENAME(c.name), N' AND ') WITHIN GROUP (ORDER BY ic.key_ordinal),
+           @onD = STRING_AGG(N'x.' + QUOTENAME(c.name) + N' = d.' + QUOTENAME(c.name), N' AND ') WITHIN GROUP (ORDER BY ic.key_ordinal),
+           @clave = CASE WHEN COUNT(*) = 1 THEN N'CAST(' + MAX(N'd.' + QUOTENAME(c.name)) + N' AS nvarchar(400))'
+                         ELSE N'CONCAT_WS(N''|'', ' + STRING_AGG(N'd.' + QUOTENAME(c.name), N', ') WITHIN GROUP (ORDER BY ic.key_ordinal) + N')' END
+      FROM sys.indexes ix JOIN sys.index_columns ic ON ic.object_id = ix.object_id AND ic.index_id = ix.index_id
+      JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+     WHERE ix.object_id = OBJECT_ID(N'Eurovip.' + @tab) AND ix.is_primary_key = 1;
+    IF @on IS NULL THROW 50110, 'CAMBIO 110: tabla sin clave primaria', 1;
+    SET @nombre = CASE WHEN COL_LENGTH(N'Eurovip.' + @tab, 'nombre') IS NOT NULL THEN N'd.nombre'
+                       WHEN COL_LENGTH(N'Eurovip.' + @tab, 'nombre_circuito') IS NOT NULL THEN N'd.nombre_circuito'
+                       WHEN COL_LENGTH(N'Eurovip.' + @tab, 'titulo') IS NOT NULL THEN N'd.titulo'
+                       WHEN COL_LENGTH(N'Eurovip.' + @tab, 'id_destino') IS NOT NULL THEN N'd.id_destino'
+                       WHEN COL_LENGTH(N'Eurovip.' + @tab, 'descripcion') IS NOT NULL THEN N'd.descripcion'
+                       ELSE N'NULL' END;
+    SET @sql = N'CREATE OR ALTER TRIGGER Eurovip.' + QUOTENAME(N'trEurovip_' + @tab + N'_quien') + N' ON Eurovip.' + QUOTENAME(@tab) + N'
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    /* CAMBIO 110 (FASE 33): quién y cuándo creó, cambió o eliminó. Solo lo que hace el usuario (no lo de otros triggers). */
+    SET NOCOUNT ON;
+    IF TRIGGER_NESTLEVEL() > 1 RETURN;
+    DECLARE @u varchar(50) = LEFT(COALESCE(CAST(SESSION_CONTEXT(N''usuario'') AS nvarchar(50)), N''sql:'' + SUSER_SNAME()), 50);
+    DECLARE @ahora datetime2(0) = SYSDATETIME();
+    IF EXISTS (SELECT 1 FROM inserted)
+    BEGIN
+        IF EXISTS (SELECT 1 FROM deleted)
+            UPDATE t SET usuario_modificacion = @u, fecha_modificacion = @ahora
+              FROM Eurovip.' + QUOTENAME(@tab) + N' t WHERE EXISTS (SELECT 1 FROM inserted x WHERE ' + @on + N');
+        ELSE
+            UPDATE t SET usuario_alta = ISNULL(t.usuario_alta, @u), fecha_alta = ISNULL(t.fecha_alta, @ahora)
+              FROM Eurovip.' + QUOTENAME(@tab) + N' t WHERE EXISTS (SELECT 1 FROM inserted x WHERE ' + @on + N');
+        RETURN;
+    END
+    INSERT INTO Eurovip.registro_eliminado (tabla, clave, nombre, datos, usuario, fecha)
+    SELECT N''' + @tab + N''', ' + @clave + N', LEFT(CAST(' + @nombre + N' AS nvarchar(400)), 400),
+           (SELECT x.* FROM deleted x WHERE ' + @onD + N' FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), @u, @ahora
+      FROM deleted d WHERE 1 = 1' + @fb + N';
+END';
+    EXEC sp_executesql @sql;
+    SET @i += 1;
+END
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -5322,6 +5427,9 @@ GO
    27/10/2026  FASE 32 aplicada SOLO en el 93 (CAMBIO 107): la web ordena por prioridad (★) y devuelve peso y precio_proveedor
                (fnPortalServicios y 7 spPortal*). Probado: prioridad 1 a la oferta más cara (#188) → sale la primera (con ROLLBACK);
                los demás procedimientos ejecutan sin error. No cambió ningún dato.
+   27/10/2026  FASE 33 aplicada SOLO en el 93 (CAMBIO 108-110): usuario_alta/fecha_alta/usuario_modificacion/fecha_modificacion
+               en 17 tablas, Eurovip.registro_eliminado y triggers trEurovip_*_quien. Ensayada antes con ROLLBACK. Prueba desde el back:
+               moneda ZZQ creada, editada y eliminada (y su fila de registro_eliminado borrada). No cambió ningún dato.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

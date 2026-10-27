@@ -96,7 +96,10 @@ var mvc = builder.Services.AddControllersWithViews(o =>
 if (builder.Environment.IsDevelopment())
     mvc.AddRazorRuntimeCompilation();
 
+builder.Services.AddHttpContextAccessor();
 var app = builder.Build();
+// FASE 33: el usuario de la sesión llega a SQL Server (SESSION_CONTEXT) para anotar quién crea, cambia o elimina
+EuroVip.Services.UsuarioSql.Accesor = app.Services.GetRequiredService<IHttpContextAccessor>();
 
 // Página de error de Eurovip para cualquier fallo (ErrorController). En desarrollo también, con el detalle técnico desplegable.
 app.UseExceptionHandler("/Error/500");

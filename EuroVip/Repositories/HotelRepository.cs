@@ -48,7 +48,7 @@ namespace EuroVip.Repositories
                   ?? throw new InvalidOperationException("Falta ConnectionStrings:DefaultConnection");
         }
 
-        private SqlConnection Conexion() => new(_cs);
+        private SqlConnection Conexion() => UsuarioSql.Marcar(new SqlConnection(_cs));   // FASE 33: quién hace el cambio
 
         public async Task<PaginaResultado<HotelListaItem>> ListarAsync(HotelFiltro f)
         {

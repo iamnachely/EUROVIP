@@ -56,7 +56,7 @@ namespace EuroVip.Repositories
                   ?? throw new InvalidOperationException("Falta ConnectionStrings:DefaultConnection");
         }
 
-        public SqlConnection Conexion() => new(_cs);
+        public SqlConnection Conexion() => EuroVip.Services.UsuarioSql.Marcar(new SqlConnection(_cs));   // FASE 33: quién hace el cambio
 
         // ------------------------------------------------------------------ catálogo
 

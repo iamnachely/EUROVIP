@@ -398,6 +398,15 @@ const HC = (() => {
         return { datos, err };
     }
 
+    // FASE 33: quién lo creó y quién lo cambió por última vez (lo anterior al 27/10/2026 no tiene registro)
+    function quien(f) {
+        const cuando = v => v ? new Date(v).toLocaleString('es', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        const p = [];
+        if (f?._usuario_alta) p.push(`<span><i class="bi bi-plus-circle"></i> Creado por <b>${esc(f._usuario_alta)}</b> · ${cuando(f._fecha_alta)}</span>`);
+        if (f?._usuario_modificacion) p.push(`<span><i class="bi bi-pencil"></i> Último cambio: <b>${esc(f._usuario_modificacion)}</b> · ${cuando(f._fecha_modificacion)}</span>`);
+        return `<div class="hc-uso" style="color:var(--ev-muted);gap:14px">${p.join('') || '<span><i class="bi bi-clock-history"></i> Sin registro de quién lo creó (es anterior al 27/10/2026).</span>'}</div>`;
+    }
+
     async function abrir(fila) {
         nuevo = !fila;
         actual = null;
@@ -407,6 +416,7 @@ const HC = (() => {
                   $('#eUso').innerHTML = r.usos.length
                     ? `<div class="hc-uso"><i class="bi bi-link-45deg"></i> Se usa en: ${r.usos.map(u => `<span class="ui-chip">${EV.fmt(u.n)} ${esc(u.etiqueta)}</span>`).join('')}<small style="color:var(--ev-muted);width:100%">Por eso no se puede eliminar${DEF.especial === 'alojamiento' ? ' (puedes desactivarlo)' : ''}.</small></div>`
                     : `<div class="hc-uso" style="color:var(--ev-muted)"><i class="bi bi-check2-circle"></i> No se usa en ninguna oferta ni circuito.</div>`;
+                  $('#eUso').insertAdjacentHTML('beforeend', quien(actual));
                   $('#eEliminar').disabled = r.usos.length > 0; }
             catch (e) { EV.toast(e.message, 'err'); return; }
         } else $('#eEliminar').disabled = true;
