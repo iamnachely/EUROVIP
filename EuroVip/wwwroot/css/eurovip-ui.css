@@ -79,8 +79,8 @@
 .ui-f .msg { color: #D92D20; font-size: 12px; font-weight: 600; }
 .ui-f .ok { color: #067647; font-size: 12px; font-weight: 600; }
 .ui-money { position: relative; }
-.ui-money input { padding-left: 32px !important; font-weight: 800 !important; }
-.ui-money b { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ev-muted); font-size: 13px; }
+.ui-money input { padding-left: 52px !important; font-weight: 800 !important; }   /* cabe «RD$» / «US$» sin tapar el número */
+.ui-money b { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--ev-muted); font-size: 13px; font-weight: 800; pointer-events: none; }
 
 /* ---------- Interruptor ---------- */
 .ui-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font: 700 13px var(--ev-font); user-select: none; }
