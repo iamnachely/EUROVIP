@@ -227,6 +227,15 @@
     @@media (max-width: 640px) { .hx-foto { grid-template-columns: 1fr; } }
 
     /* Vista previa en vivo */
+    .hx-tabs { display: flex; gap: 6px; padding: 5px; border-radius: 16px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); margin-bottom: 22px; position: sticky; top: -24px; z-index: 3; }
+    .hx-tabs button { flex: 1; border: 0; background: none; border-radius: 12px; padding: 10px 12px; font: 800 14px var(--ev-font); color: var(--ev-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s, color .15s; }
+    .hx-tabs button small { font-weight: 600; font-size: 11.5px; opacity: .8; }
+    .hx-tabs button.on { background: var(--ev-surface); color: var(--ev-text); box-shadow: 0 4px 14px -8px rgba(14,60,58,.35); }
+    .hx-tab-err { background: #D92D20; color: #fff; border-radius: 99px; min-width: 20px; height: 20px; display: inline-grid; place-items: center; font-size: 12px; }
+    .hx-pane { display: none; } .hx-pane.on { display: block; animation: hxPane .18s ease-out; }
+    @@keyframes hxPane { from { opacity: 0; transform: translateY(4px); } }
+    .hx-mas-nota { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; background: #ECFDF8; border: 1px solid #B7EDE3; color: #0B5F58; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
+    .hx-mas-nota i { font-size: 18px; }
     .hx-preview { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; padding: 16px; border-radius: 22px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); margin-bottom: 26px; align-items: center; }
     .hx-preview .pi { position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 4 / 3; background: var(--ev-grad); }
     .hx-preview .pi img { width: 100%; height: 100%; object-fit: cover; }
@@ -439,6 +448,12 @@
             </div>
         </div>
 
+        <!-- Pestañas: lo que hay que escribir siempre / lo que ya viene relleno -->
+        <div class="hx-tabs" role="tablist">
+            <button type="button" class="on" data-ptab="principal" role="tab"><i class="bi bi-building"></i> Lo principal</button>
+            <button type="button" data-ptab="mas" role="tab"><i class="bi bi-sliders"></i> Más datos <small>ya rellenos</small><span class="hx-tab-err" hidden>!</span></button>
+        </div>
+        <div class="hx-pane on" data-pane="principal">
         <!-- 1. Hotel: se guarda igual que ViajeVDT.dbo.inicio (tipo_servicio = Hotel) -->
         <div class="hx-sec">
             <div class="hx-sec-t"><span>1</span> El hotel</div>
@@ -500,6 +515,14 @@
                     <span class="msg"></span>
                 </div>
             </div>
+            <div class="hx-row">
+                <div class="hx-f">
+                    <label for="PrecioWeb">Precio desde</label>
+                    <div class="hx-money"><b id="mSim">RD$</b><input id="PrecioWeb" name="PrecioWeb" type="number" min="0" step="1" placeholder="0" /></div>
+                    <span class="msg"></span>
+                </div>
+                <div class="hx-f"><label>&nbsp;</label><small class="hx-ayuda" style="margin-top:12px">El precio «desde» que ve el cliente. La moneda, la campaña y las noches están en «Más datos».</small></div>
+            </div>
             <input type="hidden" id="Descripcion" name="Descripcion" />
         </div>
 
@@ -521,9 +544,14 @@
             </div>
         </div>
 
+            <div class="hx-f" style="margin-top:4px" id="edPrio"></div>
+        </div>
+
+        <div class="hx-pane" data-pane="mas">
+        <div class="hx-mas-nota"><i class="bi bi-magic"></i><span>Todo esto ya viene relleno con lo habitual (campaña General-DT, salida desde Madrid, sección HOTELES BOOKINGMOTOR…). Cámbialo solo si este hotel es distinto.</span></div>
         <!-- 2. Precio y campaña -->
         <div class="hx-sec">
-            <div class="hx-sec-t"><span>2</span> Precio y campaña</div>
+            <div class="hx-sec-t"><span>2</span> Campaña, moneda y noches</div>
             <div class="hx-row">
                 <div class="hx-f">
                     <label>Idioma <em>fijo</em></label>
@@ -536,12 +564,7 @@
                     <span class="msg"></span>
                 </div>
             </div>
-            <div class="hx-row r3">
-                <div class="hx-f">
-                    <label for="PrecioWeb">Precio desde</label>
-                    <div class="hx-money"><b id="mSim">RD$</b><input id="PrecioWeb" name="PrecioWeb" type="number" min="0" step="1" placeholder="0" /></div>
-                    <span class="msg"></span>
-                </div>
+            <div class="hx-row">
                 <div class="hx-f">
                     <label for="Id_Moneda">Moneda</label>
                     <select id="Id_Moneda" name="Id_Moneda">
@@ -629,12 +652,12 @@
                 <div><b>Visible en la web</b><small>Si lo apagas, se guarda pero no se muestra.</small></div>
                 <label class="hx-switch" style="margin:0"><input type="checkbox" id="Estado" name="Estado" checked /><span class="tr"></span></label>
             </div>
-            <div class="hx-f" style="margin-top:12px" id="edPrio"></div>
             <div class="hx-f" style="margin-top:12px">
                 <label for="Notas">Notas internas <em>opcional</em></label>
                 <textarea id="Notas" name="Notas" maxlength="1000" placeholder="Solo para el equipo, no se publica."></textarea>
                 <span class="msg"></span>
             </div>
+        </div>
         </div>
     </form>
 
@@ -1039,20 +1062,36 @@ const HX = (() => {
         campo('Id_Contenedor').innerHTML = '<option value="">Sin sección</option>' + conts.map(c => `<option value="${c.id_Contenedor}">${esc(c.nombre)} · posición ${c.posicion}</option>`).join('');
 
         if (campanya != null) campo('Id_Campanya').value = campanya;
+        else { const g = camps.find(c => +c.id_Campanya === 99) || camps.find(c => /general/i.test(c.nombre)); if (g) campo('Id_Campanya').value = g.id_Campanya; }
         if (contenedor != null) campo('Id_Contenedor').value = contenedor;
         else {
-            // Por defecto: la sección "HOTEL" del idioma, si existe
-            const hotel = conts.find(c => c.nombre.trim().toUpperCase() === 'HOTEL');
+            // Por defecto: HOTELES BOOKINGMOTOR (si no está, la sección "HOTEL")
+            const hotel = conts.find(c => /BOOKINGMOTOR/i.test(c.nombre)) || conts.find(c => c.nombre.trim().toUpperCase() === 'HOTEL');
             if (hotel) campo('Id_Contenedor').value = hotel.id_Contenedor;
         }
     }
 
-    function limpiarErrores() { $$('.hx-f.err', frm).forEach(f => { f.classList.remove('err'); $('.msg', f).textContent = ''; }); }
+    function limpiarErrores() { $('.hx-f.err', frm).forEach(f => { f.classList.remove('err'); $('.msg', f).textContent = ''; }); marcarPestanas(); }
+
+    // ---- pestañas del formulario: «Lo principal» / «Más datos» ----
+    function irPestana(n) {
+        $('[data-ptab]', $('#hxForm')).forEach(b => b.classList.toggle('on', b.dataset.ptab === n));
+        $('[data-pane]', frm).forEach(p => p.classList.toggle('on', p.dataset.pane === n));
+    }
+    // «!» en «Más datos» si tiene algo en rojo
+    function marcarPestanas() { const e = $('.hx-tab-err', $('#hxForm')); if (e) e.hidden = !$('[data-pane="mas"] .hx-f.err', frm); }
+    // Lo habitual para un hotel nuevo (pedido de la usuaria: que no tenga que escribir tanto)
+    function valoresPorDefecto() {
+        const poner = (n, v) => { const el = campo(n); if (el && [...(el.options || [{ value: v }])].some(o => o.value === v)) el.value = v; };
+        poner('Id_Pais_Origen', 'ES'); campo('Origen').value = 'Madrid'; poner('Id_PaisDestino', 'DO');
+        poner('Id_Moneda', 'DOP'); campo('Noches').value = 1; campo('Posicion_Destino').value = 1; campo('Estado').checked = true;
+    }
 
     function marcarError(nombre, msg) {
         if (/^descripcion$/i.test(nombre)) nombre = 'CodigoHotel';   // la descripción se arma con régimen + código
         const el = campo(nombre); if (!el) return;
         const f = el.closest('.hx-f'); if (!f) return; f.classList.add('err'); $('.msg', f).textContent = msg;
+        marcarPestanas();
     }
 
     function preview() {
@@ -1109,7 +1148,8 @@ const HX = (() => {
         editandoId = null;
         frm.reset();
         campo('Id_Servicio').value = '';
-        campo('Estado').checked = true;
+        valoresPorDefecto();
+        irPestana('principal');
         prioridad(null);
         limpiarErrores();
         $('#frmTitulo').textContent = 'Nuevo hotel';
@@ -1130,6 +1170,7 @@ const HX = (() => {
             const h = await api('/Hoteles/Obtener?id=' + id);
             editandoId = id;
             frm.reset();
+            irPestana('principal');
             limpiarErrores();
             const set = (n, v) => { if (campo(n)) campo(n).value = v ?? ''; };
             set('Id_Servicio', h.id_Servicio); set('Id_Destino', (h.id_Destino || '').trim()); set('Descripcion', h.descripcion);
@@ -1194,6 +1235,7 @@ const HX = (() => {
         if (dto.PrecioWeb != null && dto.PrecioWeb < 0) faltan.push(['PrecioWeb', 'El precio no puede ser negativo']);
         if (faltan.length) {
             faltan.forEach(([n, m]) => marcarError(n, m));
+            irPestana(campo(faltan[0][0]).closest('[data-pane]')?.dataset.pane || 'principal');
             campo(faltan[0][0]).focus();
             toast('Revisa los campos marcados en rojo.', 'err');
             return;
@@ -1220,7 +1262,8 @@ const HX = (() => {
             const card = document.querySelector(`[data-id="${r.id}"]`);
             card?.animate([{ boxShadow: '0 0 0 0 rgba(116,242,230,.9)' }, { boxShadow: '0 0 0 14px rgba(116,242,230,0)' }], { duration: 1200, iterations: 2 });
         } catch (e) {
-            if (e.data?.errores) Object.entries(e.data.errores).forEach(([k, m]) => marcarError(k.replace(/^\$\./, ''), m));
+            if (e.data?.errores) { Object.entries(e.data.errores).forEach(([k, m]) => marcarError(k.replace(/^\$\./, ''), m));
+                const pr = $('.hx-f.err', frm); if (pr) irPestana(pr.closest('[data-pane]')?.dataset.pane || 'principal'); }
             toast(e.message, 'err');
         } finally {
             barra?.cerrar();
@@ -1340,7 +1383,10 @@ const HX = (() => {
         $('#fContenedor').addEventListener('change', e => { estado.contenedor = e.target.value; estado.pagina = 1; cargar(); });
 
         // Formulario: vista previa en vivo + combos por idioma
-        frm.addEventListener('input', e => { e.target.closest('.hx-f')?.classList.remove('err'); preview(); });
+        const quitarError = e => { const f = e.target.closest('.hx-f'); if (f?.classList.contains('err')) { f.classList.remove('err'); const m = $('.msg', f); if (m) m.textContent = ''; marcarPestanas(); } };
+        frm.addEventListener('input', e => { quitarError(e); preview(); });
+        frm.addEventListener('change', quitarError);
+        $('[data-ptab]', $('#hxForm')).forEach(b => b.addEventListener('click', () => irPestana(b.dataset.ptab)));
         ['input', 'change'].forEach(t => frm.addEventListener(t, e => { if (e.isTrusted && formAbierto()) formSucio = true; }));
         window.addEventListener('beforeunload', e => { if (formSucio && formAbierto()) { e.preventDefault(); e.returnValue = ''; } });
         frm.addEventListener('change', preview);
