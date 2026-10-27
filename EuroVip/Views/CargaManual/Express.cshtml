@@ -118,10 +118,10 @@
                 </div>
             </div>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>B</span> Origen de venta</div>
+                <div class="ui-sec-t"><span>B</span> Origen de venta @if (!esPaq) {<small>opcional · déjalo vacío si se vende desde cualquier origen</small>}</div>
                 <div class="ui-row">
                     <div class="ui-f"><label>País de origen</label><select id="cPaisOrigen"></select></div>
-                    <div class="ui-f"><label>Ciudad de origen</label><input id="cOrigen" placeholder="Ej. Madrid"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Ciudad de origen @if (!esPaq) {<em>opcional</em>}</label><input id="cOrigen" placeholder="@(esPaq ? "Ej. Madrid" : "Ej. Madrid · o déjalo vacío")"><span class="msg"></span></div>
                 </div>
             </div>
             <div class="ui-sec">
@@ -229,7 +229,8 @@ const XP = (() => {
         }
         if (p === 3) {
             if (!$('#cProveedor').dataset.valor) marca('#cProveedor', 'Elige el proveedor de la lista');
-            if (!$('#cOrigen').dataset.valor) marca('#cOrigen', 'Elige la ciudad de la lista');
+            // Solo Hotel: el origen es opcional, pero si se escribe algo tiene que ser de la lista
+            if (!$('#cOrigen').dataset.valor && (ES_PAQ || $('#cOrigen').value.trim())) marca('#cOrigen', ES_PAQ ? 'Elige la ciudad de la lista' : 'Elige la ciudad de la lista o déjalo vacío');
             if (!campanyas.datos().length) err.push('Agrega al menos una campaña.');
             const cs = campanyas.datos().map(x => x.opcion); if (new Set(cs).size !== cs.length) err.push('Hay campañas repetidas.');
             const ts = suplementos.datos().map(x => x.opcion); if (new Set(ts).size !== ts.length) err.push('Hay suplementos repetidos.');
@@ -305,7 +306,7 @@ const XP = (() => {
                 <div><dt>Última entrada</dt><dd>${fechas.length ? EV.fecha(fechas[fechas.length - 1]) : '—'}</dd></div>
                 <div><dt>Precio</dt><dd>${precios.length ? (Math.min(...precios) === Math.max(...precios) ? EV.dinero(precios[0], m) : `${EV.dinero(Math.min(...precios), m)} – ${EV.dinero(Math.max(...precios), m)}`) : '—'}</dd></div>
                 <div><dt>Proveedor</dt><dd>${esc($('#cProveedor')?.dataset.valor ? $('#cProveedor').value : '—')}</dd></div>
-                <div><dt>Origen</dt><dd>${esc($('#cOrigen')?.dataset.valor || '—')}</dd></div>
+                <div><dt>Origen</dt><dd>${esc($('#cOrigen')?.dataset.valor || (ES_PAQ ? '—' : 'Sin origen'))}</dd></div>
                 <div><dt>Campañas</dt><dd>${camps.length ? camps.map(c => esc(cat.campanyas.find(x => x.valor === c.opcion)?.texto || c.opcion) + (c.valor ? ` (-${c.valor}%)` : '')).join('<br>') : '—'}</dd></div>
                 <div><dt>Vuelo</dt><dd>${S.conVuelo ? `<i class="bi bi-airplane"></i> ${vIda?.cantidad() || 0} ida · ${vVuelta?.cantidad() || 0} vuelta` : '<i class="bi bi-building"></i> Sin vuelo'}</dd></div>
             </dl>`;
@@ -317,7 +318,7 @@ const XP = (() => {
         return {
             Modo: 'express', Tipo: TIPO,
             Id_Proveedor: $('#cProveedor').dataset.valor || '', Nombre: $('#cNombre').value.trim() || null,
-            Noches: noches(), Divisa: moneda(), Origen: $('#cOrigen').dataset.valor || '', Id_Pais_Origen: $('#cPaisOrigen').value,
+            Noches: noches(), Divisa: moneda(), Origen: $('#cOrigen').dataset.valor || '', Id_Pais_Origen: $('#cOrigen').dataset.valor ? $('#cPaisOrigen').value : '',
             Hoteles: hoteles().map(h => ({ ...S.bloques.find(b => b.uid === h.uid).comp.datos(), Salidas: mx.salidas(h.uid) })),
             Campanyas: campanyas.datos().map(c => ({ Id_Campanya: parseInt(c.opcion, 10), Descuento: c.valor })),
             Suplementos: suplementos.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor })),

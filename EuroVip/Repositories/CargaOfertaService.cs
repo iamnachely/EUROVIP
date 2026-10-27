@@ -47,7 +47,12 @@ namespace EuroVip.Repositories
 
             if (!await Existe("SELECT COUNT(1) FROM Eurovip.proveedor WHERE id_proveedor = @p", new { p = dto.Id_Proveedor })) e.Add($"El proveedor \"{dto.Id_Proveedor}\" no existe.");
             if (!await Existe("SELECT COUNT(1) FROM Eurovip.moneda WHERE id_moneda = @m", new { m = dto.Divisa })) e.Add($"La moneda \"{dto.Divisa}\" no existe.");
-            if (!await Existe("SELECT COUNT(1) FROM Eurovip.destino WHERE id_destino = @o AND id_pais = @p AND id_idioma = 'ES'", new { o = dto.Origen, p = dto.Id_Pais_Origen }))
+            // origen de venta: opcional en Solo Hotel (sin origen = no se guarda servicio_origen); obligatorio en Paquetes
+            if (string.IsNullOrEmpty(dto.Origen))
+            {
+                if (OfertaRepository.TipoDe(dto.Tipo) == OfertaRepository.TipoPaquete) e.Add("Elige la ciudad de origen.");
+            }
+            else if (!await Existe("SELECT COUNT(1) FROM Eurovip.destino WHERE id_destino = @o AND id_pais = @p AND id_idioma = 'ES'", new { o = dto.Origen, p = dto.Id_Pais_Origen }))
                 e.Add($"El origen \"{dto.Origen} ({dto.Id_Pais_Origen})\" no existe en destinos.");
 
             if (dto.Campanyas.Count == 0) e.Add("Elige al menos una campaña.");
@@ -172,7 +177,7 @@ namespace EuroVip.Repositories
                 {
                     tipo = (dto.Modo == "express" ? "Carga Express " : "Carga Excel ") + (esPaquete ? "Paquetes" : "Ofertas"),
                     usuario, ip, navegador = CargaCircuitoService.Corta(navegador, 1000),
-                    origen = $"{dto.Origen} ({dto.Id_Pais_Origen})",
+                    origen = string.IsNullOrEmpty(dto.Origen) ? "Sin origen" : $"{dto.Origen} ({dto.Id_Pais_Origen})",
                     destino = CargaCircuitoService.Corta($"{destino.Destino.Trim()} — {string.Join(" · ", nombresHotel)}", 1000),
                     campanyas = string.Join(",", dto.Campanyas.Select(c => c.Id_Campanya)),
                     regimenes = string.Join(",", dto.Hoteles.Select(h => h.Id_Regimen).Distinct()),
@@ -226,8 +231,9 @@ namespace EuroVip.Repositories
                                 new { Id_Servicio = id, Secuencia = 1, Id_Alojamiento = hotel.Id_Alojamiento, Id_Idioma = Idioma, h.Id_Habitacion, h.Precio },
                                 tx, commandType: CommandType.StoredProcedure);
 
-                        await cn.ExecuteAsync("INSERT INTO Eurovip.servicio_origen (id_servicio, id_pais_origen, origen) VALUES (@id, @p, @o)",
-                            new { id, p = dto.Id_Pais_Origen, o = dto.Origen }, tx);
+                        if (!string.IsNullOrEmpty(dto.Origen))
+                            await cn.ExecuteAsync("INSERT INTO Eurovip.servicio_origen (id_servicio, id_pais_origen, origen) VALUES (@id, @p, @o)",
+                                new { id, p = dto.Id_Pais_Origen, o = dto.Origen }, tx);
                         await cn.ExecuteAsync("INSERT INTO Eurovip.servicio_destino (id_servicio, id_pais_destino, destino) VALUES (@id, @p, @d)",
                             new { id, p = destino.Pais, d = destino.Destino.Trim() }, tx);
 
@@ -273,8 +279,8 @@ namespace EuroVip.Repositories
         private static void Normalizar(CargaOfertaDto d)
         {
             d.Divisa = d.Divisa.Trim().ToUpperInvariant();
-            d.Id_Pais_Origen = d.Id_Pais_Origen.Trim().ToUpperInvariant();
-            d.Origen = d.Origen.Trim();
+            d.Origen = (d.Origen ?? "").Trim();
+            d.Id_Pais_Origen = d.Origen == "" ? "" : (d.Id_Pais_Origen ?? "").Trim().ToUpperInvariant();
             d.Id_Proveedor = d.Id_Proveedor.Trim();
             foreach (var h in d.Hoteles) h.Id_Regimen = h.Id_Regimen.Trim().ToUpperInvariant();
             if (!d.ConVuelo) { d.VuelosIda.Clear(); d.VuelosVuelta.Clear(); }
