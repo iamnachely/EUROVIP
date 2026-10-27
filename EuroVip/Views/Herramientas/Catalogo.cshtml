@@ -185,6 +185,8 @@
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-mapa.js" asp-append-version="true"></script>
+<script>window.EV_MAPS_KEY = @Json.Serialize(((Microsoft.Extensions.Configuration.IConfiguration)Context.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration))!)["GoogleMaps:ApiKey"] ?? "");</script>
 <script>
 const HC = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -284,6 +286,8 @@ const HC = (() => {
     const previa = v => esImg(v) ? `<img src="${esc(v)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'sin',textContent:'No se encontró la imagen'}))">`
                                  : '<span class="sin"><i class="bi bi-image"></i> Sin imagen</span>';
 
+    // Pares latitud → longitud de los catálogos (destinos y países: latitud/longitud; alojamientos: latitude/longitude)
+    const LAT = { latitud: 'longitud', latitude: 'longitude' };
     async function campoHtml(c, v, esNuevo, pref = 'e') {
         const id = `${pref}_${c.col}`, bloqueado = (c.clave && !esNuevo) || (c.auto);
         const val = v ?? (esNuevo ? (c.defecto ?? '') : '');
@@ -315,6 +319,9 @@ const HC = (() => {
                 </div>
             </div><span class="msg"></span></div>`;
         if (c.tipo === 'url') return `<div class="ui-f" style="grid-column:1/-1">${lab}<input id="${id}" data-c="${c.col}" maxlength="${c.max || ''}" value="${esc(val)}" placeholder="https://…"><span class="msg"></span><div class="hc-prev" data-prev="${c.col}">${EV.esUrl(val) ? `<img src="${esc(val)}" alt="" onerror="this.remove()">` : ''}</div></div>`;
+        // Latitud: con el botón para elegir la ubicación en el mapa (rellena latitud y longitud)
+        if (LAT[c.col]) return `<div class="ui-f">${lab}<div style="display:flex;gap:8px"><input id="${id}" data-c="${c.col}" maxlength="${c.max || ''}" value="${esc(val)}" inputmode="decimal" placeholder="Ej. 18.582010" autocomplete="off" style="flex:1">
+            <button type="button" class="ev-btn ghost sm" data-mapa="${c.col}" title="Buscar el lugar y elegirlo en el mapa" style="white-space:nowrap"><i class="bi bi-geo-alt-fill"></i> Elegir en el mapa</button></div><span class="msg"></span></div>`;
         const tipo = c.tipo === 'number' || c.tipo === 'decimal' ? `type="number" step="${c.tipo === 'decimal' ? '0.01' : '1'}"` : '';
         const disp = c.tipo === 'hotel' && val ? (v && actual?.hotel_nombre ? `${actual.hotel_nombre}` : `#${val}`) : val;
         return `<div class="ui-f">${lab}<input id="${id}" data-c="${c.col}" ${tipo} maxlength="${c.max || ''}" value="${esc(disp)}" data-valor="${esc(val)}" class="${c.mayus ? 'may' : ''}" ${ro} autocomplete="off"><span class="msg"></span></div>`;
@@ -389,6 +396,18 @@ const HC = (() => {
                 caja.addEventListener('mouseleave', () => pintar(+el.value || 0));
             }
             if (vigilado(c) && !el.readOnly) vigilar(el, c, cont, def, esNuevo);
+            if (LAT[c.col]) $(`[data-mapa="${c.col}"]`, cont)?.addEventListener('click', async () => {
+                const lng = $(`[data-c="${LAT[c.col]}"]`, cont);
+                // lo que se busca al abrir: el nombre / destino escrito y su país
+                const valor = col => { const e = $(`[data-c="${col}"]`, cont); if (!e) return ''; return e.tagName === 'SELECT' ? (e.selectedOptions[0]?.text || '') : (e.dataset.valor || e.value || ''); };
+                const buscar = [valor('nombre') || valor('id_destino'), def.clave === 'alojamientos' ? valor('id_destino') : '', valor('id_pais')].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(', ');
+                const r = await EVMapa.elegir({ lat: el.value, lng: lng?.value, buscar, titulo: `Ubicación ${def.el === 'la' ? 'de la' : 'del'} ${def.singular}` });
+                if (!r) return;
+                el.value = r.lat; if (lng) lng.value = r.lng;
+                [el, lng].forEach(x => { x?.closest('.ui-f')?.classList.remove('err'); x?.dispatchEvent(new Event('input', { bubbles: true })); });
+                el.dispatchEvent(new CustomEvent('ev-cambio', { bubbles: true }));
+                EV.toast(`Ubicación puesta: ${r.lat}, ${r.lng}`);
+            });
             if (c.tipo === 'url') el.addEventListener('change', () => { const p = $(`[data-prev="${c.col}"]`, cont); p.innerHTML = EV.esUrl(el.value) ? `<img src="${esc(el.value)}" alt="" onerror="this.remove()">` : ''; });
         });
     }
