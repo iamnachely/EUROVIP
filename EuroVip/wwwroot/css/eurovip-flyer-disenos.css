@@ -1,14 +1,15 @@
-/* Diseños modernos del flyer (Flyer Agencia y Flyer Editor): Neón, Cristal, Bento, Bloque, Editorial y Aurora.
+/* Diseños profesionales del flyer (Flyer Agencia y Flyer Editor): Corporativo, Ejecutivo, Catálogo, Promoción,
+   Premium y Eurovip. Estilo comercial y de empresa.
    Van sobre el mismo HTML del flyer clásico (.flyer-accent, .flyer-hero, .flyer-title, .flyer-section-title, .fh-row,
    .fh-pos, .fh-name, .fh-meta, .fh-price, .flyer-footer…), así que no cambian la edición ni la descarga.
    Todos los colores salen de variables que el usuario puede cambiar (eurovip-flyer-disenos.js las pone en el .flyer):
-     --fx-fondo  fondo del flyer        --fx-tarjeta  fondo de cada hotel     --fx-texto  títulos y nombres
-     --fx-suave  texto secundario       --fx-num      números (1, 2, 3…)      --fx-precio precios
-     --fx-acento detalles (bordes, etiquetas, barras)   --fx-titulo título y subtítulo sobre la foto (blanco)
+     --fx-titulo título y subtítulo sobre la foto (blanco)          --fx-fondo  fondo del flyer
+     --fx-tarjeta fondo de cada hotel     --fx-texto  títulos y nombres     --fx-suave  texto secundario
+     --fx-num     números (1, 2, 3…)      --fx-precio precios               --fx-acento detalles (bandas, bordes, etiquetas)
    Los !important pisan los colores que el editor pone en línea (posiciones, régimen, precios). */
 
-/* ── base común de los 6 ── */
-.flyer.fx { background: var(--fx-fondo) !important; color: var(--fx-texto); }
+/* ── base común ── */
+.flyer.fx { background: var(--fx-fondo) !important; color: var(--fx-texto); font-family: 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif; }
 .flyer.fx .flyer-title { color: var(--fx-titulo, #fff) !important; }   /* va sobre la foto: claro aunque el diseño sea claro */
 .flyer.fx .flyer-subtitle { color: var(--fx-titulo, #fff) !important; opacity: .85; }
 .flyer.fx .flyer-section-title { color: var(--fx-acento) !important; border-color: transparent !important; }
@@ -22,89 +23,95 @@
 .flyer.fx .ff-url { color: var(--fx-texto) !important; }
 .flyer.fx .ff-tag { color: var(--fx-suave) !important; }
 .flyer.fx .ff-line { background: var(--fx-acento) !important; opacity: .45; }
+.flyer.fx .flyer-hero::before, .flyer.fx .flyer-hero::after { display: none; }
 
-/* ── 1. Neón: noche, bordes que brillan ── */
-.flyer.fx-neon { --fx-fondo: #0B0B1A; --fx-tarjeta: #14142B; --fx-texto: #FFFFFF; --fx-suave: #A5A8D6; --fx-num: #00F0FF; --fx-precio: #FF3DF2; --fx-acento: #7C4DFF; }
-.flyer.fx-neon .flyer-accent { background: linear-gradient(90deg, var(--fx-num), var(--fx-acento), var(--fx-precio)) !important; height: 6px; }
-.flyer.fx-neon .flyer-hero { margin: 26px 36px 0; border-radius: 28px; border: 2px solid var(--fx-num); box-shadow: 0 0 34px -4px var(--fx-num), inset 0 0 40px rgba(0,0,0,.35); }
-.flyer.fx-neon .flyer-title { text-shadow: 0 0 22px var(--fx-acento), 0 0 4px rgba(255,255,255,.6); }
-.flyer.fx-neon .flyer-section-title { letter-spacing: 6px; }
-.flyer.fx-neon .flyer-section-title::after { background: linear-gradient(90deg, var(--fx-acento), transparent) !important; }
-.flyer.fx-neon .flyer-hotels { padding: 4px 36px 14px; }
-.flyer.fx-neon .fh-row, .flyer.fx-neon .fh-row.best { background: var(--fx-tarjeta) !important; border: 1px solid rgba(255,255,255,.08) !important; border-left: 4px solid var(--fx-acento) !important; border-radius: 16px; margin-bottom: 12px; padding: 16px 24px 16px 14px; }
-.flyer.fx-neon .fh-row.best { border-left-color: var(--fx-precio) !important; box-shadow: 0 0 26px -8px var(--fx-precio); }
-.flyer.fx-neon .fh-pos { text-shadow: 0 0 14px var(--fx-num); }
-.flyer.fx-neon .fh-sep { background: rgba(255,255,255,.12) !important; }
-.flyer.fx-neon .fh-price { text-shadow: 0 0 16px var(--fx-precio); }
+/* ── 1. Corporativo: blanco y azul marino, ordenado ── */
+.flyer.fx-corporativo { --fx-fondo: #FFFFFF; --fx-tarjeta: #FFFFFF; --fx-texto: #0B2545; --fx-suave: #5B6B7F; --fx-num: #FFFFFF; --fx-precio: #0B2545; --fx-acento: #134074; }
+.flyer.fx-corporativo .flyer-accent { background: var(--fx-acento) !important; height: 10px; }
+.flyer.fx-corporativo .flyer-section-title { letter-spacing: 3px; padding: 26px 56px 12px; border-bottom: 2px solid var(--fx-acento) !important; margin: 0 56px; padding-left: 0; padding-right: 0; }
+.flyer.fx-corporativo .flyer-section-title::after { display: none; }
+.flyer.fx-corporativo .flyer-hotels { padding: 6px 56px 10px; }
+.flyer.fx-corporativo .fh-row, .flyer.fx-corporativo .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-bottom: 1px solid #E3E8EF !important; padding: 16px 0 !important; align-items: center; }
+.flyer.fx-corporativo .fh-row.best { background: #EEF4FB !important; padding: 16px 14px !important; margin: 0 -14px; }
+.flyer.fx-corporativo .fh-pos { background: var(--fx-acento); border-radius: 8px; width: 48px; height: 48px; min-width: 48px; display: grid; place-items: center; font-size: 1.5rem; }
+.flyer.fx-corporativo .fh-sep { display: none; }
+.flyer.fx-corporativo .fh-info { padding-left: 8px; }
+.flyer.fx-corporativo .fh-price { align-self: center; padding-top: 0; margin-top: 0; }
+.flyer.fx-corporativo .flyer-footer { background: var(--fx-acento) !important; margin-top: 14px; }
+.flyer.fx-corporativo .ff-url { color: #FFFFFF !important; } .flyer.fx-corporativo .ff-tag { color: rgba(255,255,255,.75) !important; } .flyer.fx-corporativo .ff-line { background: rgba(255,255,255,.4) !important; }
 
-/* ── 2. Cristal: foto de fondo en todo el flyer y tarjetas translúcidas ── */
-.flyer.fx-cristal { --fx-fondo: #0E3B4A; --fx-tarjeta: rgba(255,255,255,.14); --fx-texto: #FFFFFF; --fx-suave: #CFEFF2; --fx-num: #FFFFFF; --fx-precio: #FFD166; --fx-acento: #7FE7DC; }
-.flyer.fx-cristal { background: linear-gradient(160deg, var(--fx-fondo) 0%, #071E26 100%) !important; }
-.flyer.fx-cristal .flyer-accent { display: none; }
-.flyer.fx-cristal .flyer-hero { margin: 0; border-radius: 0 0 40px 40px; }
-.flyer.fx-cristal .flyer-section-title { padding-top: 30px; }
-.flyer.fx-cristal .flyer-section-title::after { background: linear-gradient(90deg, rgba(255,255,255,.35), transparent) !important; }
-.flyer.fx-cristal .flyer-hotels { padding: 4px 40px 16px; }
-.flyer.fx-cristal .fh-row, .flyer.fx-cristal .fh-row.best { background: var(--fx-tarjeta) !important; border: 1px solid rgba(255,255,255,.28) !important; border-radius: 22px; margin-bottom: 12px; padding: 16px 26px 16px 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
-.flyer.fx-cristal .fh-row.best { background: rgba(255,255,255,.24) !important; }
-.flyer.fx-cristal .fh-pos { width: 52px; height: 52px; min-width: 52px; border-radius: 50%; background: rgba(255,255,255,.18); display: grid; place-items: center; font-size: 1.6rem; align-self: center; }
-.flyer.fx-cristal .fh-sep { display: none; }
+/* ── 2. Ejecutivo: gris carbón y dorado, sobrio ── */
+.flyer.fx-ejecutivo { --fx-fondo: #1E2329; --fx-tarjeta: #262C33; --fx-texto: #FFFFFF; --fx-suave: #A9B1BA; --fx-num: #C9A227; --fx-precio: #C9A227; --fx-acento: #C9A227; }
+.flyer.fx-ejecutivo .flyer-accent { background: var(--fx-acento) !important; height: 4px; }
+.flyer.fx-ejecutivo .flyer-section-title { letter-spacing: 4px; padding: 28px 48px 12px; }
+.flyer.fx-ejecutivo .flyer-section-title::after { background: var(--fx-acento) !important; opacity: .35; }
+.flyer.fx-ejecutivo .flyer-hotels { padding: 4px 48px 12px; }
+.flyer.fx-ejecutivo .fh-row, .flyer.fx-ejecutivo .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-left: 3px solid transparent !important; border-radius: 6px; margin-bottom: 10px; padding: 16px 24px 16px 12px !important; align-items: center; }
+.flyer.fx-ejecutivo .fh-row.best { border-left-color: var(--fx-acento) !important; }
+.flyer.fx-ejecutivo .fh-sep { background: rgba(255,255,255,.12) !important; }
+.flyer.fx-ejecutivo .fh-price { align-self: center; padding-top: 0; margin-top: 0; }
+.flyer.fx-ejecutivo .flyer-footer { border-top: 1px solid rgba(201,162,39,.35) !important; }
+.flyer.fx-ejecutivo .ff-url { color: var(--fx-acento) !important; }
 
-/* ── 3. Bento: mosaico de tarjetas en dos columnas ── */
-.flyer.fx-bento { --fx-fondo: #F2F0EB; --fx-tarjeta: #FFFFFF; --fx-texto: #111111; --fx-suave: #6B6B6B; --fx-num: #FF5A36; --fx-precio: #111111; --fx-acento: #FF5A36; }
-.flyer.fx-bento .flyer-accent { display: none; }
-.flyer.fx-bento .flyer-hero { margin: 28px 32px 0; border-radius: 30px; }
-.flyer.fx-bento .flyer-section-title { padding: 22px 32px 10px; }
-.flyer.fx-bento .flyer-section-title::after { background: var(--fx-acento) !important; opacity: .3; }
-.flyer.fx-bento .flyer-hotels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 6px 32px 18px; align-content: start; }
-.flyer.fx-bento .fh-row, .flyer.fx-bento .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-radius: 26px; padding: 18px 20px !important; flex-direction: column; gap: 6px; box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 12px 28px -18px rgba(0,0,0,.35); }
-.flyer.fx-bento .fh-row.best { grid-column: 1 / -1; background: var(--fx-acento) !important; }
-.flyer.fx-bento .fh-row.best .fh-name, .flyer.fx-bento .fh-row.best .fh-pos, .flyer.fx-bento .fh-row.best .fh-price, .flyer.fx-bento .fh-row.best .fh-best-tag { color: #FFFFFF !important; }
-.flyer.fx-bento .fh-row.best .fh-meta { color: rgba(255,255,255,.85) !important; }
-.flyer.fx-bento .fh-pos { text-align: left; font-size: 1.5rem; min-width: 0; }
-.flyer.fx-bento .fh-sep { display: none; }
-.flyer.fx-bento .fh-info { width: 100%; }
-.flyer.fx-bento .fh-price { align-self: flex-start; padding-top: 6px; }
+/* ── 3. Catálogo: fichas de producto en dos columnas ── */
+.flyer.fx-catalogo { --fx-fondo: #F4F6F8; --fx-tarjeta: #FFFFFF; --fx-texto: #1D2939; --fx-suave: #667085; --fx-num: #0E8F86; --fx-precio: #0E8F86; --fx-acento: #0E8F86; }
+.flyer.fx-catalogo .flyer-accent { background: var(--fx-acento) !important; height: 6px; }
+.flyer.fx-catalogo .flyer-hero { margin: 24px 32px 0; border-radius: 14px; }
+.flyer.fx-catalogo .flyer-section-title { padding: 24px 32px 10px; letter-spacing: 3px; }
+.flyer.fx-catalogo .flyer-section-title::after { background: #D0D5DD !important; opacity: 1; }
+.flyer.fx-catalogo .flyer-hotels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 6px 32px 18px; align-content: start; }
+.flyer.fx-catalogo .fh-row, .flyer.fx-catalogo .fh-row.best { background: var(--fx-tarjeta) !important; border: 1px solid #E4E7EC !important; border-radius: 12px; padding: 18px 20px !important; flex-direction: column; gap: 6px; }
+.flyer.fx-catalogo .fh-row.best { grid-column: 1 / -1; border: 2px solid var(--fx-acento) !important; }
+.flyer.fx-catalogo .fh-pos { font-size: 1.15rem; min-width: 0; text-align: left; letter-spacing: 1px; }
+.flyer.fx-catalogo .fh-pos::before { content: 'N.º '; }
+.flyer.fx-catalogo .fh-sep { display: none; }
+.flyer.fx-catalogo .fh-info { width: 100%; }
+.flyer.fx-catalogo .fh-price { align-self: stretch; text-align: left; padding: 10px 0 0; margin-top: 4px; border-top: 1px solid #EAECF0; }
+.flyer.fx-catalogo .fh-price::before { content: 'Desde'; font-size: 1.15rem; font-weight: 700; color: var(--fx-suave); margin-right: 10px; letter-spacing: .5px; }
 
-/* ── 4. Bloque: dos colores fuertes, números enormes ── */
-.flyer.fx-bloque { --fx-fondo: #1F2BFF; --fx-tarjeta: #1F2BFF; --fx-texto: #FFFFFF; --fx-suave: #C9CCFF; --fx-num: #E8FF3A; --fx-precio: #E8FF3A; --fx-acento: #E8FF3A; }
-.flyer.fx-bloque .flyer-accent { background: var(--fx-acento) !important; height: 14px; }
-.flyer.fx-bloque .flyer-hero { margin: 0 36px; border-radius: 0 0 0 80px; }
-.flyer.fx-bloque .flyer-title { text-transform: uppercase; font-family: 'Plus Jakarta Sans', Arial, sans-serif !important; letter-spacing: -3px; font-weight: 900; }
-.flyer.fx-bloque .flyer-section-title { font-size: 1.1rem; letter-spacing: 5px; }
-.flyer.fx-bloque .flyer-section-title::after { background: var(--fx-acento) !important; height: 3px; }
-.flyer.fx-bloque .flyer-hotels { padding: 0 36px 10px; }
-.flyer.fx-bloque .fh-row, .flyer.fx-bloque .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-bottom: 3px solid rgba(255,255,255,.18) !important; padding: 14px 0 !important; align-items: center; }
-.flyer.fx-bloque .fh-pos { font-size: 4.4rem; min-width: 84px; line-height: 1; }
-.flyer.fx-bloque .fh-sep { display: none; }
-.flyer.fx-bloque .fh-name { text-transform: uppercase; letter-spacing: .5px; }
-.flyer.fx-bloque .fh-price { align-self: center; padding-top: 0; margin-top: 0; font-size: calc(var(--tam-precio, 2.75rem) * 1.1); }
+/* ── 4. Promoción: comercial, banda roja y precios destacados ── */
+.flyer.fx-promocion { --fx-fondo: #FFFFFF; --fx-tarjeta: #FFFFFF; --fx-texto: #1A1A1A; --fx-suave: #6B6B6B; --fx-num: #FFFFFF; --fx-precio: #D62828; --fx-acento: #D62828; }
+.flyer.fx-promocion .flyer-accent { background: var(--fx-acento) !important; height: 12px; }
+.flyer.fx-promocion .flyer-section-title { background: var(--fx-acento); color: #FFFFFF !important; letter-spacing: 4px; font-size: 1.15rem; padding: 16px 48px; justify-content: center; }
+.flyer.fx-promocion .flyer-section-title::after { display: none; }
+.flyer.fx-promocion .flyer-hotels { padding: 8px 48px 10px; }
+.flyer.fx-promocion .fh-row, .flyer.fx-promocion .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-bottom: 2px dashed #E5E5E5 !important; padding: 16px 0 !important; align-items: center; }
+.flyer.fx-promocion .fh-pos { background: var(--fx-acento); border-radius: 50%; width: 46px; height: 46px; min-width: 46px; display: grid; place-items: center; font-size: 1.4rem; }
+.flyer.fx-promocion .fh-sep { display: none; }
+.flyer.fx-promocion .fh-info { padding-left: 10px; }
+.flyer.fx-promocion .fh-price { align-self: center; padding-top: 0; margin-top: 0; font-weight: 900; font-size: calc(var(--tam-precio, 2.75rem) * 1.08); }
+.flyer.fx-promocion .fh-row.best .fh-price { background: var(--fx-acento); color: #FFFFFF !important; padding: 6px 16px; border-radius: 8px; }
+.flyer.fx-promocion .flyer-footer { background: #1A1A1A !important; }
+.flyer.fx-promocion .ff-url { color: #FFFFFF !important; } .flyer.fx-promocion .ff-tag { color: #BDBDBD !important; } .flyer.fx-promocion .ff-line { background: var(--fx-acento) !important; opacity: 1; }
 
-/* ── 5. Editorial: revista, papel claro y letra con serifa ── */
-.flyer.fx-editorial { --fx-fondo: #FBF8F2; --fx-tarjeta: transparent; --fx-texto: #1B1B1B; --fx-suave: #7A7369; --fx-num: #B08D57; --fx-precio: #1B1B1B; --fx-acento: #B08D57; }
-.flyer.fx-editorial .flyer-accent { background: var(--fx-texto) !important; height: 2px; margin: 26px 56px 0; }
-.flyer.fx-editorial .flyer-hero { margin: 22px 56px 0; border-radius: 2px; outline: 1px solid var(--fx-texto); outline-offset: 8px; }
-.flyer.fx-editorial .flyer-section-title { font-family: 'Playfair Display', Georgia, serif; text-transform: none; letter-spacing: 0; font-size: 1.9rem; font-style: italic; padding: 34px 56px 10px; }
-.flyer.fx-editorial .flyer-section-title::after { background: var(--fx-texto) !important; opacity: .25; }
-.flyer.fx-editorial .flyer-hotels { padding: 0 56px 10px; }
-.flyer.fx-editorial .fh-row, .flyer.fx-editorial .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-bottom: 1px solid rgba(0,0,0,.12) !important; padding: 16px 0 !important; }
-.flyer.fx-editorial .fh-pos { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 2.4rem; }
-.flyer.fx-editorial .fh-sep { background: var(--fx-acento) !important; opacity: .5; }
-.flyer.fx-editorial .fh-name { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; }
-.flyer.fx-editorial .fh-meta { text-transform: uppercase; letter-spacing: 2px; font-size: calc(var(--tam-regimen, 1.85rem) * .6) !important; }
-.flyer.fx-editorial .fh-price { font-family: 'Playfair Display', Georgia, serif; }
+/* ── 5. Premium: marfil, azul y dorado fino ── */
+.flyer.fx-premium { --fx-fondo: #FAF7F0; --fx-tarjeta: transparent; --fx-texto: #14213D; --fx-suave: #7A7363; --fx-num: #B08D57; --fx-precio: #14213D; --fx-acento: #B08D57; }
+.flyer.fx-premium .flyer-accent { background: var(--fx-acento) !important; height: 3px; }
+.flyer.fx-premium .flyer-hero { margin: 26px 52px 0; border-radius: 2px; }
+.flyer.fx-premium .flyer-section-title { font-family: 'Playfair Display', Georgia, serif; text-transform: none; letter-spacing: 0; font-size: 1.8rem; padding: 32px 52px 10px; }
+.flyer.fx-premium .flyer-section-title::after { background: var(--fx-acento) !important; opacity: .5; }
+.flyer.fx-premium .flyer-hotels { padding: 0 52px 10px; }
+.flyer.fx-premium .fh-row, .flyer.fx-premium .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-bottom: 1px solid rgba(20,33,61,.12) !important; padding: 16px 0 !important; align-items: center; }
+.flyer.fx-premium .fh-pos { font-family: 'Playfair Display', Georgia, serif; font-size: 2.2rem; }
+.flyer.fx-premium .fh-sep { background: var(--fx-acento) !important; opacity: .5; }
+.flyer.fx-premium .fh-name { font-family: 'Playfair Display', Georgia, serif; }
+.flyer.fx-premium .fh-meta { text-transform: uppercase; letter-spacing: 2px; font-size: calc(var(--tam-regimen, 1.85rem) * .6) !important; }
+.flyer.fx-premium .fh-price { align-self: center; padding-top: 0; margin-top: 0; }
+.flyer.fx-premium .flyer-footer { border-top: 1px solid rgba(176,141,87,.4) !important; }
 
-/* ── 6. Aurora: degradado suave, píldoras blancas ── */
-.flyer.fx-aurora { --fx-fondo: #FFE3EC; --fx-tarjeta: #FFFFFF; --fx-texto: #2A1B4D; --fx-suave: #7D6FA3; --fx-num: #8B5CF6; --fx-precio: #EC4899; --fx-acento: #8B5CF6; }
-.flyer.fx-aurora { background: radial-gradient(circle at 0% 0%, #C7D2FE 0%, transparent 45%), radial-gradient(circle at 100% 30%, #FBCFE8 0%, transparent 45%), radial-gradient(circle at 30% 100%, #A7F3D0 0%, transparent 45%), var(--fx-fondo) !important; }
-.flyer.fx-aurora .flyer-accent { display: none; }
-.flyer.fx-aurora .flyer-hero { margin: 30px 36px 0; border-radius: 36px; box-shadow: 0 24px 50px -24px rgba(42,27,77,.6); }
-.flyer.fx-aurora .flyer-section-title::after { background: linear-gradient(90deg, var(--fx-acento), transparent) !important; opacity: .4; }
-.flyer.fx-aurora .flyer-hotels { padding: 4px 36px 16px; }
-.flyer.fx-aurora .fh-row, .flyer.fx-aurora .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-radius: 99px; margin-bottom: 12px; padding: 12px 30px 12px 12px !important; align-items: center; box-shadow: 0 10px 24px -16px rgba(42,27,77,.5); }
-.flyer.fx-aurora .fh-pos { width: 56px; height: 56px; min-width: 56px; border-radius: 50%; background: var(--fx-fondo); display: grid; place-items: center; font-size: 1.6rem; }
-.flyer.fx-aurora .fh-sep { display: none; }
-.flyer.fx-aurora .fh-price { align-self: center; padding-top: 0; margin-top: 0; }
+/* ── 6. Eurovip: colores de la marca (azul y naranja) ── */
+.flyer.fx-eurovip { --fx-fondo: #F5F7FB; --fx-tarjeta: #FFFFFF; --fx-texto: #0B2A6F; --fx-suave: #5A6B8C; --fx-num: #FF8A3D; --fx-precio: #FF6A13; --fx-acento: #0B2A6F; }
+.flyer.fx-eurovip .flyer-accent { background: linear-gradient(90deg, #0B2A6F 0 70%, #FF8A3D 70%) !important; height: 10px; }
+.flyer.fx-eurovip .flyer-hero { margin: 0; }
+.flyer.fx-eurovip .flyer-section-title { letter-spacing: 3px; padding: 26px 44px 12px; }
+.flyer.fx-eurovip .flyer-section-title::after { background: #FF8A3D !important; opacity: .6; }
+.flyer.fx-eurovip .flyer-hotels { padding: 4px 44px 12px; }
+.flyer.fx-eurovip .fh-row, .flyer.fx-eurovip .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-left: 5px solid var(--fx-acento) !important; border-radius: 10px; margin-bottom: 10px; padding: 14px 24px 14px 12px !important; align-items: center; box-shadow: 0 6px 18px -12px rgba(11,42,111,.35); }
+.flyer.fx-eurovip .fh-row.best { border-left-color: #FF8A3D !important; }
+.flyer.fx-eurovip .fh-sep { background: #E3E8F2 !important; }
+.flyer.fx-eurovip .fh-price { align-self: center; padding-top: 0; margin-top: 0; }
+.flyer.fx-eurovip .flyer-footer { background: var(--fx-acento) !important; }
+.flyer.fx-eurovip .ff-url { color: #FFFFFF !important; } .flyer.fx-eurovip .ff-tag { color: #FFB27A !important; } .flyer.fx-eurovip .ff-line { background: rgba(255,255,255,.35) !important; }
 
 /* ── símbolo de moneda detrás («12.990 €») ── */
 .flyer .fh-price.sym-detras { display: inline-flex; align-items: baseline; justify-content: flex-end; }

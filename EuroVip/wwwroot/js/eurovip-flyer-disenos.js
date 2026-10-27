@@ -1,5 +1,5 @@
-// Diseños modernos del flyer + colores a elegir + moneda (Flyer Agencia y Flyer Editor). Estilos: css/eurovip-flyer-disenos.css.
-//   EVDisenos.LISTA                         → [{ id, nombre, mini }] de los 6 diseños modernos
+// Diseños profesionales del flyer (comerciales, de empresa) + colores a elegir + moneda (Flyer Agencia y Flyer Editor). Estilos: css/eurovip-flyer-disenos.css.
+//   EVDisenos.LISTA                         → [{ id, nombre, mini }] de los 6 diseños profesionales
 //   EVDisenos.es(id)                        → true si es uno de ellos
 //   EVDisenos.aplicar(flyer, id)            → pone las clases y los colores guardados (id no moderno = los quita)
 //   EVDisenos.panelColores(caja, id, alCambiar) → los 7 selectores de color + «Restablecer»
@@ -9,12 +9,12 @@
 // Colores y moneda se guardan en este navegador (los comparten Flyer Agencia y Flyer Editor).
 window.EVDisenos = (() => {
     const LISTA = [
-        { id: 'neon', nombre: 'Neón', mini: 'linear-gradient(135deg,#0B0B1A 55%,#00F0FF 56%,#FF3DF2)' },
-        { id: 'cristal', nombre: 'Cristal', mini: 'linear-gradient(160deg,#0E3B4A,#7FE7DC)' },
-        { id: 'bento', nombre: 'Bento', mini: 'conic-gradient(#FF5A36 0 25%,#fff 0 50%,#F2F0EB 0 75%,#fff 0)' },
-        { id: 'bloque', nombre: 'Bloque', mini: 'linear-gradient(180deg,#1F2BFF 70%,#E8FF3A 70%)' },
-        { id: 'editorial', nombre: 'Editorial', mini: 'linear-gradient(180deg,#FBF8F2 40%,#1B1B1B 40% 43%,#FBF8F2 43%)' },
-        { id: 'aurora', nombre: 'Aurora', mini: 'radial-gradient(circle at 0 0,#C7D2FE,transparent 60%),radial-gradient(circle at 100% 100%,#A7F3D0,transparent 60%),#FFE3EC' },
+        { id: 'corporativo', nombre: 'Corporativo', mini: 'linear-gradient(180deg,#134074 0 18%,#fff 18% 82%,#134074 82%)' },
+        { id: 'ejecutivo', nombre: 'Ejecutivo', mini: 'linear-gradient(180deg,#C9A227 0 6%,#1E2329 6%)' },
+        { id: 'catalogo', nombre: 'Catálogo', mini: 'linear-gradient(90deg,#fff 0 47%,#F4F6F8 47% 53%,#fff 53%)' },
+        { id: 'promocion', nombre: 'Promoción', mini: 'linear-gradient(180deg,#fff 0 40%,#D62828 40% 58%,#fff 58%)' },
+        { id: 'premium', nombre: 'Premium', mini: 'linear-gradient(180deg,#FAF7F0 0 45%,#B08D57 45% 48%,#FAF7F0 48%)' },
+        { id: 'eurovip', nombre: 'Eurovip', mini: 'linear-gradient(180deg,#0B2A6F 0 25%,#F5F7FB 25% 80%,#FF8A3D 80%)' },
     ];
     const VARS = [['--fx-titulo', 'Título'], ['--fx-fondo', 'Fondo'], ['--fx-tarjeta', 'Tarjetas'], ['--fx-texto', 'Letras'], ['--fx-suave', 'Texto 2.º'],
                   ['--fx-num', 'Números'], ['--fx-precio', 'Precios'], ['--fx-acento', 'Acento']];

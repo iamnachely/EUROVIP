@@ -829,7 +829,7 @@
             DIS.forEach(function (d) {
                 var b = document.createElement('button'); b.type = 'button'; b.dataset.dis = d[0];
                 b.innerHTML = '<i style="background:' + d[2] + '"></i>' + d[1] + (d[3] ? ' <small style="color:#FF8A3D;font-weight:900">✦</small>' : '');
-                b.title = d[3] ? 'Diseño moderno: puedes cambiarle los colores' : 'Diseño ' + d[1];
+                b.title = d[3] ? 'Diseño profesional: puedes cambiarle los colores' : 'Diseño ' + d[1];
                 b.addEventListener('click', function () { actual = d[0]; try { localStorage.setItem('fe-diseno', actual); } catch (e) { } aplicar(); });
                 caja.appendChild(b);
             });
