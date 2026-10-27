@@ -4730,6 +4730,39 @@ GO
 
 
 /* ##########################################################################################
+   FASE 31 — LA HOME CONSERVA LA PRIORIDAD DE CADA TARJETA  (27/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: en /HomeWeb cada tarjeta puede tener prioridad (★) y precio del proveedor (FASE 29), y cada sección
+   un check «prioridad» (contenedores.prioridad). Eurovip.spActualizaInicio BORRA y vuelve a crear la tarjeta cada vez
+   que se refrescan los precios desde las ofertas/circuitos: sin este cambio la prioridad puesta a mano se perdía.
+   Explicado fácil: igual que ya conservaba la sección, la posición y si está visible, ahora conserva también
+   peso y precio_proveedor de la tarjeta.
+   Cambios:
+     • CAMBIO 106: spActualizaInicio guarda y restaura peso y precio_proveedor (se cambia con REPLACE sobre el
+       procedimiento actual; si no encuentra el texto, no toca nada y avisa).
+   No cambia ningún dato.
+   ########################################################################################## */
+SET XACT_ABORT ON;
+GO
+DECLARE @def nvarchar(max) = OBJECT_DEFINITION(OBJECT_ID('Eurovip.spActualizaInicio')), @nuevo nvarchar(max);
+IF CHARINDEX(N'i.peso = p.peso', @def) = 0
+BEGIN
+    SET @nuevo = REPLACE(@def, N'posicion_destino INT);', N'posicion_destino INT, peso SMALLINT, precio_proveedor DECIMAL(12, 2));');
+    SET @nuevo = REPLACE(@nuevo, N'SELECT TOP 1 id, caratulaDestino, estado, id_contenedor, contenedor, posicion_contenedor, posicion_destino',
+                                 N'SELECT TOP 1 id, caratulaDestino, estado, id_contenedor, contenedor, posicion_contenedor, posicion_destino, peso, precio_proveedor');
+    SET @nuevo = REPLACE(@nuevo, N'i.posicion_destino = ISNULL(p.posicion_destino, i.posicion_destino)',
+                                 N'i.posicion_destino = ISNULL(p.posicion_destino, i.posicion_destino),
+                 i.peso = p.peso, i.precio_proveedor = p.precio_proveedor   -- CAMBIO 106 (FASE 31)');
+    IF CHARINDEX(N'peso SMALLINT, precio_proveedor', @nuevo) = 0 OR CHARINDEX(N'posicion_destino, peso, precio_proveedor', @nuevo) = 0
+       OR CHARINDEX(N'i.peso = p.peso', @nuevo) = 0 OR CHARINDEX(N'CREATE   PROCEDURE', @nuevo) = 0
+        THROW 50106, 'CAMBIO 106: no se encontró el texto a cambiar en spActualizaInicio', 1;
+    SET @nuevo = REPLACE(@nuevo, N'CREATE   PROCEDURE', N'CREATE OR ALTER PROCEDURE');
+    EXEC sp_executesql @nuevo;
+END
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -5212,6 +5245,8 @@ GO
                servicio_excursion, traslado y crucero; contenedores.prioridad. No cambió ningún dato.
    27/10/2026  FASE 30 aplicada SOLO en el 93 (CAMBIO 104-105): tabla crucero_pdf (PDF de cada crucero) y spPortalCruceroPdfs.
                Los archivos van en ...\eurovip\PDF\cruceros\{crucero}\. No cambió ningún dato.
+   27/10/2026  FASE 31 aplicada SOLO en el 93 (CAMBIO 106): spActualizaInicio conserva peso y precio_proveedor de la tarjeta al
+               refrescarla. Probado con ROLLBACK (tarjeta 135 → 143 con su prioridad). No cambió ningún dato.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

@@ -37,6 +37,8 @@ namespace EuroVip.Models
         /// <summary>De quién es la foto que se cambia desde la tarjeta (Eurovip.multimedia): INICIO (la tarjeta), HOTEL o CIRCUITO.</summary>
         public string Foto_Tipo { get; set; } = "INICIO";
         public string Foto_Clave { get; set; } = "";
+        public short? Peso { get; set; }
+        public decimal? Precio_Proveedor { get; set; }
     }
 
     public class HwContenedor
@@ -45,6 +47,8 @@ namespace EuroVip.Models
         public string Nombre { get; set; } = "";
         public int Posicion { get; set; }
         public bool Estado { get; set; }
+        /// <summary>FASE 29: la sección ordena sus tarjetas por prioridad (★) y después por precio, en vez del orden a mano.</summary>
+        public bool Prioridad { get; set; }
         public List<HwTarjeta> Tarjetas { get; set; } = new();
     }
 
@@ -119,6 +123,8 @@ namespace EuroVip.Models
         [Required(ErrorMessage = "Escribe el nombre de la sección")] [StringLength(60, ErrorMessage = "Máximo 60 caracteres (cada emoji cuenta como 2)")]
         public string Nombre { get; set; } = "";
         public bool Estado { get; set; } = true;
+        /// <summary>null = no se cambia (renombrar u ocultar no la tocan).</summary>
+        public bool? Prioridad { get; set; }
     }
 
     public class HwTarjetaDto
@@ -137,6 +143,10 @@ namespace EuroVip.Models
         [Range(0, 60)] public int? Noches { get; set; }
         [StringLength(1000)] public string? Notas { get; set; }
         public bool Estado { get; set; } = true;
+        /// <summary>Prioridad (FASE 29): 1 sale primero en la sección, 2 segundo… null = sin prioridad (por precio).</summary>
+        [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
+        /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
+        [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
     }
 
     public class HwActualizarDto

@@ -304,6 +304,7 @@
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
 <script>
 const HW = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -407,14 +408,14 @@ const HW = (() => {
     const sinSeccion = t => !D.contenedores.some(c => c.id_Contenedor === t.id_Contenedor);
     const cardHtml = t => {
         const c = carat(t), sin = sinSeccion(t);
-        return `<div class="hw-card ${t.estado ? '' : 'oculta'}" data-t="${t.id}" title="Clic para editar · arrastra para mover">
+        return `<div class="hw-card ${t.estado ? '' : 'oculta'} ${t.peso ? 'ev-con-prioridad' : ''}" data-t="${t.id}" title="Clic para editar · arrastra para mover">
             <div class="img">${c ? `<img src="${esc(c)}" alt="" loading="lazy" onerror="this.remove()">` : esc(EV.iniciales(t.id_Destino))}
                 <div class="chips"><span>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</span>${t.vigente === false ? '<span class="mal">Ya no se vende</span>' : ''}${t.estado ? '' : `<span class="oc">${sin ? 'Oculta · sin sección' : 'Oculta'}</span>`}</div>
                 <div class="acc"><button type="button" class="edt" data-foto="${t.id}" title="Cambiar la foto" aria-label="Cambiar la foto"><i class="bi bi-camera"></i></button>
                     <button type="button" class="edt" title="Editar tarjeta" aria-label="Editar tarjeta"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="ojo" data-ojo="${t.id}" title="${sin ? 'Sin sección: arrástrala a una sección para que salga en la web' : t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}" aria-label="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div></div>
             <div class="tx"><b>${esc(t.descripcion && ['CIRCUITO', 'EXCURSION', 'TRASLADO', 'CRUCERO'].includes(t.tipo_Servicio) ? t.descripcion : t.id_Destino)}</b><small>${esc(t.origen)} · ${esc(t.campanya || '#' + t.id_Campanya)}${t.noches ? ` · ${t.noches} noches` : ''}</small>
-                <div class="pr">${t.precioWeb ? `desde <b>${EV.dinero(t.precioWeb)}</b>` : 'sin precio'}</div></div></div>`;
+                <div class="pr">${t.peso ? EVPrioridad.estrella(t.peso) + ' ' : ''}${t.precioWeb ? `desde <b>${EV.dinero(t.precioWeb)}</b>` : 'sin precio'}</div>${t.precio_Proveedor ? `<div>${EVPrioridad.proveedor(t.precioWeb, t.precio_Proveedor)}</div>` : ''}</div></div>`;
     };
 
     function pintarSecciones() {
@@ -423,12 +424,14 @@ const HW = (() => {
                 <div class="hw-sec-h">
                     <span class="asa" data-asa="${c.id_Contenedor}" title="Arrastra para mover la sección"><i class="bi bi-grip-vertical"></i></span>
                     <h3>${esc(c.nombre)}</h3><span class="n">${c.tarjetas.length}</span>${c.estado ? '' : '<span class="ui-chip ghost" style="padding:2px 9px">Oculta</span>'}
+                    ${c.prioridad ? '<span class="hw-tip" style="margin-left:6px"><i class="bi bi-sort-numeric-down"></i> ordenada por ★ prioridad y precio (como en la web)</span>' : ''}
                     <span class="sp"></span>
+                    <label class="ui-switch" title="Prioridad: la sección ordena sus tarjetas por la ★ (1, 2, 3…) y después por precio, en vez del orden a mano" style="margin-right:6px;font-size:13px;font-weight:700"><input type="checkbox" data-secprio="${c.id_Contenedor}" ${c.prioridad ? 'checked' : ''}><span class="tr"></span> <i class="bi bi-star-fill" style="color:#F5A623"></i> Prioridad</label>
                     <button type="button" class="ui-ibtn" data-secojo="${c.id_Contenedor}" title="${c.estado ? 'Ocultar sección' : 'Mostrar sección'}"><i class="bi ${c.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button>
                     <button type="button" class="ui-ibtn" data-secren="${c.id_Contenedor}" title="Cambiar nombre"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="ui-ibtn danger" data-secdel="${c.id_Contenedor}" title="Eliminar sección"><i class="bi bi-trash3"></i></button>
                 </div>
-                <div class="hw-cards" data-cards="${c.id_Contenedor}">${c.tarjetas.map(cardHtml).join('')}<button type="button" class="hw-add" data-addsec="${c.id_Contenedor}"><span><i class="bi bi-plus-circle"></i>Agregar tarjeta</span></button></div>
+                <div class="hw-cards" data-cards="${c.id_Contenedor}">${(c.prioridad ? EVPrioridad.ordenar(c.tarjetas, t => t.peso, t => t.precioWeb) : c.tarjetas).map(cardHtml).join('')}<button type="button" class="hw-add" data-addsec="${c.id_Contenedor}"><span><i class="bi bi-plus-circle"></i>Agregar tarjeta</span></button></div>
             </section>`).join('') || '<div class="ui-empty"><p>No hay secciones. Crea la primera.</p></div>';
         $('#hwSin').innerHTML = `<div class="hw-sec-h"><i class="bi bi-inbox" style="font-size:18px;color:var(--ev-muted)"></i><h3 style="font-size:14px">Sin sección</h3><span class="n">${D.sinContenedor.length}</span>
                 <span class="hw-tip" style="margin-left:8px"><i class="bi bi-eye-slash"></i> ocultas en la web hasta que las pongas en una sección</span></div>
@@ -722,11 +725,15 @@ const HW = (() => {
                     <div class="ui-f"><label class="ui-switch" style="margin-top:28px"><input type="checkbox" id="tEstF"><span class="tr"></span> Visible en la web</label></div>
                 </div>
                 <div class="ui-f"><label>Notas</label><textarea id="tNot" rows="2" maxlength="1000"></textarea></div>
-            </div>`;
+            </div>
+            <div class="ui-sec"><div class="ui-sec-t"><span>3</span> Prioridad y precio del proveedor</div><div id="tPrio"></div>
+                <div class="ui-help" style="margin-top:8px"><i class="bi bi-info-circle"></i> La prioridad ordena la tarjeta dentro de su sección cuando la sección tiene marcado «★ Prioridad».</div></div>`;
         $('#tTipoF').value = v.tipo_Servicio; $('#tCam').value = String(v.id_Campanya || cat.campanyas.find(c => c.texto === 'DTGeneral')?.valor || cat.campanyas[0].valor);
         $('#tSecF').value = v.id_Contenedor ?? ''; $('#tPO').value = (v.id_Pais_Origen || 'ES').toUpperCase(); $('#tPD').value = (v.id_PaisDestino || 'DO').toUpperCase();
         $('#tOri').value = v.origen || ''; $('#tDes').value = v.id_Destino || ''; $('#tImg').value = v.caratulaDestino || ''; $('#tDesc').value = v.descripcion || '';
         $('#tPre').value = v.precioWeb != null ? Math.round(v.precioWeb) : ''; $('#tNoc').value = v.noches ?? ''; $('#tNot').value = v.notas || ''; $('#tEstF').checked = v.estado !== false;
+        $('#tPrio').innerHTML = EVPrioridad.campos({ peso: v.peso, proveedor: v.precio_Proveedor, precio: v.precioWeb, ayuda: 'Compáralo con el precio «desde».' });
+        EVPrioridad.vivo($('#tPrio'), () => $('#tPre').value);
         // caratulaDestino se conserva tal cual (en hoteles es el destino, no una imagen). Las fotos se cambian arriba y se guardan al momento.
         if (t) EVFotos.montar($('#tdFotos'), { tipo: t.foto_Tipo, clave: t.foto_Clave, alCambiar: items => {
             // La foto propia de la tarjeta se copia en caratulaDestino: que al pulsar Guardar no se pise con la de antes
@@ -747,7 +754,8 @@ const HW = (() => {
             Id: tarjetaActual?.id ?? null, Tipo_Servicio: $('#tTipoF').value, Id_Campanya: +$('#tCam').value, Id_Pais_Origen: $('#tPO').value, Origen: $('#tOri').value.trim(),
             Id_PaisDestino: $('#tPD').value, Id_Destino: $('#tDes').value.trim(), CaratulaDestino: $('#tImg').value.trim() || null, Descripcion: $('#tDesc').value.trim(),
             PrecioWeb: $('#tPre').value === '' ? null : +$('#tPre').value, Id_Contenedor: $('#tSecF').value ? +$('#tSecF').value : null,
-            Noches: $('#tNoc').value === '' ? null : +$('#tNoc').value, Notas: $('#tNot').value.trim() || null, Estado: $('#tEstF').checked
+            Noches: $('#tNoc').value === '' ? null : +$('#tNoc').value, Notas: $('#tNot').value.trim() || null, Estado: $('#tEstF').checked,
+            ...EVPrioridad.leer($('#tPrio'))
         };
         $$('#tdForm .ui-f.err').forEach(f => f.classList.remove('err'));
         const falta = (id, m) => { const f = $(id).closest('.ui-f'); f.classList.add('err'); f.querySelector('.msg').textContent = m; EV.toast(m, 'err'); };
@@ -801,6 +809,14 @@ const HW = (() => {
             if (!nombre?.trim()) return;
             try { const r = await EV.post('/HomeWeb/Seccion', { Nombre: nombre.trim(), Estado: true }); EV.toast(r.mensaje); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
         };
+        // ★ Prioridad de la sección: ordena sus tarjetas por prioridad y precio (como la web)
+        document.addEventListener('change', async e => {
+            const sp = e.target.closest('[data-secprio]'); if (!sp) return;
+            const c = D.contenedores.find(x => x.id_Contenedor === +sp.dataset.secprio);
+            try { await EV.post('/HomeWeb/Seccion', { Id_Contenedor: c.id_Contenedor, Nombre: c.nombre, Estado: c.estado, Prioridad: sp.checked });
+                  EV.toast(sp.checked ? `«${c.nombre}»: las tarjetas se ordenan por ★ prioridad y después por precio.` : `«${c.nombre}»: vuelve al orden a mano.`); cargar(); }
+            catch (er) { sp.checked = !sp.checked; EV.toast(er.message, 'err'); }
+        });
         document.addEventListener('click', async e => {
             const ojo = e.target.closest('[data-ojo]'); if (ojo) { e.stopPropagation(); return estadoTarjeta(+ojo.dataset.ojo); }
             const add = e.target.closest('[data-addsec]'); if (add) return abrirTarjeta(null, +add.dataset.addsec);
