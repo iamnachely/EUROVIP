@@ -60,7 +60,8 @@ namespace EuroVip.Models
                     new("latitud", "Latitud", Max: 50, EnTabla: false),
                     new("longitud", "Longitud", Max: 50, EnTabla: false),
                     new("informacion", "Información", "textarea", EnTabla: false),
-                    new("id", "Código interno", "number", EnTabla: false)
+                    // FASE 34: automático (mayor + 1) y único (índice UX_Eurovip_destino_id); no se escribe ni se cambia
+                    new("id", "Código interno", "number", Auto: true, EnTabla: false, Ayuda: "Se asigna solo y no se repite")
                 }, "id_destino", new[] { "id_destino", "id_pais" },
                 new[] {
                     new HrUso("alojamiento", $"id_destino = @id_destino AND id_pais = @id_pais AND {ES}", "alojamientos"),

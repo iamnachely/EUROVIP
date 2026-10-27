@@ -4940,6 +4940,58 @@ GO
 
 
 /* ##########################################################################################
+   FASE 34 — CÓDIGO INTERNO DEL DESTINO: AUTOMÁTICO Y ÚNICO  (27/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «/Herramientas/Catalogo/destinos, Código interno: debe ser un código que no exista,
+   se debe generar automático y ser único».
+   Explicado fácil:
+     • Eurovip.destino.id (el «Código interno») venía de ViajeVDT con 124 destinos SIN código y 10 códigos repetidos
+       (ej. 5429 = Atenas y Athens). Nadie lo usa como referencia (sin claves foráneas, procedimientos ni código).
+     • CAMBIO 111: a los que no tienen código y al segundo de cada repetido se les da uno nuevo (después del mayor).
+     • CAMBIO 112: índice único: ya no se puede repetir.
+     • CAMBIO 113: trigger trEurovip_destino_codigo: un destino nuevo sin código recibe el siguiente (mayor + 1), venga
+       de donde venga (Herramientas también lo pone solo: «Se asigna solo»).
+   ########################################################################################## */
+SET XACT_ABORT ON;
+GO
+/* ---------- CAMBIO 111 ---------- */
+EXEC sp_set_session_context @key = N'usuario', @value = N'sistema (FASE 34)';   -- así queda en usuario_modificacion (FASE 33)
+BEGIN TRAN;
+DECLARE @max int = (SELECT ISNULL(MAX(id), 0) FROM Eurovip.destino WITH (UPDLOCK, HOLDLOCK));
+-- sin código, o el 2.º, 3.º… de un código repetido (se queda con el código el primero por país y nombre)
+SELECT id_destino, id_idioma, id_pais
+  INTO #cambiar
+  FROM (SELECT id_destino, id_idioma, id_pais, id, ROW_NUMBER() OVER (PARTITION BY id ORDER BY id_pais, id_destino) AS n FROM Eurovip.destino) x
+ WHERE x.id IS NULL OR x.n > 1;
+UPDATE d SET id = n.nuevo
+  FROM Eurovip.destino d
+  JOIN (SELECT id_destino, id_idioma, id_pais, @max + ROW_NUMBER() OVER (ORDER BY id_pais, id_destino) AS nuevo FROM #cambiar) n
+    ON n.id_destino = d.id_destino AND n.id_idioma = d.id_idioma AND n.id_pais = d.id_pais;
+SELECT @@ROWCOUNT AS destinos_con_codigo_nuevo;
+DROP TABLE #cambiar;
+COMMIT;
+GO
+/* ---------- CAMBIO 112 ---------- */
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Eurovip_destino_id')
+    CREATE UNIQUE INDEX UX_Eurovip_destino_id ON Eurovip.destino (id) WHERE id IS NOT NULL;
+GO
+/* ---------- CAMBIO 113 ---------- */
+CREATE OR ALTER TRIGGER Eurovip.trEurovip_destino_codigo ON Eurovip.destino
+AFTER INSERT
+AS
+BEGIN
+    /* CAMBIO 113 (FASE 34): el destino nuevo sin «Código interno» recibe el siguiente (mayor + 1). */
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM inserted WHERE id IS NULL) RETURN;
+    DECLARE @max int = (SELECT ISNULL(MAX(id), 0) FROM Eurovip.destino WITH (UPDLOCK, HOLDLOCK));
+    WITH n AS (SELECT id_destino, id_idioma, id_pais, @max + ROW_NUMBER() OVER (ORDER BY id_pais, id_destino) AS nuevo FROM inserted WHERE id IS NULL)
+    UPDATE d SET id = n.nuevo
+      FROM Eurovip.destino d JOIN n ON n.id_destino = d.id_destino AND n.id_idioma = d.id_idioma AND n.id_pais = d.id_pais;
+END
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -5430,6 +5482,10 @@ GO
    27/10/2026  FASE 33 aplicada SOLO en el 93 (CAMBIO 108-110): usuario_alta/fecha_alta/usuario_modificacion/fecha_modificacion
                en 17 tablas, Eurovip.registro_eliminado y triggers trEurovip_*_quien. Ensayada antes con ROLLBACK. Prueba desde el back:
                moneda ZZQ creada, editada y eliminada (y su fila de registro_eliminado borrada). No cambió ningún dato.
+   27/10/2026  FASE 34 aplicada SOLO en el 93 (CAMBIO 111-113): Código interno del destino (destino.id) automático y único.
+               134 destinos recibieron código nuevo (124 sin código y 10 repetidos, ej. 5429 Atenas/Athens: se queda el primero por
+               país y nombre; el resto pasa a 68003…68136), con usuario_modificacion = «sistema (FASE 34)». Índice único
+               UX_Eurovip_destino_id y trigger trEurovip_destino_codigo. Nadie usaba destino.id como referencia.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

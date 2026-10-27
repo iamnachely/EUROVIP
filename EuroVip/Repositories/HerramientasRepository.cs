@@ -280,7 +280,7 @@ namespace EuroVip.Repositories
             }
             else
             {
-                var sets = c.Campos.Where(f => !f.Clave).Select(f => $"[{f.Col}] = @{f.Col}").ToList();
+                var sets = c.Campos.Where(f => !f.Clave && !f.Auto).Select(f => $"[{f.Col}] = @{f.Col}").ToList();   // lo automático no se cambia al editar
                 if (sets.Count > 0)
                 {
                     var n = await cn.ExecuteAsync($"UPDATE {Tabla(c)} SET {string.Join(", ", sets)} WHERE " +
