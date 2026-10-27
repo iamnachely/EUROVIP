@@ -20,6 +20,11 @@ namespace EuroVip.Models
         public List<OfertaHabitacionDto> Habitaciones { get; set; } = new();
         public List<CargaSalidaDto> Salidas { get; set; } = new();
         public string? Nombre { get; set; }
+        // Se guardan en todas las ofertas/paquetes que se crean de este hotel
+        /// <summary>Prioridad (FASE 29): 1 sale primero en la web, 2 segundo… null = sin prioridad (por precio).</summary>
+        [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
+        /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
+        [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
     }
 
     /// <summary>
@@ -98,6 +103,8 @@ namespace EuroVip.Models
         public string? Codigo { get; set; }
         public string? Usuario { get; set; }
         public string? Proveedor { get; set; }
+        public short? Peso { get; set; }
+        public decimal? Precio_Proveedor { get; set; }
     }
 
     public class OfertaEstadisticas
@@ -157,6 +164,12 @@ namespace EuroVip.Models
         public bool Activo { get; set; } = true;
         public List<OfertaHabitacionDto> Habitaciones { get; set; } = new();
         public List<CargaSuplementoDto> Suplementos { get; set; } = new();
+        /// <summary>Prioridad (FASE 29): 1 sale primero en la web, 2 segundo… null = sin prioridad (por precio).</summary>
+        [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
+        /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
+        [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
+        /// <summary>true = la prioridad y el precio del proveedor se ponen también en las demás fechas de este hotel (mismo tipo).</summary>
+        public bool PrioridadTodas { get; set; }
     }
 
     public class OfertaLoteDto

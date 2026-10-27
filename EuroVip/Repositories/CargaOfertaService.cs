@@ -210,6 +210,9 @@ namespace EuroVip.Repositories
                         var id = p.Get<int>("@ret");
                         if (id <= 0) throw new InvalidOperationException($"No se pudo crear {(esPaquete ? "el paquete" : "la oferta")} del {desde:dd/MM/yyyy}.");
                         r.Ids.Add(id);
+                        if (hotel.Peso is not null || hotel.Precio_Proveedor is not null)
+                            await cn.ExecuteAsync("UPDATE Eurovip.servicio SET peso = @Peso, precio_proveedor = @Precio_Proveedor WHERE id_servicio = @id",
+                                new { id, hotel.Peso, hotel.Precio_Proveedor }, tx);
                         Avance(8 + 80.0 * r.Ids.Count / Math.Max(1, total), $"Creando {palabra} {r.Ids.Count} de {total} · {desde:dd/MM/yyyy}");
 
                         await cn.ExecuteAsync("Eurovip.spInsertaServicioDetalle", new

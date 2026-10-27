@@ -65,7 +65,7 @@ namespace EuroVip.Repositories
             Eurovip.fnPrecioWeb(s.id_servicio) AS PrecioWeb, COALESCE(v.origen, so.origen) AS Origen,
             (SELECT COUNT(*) FROM Eurovip.servicio_itinerario x WHERE x.id_servicio = s.id_servicio) AS Vuelos,
             (SELECT COUNT(*) FROM Eurovip.servicio_habitacion h WHERE h.id_servicio = s.id_servicio) AS Habitaciones,
-            s.activo AS Activo, s.codigo AS Codigo, s.usuario AS Usuario, p.nombre AS Proveedor";
+            s.activo AS Activo, s.codigo AS Codigo, s.usuario AS Usuario, p.nombre AS Proveedor, s.peso AS Peso, s.precio_proveedor AS Precio_Proveedor";
 
         public async Task<(IEnumerable<OfertaItem> Items, int Total)> ListarAsync(OfertaFiltro f)
         {
@@ -91,6 +91,8 @@ namespace EuroVip.Repositories
                 "precio" => "Eurovip.fnPrecioWeb(s.id_servicio), sd.desde",
                 "hotel" => "a.nombre, sd.desde",
                 "recientes" => "s.id_servicio DESC",
+                // como en la web: prioridad 1, 2, 3… y después de menor a mayor precio
+                "prioridad" => "CASE WHEN s.peso IS NULL THEN 1 ELSE 0 END, s.peso, Eurovip.fnPrecioWeb(s.id_servicio), sd.desde",
                 _ => "sd.desde, a.nombre, s.id_servicio"
             };
             var filtro = where.Count > 0 ? " AND " + string.Join(" AND ", where) : "";
@@ -160,12 +162,20 @@ namespace EuroVip.Repositories
             var claves = await ClavesVitrinaAsync(cn, tx, new[] { d.Id_Servicio });
             var tasas = d.Suplementos.Sum(x => x.Valor);
             await cn.ExecuteAsync(@"
-                UPDATE Eurovip.servicio SET precio_base = @pb, descuento = @desc, id_campanya = @camp, activo = @activo, noches = @noches WHERE id_servicio = @id;
+                UPDATE Eurovip.servicio SET precio_base = @pb, descuento = @desc, id_campanya = @camp, activo = @activo, noches = @noches,
+                       peso = @peso, precio_proveedor = @prov WHERE id_servicio = @id;
+                -- «Aplicar a todas las fechas de este hotel»: las demás ofertas/paquetes del mismo hotel y tipo
+                IF @todas = 1
+                    UPDATE s SET peso = @peso, precio_proveedor = @prov
+                      FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
+                     WHERE sd.id_alojamiento = @aloj AND s.id_idioma = 'ES' AND s.id_servicio <> @id
+                       AND s.id_tipo_servicio = (SELECT id_tipo_servicio FROM Eurovip.servicio WHERE id_servicio = @id);
                 UPDATE Eurovip.servicio_detalle SET id_regimen = @reg, desde = @desde, hasta = DATEADD(DAY, @noches, @desde), noches = @noches
                 WHERE id_servicio = @id AND secuencia = 1;
                 DELETE FROM Eurovip.servicio_habitacion WHERE id_servicio = @id;
                 DELETE FROM Eurovip.servicio_tasa WHERE id_Servicio = @id;",
-                new { id = d.Id_Servicio, pb = d.PrecioTotal - tasas, desc = d.Descuento, camp = d.Id_Campanya, activo = d.Activo, noches = d.Noches, reg = d.Id_Regimen, desde = d.Desde.Date }, tx);
+                new { id = d.Id_Servicio, pb = d.PrecioTotal - tasas, desc = d.Descuento, camp = d.Id_Campanya, activo = d.Activo, noches = d.Noches, reg = d.Id_Regimen, desde = d.Desde.Date,
+                      peso = d.Peso, prov = d.Precio_Proveedor, todas = d.PrioridadTodas, aloj = actual.Aloj }, tx);
             foreach (var h in d.Habitaciones.DistinctBy(x => x.Id_Habitacion))
                 await cn.ExecuteAsync("Eurovip.InsertarServicioHabitacion",
                     new { Id_Servicio = d.Id_Servicio, Secuencia = 1, Id_Alojamiento = actual.Aloj, Id_Idioma = Idioma, h.Id_Habitacion, h.Precio }, tx, commandType: CommandType.StoredProcedure);

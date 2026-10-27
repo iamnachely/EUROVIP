@@ -333,6 +333,10 @@ const CL = (() => {
                     <select data-k="hab" ${h.habs.length ? '' : 'disabled'}>${h.habs.length ? h.habs.map(x => `<option value="${x.id_Habitacion}" ${x.id_Habitacion === h.idHab ? 'selected' : ''}>${esc(x.nombre)} · #${x.id_Habitacion}${x.id_Tipo_Habitacion ? ' · ' + esc(x.id_Tipo_Habitacion) : ''}</option>`).join('') : `<option>${h.elegido ? 'Este hotel no tiene habitaciones' : 'Primero elige el hotel'}</option>`}</select></div>
                 <div class="ui-f"><label>Régimen del hotel <em>sobrescribe el global</em></label><select data-k="regimen">${cat.regimenes.map(r => `<option value="${esc(r.valor)}" ${r.valor === h.regimen ? 'selected' : ''}>${esc(r.valor)} · ${esc(r.texto)}</option>`).join('')}</select></div>
             </div>
+            <div class="ui-row">
+                <div class="ui-f"><label><i class="bi bi-star-fill" style="color:#F5A623"></i> Prioridad <em>opcional · 1 sale primero en la web, 2 segundo…</em></label><input data-k="peso" type="number" min="1" max="999" step="1" value="${h.peso ?? ''}" placeholder="Sin prioridad (por precio)"></div>
+                <div class="ui-f"><label><i class="bi bi-shop"></i> Precio del proveedor <em>opcional · solo informativo</em></label><input data-k="proveedor" type="number" min="0" step="1" value="${h.proveedor ?? ''}" placeholder="Precio en su web"></div>
+            </div>
             <div style="display:flex;align-items:center;gap:10px;margin:6px 0 10px;flex-wrap:wrap">
                 <b><i class="bi bi-calendar3"></i> Lista de precios del hotel</b><span class="ui-chip ghost" style="padding:3px 10px">Total − Tasa = Base</span><span style="flex:1"></span>
                 <button type="button" class="ev-btn ghost sm" data-k="fila"><i class="bi bi-plus-lg"></i> Agregar fila</button>
@@ -368,7 +372,7 @@ const CL = (() => {
             Id_Proveedor: $('#iProveedor').dataset.valor || '', Nombre: $('#iNombre').value.trim() || null,
             Noches: noches(), Divisa: moneda(), Origen: $('#iOrigen').dataset.valor || '', Id_Pais_Origen: $('#iPaisOrigen').value,
             Hoteles: H.filter(listo).map(h => ({
-                Id_Alojamiento: h.elegido.id, Nombre: h.elegido.nombre, Id_Regimen: h.regimen,
+                Id_Alojamiento: h.elegido.id, Nombre: h.elegido.nombre, Id_Regimen: h.regimen, Peso: h.peso ?? null, Precio_Proveedor: h.proveedor ?? null,
                 Habitaciones: [{ Id_Habitacion: h.idHab, Precio: 0 }],
                 Salidas: filasOk(h).sort((a, b) => a.desde.localeCompare(b.desde)).map(f => ({ Desde: f.desde, PrecioTotal: num(f.total), Tasas: num(f.tasas) }))
             })),
@@ -517,6 +521,8 @@ const CL = (() => {
             else if (t.dataset.k === 'candidato') { const o = t.selectedOptions[0]; elegirHotel(h, t.value ? { id: +t.value, nombre: o.dataset.n, destino: o.dataset.d } : null); }
             else if (t.dataset.k === 'hab') { h.idHab = +t.value; pintar(); }
             else if (t.dataset.k === 'regimen') { h.regimen = t.value; limpiarRevision(); }
+            else if (t.dataset.k === 'peso') h.peso = t.value === '' ? null : Math.round(+t.value);
+            else if (t.dataset.k === 'proveedor') h.proveedor = t.value === '' ? null : +t.value;
             else if (t.dataset.f != null) pintar();
             limpiarRevision();
         });

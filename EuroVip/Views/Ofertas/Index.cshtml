@@ -83,7 +83,7 @@
     <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar hotel, destino, campaña, código o nº de @of1…" /></label>
     <select class="ui-select" id="fDestino"><option value="">Todos los destinos</option></select>
     <select class="ui-select" id="fCampanya"><option value="">Todas las campañas</option></select>
-    <select class="ui-select" id="fOrden"><option value="fecha">Por fecha</option><option value="precio">Precio más bajo</option><option value="hotel">Hotel A–Z</option><option value="recientes">Recién cargadas</option></select>
+    <select class="ui-select" id="fOrden"><option value="fecha">Por fecha</option><option value="prioridad">Prioridad (como en la web)</option><option value="precio">Precio más bajo</option><option value="hotel">Hotel A–Z</option><option value="recientes">Recién cargadas</option></select>
     <div class="of-filtros2">
         <div class="ui-chips" id="fEstado">
             <button type="button" class="ui-pick on" data-v="">Todas</button>
@@ -150,7 +150,12 @@
             <div id="eHabs"></div>
         </div>
         <div class="ui-sec">
-            <div class="ui-sec-t"><span>4</span> Estado y datos de la carga</div>
+            <div class="ui-sec-t"><span>4</span> Prioridad y precio del proveedor</div>
+            <div id="ePrio"></div>
+            <label class="ui-switch" style="margin-top:12px"><input type="checkbox" id="ePrioTodas" checked><span class="tr"></span> Aplicar a todas las fechas de este hotel</label>
+        </div>
+        <div class="ui-sec">
+            <div class="ui-sec-t"><span>5</span> Estado y datos de la carga</div>
             <label class="ui-switch" style="margin-bottom:14px"><input type="checkbox" id="eActivo"><span class="tr"></span> Activa (se vende)</label>
             <div id="eInfo"></div>
         </div>
@@ -166,6 +171,7 @@
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
 <script>
 const TIPO = '@tipo', ES_PAQ = TIPO === 'PAQUETES', QS = '@qs', LISTA = '@lista', NOMBRE = '@nombre', OFS = '@ofs', OF1 = '@of1', OF1M = ES_PAQ ? 'Paquete' : 'Oferta';
 const OF = (() => {
@@ -225,11 +231,11 @@ const OF = (() => {
             <th style="width:40px"><input type="checkbox" class="of-check" id="selTodo" title="Seleccionar todo"></th><th>Hotel</th><th>Régimen</th><th>Fechas</th><th>Campaña</th><th class="num">Precio web</th><th>Vuelo</th><th>Origen</th><th>Destino</th><th>Activa</th><th></th></tr></thead><tbody>
             ${d.items.map(o => `<tr class="${o.activo ? '' : 'off'} ${sel.has(o.id_Servicio) ? 'sel' : ''}" data-id="${o.id_Servicio}">
                 <td><input type="checkbox" class="of-check" data-sel="${o.id_Servicio}" ${sel.has(o.id_Servicio) ? 'checked' : ''}></td>
-                <td><div class="of-hotel"><span class="of-th">${thumb(o)}</span><div><b>${esc(o.hotel)}</b><span class="of-sub">#${o.id_Servicio}</span></div></div></td>
+                <td><div class="of-hotel"><span class="of-th">${thumb(o)}</span><div><b>${EVPrioridad.estrella(o.peso)} ${esc(o.hotel)}</b><span class="of-sub">#${o.id_Servicio}</span></div></div></td>
                 <td><span class="of-reg" title="${esc(o.regimen || '')}">${esc(o.id_Regimen)}</span></td>
                 <td class="of-fecha"><b>${EV.fechaCorta(o.desde.slice(0, 10))}</b><span class="of-sub">${o.noches} noches · hasta ${EV.fecha(o.hasta.slice(0, 10))}</span>${o.desde.slice(0, 10) <= EV.hoy() ? '<span class="of-nov" title="Las fechas de hoy o pasadas no se venden ni salen en la web"><i class="bi bi-calendar-x"></i> No se vende: es de hoy o pasada</span>' : ''}</td>
                 <td>${esc(o.campanya || '#' + o.id_Campanya)}${o.descuento ? ` <span class="ui-chip" style="padding:2px 8px;font-size:11px">-${EV.fmt(o.descuento, 1)}%</span>` : ''}</td>
-                <td class="num" title="Base ${EV.fmt(o.precio_Base)} + tasas ${EV.fmt(o.tasas)}">${EV.dinero(o.precioWeb, o.id_Moneda)}</td>
+                <td class="num" title="Base ${EV.fmt(o.precio_Base)} + tasas ${EV.fmt(o.tasas)}">${EV.dinero(o.precioWeb, o.id_Moneda)}${o.precio_Proveedor ? '<br>' + EVPrioridad.proveedor(o.precioWeb, o.precio_Proveedor) : ''}</td>
                 <td>${o.vuelos ? `<span class="ui-chip dark" style="padding:3px 9px">${o.vuelos} vuelos</span>` : '<span class="ui-chip ghost" style="padding:3px 9px">Sin vuelo</span>'}</td>
                 <td>${esc(o.origen || '—')}</td>
                 <td>${o.destino ? `<span class="of-dest"><i class="bi bi-geo-alt-fill"></i>${esc(o.destino)}</span>` : '—'}</td>
@@ -265,6 +271,9 @@ const OF = (() => {
             $('#eCampanya').value = String(o.id_Campanya);
             $('#eTotal').value = Math.round((o.precio_Base + o.tasas) * 100) / 100; $('#eDescuento').value = o.descuento;
             $('#eActivo').checked = o.activo;
+            $('#ePrio').innerHTML = EVPrioridad.campos({ peso: o.peso, proveedor: o.precio_Proveedor, precio: o.precioWeb, ayuda: 'Compáralo con el precio web.' });
+            EVPrioridad.vivo($('#ePrio'), () => $('#eTotal').value);
+            $('#ePrioTodas').checked = true;
             sups = EVC.filas($('#eSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento / tasa', valorEtiqueta: 'Importe', sufijo: EV.simbolo(), onChange: precioVivo, placeholder: 'Elige…', inicial: o.tasasDetalle.map(t => ({ opcion: t.id_Tasa, valor: t.valor })) });
             const marcadas = new Map(o.habitacionesDetalle.map(h => [h.id_Habitacion, h.precio]));
             // marcadas primero; con muchas habitaciones, buscador
@@ -304,7 +313,8 @@ const OF = (() => {
         const dto = {
             Id_Servicio: actual.id_Servicio, PrecioTotal: parseFloat($('#eTotal').value) || 0, Descuento: parseFloat($('#eDescuento').value) || 0,
             Id_Campanya: parseInt($('#eCampanya').value, 10), Id_Regimen: $('#eRegimen').value, Desde: $('#eDesde').value, Noches: parseInt($('#eNoches').value, 10) || 0,
-            Activo: $('#eActivo').checked, Habitaciones: habs, Suplementos: sups.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor }))
+            Activo: $('#eActivo').checked, Habitaciones: habs, Suplementos: sups.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor })),
+            ...EVPrioridad.leer($('#ePrio')), PrioridadTodas: $('#ePrioTodas').checked
         };
         if (dto.PrecioTotal - sups.total() < cat.minimo && !await EV.confirmar({ titulo: 'Precio base bajo', texto: `El precio base queda por debajo del mínimo (${EV.fmt(cat.minimo)}). ¿Guardar igual?`, si: 'Guardar igual' })) return;
         const b = $('#eGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
