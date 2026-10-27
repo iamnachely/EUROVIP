@@ -150,7 +150,7 @@ namespace EuroVip.Models
                     new("id_pais", "País", "select", 2, Req: true, Lista: "paises", Defecto: "DO"),
                     new("id_destino", "Destino", "destino", 30, Req: true),
                     new("id_tipo_alojamiento", "Tipo", "select", 20, Req: true, Lista: "tiposAlojamiento", Defecto: "HOTEL"),
-                    new("categoria", "Categoría (estrellas)", Max: 15, Req: true, Ayuda: "ej. 5*"),
+                    new("categoria", "Categoría (estrellas)", "estrellas", 15, Req: true, Ayuda: "pulsa de 1 a 6 estrellas"),
                     new("caratula", "Imagen", "imagen", 300, Carpeta: "alojamientos", NombreDe: "id_alojamiento",
                         Ayuda: "Se guarda en imagenes/alojamientos con el número del hotel (ej. 6031.webp). En un hotel nuevo, guárdalo primero."),
                     new("descripcion", "Descripción", "textarea", EnTabla: false),

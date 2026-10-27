@@ -141,6 +141,9 @@ namespace EuroVip.Repositories
                     continue;
                 }
                 if (f.Max > 0 && s.Length > f.Max) return (null, $"«{f.Etiqueta}» admite como máximo {f.Max} caracteres.");
+                // Estrellas del hotel: se guardan como en ViajeVDT, el número de 1 a 6 en texto ("4")
+                if (f.Tipo == "estrellas" && !(int.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out var est) && est is >= 1 and <= 6))
+                    return (null, $"Elige de 1 a 6 estrellas en «{f.Etiqueta}».");
                 if ((f.Tipo == "url" || f.Tipo == "imagen") && !s.StartsWith("http://") && !s.StartsWith("https://") && !s.StartsWith("/")) return (null, $"«{f.Etiqueta}» debe ser una URL (https://…) o una ruta que empiece por /");
                 try { v[f.Col] = Convertir(f, s); }
                 catch { return (null, $"«{f.Etiqueta}» no es un número válido."); }

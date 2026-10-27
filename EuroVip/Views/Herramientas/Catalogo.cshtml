@@ -73,6 +73,14 @@
     .hc-rev-g tr[data-r]:hover { background: var(--ev-surface-2); }
     .hb-form { padding: 14px; border-radius: 16px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); margin-bottom: 12px; }
     @@media (max-width: 1100px) { .hc { grid-template-columns: 1fr; } .hc-nav { position: static; display: flex; flex-wrap: wrap; } .hc-nav .g { display: none; } }
+    /* Categoría del hotel: estrellas de verdad (1 a 6) */
+    .hc-est { display: inline-flex; gap: 4px; align-items: center; padding: 6px 10px; border: 1.5px solid var(--ev-line); border-radius: 14px; background: var(--ev-surface); }
+    .hc-est button { border: 0; background: none; padding: 2px; font-size: 26px; line-height: 1; color: #D9DEE3; cursor: pointer; transition: transform .12s, color .12s; }
+    .hc-est button.on { color: #F5A623; text-shadow: 0 1px 4px rgba(245,166,35,.45); }
+    .hc-est button:hover { transform: scale(1.15); }
+    .hc-est button:focus-visible { outline: 2px solid #F5A623; outline-offset: 2px; border-radius: 6px; }
+    .hc-est .n { margin-left: 8px; font-weight: 800; font-size: 13px; color: var(--ev-muted); min-width: 74px; }
+    .hc-est-celda { color: #F5A623; letter-spacing: 1px; white-space: nowrap; }
 </style>
 }
 
@@ -189,6 +197,7 @@ const HC = (() => {
         if (c.tipo === 'bool') return v ? '<span class="ui-chip" style="padding:2px 9px">Sí</span>' : '<span class="ui-chip ghost" style="padding:2px 9px">No</span>';
         if (c.tipo === 'url' || c.tipo === 'imagen') return esImg(v) ? `<img class="hc-cell-img" src="${esc(v)}" alt="" loading="lazy" onerror="this.replaceWith('—')">` : esc(v || '—');
         if (c.tipo === 'decimal') return EV.fmt(v, 2);
+        if (c.tipo === 'estrellas' && /^[1-6]$/.test(String(v).trim())) return `<span class="hc-est-celda" title="${esc(v)} estrellas">${'★'.repeat(+v)}</span>`;
         return esc(String(v).length > 80 ? String(v).slice(0, 80) + '…' : v);
     };
 
@@ -269,6 +278,14 @@ const HC = (() => {
         const lab = `<label for="${id}">${esc(c.etiqueta)}${c.req ? ' *' : ''}${c.ayuda ? ` <em>${esc(c.ayuda)}</em>` : ''}</label>`;
         const ro = bloqueado ? 'readonly tabindex="-1" style="opacity:.75"' : '';
         if (c.tipo === 'bool') return `<div class="ui-f"><label class="ui-switch" style="margin-top:26px"><input type="checkbox" id="${id}" data-c="${c.col}" ${val === true || val === 1 || val === '1' ? 'checked' : ''}><span class="tr"></span> ${esc(c.etiqueta)}</label></div>`;
+        if (c.tipo === 'estrellas') {
+            const n = /^[1-6]$/.test(String(val).trim()) ? +val : 0;
+            return `<div class="ui-f"><label>${esc(c.etiqueta)}${c.req ? ' *' : ''}${c.ayuda ? ` <em>${esc(c.ayuda)}</em>` : ''}</label>
+                <input type="hidden" id="${id}" data-c="${c.col}" value="${n || ''}">
+                <div class="hc-est" role="radiogroup" aria-label="${esc(c.etiqueta)}" data-est="${c.col}">
+                    ${[1, 2, 3, 4, 5, 6].map(i => `<button type="button" role="radio" aria-checked="${i === n}" aria-label="${i} estrella${i > 1 ? 's' : ''}" data-i="${i}" class="${i <= n ? 'on' : ''}">★</button>`).join('')}
+                    <span class="n">${n ? n + ' estrella' + (n > 1 ? 's' : '') : 'Sin elegir'}</span></div><span class="msg"></span></div>`;
+        }
         if (c.tipo === 'textarea') return `<div class="ui-f" style="grid-column:1/-1">${lab}<textarea id="${id}" data-c="${c.col}" rows="4">${esc(val)}</textarea></div>`;
         if (c.tipo === 'select') {
             const ops = await lista(c.lista);
@@ -346,6 +363,18 @@ const HC = (() => {
                 ['dragenter', 'dragover'].forEach(t => zona.addEventListener(t, e => { e.preventDefault(); zona.classList.add('sobre'); }));
                 ['dragleave', 'drop'].forEach(t => zona.addEventListener(t, e => { e.preventDefault(); zona.classList.remove('sobre'); }));
                 zona.addEventListener('drop', e => subir(e.dataTransfer?.files?.[0]));
+            }
+            if (c.tipo === 'estrellas') {
+                // Clic = elegir; pasar el ratón = vista previa; flechas izquierda/derecha también cambian
+                const caja = $(`[data-est="${c.col}"]`, cont), bs = $$('button', caja), txt = $('.n', caja);
+                const pintar = n => { bs.forEach(b => { b.classList.toggle('on', +b.dataset.i <= n); b.setAttribute('aria-checked', String(+b.dataset.i === n)); }); txt.textContent = n ? `${n} estrella${n > 1 ? 's' : ''}` : 'Sin elegir'; };
+                const elegir = n => { el.value = n; pintar(n); el.closest('.ui-f').classList.remove('err'); el.dispatchEvent(new CustomEvent('ev-cambio', { bubbles: true })); };
+                bs.forEach(b => {
+                    b.addEventListener('click', () => elegir(+b.dataset.i));
+                    b.addEventListener('mouseenter', () => pintar(+b.dataset.i));
+                    b.addEventListener('keydown', e => { const n = +el.value || 0; if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); elegir(Math.min(6, n + 1)); bs[Math.min(5, n)].focus(); } if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); elegir(Math.max(1, n - 1)); bs[Math.max(0, n - 2)].focus(); } });
+                });
+                caja.addEventListener('mouseleave', () => pintar(+el.value || 0));
             }
             if (c.tipo === 'url') el.addEventListener('change', () => { const p = $(`[data-prev="${c.col}"]`, cont); p.innerHTML = EV.esUrl(el.value) ? `<img src="${esc(el.value)}" alt="" onerror="this.remove()">` : ''; });
         });
