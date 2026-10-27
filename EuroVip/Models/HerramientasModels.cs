@@ -15,6 +15,9 @@ namespace EuroVip.Models
     /// <summary>Dónde se usa un registro: si hay filas, no se deja borrar. Where usa @columna de la clave.</summary>
     public record HrUso(string Tabla, string Where, string Etiqueta);
 
+    /// <summary>Registro que ya existe o se parece a lo que se escribe (aviso en vivo). Nivel: "existe" (rojo) o "parecido" (amarillo).</summary>
+    public record HrParecido(string Nivel, string Texto, string? Detalle, Dictionary<string, object?> Clave, double Puntos);
+
     /// <summary>Columna calculada solo para mostrar (p. ej. el nombre del país).</summary>
     public record HrExtra(string Alias, string Sql, string Etiqueta);
 
@@ -185,6 +188,9 @@ namespace EuroVip.Models
                 Extras: new[] { new HrExtra("hotel_nombre", "(SELECT TOP 1 a.nombre FROM Eurovip.alojamiento a WHERE a.id_alojamiento = t.id_alojamiento AND a.id_idioma = 'ES')", "Hotel") },
                 Especial: "habitacion", F: true)
         };
+
+        /// <summary>Campos que se revisan al escribir: los de texto que identifican el registro (clave, nombre o descripción).</summary>
+        public static bool Vigilado(HrCampo f) => f.Tipo == "text" && !f.Auto && (f.Clave || f.Col is "nombre" or "descripcion");
 
         public static HrCatalogo? Buscar(string? clave) => Todos.FirstOrDefault(c => c.Clave.Equals(clave, StringComparison.OrdinalIgnoreCase));
 

@@ -80,6 +80,18 @@
     .hc-est button:hover { transform: scale(1.15); }
     .hc-est button:focus-visible { outline: 2px solid #F5A623; outline-offset: 2px; border-radius: 6px; }
     .hc-est .n { margin-left: 8px; font-weight: 800; font-size: 13px; color: var(--ev-muted); min-width: 74px; }
+    /* Aviso en vivo: ya existe (rojo) / se parece (amarillo) */
+    .ui-f.hc-rojo input { border-color: #D92D20 !important; box-shadow: 0 0 0 3px rgba(217,45,32,.15) !important; }
+    .ui-f.hc-amarillo input { border-color: #F5A623 !important; box-shadow: 0 0 0 3px rgba(245,166,35,.18) !important; }
+    .hc-dup { margin-top: 6px; border-radius: 12px; padding: 8px 10px; font-size: 12.5px; font-weight: 600; display: grid; gap: 4px; }
+    .hc-dup.rojo { background: #FEF3F2; border: 1px solid #FECDCA; color: #912018; }
+    .hc-dup.amarillo { background: #FFFAEB; border: 1px solid #FEDF89; color: #7A4B00; }
+    .hc-dup .t { font-weight: 800; display: flex; gap: 6px; align-items: center; }
+    .hc-dup .it { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+    .hc-dup .it span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hc-dup .it small { color: inherit; opacity: .75; font-weight: 600; }
+    .hc-dup button { border: 0; background: rgba(255,255,255,.7); border-radius: 8px; padding: 2px 8px; font: inherit; font-weight: 800; cursor: pointer; color: inherit; flex-shrink: 0; }
+    .hc-dup .ok { color: #166534; }
     .hc-est-celda { color: #F5A623; letter-spacing: 1px; white-space: nowrap; }
 </style>
 }
@@ -376,8 +388,51 @@ const HC = (() => {
                 });
                 caja.addEventListener('mouseleave', () => pintar(+el.value || 0));
             }
+            if (vigilado(c) && !el.readOnly) vigilar(el, c, cont, def, esNuevo);
             if (c.tipo === 'url') el.addEventListener('change', () => { const p = $(`[data-prev="${c.col}"]`, cont); p.innerHTML = EV.esUrl(el.value) ? `<img src="${esc(el.value)}" alt="" onerror="this.remove()">` : ''; });
         });
+    }
+
+    // ---------- Aviso en vivo: ¿ya existe o se parece? (rojo / amarillo) ----------
+    // Mismo criterio que el servidor (HrCatalogos.Vigilado): campos de texto que identifican el registro.
+    const vigilado = c => c.tipo === 'text' && !c.auto && (c.clave || c.col === 'nombre' || c.col === 'descripcion');
+    const dupRojos = new Map();   // campo → nombre de lo que ya existe (para preguntar al guardar)
+    function vigilar(el, c, cont, def, esNuevo) {
+        const f = el.closest('.ui-f');
+        const caja = document.createElement('div'); caja.hidden = true; f.appendChild(caja);
+        const clave = def.clave + ':' + c.col;
+        let turno = 0;
+        const limpiar = () => { caja.hidden = true; caja.innerHTML = ''; f.classList.remove('hc-rojo', 'hc-amarillo'); dupRojos.delete(clave); };
+        const revisarTexto = EV.debounce(async () => {
+            const texto = el.value.trim(), mio = ++turno;
+            if (texto.length < (c.max && c.max <= 3 ? 1 : 2)) { limpiar(); return; }
+            // contexto: país, hotel… que ya se eligieron en el formulario; propio: el registro que se edita (no se compara consigo)
+            const contexto = { ...(def.contexto || {}) };
+            def.campos.filter(k => k.clave && k.col !== c.col).forEach(k => { const e = $(`[data-c="${k.col}"]`, cont); if (e) contexto[k.col] = e.dataset.valor || e.value || null; });
+            const propio = esNuevo ? {} : def.propio !== undefined ? (def.propio || {})
+                : !actual ? {} : Object.fromEntries(def.campos.filter(k => k.clave).map(k => [k.col, actual[k.col] == null ? null : String(actual[k.col])]));
+            let r;
+            try { r = await EV.post(`/Herramientas/Parecidos?id=${def.clave}`, { Col: c.col, Texto: texto, Contexto: contexto, Propio: propio }); } catch { return; }
+            if (mio !== turno) return;   // llegó tarde: ya se escribió otra cosa
+            if (!r.length) {
+                f.classList.remove('hc-rojo', 'hc-amarillo'); dupRojos.delete(clave);
+                caja.className = 'hc-dup'; caja.hidden = !esNuevo;
+                caja.innerHTML = '<span class="ok"><i class="bi bi-check-circle-fill"></i> No hay ninguno igual ni parecido.</span>';
+                return;
+            }
+            const rojo = r.find(x => x.nivel === 'existe');
+            f.classList.toggle('hc-rojo', !!rojo); f.classList.toggle('hc-amarillo', !rojo);
+            if (rojo) dupRojos.set(clave, `${c.etiqueta}: «${rojo.texto || texto}»`); else dupRojos.delete(clave);
+            caja.className = 'hc-dup ' + (rojo ? 'rojo' : 'amarillo'); caja.hidden = false;
+            caja.innerHTML = `<span class="t"><i class="bi ${rojo ? 'bi-x-octagon-fill' : 'bi-exclamation-triangle-fill'}"></i> ${rojo ? `Ya existe ${def.el} ${def.singular} con ${c.etiqueta.toLowerCase()} igual` : 'Se parece a:'}</span>` +
+                r.map((x, i) => `<div class="it"><span>${x.nivel === 'existe' ? '🔴' : '🟡'} <b>${esc(x.texto)}</b> ${x.detalle ? `<small>${esc(x.detalle)}</small>` : ''}</span>
+                    ${def === DEF ? `<button type="button" data-ver="${i}" title="Abrir el que ya existe">Abrir</button>` : ''}</div>`).join('');
+            caja.querySelectorAll('[data-ver]').forEach(b => b.onclick = () => abrir(r[+b.dataset.ver].clave));
+        }, 300);
+        el.addEventListener('input', revisarTexto);
+        // al cambiar el país / hotel, se vuelve a revisar (lo que existe en otro país es solo «parecido»)
+        def.campos.filter(k => k.clave && k.col !== c.col).forEach(k => $(`[data-c="${k.col}"]`, cont)?.addEventListener('change', revisarTexto));
+        if (!esNuevo && el.value.trim()) revisarTexto();
     }
 
     function leer(cont, def) {
@@ -409,6 +464,7 @@ const HC = (() => {
 
     async function abrir(fila) {
         nuevo = !fila;
+        dupRojos.clear();
         actual = null;
         $('#eUso').innerHTML = '';
         if (fila) {
@@ -442,6 +498,10 @@ const HC = (() => {
         const { datos, err } = leer($('#eForm'), DEF);
         if (!nuevo) claves.forEach(c => datos[c] = actual[c]);
         if (err.length) { EV.toast(err[0], 'err'); return; }
+        // Aviso en vivo en rojo: confirmar antes de crear algo que ya existe
+        const rojos = [...dupRojos.entries()].filter(([k]) => k.startsWith(DEF.clave + ':')).map(([, v]) => v);
+        if (rojos.length && !await EV.confirmar({ titulo: `Ya existe ${DEF.el} ${DEF.singular} así`, peligro: true, si: nuevo ? 'Crear igualmente' : 'Guardar igualmente',
+                texto: `${rojos.map(esc).join('<br>')}<br><br>Revisa que no estés repitiendo uno que ya existe.` })) return;
         const b = $('#eGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
         try {
             const r = await EV.post(`/Herramientas/Guardar?id=${DEF.clave}`, { Datos: datos, Nuevo: nuevo });
@@ -482,11 +542,15 @@ const HC = (() => {
         $('#hbForm').innerHTML = `<div class="hb-form"><b style="display:block;margin-bottom:10px">${h ? 'Editar habitación #' + h.id_habitacion : 'Nueva habitación'}</b><div class="ui-row r3">${htmls.join('')}</div>
             <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="ev-btn ghost sm" id="hbCancelar">Cancelar</button><button type="button" class="ev-btn sm" id="hbGuardar"><i class="bi bi-check2"></i> Guardar habitación</button></div></div>`;
         if (h) $('[data-c="id_tipo_habitacion"]', $('#hbForm')).dataset.valor = h.id_tipo_habitacion;
-        activarCampos($('#hbForm'), { campos }, !h);
+        // aviso en vivo: solo contra las habitaciones de ESTE hotel (y sin compararse consigo misma)
+        activarCampos($('#hbForm'), { ...HAB, campos, contexto: { id_alojamiento: String(actual.id_alojamiento) },
+            propio: h ? { id_alojamiento: String(actual.id_alojamiento), id_habitacion: String(h.id_habitacion), id_idioma: h.id_idioma ?? null } : null }, !h);
         $('#hbCancelar').onclick = () => $('#hbForm').innerHTML = '';
         $('#hbGuardar').onclick = async () => {
             const { datos, err } = leer($('#hbForm'), { campos });
             if (err.length) { EV.toast(err[0], 'err'); return; }
+            const rojos = [...dupRojos.entries()].filter(([k]) => k.startsWith(HAB.clave + ':')).map(([, v]) => v);
+            if (rojos.length && !await EV.confirmar({ titulo: 'Este hotel ya tiene una habitación así', peligro: true, si: h ? 'Guardar igualmente' : 'Crear igualmente', texto: rojos.map(esc).join('<br>') })) return;
             datos.id_alojamiento = actual.id_alojamiento;
             if (h) datos.id_habitacion = h.id_habitacion;
             try { const r = await EV.post('/Herramientas/Guardar?id=habitaciones', { Datos: datos, Nuevo: !h }); EV.toast(r.mensaje); $('#hbForm').innerHTML = ''; habs(); cargar(); }

@@ -13,6 +13,8 @@ namespace EuroVip.Repositories
         Task<List<HrResumen>> ResumenAsync();
         Task<(List<Dictionary<string, object?>> Filas, int Total)> ListarAsync(HrCatalogo c, string? q, Dictionary<string, string> filtros, int pagina, int tam);
         Task<Dictionary<string, object?>?> ObtenerAsync(HrCatalogo c, Dictionary<string, JsonElement> clave);
+        /// <summary>¿Ya existe o se parece a lo escrito en el campo col? contexto = país, hotel… del formulario; propio = la clave del que se edita.</summary>
+        Task<List<HrParecido>> ParecidosAsync(HrCatalogo c, string col, string texto, Dictionary<string, string?> contexto, Dictionary<string, string?> propio);
         Task<(Dictionary<string, object?>? Clave, string? Error)> GuardarAsync(HrCatalogo c, Dictionary<string, JsonElement> datos, bool nuevo);
         Task<List<(string Etiqueta, int N)>> UsosAsync(HrCatalogo c, Dictionary<string, JsonElement> clave);
         Task<string?> EliminarAsync(HrCatalogo c, Dictionary<string, JsonElement> clave);
@@ -107,6 +109,48 @@ namespace EuroVip.Repositories
             var r = await cn.QueryFirstOrDefaultAsync($"SELECT {SelectCols(c)}, t.usuario_alta AS [_usuario_alta], t.fecha_alta AS [_fecha_alta], " +
                 $"t.usuario_modificacion AS [_usuario_modificacion], t.fecha_modificacion AS [_fecha_modificacion] FROM {Tabla(c)} t WHERE {where}", p);
             return r is null ? null : Fila(r);
+        }
+
+        public async Task<List<HrParecido>> ParecidosAsync(HrCatalogo c, string col, string texto, Dictionary<string, string?> contexto, Dictionary<string, string?> propio)
+        {
+            var f = c.Campos.FirstOrDefault(x => x.Col == col);
+            if (f is null || !HrCatalogos.Vigilado(f) || string.IsNullOrWhiteSpace(texto) || texto.Length > 300) return new();
+            var claves = c.Claves.ToList();
+            // Lo que se muestra: el nombre (o la descripción) del registro
+            var nom = c.Campos.FirstOrDefault(x => x.Col == "nombre") ?? c.Campos.FirstOrDefault(x => x.Col == "descripcion" && x.Tipo == "text") ?? f;
+            var cols = claves.Select(k => k.Col).Append(col).Append(nom.Col).Distinct().ToList();
+            var w = new List<string>();
+            var p = new DynamicParameters();
+            if (c.Idioma) w.Add("t.id_idioma = 'ES'");
+            // Habitaciones: solo las del mismo hotel (todas las demás tienen «Doble», «Suite»…)
+            foreach (var k in claves.Where(k => k.Tipo == "hotel"))
+            {
+                if (!int.TryParse(contexto.GetValueOrDefault(k.Col), out var h)) return new();
+                w.Add($"t.[{k.Col}] = @h_{k.Col}"); p.Add("h_" + k.Col, h);
+            }
+            using var cn = _db.Conexion();
+            var filas = await cn.QueryAsync($"SELECT {string.Join(", ", cols.Select(x => $"t.[{x}] AS [{x}]"))} FROM {Tabla(c)} t{(w.Count > 0 ? " WHERE " + string.Join(" AND ", w) : "")}", p);
+            // Los demás campos de la clave (p. ej. el país de un destino): si no coinciden, «existe» pasa a «parecido» («existe en otro país»)
+            var otras = claves.Where(k => k.Col != col && !k.Auto && k.Tipo != "hotel").ToList();
+            var res = new List<HrParecido>();
+            foreach (var r in filas)
+            {
+                Dictionary<string, object?> d = Fila(r);
+                if (propio.Count > 0 && claves.All(k => string.Equals(d.GetValueOrDefault(k.Col)?.ToString()?.Trim(), propio.GetValueOrDefault(k.Col)?.Trim(), StringComparison.OrdinalIgnoreCase)))
+                    continue;   // es el mismo que se está editando
+                var cmp = Parecidos.Comparar(texto, d.GetValueOrDefault(col)?.ToString(), soloExacto: f.Max is > 0 and <= 3);
+                if (cmp is null) continue;
+                var (nivel, puntos) = cmp.Value;
+                var distinto = otras.Where(k => contexto.GetValueOrDefault(k.Col) is { Length: > 0 } v
+                                                && !string.Equals(v.Trim(), d.GetValueOrDefault(k.Col)?.ToString()?.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+                if (nivel == "existe" && distinto.Count > 0) { nivel = "parecido"; puntos = .99; }
+                var detalle = string.Join(" · ", claves.Where(k => k.Col != nom.Col && k.Tipo != "hotel")
+                    .Select(k => d.GetValueOrDefault(k.Col)?.ToString()?.Trim() is { Length: > 0 } s ? (k.Tipo == "number" ? "#" + s : s) : null).Where(s => s is not null));
+                if (distinto.Count > 0) detalle = $"existe en otro {string.Join(", ", distinto.Select(k => k.Etiqueta.ToLowerInvariant()))} · {detalle}";
+                res.Add(new HrParecido(nivel, d.GetValueOrDefault(nom.Col)?.ToString()?.Trim() ?? "", detalle,
+                    claves.ToDictionary(k => k.Col, k => d.GetValueOrDefault(k.Col)), puntos));
+            }
+            return res.OrderBy(x => x.Nivel == "existe" ? 0 : 1).ThenByDescending(x => x.Puntos).ThenBy(x => x.Texto).Take(6).ToList();
         }
 
         public async Task<List<(string Etiqueta, int N)>> UsosAsync(HrCatalogo c, Dictionary<string, JsonElement> clave)

@@ -130,6 +130,24 @@ namespace EuroVip.Controllers
             return Json(new { fila, usos = usos.Select(u => new { u.Etiqueta, u.N }) });
         }
 
+        public class ParecidosDto
+        {
+            public string Col { get; set; } = "";
+            public string Texto { get; set; } = "";
+            public Dictionary<string, string?> Contexto { get; set; } = new();
+            public Dictionary<string, string?> Propio { get; set; } = new();
+        }
+
+        /// <summary>Aviso en vivo al escribir: lo que ya existe (rojo) o se parece (amarillo) en este catálogo.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Parecidos(string id, [FromBody] ParecidosDto dto)
+        {
+            var c = HrCatalogos.Buscar(id);
+            if (c is null) return NotFound(new { mensaje = "Catálogo desconocido." });
+            return Json(await _repo.ParecidosAsync(c, dto.Col, dto.Texto, dto.Contexto, dto.Propio));
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Guardar(string id, [FromBody] PeticionDto dto)
