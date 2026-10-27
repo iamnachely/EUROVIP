@@ -447,6 +447,7 @@
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-quien.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
@@ -660,7 +661,8 @@
         tarSel = C.tarifas[0]?.clave || null;
         fotosMontadas = false; P = { PORTADA: null, INTERMEDIA: null, GALERIA: [] }; $('#eFotos').innerHTML = '';
         $('#edTitulo').textContent = id ? C.titulo : 'Nuevo crucero';
-        $('#edSub').textContent = id ? `n.º ${C.id_Crucero}${C.usuario ? ' · cargado por ' + C.usuario : ''}` : 'Solo el título es obligatorio. Lo demás, cuando lo tengas.';
+        $('#edSub').textContent = id ? `n.º ${C.id_Crucero}` : 'Solo el título es obligatorio. Lo demás, cuando lo tengas.';
+        if (id) EVQuien.pintar($('#edSub'), 'crucero', C.id_Crucero); else EVQuien.quitar($('#edSub'));
         $('#edEliminar').hidden = !id;
         pintarDatos(); pintarItin(); pintarBordo(); pintarCabinas(); pintarPrecios();
         edTabs.ir('eDatos'); editor.abrir();

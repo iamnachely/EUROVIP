@@ -218,6 +218,7 @@
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-quien.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-excel.js" asp-append-version="true"></script>
@@ -421,6 +422,7 @@ const EX = (() => {
         actual = x || null; fotoNueva = null; quitarFoto = false;
         $('#edTitulo').textContent = x ? 'Editar excursión' : 'Nueva excursión';
         $('#edSub').textContent = x ? `n.º ${x.id_Excursion} · los cambios se guardan al pulsar Guardar` : 'Los campos con * son obligatorios.';
+        if (x?.id_Excursion) EVQuien.pintar($('#edSub'), 'excursion', x.id_Excursion); else EVQuien.quitar($('#edSub'));
         $('#edNombre').value = x?.nombre || '';
         $('#edDestino').value = x?.id_Destino || destinoInicial || st.destino || (todas[0]?.id_Destino ?? '');
         $('#edPrecio').value = x?.precio ?? '';

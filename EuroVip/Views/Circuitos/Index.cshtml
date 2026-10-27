@@ -223,6 +223,7 @@
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-quien.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
@@ -323,6 +324,7 @@ const CX = (() => {
         estado = c;
         $('#edTitulo').textContent = c.codigoOriginal ? c.nombre : 'Nuevo circuito';
         $('#edSub').textContent = c.codigoOriginal ? `Código ${c.codigoOriginal} · ${c.salidas.length} salidas cargadas` : 'Completa las pestañas; puedes guardar cuando quieras.';
+        if (c.codigoOriginal) EVQuien.pintar($('#edSub'), 'circuito', c.codigoOriginal); else EVQuien.quitar($('#edSub'));
         $('#edCodigo').value = c.codigo; $('#edNombre').value = c.nombre;
         $('#edProveedor').value = c.proveedor ? `${c.proveedor}` : ''; $('#edProveedor').dataset.valor = c.id_Proveedor || '';
         $('#edNoches').value = c.noches; $('#edCaratula').value = c.caratula || ''; delete $('#edPortada').dataset.vista; delete $('#edCaratula').dataset.quitada; $('#edResumen').value = c.itinerario || '';
@@ -355,7 +357,7 @@ const CX = (() => {
             const c = await EV.api('/Circuitos/Obtener?codigo=' + encodeURIComponent(codigo));
             await abrirEditor({ ...c, codigoOriginal: null, codigo: '', nombre: `${c.nombre} (copia)`, caratula: '', salidas: [] });
             $('#edTitulo').textContent = 'Duplicar circuito';
-            $('#edSub').textContent = `Copia de "${c.nombre}": cambia el código y el nombre, revisa y guarda. Las salidas no se copian.`;
+            $('#edSub').textContent = `Copia de "${c.nombre}": cambia el código y el nombre, revisa y guarda. Las salidas no se copian.`; EVQuien.quitar($('#edSub'));
             EV.toast('Copia lista: escribe el código y el nombre nuevos.', 'info');
         } catch (e) { EV.toast(e.message, 'err'); }
     }

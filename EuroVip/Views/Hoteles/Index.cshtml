@@ -702,6 +702,7 @@
 @section Scripts {
 <script src="~/js/eurovip-excel.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-quien.js" asp-append-version="true"></script>
 <script>
 const HX = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -1112,7 +1113,7 @@ const HX = (() => {
         prioridad(null);
         limpiarErrores();
         $('#frmTitulo').textContent = 'Nuevo hotel';
-        $('#frmSub').textContent = 'Completa los datos y mira la vista previa en vivo.';
+        $('#frmSub').textContent = 'Completa los datos y mira la vista previa en vivo.'; EVQuien.quitar($('#frmSub'));
         $('#frmIcon').className = 'bi bi-building-add';
         $('#btnGuardar').innerHTML = '<i class="bi bi-check2-circle"></i> Guardar hotel';
         $('#pvImg').innerHTML = '';
@@ -1140,7 +1141,7 @@ const HX = (() => {
             prioridad(h);
             campo('Estado').checked = h.estado !== false;
             $('#frmTitulo').textContent = 'Editar hotel';
-            $('#frmSub').textContent = `#${h.id_Servicio} · los cambios se ven en la vista previa`;
+            $('#frmSub').textContent = `#${h.id_Servicio} · los cambios se ven en la vista previa`; EVQuien.pintar($('#frmSub'), 'hotel', h.id_Servicio);
             $('#frmIcon').className = 'bi bi-pencil-square';
             $('#btnGuardar').innerHTML = '<i class="bi bi-check2-circle"></i> Guardar cambios';
             $('#pvImg').innerHTML = '';
@@ -1158,7 +1159,7 @@ const HX = (() => {
         editandoId = null;
         campo('Id_Servicio').value = '';
         $('#frmTitulo').textContent = 'Duplicar hotel';
-        $('#frmSub').textContent = 'Copia lista: cambia la campaña, el origen, el precio o la sección y guarda. Es un hotel nuevo en la web.';
+        $('#frmSub').textContent = 'Copia lista: cambia la campaña, el origen, el precio o la sección y guarda. Es un hotel nuevo en la web.'; EVQuien.quitar($('#frmSub'));
         $('#frmIcon').className = 'bi bi-copy';
         $('#btnGuardar').innerHTML = '<i class="bi bi-check2-circle"></i> Guardar copia';
         formSucio = true;   // es un registro nuevo sin guardar: avisar si se cierra

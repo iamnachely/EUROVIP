@@ -170,6 +170,7 @@
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-quien.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
 <script>
@@ -263,7 +264,7 @@ const OF = (() => {
             actual = o;
             const habsHotel = await EV.api('/Ofertas/Habitaciones?hotel=' + o.id_Alojamiento);
             $('#eTitulo').textContent = o.hotel;
-            $('#eSub').textContent = `${OF1M} #${o.id_Servicio} · ${o.destino || ''} · ${esc(o.proveedor || '')}`;
+            $('#eSub').textContent = `${OF1M} #${o.id_Servicio} · ${o.destino || ''} · ${esc(o.proveedor || '')}`; EVQuien.pintar($('#eSub'), 'oferta', o.id_Servicio);
             $('#eDesde').value = o.desde.slice(0, 10); $('#eNoches').value = o.noches;
             $('#eRegimen').innerHTML = cat.regimenes.map(r => `<option value="${esc(r.valor)}">${esc(r.valor)} · ${esc(r.texto)}</option>`).join('');
             $('#eRegimen').value = o.id_Regimen.trim();

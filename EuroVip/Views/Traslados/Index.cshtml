@@ -277,6 +277,7 @@
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-quien.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-excel.js" asp-append-version="true"></script>
@@ -505,6 +506,7 @@
         actual = t || null; fotoNueva = null; quitarFoto = false;
         $('#edTitulo').textContent = t ? 'Editar traslado' : 'Nuevo traslado';
         $('#edSub').textContent = t ? `n.º ${t.id_Traslado} · los cambios se guardan al pulsar Guardar` : 'Los campos con * son obligatorios.';
+        if (t?.id_Traslado) EVQuien.pintar($('#edSub'), 'traslado', t.id_Traslado); else EVQuien.quitar($('#edSub'));
         const [o, d] = (ruta || '').split('|');
         $('#edOrigen').value = t ? `${t.id_Estacion_Origen} · ${t.origen_Nombre || ''}` : (o ? `${o} · ${todos.find(x => x.id_Estacion_Origen === o)?.origen_Nombre || ''}` : '');
         $('#edDestino').value = t?.id_Destino || d || '';
