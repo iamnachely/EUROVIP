@@ -1071,12 +1071,12 @@ const HX = (() => {
         }
     }
 
-    function limpiarErrores() { $('.hx-f.err', frm).forEach(f => { f.classList.remove('err'); $('.msg', f).textContent = ''; }); marcarPestanas(); }
+    function limpiarErrores() { $$('.hx-f.err', frm).forEach(f => { f.classList.remove('err'); $('.msg', f).textContent = ''; }); marcarPestanas(); }
 
     // ---- pestañas del formulario: «Lo principal» / «Más datos» ----
     function irPestana(n) {
-        $('[data-ptab]', $('#hxForm')).forEach(b => b.classList.toggle('on', b.dataset.ptab === n));
-        $('[data-pane]', frm).forEach(p => p.classList.toggle('on', p.dataset.pane === n));
+        $$('[data-ptab]', $('#hxForm')).forEach(b => b.classList.toggle('on', b.dataset.ptab === n));
+        $$('[data-pane]', frm).forEach(p => p.classList.toggle('on', p.dataset.pane === n));
     }
     // «!» en «Más datos» si tiene algo en rojo
     function marcarPestanas() { const e = $('.hx-tab-err', $('#hxForm')); if (e) e.hidden = !$('[data-pane="mas"] .hx-f.err', frm); }
@@ -1386,7 +1386,7 @@ const HX = (() => {
         const quitarError = e => { const f = e.target.closest('.hx-f'); if (f?.classList.contains('err')) { f.classList.remove('err'); const m = $('.msg', f); if (m) m.textContent = ''; marcarPestanas(); } };
         frm.addEventListener('input', e => { quitarError(e); preview(); });
         frm.addEventListener('change', quitarError);
-        $('[data-ptab]', $('#hxForm')).forEach(b => b.addEventListener('click', () => irPestana(b.dataset.ptab)));
+        $$('[data-ptab]', $('#hxForm')).forEach(b => b.addEventListener('click', () => irPestana(b.dataset.ptab)));
         ['input', 'change'].forEach(t => frm.addEventListener(t, e => { if (e.isTrusted && formAbierto()) formSucio = true; }));
         window.addEventListener('beforeunload', e => { if (formSucio && formAbierto()) { e.preventDefault(); e.returnValue = ''; } });
         frm.addEventListener('change', preview);
