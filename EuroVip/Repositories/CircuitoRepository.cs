@@ -65,7 +65,7 @@ namespace EuroVip.Repositories
             using var cn = Conexion();
             return await cn.QueryAsync<CircuitoResumen>(@"
                 SELECT c.id AS Codigo, c.nombre_circuito AS Nombre, c.noches AS Noches, c.id_proveedor AS Id_Proveedor,
-                       p.nombre AS Proveedor, c.caratula AS Caratula,
+                       p.nombre AS Proveedor, c.caratula AS Caratula, c.peso AS Peso, c.precio_proveedor AS Precio_Proveedor,
                        (SELECT STRING_AGG(cd.id_destino, ' · ') FROM Eurovip.circuito_destino cd WHERE cd.nombre_circuito = c.nombre_circuito AND cd.id_idioma = c.id_idioma) AS Destinos,
                        (SELECT STRING_AGG(x.id_pais, ',') FROM (SELECT DISTINCT cd.id_pais FROM Eurovip.circuito_destino cd WHERE cd.nombre_circuito = c.nombre_circuito AND cd.id_idioma = c.id_idioma) x) AS Paises,
                        (SELECT COUNT(*) FROM Eurovip.servicio_circuito_alojamiento h WHERE h.nombre_circuito = c.nombre_circuito AND h.id_idioma = c.id_idioma) AS Hoteles,
@@ -100,7 +100,7 @@ namespace EuroVip.Repositories
             using var cn = Conexion();
             var c = await cn.QueryFirstOrDefaultAsync<CircuitoDetalle>(@"
                 SELECT c.id AS Codigo, c.nombre_circuito AS Nombre, c.id_proveedor AS Id_Proveedor, p.nombre AS Proveedor,
-                       c.noches AS Noches, c.caratula AS Caratula, c.itinerario AS Itinerario
+                       c.noches AS Noches, c.caratula AS Caratula, c.itinerario AS Itinerario, c.peso AS Peso, c.precio_proveedor AS Precio_Proveedor
                 FROM Eurovip.circuito c LEFT JOIN Eurovip.proveedor p ON p.id_proveedor = c.id_proveedor
                 WHERE c.id = @codigo AND c.id_idioma = @Idioma", new { codigo, Idioma });
             if (c is null) return null;
@@ -181,9 +181,9 @@ namespace EuroVip.Repositories
             if (original is null)
             {
                 await cn.ExecuteAsync(@"
-                    INSERT INTO Eurovip.circuito (id, nombre_circuito, id_idioma, id_proveedor, noches, caratula, itinerario)
-                    VALUES (@codigo, @nombre, @Idioma, @Id_Proveedor, @Noches, @Caratula, @Itinerario)",
-                    new { codigo, nombre, Idioma, dto.Id_Proveedor, dto.Noches, Caratula = Nulo(dto.Caratula), Itinerario = Nulo(dto.Itinerario) }, tx);
+                    INSERT INTO Eurovip.circuito (id, nombre_circuito, id_idioma, id_proveedor, noches, caratula, itinerario, peso, precio_proveedor)
+                    VALUES (@codigo, @nombre, @Idioma, @Id_Proveedor, @Noches, @Caratula, @Itinerario, @Peso, @Precio_Proveedor)",
+                    new { codigo, nombre, Idioma, dto.Id_Proveedor, dto.Noches, Caratula = Nulo(dto.Caratula), Itinerario = Nulo(dto.Itinerario), dto.Peso, dto.Precio_Proveedor }, tx);
             }
             else
             {
@@ -200,9 +200,9 @@ namespace EuroVip.Repositories
                 await cn.ExecuteAsync(@"
                     UPDATE Eurovip.circuito
                     SET id = @codigo, nombre_circuito = @nombre, id_proveedor = @Id_Proveedor, noches = @Noches,
-                        caratula = @Caratula, itinerario = @Itinerario
+                        caratula = @Caratula, itinerario = @Itinerario, peso = @Peso, precio_proveedor = @Precio_Proveedor
                     WHERE id = @original AND id_idioma = @Idioma",
-                    new { codigo, nombre, dto.Id_Proveedor, dto.Noches, Caratula = Nulo(dto.Caratula), Itinerario = Nulo(dto.Itinerario), original, Idioma }, tx);
+                    new { codigo, nombre, dto.Id_Proveedor, dto.Noches, Caratula = Nulo(dto.Caratula), Itinerario = Nulo(dto.Itinerario), dto.Peso, dto.Precio_Proveedor, original, Idioma }, tx);
 
                 // Las fotos (Eurovip.multimedia) van por nombre: si se renombra, lo siguen. Los archivos se quedan en su carpeta.
                 if (!string.Equals(nombreAnterior, nombre, StringComparison.Ordinal))

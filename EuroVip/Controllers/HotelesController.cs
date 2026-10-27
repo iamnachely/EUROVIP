@@ -144,7 +144,7 @@ namespace EuroVip.Controllers
         private static readonly string[] Columnas =
         {
             "Hotel", "Destino", "Régimen", "Código hotel", "Precio", "Noches", "Moneda", "Campaña", "País salida", "Ciudad salida",
-            "País destino", "Latitud", "Longitud", "Sección de la web", "Visible", "Notas"
+            "País destino", "Latitud", "Longitud", "Sección de la web", "Visible", "Notas", "Prioridad", "Precio proveedor"
         };
         private static readonly string[] Regimenes = { "Solo Habitación", "Alojamiento y Desayuno", "Media Pensión", "Pensión Completa", "Todo Incluido", "Room Only" };
 
@@ -162,9 +162,9 @@ namespace EuroVip.Controllers
             var seccion = conts.FirstOrDefault(c => ExcelTabla.Clave(c.Nombre).Contains("hotel"))?.Nombre ?? conts.FirstOrDefault()?.Nombre;
             var datos = new ExcelTabla.Hoja("Hoteles", Columnas, new List<object?[]>
             {
-                new object?[] { "Riu Palace Bavaro", Dest("Punta Cana", 0), "Todo Incluido", "603258", 1290m, 7, "DOP", camp, "ES", "Madrid", "DO", "18.7357", "-68.4447", seccion, "Sí", null },
-                new object?[] { "Iberostar Selection Hacienda Dominicus", Dest("La Romana", 1), "Todo Incluido", "702115", 1450m, 7, "DOP", camp, "ES", "Madrid", "DO", null, null, seccion, "Sí", "Ejemplo: borra estas filas y pon tus hoteles." },
-            }, new double[] { 38, 18, 20, 13, 11, 9, 9, 11, 11, 14, 12, 11, 11, 22, 9, 40 });
+                new object?[] { "Riu Palace Bavaro", Dest("Punta Cana", 0), "Todo Incluido", "603258", 1290m, 7, "DOP", camp, "ES", "Madrid", "DO", "18.7357", "-68.4447", seccion, "Sí", null, 1, 1450m },
+                new object?[] { "Iberostar Selection Hacienda Dominicus", Dest("La Romana", 1), "Todo Incluido", "702115", 1450m, 7, "DOP", camp, "ES", "Madrid", "DO", null, null, seccion, "Sí", "Ejemplo: borra estas filas y pon tus hoteles.", null, null },
+            }, new double[] { 38, 18, 20, 13, 11, 9, 9, 11, 11, 14, 12, 11, 11, 22, 9, 40, 11, 16 });
             var ayuda = new List<object?[]>
             {
                 new object?[] { "Hotel", "Obligatorio. Nombre del hotel (no debe existir ya en la vitrina).", null },
@@ -179,6 +179,8 @@ namespace EuroVip.Controllers
                 new object?[] { "Latitud / Longitud", "Opcionales (para el mapa).", null },
                 new object?[] { "Sección de la web", "Nombre de la sección (lista abajo). Sin sección el hotel queda oculto.", null },
                 new object?[] { "Visible", "Sí o No. Vacío = Sí.", null },
+                new object?[] { "Prioridad", "Opcional. 1 sale primero en la web, 2 segundo… Vacío = se ordena por precio.", null },
+                new object?[] { "Precio proveedor", "Opcional. Precio del proveedor en su web (nuestro precio no cambia).", null },
                 new object?[] { "", "", null },
                 new object?[] { "Campañas", "Nombre", "Tipo" },
             };
@@ -243,7 +245,8 @@ namespace EuroVip.Controllers
                     Origen = f.Texto("Ciudad salida", "Ciudad de salida", "Origen") ?? "",
                     Id_PaisDestino = (f.Texto("País destino", "Pais destino") ?? "DO").ToUpperInvariant(),
                     Latitud = f.Texto("Latitud"), Longitud = f.Texto("Longitud"), Id_Contenedor = cont?.Id_Contenedor,
-                    Estado = f.SiNo(true, "Visible", "Activo"), Notas = f.Texto("Notas")
+                    Estado = f.SiNo(true, "Visible", "Activo"), Notas = f.Texto("Notas"),
+                    Peso = f.Cifra("Prioridad", "Peso") is decimal pe ? (short)Math.Round(pe) : null, Precio_Proveedor = f.Cifra("Precio proveedor", "Precio del proveedor")
                 };
                 Preparar(dto);
                 mal ??= CargaExcel.ErrorModelo(dto);

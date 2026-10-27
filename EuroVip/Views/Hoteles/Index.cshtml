@@ -391,6 +391,7 @@
     </select>
 
     <select class="hx-select" id="fOrden" title="Ordenar">
+        <option value="prioridad">Prioridad (como en la web)</option>
         <option value="recientes">Más recientes</option>
         <option value="nombre">Nombre A–Z</option>
         <option value="precio_asc">Precio: menor a mayor</option>
@@ -628,6 +629,7 @@
                 <div><b>Visible en la web</b><small>Si lo apagas, se guarda pero no se muestra.</small></div>
                 <label class="hx-switch" style="margin:0"><input type="checkbox" id="Estado" name="Estado" checked /><span class="tr"></span></label>
             </div>
+            <div class="hx-f" style="margin-top:12px" id="edPrio"></div>
             <div class="hx-f" style="margin-top:12px">
                 <label for="Notas">Notas internas <em>opcional</em></label>
                 <textarea id="Notas" name="Notas" maxlength="1000" placeholder="Solo para el equipo, no se publica."></textarea>
@@ -699,6 +701,7 @@
 
 @section Scripts {
 <script src="~/js/eurovip-excel.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
 <script>
 const HX = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -720,7 +723,7 @@ const HX = (() => {
         : `<div class="hx-ph"><b>${esc(iniciales(alt))}</b>${olaSvg}</div>`;
 
     // Hoteles solo en ES: no hay filtro de idioma, el servidor lo fija.
-    const estado = { q: '', estado: '', contenedor: '', orden: 'recientes', pagina: 1, vista: localStorageGet('hx-vista') || 'grid' };
+    const estado = { q: '', estado: '', contenedor: '', orden: 'prioridad', pagina: 1, vista: localStorageGet('hx-vista') || 'grid' };
     let ultimos = [];
     let editandoId = null;
 
@@ -937,11 +940,12 @@ const HX = (() => {
 
     function vistaGrid(items) {
         return `<div class="hx-grid">${items.map((h, n) => `
-            <article class="hx-card ${h.estado ? '' : 'off'}" style="--n:${n}" data-id="${h.id_Servicio}">
+            <article class="hx-card ${h.estado ? '' : 'off'} ${h.peso ? 'ev-con-prioridad' : ''}" style="--n:${n}" data-id="${h.id_Servicio}">
                 <div class="hx-img" onclick="HX.ver(${h.id_Servicio})">
                     ${imagen(h, h.id_Destino)}
                     <div class="hx-img-top">
                         <span class="hx-tag ${h.estado ? 'vis' : 'ocu'}"><i class="bi bi-${h.estado ? 'eye' : 'eye-slash'}"></i> ${h.estado ? 'Visible' : 'Oculto'}</span>
+                        ${EVPrioridad.estrella(h.peso, true)}
                         <span class="hx-tag">${esc(h.id_Idioma)} · #${h.id_Servicio}</span>
                     </div>
                     ${h.precioWeb != null ? `<div class="hx-price"><small>desde</small>${fmt(h.precioWeb)} ${simbolo(h.id_Moneda)}</div>` : ''}
@@ -949,6 +953,7 @@ const HX = (() => {
                 <div class="hx-body">
                     <h3>${esc(h.id_Destino)}</h3>
                     <span class="hx-reg" title="${esc(h.descripcion)}">${esc(h.descripcion)}</span>
+                    ${h.precio_Proveedor ? `<div>${EVPrioridad.proveedor(h.precioWeb, h.precio_Proveedor)}</div>` : ''}
                     <div class="hx-meta">
                         ${h.caratulaDestino && !esUrl(h.caratulaDestino) ? `<span><i class="bi bi-geo-alt"></i> ${esc(h.caratulaDestino)}</span>` : ''}
                         <span><i class="bi bi-airplane"></i> ${esc(h.origen)} → ${esc(h.id_PaisDestino)}</span>
@@ -975,9 +980,9 @@ const HX = (() => {
             <tbody>${items.map((h, n) => `
                 <tr style="--n:${n}">
                     <td>${h.imagen ? `<img class="hx-thumb" src="${esc(h.imagen)}" alt="" data-ini="${esc(iniciales(h.id_Destino))}" loading="lazy" onerror="HX._sinMini(this)">` : `<div class="hx-thumb">${esc(iniciales(h.id_Destino))}</div>`}</td>
-                    <td><div class="hx-name">${esc(h.id_Destino)}</div><small style="color:var(--ev-muted)">${h.caratulaDestino && !esUrl(h.caratulaDestino) ? esc(h.caratulaDestino) + ' · ' : ''}#${h.id_Servicio}${h.nombre_Campanya ? ' · ' + esc(h.nombre_Campanya) : ''}</small></td>
+                    <td><div class="hx-name">${EVPrioridad.estrella(h.peso)} ${esc(h.id_Destino)}</div><small style="color:var(--ev-muted)">${h.caratulaDestino && !esUrl(h.caratulaDestino) ? esc(h.caratulaDestino) + ' · ' : ''}#${h.id_Servicio}${h.nombre_Campanya ? ' · ' + esc(h.nombre_Campanya) : ''}</small></td>
                     <td><span class="hx-reg">${esc(h.descripcion)}</span></td>
-                    <td><b>${h.precioWeb != null ? fmt(h.precioWeb) + ' ' + simbolo(h.id_Moneda) : '—'}</b></td>
+                    <td><b>${h.precioWeb != null ? fmt(h.precioWeb) + ' ' + simbolo(h.id_Moneda) : '—'}</b>${h.precio_Proveedor ? '<br>' + EVPrioridad.proveedor(h.precioWeb, h.precio_Proveedor) : ''}</td>
                     <td>${esc(h.origen)} → ${esc(h.id_PaisDestino)}</td>
                     <td>${esc(h.contenedor || '—')}${h.posicion_Destino != null ? ' · #' + h.posicion_Destino : ''}</td>
                     <td><label class="hx-switch"><input type="checkbox" ${h.estado ? 'checked' : ''} onchange="HX.estado(${h.id_Servicio}, this)"><span class="tr"></span></label></td>
@@ -1092,11 +1097,19 @@ const HX = (() => {
         document.body.style.overflow = '';
     }
 
+    /** Prioridad y precio del proveedor (FASE 29): los dos opcionales; la diferencia se compara con «Precio desde». */
+    function prioridad(h) {
+        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: h?.peso, proveedor: h?.precio_Proveedor, precio: h?.precioWeb, ayuda: 'Compáralo con el «Precio desde».' });
+        const pinta = EVPrioridad.vivo($('#edPrio'), () => campo('PrecioWeb').value);
+        campo('PrecioWeb').oninput = () => pinta?.();
+    }
+
     async function nuevo() {
         editandoId = null;
         frm.reset();
         campo('Id_Servicio').value = '';
         campo('Estado').checked = true;
+        prioridad(null);
         limpiarErrores();
         $('#frmTitulo').textContent = 'Nuevo hotel';
         $('#frmSub').textContent = 'Completa los datos y mira la vista previa en vivo.';
@@ -1124,6 +1137,7 @@ const HX = (() => {
             set('Id_Moneda', (h.id_Moneda || '').trim()); set('Noches', h.noches); set('Id_Pais_Origen', (h.id_Pais_Origen || '').trim());
             set('Origen', h.origen); set('Id_PaisDestino', (h.id_PaisDestino || '').trim()); set('Latitud', h.latitud); set('Longitud', h.longitud);
             set('Posicion_Destino', h.posicion_Destino); set('Notas', h.notas);
+            prioridad(h);
             campo('Estado').checked = h.estado !== false;
             $('#frmTitulo').textContent = 'Editar hotel';
             $('#frmSub').textContent = `#${h.id_Servicio} · los cambios se ven en la vista previa`;
@@ -1163,7 +1177,8 @@ const HX = (() => {
             Id_Pais_Origen: v('Id_Pais_Origen'), Origen: v('Origen'), Id_PaisDestino: v('Id_PaisDestino'),
             Latitud: v('Latitud') || null, Longitud: v('Longitud') || null,
             Id_Contenedor: num('Id_Contenedor'), Posicion_Destino: num('Posicion_Destino'),
-            Estado: campo('Estado').checked, Notas: v('Notas') || null
+            Estado: campo('Estado').checked, Notas: v('Notas') || null,
+            ...EVPrioridad.leer($('#edPrio'))
         };
 
         // Validación amigable en el navegador (el servidor vuelve a validar)

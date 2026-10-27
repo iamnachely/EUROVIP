@@ -77,6 +77,8 @@ namespace EuroVip.Repositories
                 "precio_desc" => "i.precioWeb DESC, i.id_servicio DESC",
                 "nombre" => "i.id_destino ASC",
                 "posicion" => "ISNULL(i.posicion_destino, 9999) ASC, i.id_destino ASC",
+                // como en la web: prioridad 1, 2, 3… y después de menor a mayor precio
+                "prioridad" => "CASE WHEN i.peso IS NULL THEN 1 ELSE 0 END, i.peso ASC, ISNULL(i.precioWeb, 99999999) ASC, i.id_servicio DESC",
                 _ => "i.id_servicio DESC"
             };
 
@@ -92,7 +94,7 @@ namespace EuroVip.Repositories
 
                 SELECT i.id_servicio, i.id_idioma, i.id_destino, i.descripcion, i.caratulaDestino, i.precioWeb,
                        i.id_moneda, i.origen, i.id_pais_origen, i.id_paisDestino, i.id_campanya, c.nombre AS Nombre_Campanya,
-                       i.id_contenedor, i.contenedor, i.posicion_destino, i.noches, CAST(ISNULL(i.estado, 1) AS bit) AS Estado
+                       i.id_contenedor, i.contenedor, i.posicion_destino, i.noches, CAST(ISNULL(i.estado, 1) AS bit) AS Estado, i.peso, i.precio_proveedor
                 FROM Eurovip.inicio i
                 LEFT JOIN Eurovip.campanya c ON c.id_campanya = i.id_campanya AND c.id_idioma = i.id_idioma
                 WHERE {filtro}
@@ -140,10 +142,10 @@ namespace EuroVip.Repositories
             await cn.ExecuteAsync(@"
                 INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen,
                     id_paisDestino, id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb,
-                    id_contenedor, contenedor, posicion_contenedor, posicion_destino, estado, notas, noches)
+                    id_contenedor, contenedor, posicion_contenedor, posicion_destino, estado, notas, noches, peso, precio_proveedor)
                 VALUES (@Id, @Id_Idioma, @Tipo, @Id_Campanya, @Id_Moneda, @Id_Pais_Origen, @Origen,
                     @Id_PaisDestino, @Id_Destino, @CaratulaDestino, @Descripcion, @Latitud, @Longitud, @PrecioWeb,
-                    @Id_Contenedor, @Contenedor, @Posicion_Contenedor, @Posicion_Destino, @Estado, @Notas, @Noches)",
+                    @Id_Contenedor, @Contenedor, @Posicion_Contenedor, @Posicion_Destino, @Estado, @Notas, @Noches, @Peso, @Precio_Proveedor)",
                 Parametros(dto, id, cont), tx);
 
             tx.Commit();
@@ -164,7 +166,8 @@ namespace EuroVip.Repositories
                     id_destino = @Id_Destino, caratulaDestino = @CaratulaDestino, descripcion = @Descripcion,
                     latitud = @Latitud, longitud = @Longitud, precioWeb = @PrecioWeb,
                     id_contenedor = @Id_Contenedor, contenedor = @Contenedor, posicion_contenedor = @Posicion_Contenedor,
-                    posicion_destino = @Posicion_Destino, estado = @Estado, notas = @Notas, noches = @Noches
+                    posicion_destino = @Posicion_Destino, estado = @Estado, notas = @Notas, noches = @Noches,
+                    peso = @Peso, precio_proveedor = @Precio_Proveedor
                 WHERE id_servicio = @Id AND tipo_servicio = @Tipo AND id_idioma = @Id_Idioma",
                 Parametros(dto, dto.Id_Servicio!.Value, cont), tx);
 
@@ -296,7 +299,9 @@ namespace EuroVip.Repositories
             d.Posicion_Destino,
             d.Estado,
             Notas = string.IsNullOrWhiteSpace(d.Notas) ? null : d.Notas.Trim(),
-            d.Noches
+            d.Noches,
+            d.Peso,
+            d.Precio_Proveedor
         };
     }
 }

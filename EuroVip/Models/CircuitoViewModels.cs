@@ -25,6 +25,8 @@ namespace EuroVip.Models
         /// <summary>true si una tarjeta visible de la Home de la web es de este circuito.</summary>
         public bool EnHome { get; set; }
         public decimal? PrecioDesde { get; set; }
+        public short? Peso { get; set; }
+        public decimal? Precio_Proveedor { get; set; }
     }
 
     public class CircuitoDestinoDto
@@ -84,6 +86,10 @@ namespace EuroVip.Models
 
         [StringLength(200)] public string? Caratula { get; set; }
         public string? Itinerario { get; set; }
+        /// <summary>Prioridad (FASE 29): 1 sale primero en la web, 2 segundo… null = sin prioridad (por precio).</summary>
+        [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
+        /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
+        [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
 
         public List<CircuitoDestinoDto> Destinos { get; set; } = new();
         public List<CircuitoHotelDto> Hoteles { get; set; } = new();
@@ -118,6 +124,8 @@ namespace EuroVip.Models
         public short Noches { get; set; }
         public string? Caratula { get; set; }
         public string? Itinerario { get; set; }
+        public short? Peso { get; set; }
+        public decimal? Precio_Proveedor { get; set; }
         public List<CircuitoDestinoDto> Destinos { get; set; } = new();
         public List<CircuitoHotelDto> Hoteles { get; set; } = new();
         public List<CircuitoDiaDto> Dias { get; set; } = new();

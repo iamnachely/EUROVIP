@@ -27,6 +27,9 @@ public class Inicio
     public bool? Estado { get; set; }
     public string? Notas { get; set; }
     public int? Noches { get; set; }
+    /// <summary>Prioridad (FASE 29): 1 sale primero; null = por precio.</summary>
+    public short? Peso { get; set; }
+    public decimal? Precio_Proveedor { get; set; }
 }
 
 /// <summary>[Eurovip].[contenedores] — secciones de la web.</summary>

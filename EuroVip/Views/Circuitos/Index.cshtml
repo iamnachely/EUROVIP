@@ -135,6 +135,7 @@
                     </div><span class="msg"></span>
                 </div>
             </div>
+            <div class="ui-f" id="edPrio"></div>
             <div class="ui-f"><label>Imagen de portada <em>opcional · se guarda en multimedia/circuitos</em></label>
                 <input id="edCaratula" type="hidden">
                 <div class="cx-portada" id="edPortada" title="Arrastra aquí la imagen de portada"></div>
@@ -224,6 +225,7 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
 <script>
 const CX = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -258,6 +260,7 @@ const CX = (() => {
         const q = $('#fQ').value.trim(), pais = $('#fPais').value;
         try {
             lista = await EV.api(`/Circuitos/Listar?q=${encodeURIComponent(q)}&pais=${encodeURIComponent(pais)}`);
+            lista = [...lista.filter(c => c.peso).sort((a, b) => a.peso - b.peso), ...lista.filter(c => !c.peso)];
             pintar(q || pais);
         } catch (e) { $('#cxLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar los circuitos</h3><p>${esc(e.message)}</p><button type="button" class="ev-btn" onclick="CX.recargar()"><i class="bi bi-arrow-clockwise"></i> Reintentar</button></div>`; }
     }
@@ -272,10 +275,10 @@ const CX = (() => {
             return;
         }
         $('#cxLista').innerHTML = `<div class="cx-grid">${lista.map((c, n) => `
-            <article class="cx-card" style="--n:${n}" data-cod="${esc(c.codigo)}">
+            <article class="cx-card ${c.peso ? 'ev-con-prioridad' : ''}" style="--n:${n}" data-cod="${esc(c.codigo)}">
                 <div class="cx-img" onclick="CX.editar('${esc(c.codigo)}')">
                     ${imagen(c.caratula, c.nombre)}
-                    <div class="cx-top"><span class="cx-tag dark"><i class="bi bi-moon-stars"></i> ${c.noches} noches</span>
+                    <div class="cx-top">${EVPrioridad.estrella(c.peso, true)}<span class="cx-tag dark"><i class="bi bi-moon-stars"></i> ${c.noches} noches</span>
                         <span class="cx-tag">${esc(c.paises || '—')}</span></div>
                     ${c.precioDesde != null ? `<div class="cx-precio"><small>desde</small>${EV.dinero(c.precioDesde)}</div>` : ''}
                 </div>
@@ -283,6 +286,7 @@ const CX = (() => {
                     <h3>${esc(c.nombre)}</h3>
                     <span class="cod"><i class="bi bi-upc"></i> ${esc(c.codigo)} · ${esc(c.proveedor || c.id_Proveedor)}</span>
                     <span class="cx-dest"><i class="bi bi-geo-alt"></i> ${esc(c.destinos || 'Sin destinos')}</span>
+                    ${c.precio_Proveedor ? `<span>${EVPrioridad.proveedor(c.precioDesde, c.precio_Proveedor)}</span>` : ''}
                     <div class="cx-stats">
                         <div class="${c.hoteles ? '' : 'falta'}"><b>${c.hoteles}</b><small>hoteles</small></div>
                         <div class="${c.dias ? '' : 'falta'}"><b>${c.dias}</b><small>días</small></div>
@@ -322,6 +326,9 @@ const CX = (() => {
         $('#edCodigo').value = c.codigo; $('#edNombre').value = c.nombre;
         $('#edProveedor').value = c.proveedor ? `${c.proveedor}` : ''; $('#edProveedor').dataset.valor = c.id_Proveedor || '';
         $('#edNoches').value = c.noches; $('#edCaratula').value = c.caratula || ''; delete $('#edPortada').dataset.vista; delete $('#edCaratula').dataset.quitada; $('#edResumen').value = c.itinerario || '';
+        const desde = lista.find(x => x.codigo === c.codigoOriginal)?.precioDesde;
+        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: c.peso, proveedor: c.precio_Proveedor, precio: desde, ayuda: 'Compáralo con el «desde» del circuito.' });
+        EVPrioridad.vivo($('#edPrio'), () => desde);
         $('#edEliminar').hidden = !c.codigoOriginal;
         $('#tabSalidas').hidden = !c.codigoOriginal;
         $$('.ui-f.err', ed).forEach(f => { f.classList.remove('err'); const m = $('.msg', f); if (m) m.textContent = ''; });
@@ -446,6 +453,7 @@ const CX = (() => {
             CodigoOriginal: estado.codigoOriginal, Codigo: $('#edCodigo').value.trim(), Nombre: $('#edNombre').value.trim(),
             Id_Proveedor: $('#edProveedor').dataset.valor || '', Noches: parseInt($('#edNoches').value, 10) || 0,
             Caratula: $('#edCaratula').value.trim() || null, QuitarPortada: $('#edCaratula').dataset.quitada === '1', Itinerario: $('#edResumen').value.trim() || null,
+            ...EVPrioridad.leer($('#edPrio')),
             Destinos: estado.destinos.map(d => ({ Id_Destino: d.id_Destino, Id_Pais: d.id_Pais })),
             Hoteles: estado.hoteles.map(h => ({ Id_Alojamiento: h.id_Alojamiento, Categoria: h.categoria })),
             Dias: estado.dias.filter(d => d.titulo.trim()).map(d => ({ Titulo: d.titulo.trim(), Descripcion: d.descripcion, Visitas: d.visitas, Regimen: d.regimen, Transporte: d.transporte, Tipo_Alojamiento: d.tipo_Alojamiento, Caratula: d.caratula }))

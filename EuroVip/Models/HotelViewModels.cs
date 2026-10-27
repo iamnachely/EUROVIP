@@ -33,6 +33,8 @@ namespace EuroVip.Models
         public int? Posicion_Destino { get; set; }
         public int? Noches { get; set; }
         public bool Estado { get; set; }
+        public short? Peso { get; set; }
+        public decimal? Precio_Proveedor { get; set; }
         /// <summary>URL de /imagenes/hoteles/{nombre}.webp si existe (la calcula el controlador).</summary>
         public string? Imagen { get; set; }
     }
@@ -115,6 +117,11 @@ namespace EuroVip.Models
 
         [StringLength(1000, ErrorMessage = "Máximo 1000 caracteres")]
         public string? Notas { get; set; }
+
+        /// <summary>Prioridad (FASE 29): 1 sale primero en la web, 2 segundo… null = sin prioridad (por precio).</summary>
+        [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
+        /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
+        [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
     }
 
     public class HotelesPaginaViewModel
