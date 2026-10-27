@@ -1,6 +1,6 @@
 @{
-    // Solo Hotel (SOLO_HOTEL) o Paquetes (PAQUETES): misma pantalla, solo cambian los textos, los enlaces y el tipo que se guarda
-    var tipo = (ViewData["Tipo"] as string) ?? "SOLO_HOTEL";
+    // Solo Hotel (OFERTA) o Paquetes (PAQUETES): misma pantalla, solo cambian los textos, los enlaces y el tipo que se guarda
+    var tipo = (ViewData["Tipo"] as string) ?? "OFERTA";
     var esPaq = tipo == "PAQUETES";
     var nombre = esPaq ? "Paquetes" : "Solo Hotel";
     var qs = esPaq ? "?tipo=PAQUETES" : "";

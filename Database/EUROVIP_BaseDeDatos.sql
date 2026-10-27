@@ -5074,6 +5074,64 @@ GO
 
 
 /* ##########################################################################################
+   FASE 36 — EL TIPO «SOLO HOTEL» VUELVE A GUARDARSE COMO «OFERTA»  (27/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «SOLO_HOTEL = Oferta, devuelve ese cambio: en vez de SOLO_HOTEL en tipo_servicio,
+   Oferta». Deshace la parte OFERTA → SOLO_HOTEL de la FASE 28 (los Paquetes siguen como PAQUETES).
+   Explicado fácil:
+     • tipo_servicio vuelve a tener la fila de ViajeVDT: «Oferta» · «Servicios hoteleros» · 700; se quita SOLO_HOTEL.
+     • Lo cargado con SOLO_HOTEL vuelve a OFERTA en servicio, campanya, inicio, alojamiento_destino y flyer_config.
+     • fnSecuencia y spActualizaInicio vuelven a usar OFERTA.
+     • En las pantallas se sigue leyendo «Solo Hotel»; solo cambia el código guardado. El back, la web y la API se
+       cambian el mismo día.
+   Cambios: CAMBIO 116 (datos) y CAMBIO 117 (fnSecuencia y spActualizaInicio). Una sola transacción.
+   ########################################################################################## */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+EXEC sp_set_session_context @key = N'usuario', @value = N'sistema (FASE 36 OFERTA)';
+BEGIN TRAN;
+
+/* ---------- CAMBIO 116: SOLO_HOTEL → OFERTA ---------- */
+IF NOT EXISTS (SELECT 1 FROM Eurovip.tipo_servicio WHERE id_tipo_servicio = 'Oferta')
+    INSERT INTO Eurovip.tipo_servicio (id_tipo_servicio, descripcion, precio_minimo)
+    SELECT 'Oferta', 'Servicios hoteleros', ISNULL((SELECT precio_minimo FROM Eurovip.tipo_servicio WHERE id_tipo_servicio = 'SOLO_HOTEL'), 700);
+UPDATE Eurovip.servicio            SET id_tipo_servicio = 'OFERTA' WHERE id_tipo_servicio = 'SOLO_HOTEL';  SELECT 'servicio' AS tabla, @@ROWCOUNT AS filas;
+UPDATE Eurovip.campanya            SET id_tipo_servicio = 'Oferta' WHERE id_tipo_servicio = 'SOLO_HOTEL';  SELECT 'campanya', @@ROWCOUNT;
+UPDATE Eurovip.inicio              SET tipo_servicio = 'OFERTA'    WHERE tipo_servicio = 'SOLO_HOTEL';     SELECT 'inicio', @@ROWCOUNT;
+UPDATE Eurovip.alojamiento_destino SET id_tipo_servicio = 'OFERTA' WHERE id_tipo_servicio = 'SOLO_HOTEL';  SELECT 'alojamiento_destino', @@ROWCOUNT;
+UPDATE Eurovip.flyer_config        SET id_tipo_servicio = 'OFERTA' WHERE id_tipo_servicio = 'SOLO_HOTEL';  SELECT 'flyer_config', @@ROWCOUNT;
+DELETE FROM Eurovip.tipo_servicio WHERE id_tipo_servicio = 'SOLO_HOTEL';
+
+/* ---------- CAMBIO 117: fnSecuencia y spActualizaInicio con OFERTA ---------- */
+DECLARE @o sysname, @def nvarchar(max), @nuevo nvarchar(max);
+DECLARE k CURSOR LOCAL FAST_FORWARD FOR SELECT N'fnSecuencia' UNION ALL SELECT N'spActualizaInicio';
+OPEN k; FETCH NEXT FROM k INTO @o;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @def = OBJECT_DEFINITION(OBJECT_ID(N'Eurovip.' + @o));
+    SET @nuevo = REPLACE(@def, N'''SOLO_HOTEL''', N'''OFERTA''');
+    IF @nuevo = @def THROW 50117, 'CAMBIO 117: no se encontró SOLO_HOTEL para cambiar', 1;
+    SET @nuevo = REPLACE(REPLACE(@nuevo, N'CREATE   PROCEDURE', N'CREATE OR ALTER PROCEDURE'), N'CREATE   FUNCTION', N'CREATE OR ALTER FUNCTION');
+    SET @nuevo = REPLACE(@nuevo, N'CREATE FUNCTION', N'CREATE OR ALTER FUNCTION');
+    IF CHARINDEX(N'CREATE OR ALTER', @nuevo) = 0 THROW 50117, 'CAMBIO 117: no se encontró CREATE', 1;
+    EXEC sp_executesql @nuevo;
+    FETCH NEXT FROM k INTO @o;
+END
+CLOSE k; DEALLOCATE k;
+
+/* comprobación: ya no queda SOLO_HOTEL */
+SELECT 'quedan SOLO_HOTEL' AS revision,
+       (SELECT COUNT(*) FROM Eurovip.servicio WHERE id_tipo_servicio = 'SOLO_HOTEL') + (SELECT COUNT(*) FROM Eurovip.inicio WHERE tipo_servicio = 'SOLO_HOTEL')
+     + (SELECT COUNT(*) FROM Eurovip.campanya WHERE id_tipo_servicio = 'SOLO_HOTEL') + (SELECT COUNT(*) FROM Eurovip.alojamiento_destino WHERE id_tipo_servicio = 'SOLO_HOTEL')
+     + (SELECT COUNT(*) FROM Eurovip.flyer_config WHERE id_tipo_servicio = 'SOLO_HOTEL')
+     + (SELECT COUNT(*) FROM sys.sql_modules WHERE definition LIKE '%SOLO[_]HOTEL%') AS n;
+SELECT id_tipo_servicio, descripcion, precio_minimo FROM Eurovip.tipo_servicio ORDER BY 1;
+COMMIT;
+
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -5573,6 +5631,10 @@ GO
                que el original no tenía pasaron a él (n.º 368833-369023); se eliminaron 74 hoteles y 647 habitaciones, guardados en
                registro_eliminado (721 filas, usuario «sistema (FASE 35 repetidos)»). Hoteles: 2105 → 2031. Lista de parejas en
                Database/FASE35_hoteles_unificados.csv. Ensayado antes con ROLLBACK.
+   27/10/2026  FASE 36 aplicada SOLO en el 93 (CAMBIO 116-117), pedido de la usuaria «SOLO_HOTEL = Oferta, devuelve ese cambio»:
+               el tipo vuelve a ser Oferta (fila de ViajeVDT «Oferta · Servicios hoteleros · 700»); pasaron a OFERTA 649 servicios,
+               1 campaña, 5 tarjetas, 22 filas de alojamiento_destino y 6 de flyer_config; fnSecuencia y spActualizaInicio con OFERTA.
+               PAQUETES se queda. En pantallas se sigue leyendo «Solo Hotel». Ensayado antes con ROLLBACK.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

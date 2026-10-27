@@ -6,7 +6,7 @@ namespace EuroVip.Models
     {
         public string? Q { get; set; }                 // texto libre: destino, hotel, circuito, código o nº
         public int? Id_Servicio { get; set; }
-        public string? Tipo { get; set; }              // SOLO_HOTEL · CIRCUITO
+        public string? Tipo { get; set; }              // OFERTA · CIRCUITO
         public string? Moneda { get; set; }
         public List<short> Campanyas { get; set; } = new();
         public string? Proveedor { get; set; }

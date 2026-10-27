@@ -15,7 +15,7 @@ namespace EuroVip.Repositories
 
     /// <summary>
     /// Carga manual de ofertas de hotel (equivale a /CargarOferta/CargarServices rama "Oferta" de BackTiTan) para Eurovip:
-    ///   • por cada HOTEL × CAMPAÑA × FECHA se crea un servicio SOLO_HOTEL (Solo Hotel) o PAQUETES (Paquetes, dto.Tipo) con su hotel (servicio_detalle),
+    ///   • por cada HOTEL × CAMPAÑA × FECHA se crea un servicio OFERTA (Solo Hotel) o PAQUETES (Paquetes, dto.Tipo) con su hotel (servicio_detalle),
     ///     sus habitaciones (servicio_habitacion), suplementos, notas, origen de venta y, solo si lleva, vuelos;
     ///   • fecha de salida del hotel = desde + noches (una sola regla);
     ///   • todo en UNA transacción; sin vuelos de relleno; se guarda el número de vuelo;

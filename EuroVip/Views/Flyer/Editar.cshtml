@@ -286,14 +286,14 @@
 
     async function editarConfig(id) {
         cat ??= await EVC.catalogos();
-        const c = D.configs.find(x => x.id === id) || { id: 0, id_Tipo_Servicio: 'SOLO_HOTEL', id_Moneda: EV.MONEDA, activo_Servicio: 1, origen: 'Madrid', id_Regimen: 'TI', id_Destino: '', nombre_Destino: '', id_Campanya: +(cat.campanyas.find(x => x.texto === 'DTGeneral')?.valor || 0) };
+        const c = D.configs.find(x => x.id === id) || { id: 0, id_Tipo_Servicio: 'OFERTA', id_Moneda: EV.MONEDA, activo_Servicio: 1, origen: 'Madrid', id_Regimen: 'TI', id_Destino: '', nombre_Destino: '', id_Campanya: +(cat.campanyas.find(x => x.texto === 'DTGeneral')?.valor || 0) };
         $('#dTit').textContent = id ? `Editar ${c.nombre_Destino || c.id_Destino}` : 'Nuevo destino'; $('#dSub').textContent = 'Qué ofertas se usan para calcular los precios del flyer';
         $('#dIco').innerHTML = '<i class="bi bi-geo-alt"></i>';
         $('#dCuerpo').innerHTML = `<div class="ui-row r2">
                 <div class="ui-f"><label>Destino *</label><input id="cDes" value="${esc(c.id_Destino)}" placeholder="Punta Cana"></div>
                 <div class="ui-f"><label>Nombre en el flyer</label><input id="cNom" maxlength="200" value="${esc(c.nombre_Destino || '')}" placeholder="Igual que el destino"></div></div>
             <div class="ui-row r3">
-                <div class="ui-f"><label>Tipo</label><select id="cTipo"><option>SOLO_HOTEL</option><option>CIRCUITO</option></select></div>
+                <div class="ui-f"><label>Tipo</label><select id="cTipo"><option>OFERTA</option><option>CIRCUITO</option></select></div>
                 <div class="ui-f"><label>Campaña *</label><select id="cCam">${cat.campanyas.map(x => `<option value="${esc(x.valor)}">${esc(x.texto)}</option>`).join('')}</select></div>
                 <div class="ui-f"><label>Moneda</label><select id="cMon">${cat.monedas.map(m => `<option>${esc(m.valor)}</option>`).join('')}</select></div></div>
             <div class="ui-row r2">

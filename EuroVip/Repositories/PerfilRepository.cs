@@ -108,7 +108,7 @@ namespace EuroVip.Repositories
                 });
             var vencidas = await cn.ExecuteScalarAsync<int>(@"
                 SELECT COUNT(*) FROM Eurovip.inicio i
-                WHERE i.tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES', 'CIRCUITO') AND ISNULL(i.estado, 1) = 1
+                WHERE i.tipo_servicio IN ('OFERTA', 'PAQUETES', 'CIRCUITO') AND ISNULL(i.estado, 1) = 1
                   AND NOT EXISTS (SELECT 1 FROM Eurovip.servicio s
                                     LEFT JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
                                     LEFT JOIN Eurovip.servicio_circuito sc ON sc.id_servicio = s.id_servicio

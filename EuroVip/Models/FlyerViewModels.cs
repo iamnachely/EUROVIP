@@ -8,7 +8,7 @@ namespace EuroVip.Models
     {
         public int Id { get; set; }
         [StringLength(100)] public string? Nombre_Config { get; set; }
-        [Required] public string Id_Tipo_Servicio { get; set; } = "SOLO_HOTEL";
+        [Required] public string Id_Tipo_Servicio { get; set; } = "OFERTA";
         [Range(1, int.MaxValue, ErrorMessage = "Elige la campaña")] public int Id_Campanya { get; set; }
         public string Id_Idioma { get; set; } = "ES";
         [Required] public string Id_Moneda { get; set; } = "DOP";

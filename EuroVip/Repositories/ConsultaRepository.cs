@@ -89,7 +89,7 @@ namespace EuroVip.Repositories
             p.Add("salto", (pag - 1) * tam); p.Add("tam", tam);
             using var cn = _db.Conexion();
             var resumen = await cn.QueryFirstAsync<ConsultaResumen>($@"
-                SELECT COUNT(*) AS Total, SUM(CASE WHEN x.id_tipo_servicio = 'SOLO_HOTEL' THEN 1 ELSE 0 END) AS Ofertas,
+                SELECT COUNT(*) AS Total, SUM(CASE WHEN x.id_tipo_servicio = 'OFERTA' THEN 1 ELSE 0 END) AS Ofertas,
                        SUM(CASE WHEN x.id_tipo_servicio = 'CIRCUITO' THEN 1 ELSE 0 END) AS Circuitos, SUM(CASE WHEN x.activo = 1 THEN 1 ELSE 0 END) AS Activas,
                        SUM(CASE WHEN x.conVuelo = 1 THEN 1 ELSE 0 END) AS ConVuelo, MIN(x.precioWeb) AS PrecioMin, MAX(x.precioWeb) AS PrecioMax,
                        MIN(x.inicio) AS PrimeraEntrada, MAX(x.inicio) AS UltimaEntrada {from}", p, commandTimeout: 120);

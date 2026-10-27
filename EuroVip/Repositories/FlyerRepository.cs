@@ -74,7 +74,7 @@ namespace EuroVip.Repositories
                     JOIN Eurovip.regimen r ON r.id_regimen = sd.id_regimen AND r.id_idioma = sd.id_idioma
                     JOIN Eurovip.servicio_habitacion sh ON sh.id_servicio = s.id_servicio AND sh.id_alojamiento = sd.id_alojamiento
                     JOIN Eurovip.alojamiento_habitacion ah ON ah.id_alojamiento = sh.id_alojamiento AND ah.id_habitacion = sh.id_habitacion AND ah.id_idioma = s.id_idioma
-                WHERE s.id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES') AND s.activo = 1 AND s.id_idioma = 'ES' AND sd.desde > CAST(GETDATE() AS date)
+                WHERE s.id_tipo_servicio IN ('OFERTA', 'PAQUETES') AND s.activo = 1 AND s.id_idioma = 'ES' AND sd.desde > CAST(GETDATE() AS date)
                   AND (@destino IS NULL OR a.id_destino = @destino) AND (@id IS NULL OR a.id_alojamiento = @id)
                   AND (@texto IS NULL OR a.nombre LIKE '%' + @texto + '%')
             ), r AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY id_alojamiento ORDER BY precio, desde) AS rn FROM p)

@@ -100,7 +100,7 @@
 </section>
 
 <div class="co-rapidos">
-    <div class="co-seg" data-f="Tipo"><button type="button" class="on" data-v="">Todo</button><button type="button" data-v="SOLO_HOTEL"><i class="bi bi-building"></i> Ofertas</button><button type="button" data-v="CIRCUITO"><i class="bi bi-signpost-split"></i> Circuitos</button></div>
+    <div class="co-seg" data-f="Tipo"><button type="button" class="on" data-v="">Todo</button><button type="button" data-v="OFERTA"><i class="bi bi-building"></i> Ofertas</button><button type="button" data-v="CIRCUITO"><i class="bi bi-signpost-split"></i> Circuitos</button></div>
     <div class="co-seg" data-f="Activo"><button type="button" class="on" data-v="true">Activas</button><button type="button" data-v="false">Inactivas</button><button type="button" data-v="">Todas</button></div>
     <div class="co-seg" data-f="ConVuelo"><button type="button" class="on" data-v="">Con y sin vuelo</button><button type="button" data-v="true"><i class="bi bi-airplane"></i> Con vuelo</button><button type="button" data-v="false">Sin vuelo</button></div>
     <label class="ui-switch"><input type="checkbox" id="coPasadas"><span class="tr"></span> Incluir pasadas</label>
@@ -350,7 +350,7 @@ const CO = (() => {
                     ${d.notas.length ? `<div class="ui-sec"><div class="ui-sec-t"><span><i class="bi bi-journal-text"></i></span> Notas</div>${d.notas.map(n => `<div class="ui-note info" style="margin-bottom:8px"><i class="bi bi-journal-text"></i><div><b>${esc(n.tipo)}</b><br>${esc(n.nota1)}</div></div>`).join('')}</div>` : ''}
                 </div>`,
                 pie: `<button class="ev-btn ghost" type="button" data-cerrar>Cerrar</button><span style="flex:1"></span>
-                    ${x.id_Tipo_Servicio === 'SOLO_HOTEL' ? `<a class="ev-btn ghost" href="/Ofertas/Index"><i class="bi bi-box-arrow-up-right"></i> Abrir en Solo Hotel</a>` : `<a class="ev-btn ghost" href="/Circuitos/Index"><i class="bi bi-box-arrow-up-right"></i> Abrir en Circuitos</a>`}
+                    ${x.id_Tipo_Servicio === 'OFERTA' ? `<a class="ev-btn ghost" href="/Ofertas/Index"><i class="bi bi-box-arrow-up-right"></i> Abrir en Solo Hotel</a>` : `<a class="ev-btn ghost" href="/Circuitos/Index"><i class="bi bi-box-arrow-up-right"></i> Abrir en Circuitos</a>`}
                     <button class="ev-btn ghost" type="button" id="dDup"><i class="bi bi-copy"></i> Duplicar</button><button class="ev-btn" type="button" id="dEdit"><i class="bi bi-pencil-square"></i> Editar</button>`
             });
             $('#dDup').onclick = () => { sel.clear(); sel.add(id); barra(); duplicar(); };

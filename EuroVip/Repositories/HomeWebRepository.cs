@@ -51,7 +51,7 @@ namespace EuroVip.Repositories
                    i.id_destino AS Id_Destino, i.caratulaDestino AS CaratulaDestino, i.descripcion AS Descripcion, i.precioWeb AS PrecioWeb,
                    i.id_contenedor AS Id_Contenedor, i.contenedor AS Contenedor, i.posicion_destino AS Posicion_Destino,
                    CAST(ISNULL(i.estado, 1) AS bit) AS Estado, i.noches AS Noches, i.notas AS Notas, i.peso AS Peso, i.precio_proveedor AS Precio_Proveedor,
-                   CASE WHEN i.tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES', 'CIRCUITO') THEN
+                   CASE WHEN i.tipo_servicio IN ('OFERTA', 'PAQUETES', 'CIRCUITO') THEN
                         CAST(CASE WHEN EXISTS (SELECT 1 FROM Eurovip.servicio s
                                                  LEFT JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
                                                  LEFT JOIN Eurovip.servicio_circuito sc ON sc.id_servicio = s.id_servicio
@@ -264,7 +264,7 @@ namespace EuroVip.Repositories
                 FROM Eurovip.servicio_destino d
                     JOIN Eurovip.servicio s ON s.id_servicio = d.id_servicio
                     JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
-                WHERE s.id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES') AND s.id_idioma = @Idioma
+                WHERE s.id_tipo_servicio IN ('OFERTA', 'PAQUETES') AND s.id_idioma = @Idioma
                   AND NOT EXISTS (SELECT 1 FROM Eurovip.inicio i WHERE i.tipo_servicio = s.id_tipo_servicio AND ISNULL(i.estado, 1) = 1 AND i.id_destino = d.destino)
                 GROUP BY s.id_tipo_servicio, d.destino
                 UNION ALL
@@ -310,7 +310,7 @@ namespace EuroVip.Repositories
                     JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
                     JOIN Eurovip.alojamiento a ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
                     JOIN Eurovip.servicio_origen so ON so.id_servicio = s.id_servicio
-                WHERE s.activo = 1 AND s.id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES') AND s.id_idioma = @Idioma AND sd.desde > GETDATE()
+                WHERE s.activo = 1 AND s.id_tipo_servicio IN ('OFERTA', 'PAQUETES') AND s.id_idioma = @Idioma AND sd.desde > GETDATE()
                 UNION
                 SELECT DISTINCT 'CIRCUITO', s.id_campanya, cd.id_pais, sc.origen, sc.id_pais_origen, s.id_moneda
                 FROM Eurovip.servicio s

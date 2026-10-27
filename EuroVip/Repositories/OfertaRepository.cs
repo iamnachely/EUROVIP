@@ -23,16 +23,16 @@ namespace EuroVip.Repositories
 
     /// <summary>
     /// Ofertas de hotel cargadas en el esquema Eurovip: buscar, editar, activar/desactivar y eliminar. Dos pantallas iguales:
-    /// Solo Hotel (servicio tipo SOLO_HOTEL) y Paquetes (tipo PAQUETES); se guardan igual, solo cambia el tipo.
+    /// Solo Hotel (servicio tipo OFERTA) y Paquetes (tipo PAQUETES); se guardan igual, solo cambia el tipo.
     /// Corrige lo que en BackTiTan afectaba a otras ofertas: aquí cada cambio toca SOLO las salidas elegidas.
     /// </summary>
     public class OfertaRepository : IOfertaRepository
     {
-        public const string Tipo = "SOLO_HOTEL";
+        public const string Tipo = "OFERTA";
         public const string TipoPaquete = "PAQUETES";
         /// <summary>Los dos tipos que se cargan con estas pantallas (Solo Hotel y Paquetes).</summary>
         public static readonly string[] Tipos = { Tipo, TipoPaquete };
-        /// <summary>"PAQUETES" → PAQUETES; cualquier otro valor (o nada) → SOLO_HOTEL (Solo Hotel).</summary>
+        /// <summary>"PAQUETES" → PAQUETES; cualquier otro valor (o nada) → OFERTA (Solo Hotel).</summary>
         public static string TipoDe(string? tipo) => tipo?.Trim().ToUpperInvariant() is TipoPaquete or "PAQUETE" ? TipoPaquete : Tipo;
         private static string[] TiposDe(string? tipo) => string.IsNullOrWhiteSpace(tipo) ? Tipos : new[] { TipoDe(tipo) };
         private const string Idioma = "ES";
@@ -152,7 +152,7 @@ namespace EuroVip.Repositories
             await cn.OpenAsync();
             using var tx = cn.BeginTransaction();
             var actual = await cn.QueryFirstOrDefaultAsync<(int Aloj, short Camp)>(
-                "SELECT sd.id_alojamiento, s.id_campanya FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1 WHERE s.id_servicio = @id AND s.id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES')",
+                "SELECT sd.id_alojamiento, s.id_campanya FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1 WHERE s.id_servicio = @id AND s.id_tipo_servicio IN ('OFERTA', 'PAQUETES')",
                 new { id = d.Id_Servicio }, tx);
             if (actual.Aloj == 0) return "Esa oferta ya no existe.";
             if (d.Habitaciones.Count == 0) return "Deja al menos una habitación.";
@@ -205,7 +205,7 @@ namespace EuroVip.Repositories
                     activo = COALESCE(@activo, activo),
                     precio_base = precio_base + ISNULL(@ajuste, 0),
                     descuento = COALESCE(@descuento, descuento)
-                WHERE id_servicio IN @ids AND id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES')",
+                WHERE id_servicio IN @ids AND id_tipo_servicio IN ('OFERTA', 'PAQUETES')",
                 new { activo = d.Activo, ajuste = d.AjustePrecio, descuento = d.Descuento, ids = d.Ids });
             await RefrescarVitrinaAsync(claves);
             return n;
@@ -219,7 +219,7 @@ namespace EuroVip.Repositories
             await cn.OpenAsync();
             var claves = await ClavesVitrinaAsync(cn, null, lista);
             using var tx = cn.BeginTransaction();
-            var validos = (await cn.QueryAsync<int>("SELECT id_servicio FROM Eurovip.servicio WHERE id_servicio IN @lista AND id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES')", new { lista }, tx)).ToList();
+            var validos = (await cn.QueryAsync<int>("SELECT id_servicio FROM Eurovip.servicio WHERE id_servicio IN @lista AND id_tipo_servicio IN ('OFERTA', 'PAQUETES')", new { lista }, tx)).ToList();
             foreach (var id in validos)
                 await cn.ExecuteAsync("Eurovip.spEliminaServicio", new { idServicio = id }, tx, commandType: CommandType.StoredProcedure);
             tx.Commit();
@@ -254,7 +254,7 @@ namespace EuroVip.Repositories
                 JOIN Eurovip.alojamiento a ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
                 LEFT JOIN Eurovip.servicio_itinerario v ON v.id_servicio = s.id_servicio AND v.segmento = 1
                 LEFT JOIN Eurovip.servicio_origen so ON so.id_servicio = s.id_servicio
-                WHERE s.id_servicio IN @ids AND s.id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES')
+                WHERE s.id_servicio IN @ids AND s.id_tipo_servicio IN ('OFERTA', 'PAQUETES')
                   AND COALESCE(v.origen, so.origen) IS NOT NULL", new { ids = ids.ToList() }, tx)).ToList();
 
         /// <summary>Recalcula la vitrina web de hoteles para cada combinación afectada (fuera de transacción).</summary>

@@ -98,7 +98,7 @@ namespace EuroVip.Controllers
                         SELECT TOP 5 s.id_tipo_servicio, a.nombre, COUNT(*) FROM Eurovip.servicio s
                             JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
                             JOIN Eurovip.alojamiento a ON a.id_alojamiento = sd.id_alojamiento AND a.id_idioma = sd.id_idioma
-                        WHERE s.id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES') AND s.activo = 1 AND sd.desde > CAST(GETDATE() AS date) AND a.nombre LIKE @like
+                        WHERE s.id_tipo_servicio IN ('OFERTA', 'PAQUETES') AND s.activo = 1 AND sd.desde > CAST(GETDATE() AS date) AND a.nombre LIKE @like
                         GROUP BY s.id_tipo_servicio, a.nombre ORDER BY a.nombre", new { like }))
                         if (o.Tipo == "PAQUETES")
                             Agregar("Paquetes", "bi-suitcase2", o.Hotel, $"{o.N} paquete{(o.N == 1 ? "" : "s")} a la venta", "/Paquetes/Index?q=" + Uri.EscapeDataString(o.Hotel));
@@ -146,7 +146,7 @@ namespace EuroVip.Controllers
                     SELECT s.id_tipo_servicio, d.destino, MAX(sd.desde)
                     FROM Eurovip.servicio_destino d JOIN Eurovip.servicio s ON s.id_servicio = d.id_servicio
                         JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
-                    WHERE s.activo = 1 AND s.id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES') AND sd.desde > CAST(GETDATE() AS date)
+                    WHERE s.activo = 1 AND s.id_tipo_servicio IN ('OFERTA', 'PAQUETES') AND sd.desde > CAST(GETDATE() AS date)
                     GROUP BY s.id_tipo_servicio, d.destino HAVING MAX(sd.desde) <= DATEADD(DAY, 7, CAST(GETDATE() AS date))
                     UNION ALL
                     SELECT 'CIRCUITO', sc.nombre_circuito, MAX(sc.desde)
@@ -156,7 +156,7 @@ namespace EuroVip.Controllers
                 foreach (var v in vencen)
                 {
                     var paq = v.Tipo == "PAQUETES";
-                    if (v.Tipo is "SOLO_HOTEL" or "PAQUETES" && !Puede("carga_manual")) continue;
+                    if (v.Tipo is "OFERTA" or "PAQUETES" && !Puede("carga_manual")) continue;
                     if (v.Tipo == "CIRCUITO" && !Puede("circuitos")) continue;
                     Agregar("aviso", "bi-hourglass-split", v.Tipo == "CIRCUITO" ? $"El circuito {v.Nombre} se acaba pronto" : paq ? $"Los paquetes de {v.Nombre} se acaban pronto" : $"Las ofertas de {v.Nombre} se acaban pronto",
                         $"Su última fecha a la venta es el {v.Ultima:dd/MM/yyyy}. Después deja de salir en la web.",
@@ -211,7 +211,7 @@ namespace EuroVip.Controllers
             var c = await cn.QueryFirstAsync<(int SoloHotel, int Paquetes, int Circuitos, int Excursiones, int Traslados, int Cruceros, int Hoteles)>(@"
                 SELECT
                   (SELECT COUNT(DISTINCT s.id_servicio) FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
-                    WHERE s.activo = 1 AND s.id_tipo_servicio = 'SOLO_HOTEL' AND sd.desde > CAST(GETDATE() AS date)),
+                    WHERE s.activo = 1 AND s.id_tipo_servicio = 'OFERTA' AND sd.desde > CAST(GETDATE() AS date)),
                   (SELECT COUNT(DISTINCT s.id_servicio) FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
                     WHERE s.activo = 1 AND s.id_tipo_servicio = 'PAQUETES' AND sd.desde > CAST(GETDATE() AS date)),
                   (SELECT COUNT(DISTINCT sc.nombre_circuito) FROM Eurovip.servicio_circuito sc JOIN Eurovip.servicio s ON s.id_servicio = sc.id_servicio
@@ -258,7 +258,7 @@ namespace EuroVip.Controllers
                         (SELECT COUNT(*) FROM Eurovip.usuario WHERE activo = 1)                                AS UsuariosActivos,
                         (SELECT COUNT(*) FROM Eurovip.UsuarioModulos WHERE usuario = @userName AND acceso = 1) AS ModulosConAcceso,
                         (SELECT COUNT(*) FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio
-                          WHERE s.activo = 1 AND s.id_tipo_servicio IN ('SOLO_HOTEL', 'PAQUETES') AND sd.desde > CAST(GETDATE() AS date)) AS OfertasVenta,
+                          WHERE s.activo = 1 AND s.id_tipo_servicio IN ('OFERTA', 'PAQUETES') AND sd.desde > CAST(GETDATE() AS date)) AS OfertasVenta,
                         (SELECT COUNT(DISTINCT sc.nombre_circuito) FROM Eurovip.servicio_circuito sc JOIN Eurovip.servicio s ON s.id_servicio = sc.id_servicio
                           WHERE s.activo = 1 AND sc.desde > CAST(GETDATE() AS date))                         AS CircuitosVenta",
                     new { userName });

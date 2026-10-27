@@ -30,7 +30,7 @@ namespace EuroVip.Controllers
             _logger = logger;
         }
 
-        // ?tipo=PAQUETES → la misma carga, pero guarda Paquetes (sin tipo: Solo Hotel = SOLO_HOTEL)
+        // ?tipo=PAQUETES → la misma carga, pero guarda Paquetes (sin tipo: Solo Hotel = OFERTA)
         public IActionResult Express(string? tipo) { ViewData["Tipo"] = OfertaRepository.TipoDe(tipo); return View(); }
         public IActionResult Clasica(string? tipo) { ViewData["Tipo"] = OfertaRepository.TipoDe(tipo); return View(); }
 

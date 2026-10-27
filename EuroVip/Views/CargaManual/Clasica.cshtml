@@ -1,6 +1,6 @@
 @{
-    // Solo Hotel (SOLO_HOTEL) o Paquetes (PAQUETES): misma pantalla, solo cambian los textos, los enlaces y el tipo que se guarda
-    var tipo = (ViewData["Tipo"] as string) ?? "SOLO_HOTEL";
+    // Solo Hotel (OFERTA) o Paquetes (PAQUETES): misma pantalla, solo cambian los textos, los enlaces y el tipo que se guarda
+    var tipo = (ViewData["Tipo"] as string) ?? "OFERTA";
     var esPaq = tipo == "PAQUETES";
     var nombre = esPaq ? "Paquetes" : "Solo Hotel";
     var qs = esPaq ? "?tipo=PAQUETES" : "";
@@ -94,7 +94,7 @@
             <div class="ui-row r4">
                 <div class="ui-f"><label>Código servicio</label>
                     <div style="display:flex;gap:6px"><input id="iCodigo" maxlength="30" placeholder="Se genera solo"><button type="button" class="ui-ibtn" title="Generar código" onclick="CL.generarCodigo()"><i class="bi bi-arrow-repeat"></i></button></div></div>
-                <div class="ui-f"><label>Tipo servicio</label><input value="@(esPaq ? "PAQUETES" : "SOLO_HOTEL (Solo Hotel)")" readonly tabindex="-1" style="font-weight:800"></div>
+                <div class="ui-f"><label>Tipo servicio</label><input value="@(esPaq ? "PAQUETES" : "OFERTA (Solo Hotel)")" readonly tabindex="-1" style="font-weight:800"></div>
                 <div class="ui-f"><label>Idioma</label><input value="ES · Español" readonly tabindex="-1" style="font-weight:800"></div>
                 <div class="ui-f"><label>Divisa</label><select id="iDivisa"></select></div>
             </div>
