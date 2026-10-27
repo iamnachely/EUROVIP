@@ -67,6 +67,83 @@
     .fl-logo .marco { border: 1.5px solid rgba(249,199,79,.45); border-radius: 12px; padding: 6px 10px; background: rgba(255,255,255,.94); }
     .fl-logo img { height: 92px; object-fit: contain; display: block; }
 
+    /* ---- Plantillas nuevas del flyer (900 px de ancho, como la Clásica) ---- */
+    .ag-plant { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+    .ag-plant button { border: 2px solid var(--ev-line); border-radius: 14px; background: var(--ev-surface); padding: 6px; cursor: pointer; font: 800 11.5px var(--ev-font); color: var(--ev-text); display: grid; gap: 5px; text-align: center; transition: border-color .15s, transform .15s; }
+    .ag-plant button:hover { transform: translateY(-1px); border-color: #FFB27A; }
+    .ag-plant button.on { border-color: #FF8A3D; box-shadow: 0 0 0 3px rgba(255,138,61,.25); }
+    .ag-plant .mini { height: 62px; border-radius: 9px; overflow: hidden; display: grid; }
+    .flyer.tp { font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
+    .tp .tp-logo { height: 74px; object-fit: contain; display: block; }
+    .tp .tp-url { font-weight: 800; letter-spacing: .5px; }
+    /* Postal */
+    .tp-postal .pf-foto { height: 620px; position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 56px 46px; color: #fff; }
+    .tp-postal .pf-logo { position: absolute; top: 34px; left: 56px; background: rgba(255,255,255,.95); border-radius: 18px; padding: 10px 16px; }
+    .tp-postal .pf-chip { align-self: flex-start; background: #FF8A3D; color: #fff; font-weight: 800; font-size: 1.15rem; letter-spacing: 2px; text-transform: uppercase; padding: 10px 18px; border-radius: 99px; margin-bottom: 18px; }
+    .tp-postal .pf-tit { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 6rem; line-height: .95; text-shadow: 0 4px 24px rgba(0,0,0,.45); }
+    .tp-postal .pf-sub { font-size: 1.3rem; margin-top: 12px; opacity: .9; font-weight: 600; }
+    .tp-postal .pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 34px 56px 30px; background: #F6F8FA; flex: 1; }
+    .tp-postal .pf-card { background: #fff; border-radius: 22px; padding: 22px 24px; box-shadow: 0 10px 30px -14px rgba(0,40,60,.35); display: flex; flex-direction: column; gap: 6px; }
+    .tp-postal .pf-card.top { grid-column: 1 / -1; background: linear-gradient(135deg, #003d52, #00647a); color: #fff; }
+    .tp-postal .pf-card b { font-size: 1.75rem; line-height: 1.15; }
+    .tp-postal .pf-card small { font-size: 1.15rem; font-weight: 700; color: #e07b39; }
+    .tp-postal .pf-card.top small { color: #FFD08A; }
+    .tp-postal .pf-card .pr { margin-top: auto; align-self: flex-start; background: #FF8A3D; color: #fff; font-weight: 900; font-size: 2rem; padding: 8px 16px; border-radius: 14px; }
+    .tp-postal .pf-pie { background: #003d52; color: #fff; padding: 24px 56px; display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem; }
+    /* Elegante */
+    .tp-elegante { background: radial-gradient(circle at 20% 0%, #13365a 0%, #0A1A30 60%) !important; color: #F3E7C9; }
+    .tp-elegante .el-cab { padding: 60px 70px 30px; text-align: center; }
+    .tp-elegante .el-logo { background: rgba(255,255,255,.95); border-radius: 16px; padding: 10px 18px; display: inline-block; }
+    .tp-elegante .el-orn { color: #D4AF37; letter-spacing: 8px; font-size: 1.1rem; margin: 30px 0 8px; text-transform: uppercase; font-weight: 700; }
+    .tp-elegante .el-tit { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 6.2rem; line-height: 1; color: #fff; }
+    .tp-elegante .el-sub { margin-top: 14px; font-size: 1.25rem; color: #C9B98F; }
+    .tp-elegante .el-foto { height: 300px; margin: 0 70px; border-radius: 24px; border: 2px solid rgba(212,175,55,.55); }
+    .tp-elegante .el-lista { padding: 30px 70px; flex: 1; display: grid; align-content: start; gap: 4px; }
+    .tp-elegante .el-fila { display: flex; align-items: baseline; gap: 14px; padding: 16px 0; border-bottom: 1px solid rgba(212,175,55,.2); }
+    .tp-elegante .el-fila .n { color: #D4AF37; font-weight: 900; font-size: 1.6rem; width: 36px; }
+    .tp-elegante .el-fila .h { font-size: 1.85rem; font-weight: 700; color: #fff; }
+    .tp-elegante .el-fila .r { display: block; font-size: 1.1rem; color: #C9B98F; font-weight: 600; margin-top: 2px; }
+    .tp-elegante .el-fila .pts { flex: 1; border-bottom: 2px dotted rgba(212,175,55,.45); transform: translateY(-8px); min-width: 20px; }
+    .tp-elegante .el-fila .p { color: #D4AF37; font-weight: 900; font-size: 2.2rem; white-space: nowrap; }
+    .tp-elegante .el-pie { text-align: center; padding: 26px; color: #D4AF37; font-size: 1.2rem; border-top: 1px solid rgba(212,175,55,.3); }
+    /* Minimal */
+    .tp-minimal .mi-cab { padding: 64px 72px 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .tp-minimal .mi-tag { font-size: 1.05rem; letter-spacing: 4px; text-transform: uppercase; color: #64748B; font-weight: 700; }
+    .tp-minimal .mi-tit { font-size: 6.4rem; font-weight: 900; line-height: .95; color: #0F172A; letter-spacing: -2px; padding: 0 72px; }
+    .tp-minimal .mi-sub { padding: 16px 72px 0; font-size: 1.3rem; color: #64748B; font-weight: 600; }
+    .tp-minimal .mi-foto { height: 280px; margin: 34px 72px 10px; border-radius: 6px; }
+    .tp-minimal .mi-lista { padding: 10px 72px; flex: 1; }
+    .tp-minimal .mi-fila { display: grid; grid-template-columns: 60px 1fr auto; gap: 14px; align-items: center; padding: 20px 0; border-bottom: 1px solid #E2E8F0; }
+    .tp-minimal .mi-fila .n { font-size: 1.4rem; font-weight: 800; color: #94A3B8; }
+    .tp-minimal .mi-fila .h { font-size: 1.85rem; font-weight: 800; color: #0F172A; }
+    .tp-minimal .mi-fila .r { font-size: 1.1rem; color: #64748B; font-weight: 600; }
+    .tp-minimal .mi-fila .p { font-size: 2.1rem; font-weight: 900; color: #0F172A; }
+    .tp-minimal .mi-fila.top .p { color: #E25A00; }
+    .tp-minimal .mi-pie { padding: 26px 72px 40px; display: flex; justify-content: space-between; color: #0F172A; font-size: 1.15rem; }
+    /* Vibrante */
+    .tp-vibrante { background: linear-gradient(170deg, #FF8A3D 0%, #FF5E3A 45%, #E0306B 100%) !important; color: #fff; }
+    .tp-vibrante .vi-cab { padding: 46px 56px 0; display: flex; justify-content: space-between; align-items: center; }
+    .tp-vibrante .vi-logo { background: #fff; border-radius: 18px; padding: 10px 16px; }
+    .tp-vibrante .vi-sello { width: 150px; height: 150px; border-radius: 50%; background: #FFE14D; color: #7A2E00; display: grid; place-items: center; text-align: center; font-weight: 900; font-size: 1.25rem; line-height: 1.1; transform: rotate(-10deg); box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    .tp-vibrante .vi-sello b { display: block; font-size: 2.1rem; }
+    .tp-vibrante .vi-tit { font-weight: 900; font-size: 6.6rem; line-height: .95; padding: 24px 56px 0; text-transform: uppercase; letter-spacing: -2px; text-shadow: 0 6px 0 rgba(0,0,0,.12); }
+    .tp-vibrante .vi-sub { padding: 10px 56px 0; font-size: 1.35rem; font-weight: 700; opacity: .95; }
+    .tp-vibrante .vi-foto { height: 300px; margin: 30px 56px 0; border-radius: 30px; border: 6px solid rgba(255,255,255,.85); }
+    .tp-vibrante .vi-lista { padding: 26px 56px; flex: 1; display: grid; gap: 14px; align-content: start; }
+    .tp-vibrante .vi-fila { background: #fff; color: #1F2937; border-radius: 20px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; box-shadow: 0 8px 20px -10px rgba(0,0,0,.35); }
+    .tp-vibrante .vi-fila .n { width: 48px; height: 48px; border-radius: 14px; background: #FFF1E6; color: #E25A00; display: grid; place-items: center; font-weight: 900; font-size: 1.5rem; flex-shrink: 0; }
+    .tp-vibrante .vi-fila .h { flex: 1; min-width: 0; font-size: 1.7rem; font-weight: 800; }
+    .tp-vibrante .vi-fila .r { display: block; font-size: 1.05rem; color: #6B7280; font-weight: 700; }
+    .tp-vibrante .vi-fila .p { background: #1F2937; color: #FFE14D; font-weight: 900; font-size: 1.9rem; padding: 8px 14px; border-radius: 12px; white-space: nowrap; }
+    .tp-vibrante .vi-pie { padding: 22px 56px 34px; display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 700; }
+    /* Vista previa del envío (como WhatsApp) */
+    .ag-wa { background: #E5DDD5; border-radius: 22px; padding: 18px; display: grid; gap: 10px; max-height: 70vh; overflow: auto; }
+    .ag-wa .bur { background: #fff; border-radius: 4px 16px 16px 16px; padding: 6px; max-width: 330px; box-shadow: 0 1px 1px rgba(0,0,0,.12); }
+    .ag-wa .bur img { width: 100%; border-radius: 10px; display: block; }
+    .ag-wa .bur .tx { padding: 8px 6px 4px; font-size: 13.5px; line-height: 1.45; color: #111B21; }
+    .ag-wa .bur .tx b { color: #075E54; }
+    .ag-wa .bur .hora { text-align: right; font-size: 11px; color: #667781; padding: 0 6px 2px; }
+
     /* ---- destinos, galería, envío (mismo estilo que Flyer Editar) ---- */
     .ag-dest { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); gap: 18px; }
     .ag-card { border-radius: 24px; overflow: hidden; background: var(--ev-surface); border: 1px solid var(--ev-line); display: flex; flex-direction: column; }
@@ -157,6 +234,8 @@
     <div class="ag-ed">
         <div class="ag-ed-c">
             <div class="ag-box"><h3><i class="bi bi-geo-alt-fill"></i> Destino</h3><select class="ui-select" id="fDestino" style="width:100%"></select></div>
+            <div class="ag-box"><h3><i class="bi bi-palette-fill"></i> Plantilla</h3><div class="ag-plant" id="fPlantillas"></div>
+                <div class="ui-help" style="margin:8px 0 0">Se usa al guardar, descargar y en «Guardar imágenes de todos».</div></div>
             <div class="ag-box"><h3><i class="bi bi-lightning-charge-fill"></i> Acciones</h3>
                 <button type="button" class="ev-btn ghost" id="fGuardarUno"><i class="bi bi-download"></i> Guardar este flyer</button>
                 <button type="button" class="ev-btn ghost" id="fDescargar"><i class="bi bi-file-earmark-image"></i> Descargar PNG</button>
@@ -228,6 +307,7 @@
         <div>
             <div class="ag-costo" id="eCosto"></div>
             <div style="display:flex;gap:8px;margin:12px 0">
+                <button type="button" class="ev-btn ghost" id="eVista" style="justify-content:center" title="Ver las imágenes y cómo llega el mensaje antes de enviar"><i class="bi bi-eye"></i> Vista previa</button>
                 <button type="button" class="ev-btn" id="eEnviar" style="flex:1;justify-content:center"><i class="bi bi-send"></i> Enviar</button>
             </div>
             <div class="ag-prog" id="eProg" hidden>
@@ -264,6 +344,7 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-carrusel.js" asp-append-version="true"></script>
 <script>
 (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -290,13 +371,68 @@
         sel.innerHTML = D.destinos.length ? D.destinos.map(d => `<option value="${esc(d.id_Destino)}">${esc(d.nombre_Destino)}</option>`).join('') : '<option value="">Sin destinos con precios</option>';
         if (antes && D.destinos.some(d => d.id_Destino === antes)) sel.value = antes;
         actual = D.destinos.find(d => d.id_Destino === sel.value) || null;
-        pintarFlyer(actual); pintarEstado(); pintarDestinos(); pintarGaleria(); pintarAgencias(); pintarLinks(); pintarMonitor();
+        pintarPlantillas(); pintarFlyer(actual); pintarEstado(); pintarDestinos(); pintarGaleria(); pintarAgencias(); pintarLinks(); pintarMonitor();
         if (D.enCurso) { tabs.ir('tEnv'); seguir(D.enCurso); }
+    }
+
+    // ================= PLANTILLAS DEL FLYER =================
+    // La Clásica es la de siempre (como BackTiTan). Las demás usan los mismos datos: destino, foto de fondo, 5 hoteles y precios.
+    const PLANTILLAS = [
+        { id: 'clasica', nombre: 'Clásica', mini: 'linear-gradient(180deg,#003d52 0 45%,#fff 45%)' },
+        { id: 'postal', nombre: 'Postal', mini: 'linear-gradient(180deg,#5b8fa8 0 55%,#F6F8FA 55%)' },
+        { id: 'elegante', nombre: 'Elegante', mini: 'linear-gradient(180deg,#0A1A30,#13365a)' },
+        { id: 'minimal', nombre: 'Minimal', mini: 'linear-gradient(180deg,#fff 0 60%,#E2E8F0 60%)' },
+        { id: 'vibrante', nombre: 'Vibrante', mini: 'linear-gradient(170deg,#FF8A3D,#E0306B)' },
+    ];
+    let plantilla = (() => { try { return localStorage.getItem('ag-plantilla') || 'clasica'; } catch { return 'clasica'; } })();
+    if (!PLANTILLAS.some(p => p.id === plantilla)) plantilla = 'clasica';
+    function pintarPlantillas() {
+        $('#fPlantillas').innerHTML = PLANTILLAS.map(p => `<button type="button" class="${p.id === plantilla ? 'on' : ''}" data-plantilla="${p.id}" title="Plantilla ${p.nombre}">
+            <span class="mini" style="background:${p.mini}"></span>${p.nombre}</button>`).join('');
+    }
+    $('#fPlantillas').addEventListener('click', e => {
+        const b = e.target.closest('[data-plantilla]'); if (!b) return;
+        plantilla = b.dataset.plantilla; try { localStorage.setItem('ag-plantilla', plantilla); } catch { }
+        pintarPlantillas(); pintarFlyer(actual);
+    });
+    const fotoFondo = d => d.fondo ? `url('${d.fondo}') center/cover no-repeat, linear-gradient(155deg,#003d52,#00647a)` : 'linear-gradient(155deg, #003d52 0%, #00647a 55%, #003d52 100%)';
+    const webCorta = () => esc((D.web || '').replace(/^https?:\/\/(www\.)?/, ''));
+    function flyerNuevo(d) {
+        const reg = (d.hoteles.find(h => h.regimen) || {}).regimen;
+        const sub = [reg, d.origen ? 'Salida desde ' + d.origen : null].filter(Boolean).map(esc).join(' · ');
+        const logo = `<img class="tp-logo" src="${esc(D.logo)}" alt="Eurovip Travel">`;
+        const hs = d.hoteles, sinHoteles = '<div class="flyer-no-data"><p>Sin hoteles a la venta para este destino.</p></div>';
+        if (plantilla === 'postal') return `
+            <div class="pf-foto" style="background:linear-gradient(180deg,rgba(0,20,30,.05) 30%,rgba(0,20,30,.78)),${fotoFondo(d)}">
+                <div class="pf-logo">${logo}</div><span class="pf-chip">Oferta especial</span>
+                <div class="pf-tit">${esc(d.nombre_Destino)}</div><div class="pf-sub">${sub}</div></div>
+            ${hs.length ? `<div class="pf-grid">${hs.map((h, i) => `<div class="pf-card ${i === 0 ? 'top' : ''}"><b>${esc(h.nombre_Hotel)}</b><small>${i === 0 ? '✦ Mejor precio · ' : ''}${esc(h.regimen || '')}</small><span class="pr">${precio(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            <div class="pf-pie"><span class="tp-url">${webCorta()}</span><span>Tu agencia de confianza</span></div>`;
+        if (plantilla === 'elegante') return `
+            <div class="el-cab"><span class="el-logo">${logo}</span><div class="el-orn">✦ Selección exclusiva ✦</div>
+                <div class="el-tit">${esc(d.nombre_Destino)}</div><div class="el-sub">${sub}</div></div>
+            <div class="el-foto" style="background:${fotoFondo(d)}"></div>
+            ${hs.length ? `<div class="el-lista">${hs.map((h, i) => `<div class="el-fila"><span class="n">${i + 1}</span><span><span class="h">${esc(h.nombre_Hotel)}</span><span class="r">${esc(h.regimen || '')}</span></span><span class="pts"></span><span class="p">${precio(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            <div class="el-pie tp-url">${webCorta()}</div>`;
+        if (plantilla === 'minimal') return `
+            <div class="mi-cab"><span class="mi-tag">Oferta especial</span>${logo}</div>
+            <div class="mi-tit">${esc(d.nombre_Destino)}</div><div class="mi-sub">${sub}</div>
+            <div class="mi-foto" style="background:${fotoFondo(d)}"></div>
+            ${hs.length ? `<div class="mi-lista">${hs.map((h, i) => `<div class="mi-fila ${i === 0 ? 'top' : ''}"><span class="n">0${i + 1}</span><span><div class="h">${esc(h.nombre_Hotel)}</div><div class="r">${esc(h.regimen || '')}</div></span><span class="p">${precio(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            <div class="mi-pie"><span class="tp-url">${webCorta()}</span><span>Precios por persona · desde</span></div>`;
+        /* vibrante */ return `
+            <div class="vi-cab"><span class="vi-logo">${logo}</span>${hs.length ? `<span class="vi-sello">desde<b>${precio(Math.min(...hs.map(h => h.precio_Final ?? Infinity)))}</b></span>` : ''}</div>
+            <div class="vi-tit">${esc(d.nombre_Destino)}</div><div class="vi-sub">${sub}</div>
+            <div class="vi-foto" style="background:${fotoFondo(d)}"></div>
+            ${hs.length ? `<div class="vi-lista">${hs.map((h, i) => `<div class="vi-fila"><span class="n">${i + 1}</span><span class="h">${esc(h.nombre_Hotel)}<span class="r">${esc(h.regimen || '')}</span></span><span class="p">${precio(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            <div class="vi-pie"><span class="tp-url">${webCorta()}</span><span>¡Reserva ya!</span></div>`;
     }
 
     // ================= FLYER (HTML → PNG con html2canvas, como BackTiTan) =================
     function pintarFlyer(d) {
         const fl = $('#flyer');
+        fl.className = 'flyer' + (d && plantilla !== 'clasica' ? ' tp tp-' + plantilla : '');
+        if (d && plantilla !== 'clasica') { fl.innerHTML = flyerNuevo(d); setTimeout(escalar, 30); return; }
         if (!d) { fl.innerHTML = '<div class="flyer-accent"></div><div class="flyer-no-data"><i class="bi bi-image" style="font-size:3rem"></i><p>Agrega destinos en la pestaña <b>Destinos</b> y pulsa <b>Actualizar precios</b>.</p></div>'; setTimeout(escalar, 30); return; }
         const fondo = d.fondo ? `linear-gradient(to bottom, rgba(0,30,42,.15) 0%, rgba(0,30,42,.72) 100%), url('${d.fondo}') center/cover no-repeat` : 'linear-gradient(155deg, #003d52 0%, #00647a 55%, #003d52 100%)';
         const reg = (d.hoteles.find(h => h.regimen) || {}).regimen;
@@ -590,6 +726,24 @@
         } catch { $('#eCosto').innerHTML = ''; }
     }, 300);
     $$('[name=aQuien]').forEach(r => r.onchange = costo); $('#eNum').oninput = costo;
+    // Vista previa: cómo llega en WhatsApp (imagen + datos de la plantilla aprobada) y todas las imágenes en grande
+    $('#eVista').onclick = () => {
+        const imgs = D.galeria.filter(g => !elegidas.size || elegidas.has(g.archivo));
+        if (!imgs.length) return EV.toast('No hay imágenes para enviar. Pulsa «Guardar imágenes de todos».', 'err');
+        const ag = quien() === 'prueba' ? { nombre: 'Tu número de prueba' } : (D.agencias.find(a => a.activo) || { nombre: 'Agencia' });
+        const hora = new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+        $('#dTit').textContent = 'Vista previa del envío';
+        $('#dSub').textContent = `${imgs.length} imagen(es) · plantilla «${D.plantilla}» · así lo recibe ${ag.nombre}`;
+        $('#dIco').innerHTML = '<i class="bi bi-eye"></i>';
+        $('#dCuerpo').innerHTML = `<div class="ui-note info" style="margin-top:0"><i class="bi bi-info-circle"></i><div>Cada imagen llega en un mensaje con la plantilla aprobada de WhatsApp. El texto lleva <b>el nombre de la agencia</b>, <b>el destino</b>, <b>el link de su editor</b> (único) y <b>la página del destino</b>. El texto exacto es el de la plantilla en Meta.</div></div>
+            <div class="ag-wa">${imgs.map(g => { const c = configDe(g.archivo); return `<div class="bur"><img src="${esc(g.url)}" alt="">
+                <div class="tx">Agencia: <b>${esc(ag.nombre)}</b><br>Destino: <b>${esc(c?.nombre_Destino || c?.id_Destino || '— sin destino (no se envía)')}</b><br>Editor: <b>link único de la agencia</b><br>Web: <b>página del destino</b></div>
+                <div class="hora">${hora} ✓✓</div></div>`; }).join('')}</div>`;
+        $('#dPie').innerHTML = '<button type="button" class="ev-btn ghost" id="dCarr"><i class="bi bi-arrows-fullscreen"></i> Ver imágenes en grande</button><span style="flex:1"></span><button type="button" class="ev-btn ghost" data-cerrar>Cerrar</button>';
+        $$('#agDrawer [data-cerrar]').forEach(b => b.onclick = () => drawer.cerrar());
+        $('#dCarr').onclick = () => EVCarrusel.abrir({ fotos: imgs.map(g => ({ url: g.url, texto: configDe(g.archivo)?.nombre_Destino || g.archivo })), titulo: 'Imágenes que se envían' });
+        drawer.abrir();
+    };
     $('#eEnviar').onclick = async () => {
         if (!D.whatsapp) return EV.toast('WhatsApp no está configurado en este servidor.', 'err');
         if (!D.puedeEnviar) return EV.toast('No tienes el permiso «Enviar flyers por WhatsApp».', 'err');
