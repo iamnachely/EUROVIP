@@ -258,6 +258,7 @@
             $('[data-k=hotel]').value = nombre;
             $('[data-k=hotel]').closest('.ui-f').classList.remove('err');
             $('[data-nombre]').textContent = `${nombre}${destino ? ' · ' + destino : ''}`;
+            window.EVPrioridad?.contexto($('[data-k=peso]'), { que: 'oferta', aloj: hotel.id, tipo: typeof TIPO === 'string' ? TIPO : 'OFERTA' });   // puestos de los hoteles de su destino
             try { habitaciones = await EV.api('/Ofertas/Habitaciones?hotel=' + hotel.id); } catch { habitaciones = []; }
             pintarHabs(marcadas);
             cfg.onChange?.();

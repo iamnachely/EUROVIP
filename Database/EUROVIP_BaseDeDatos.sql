@@ -5132,6 +5132,184 @@ GO
 
 
 /* ##########################################################################################
+   FASE 37 — PRIORIDAD (peso) SIN REPETIDOS: 1, 2, 3, 4… EN ORDEN  (27/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «ahora se puede poner 1, 1, 1 y debería ser 1, 2, 3, 4… en orden, que no se
+   repita, que me indique el orden que sigue o me permita cambiar con uno que esté».
+   Explicado fácil:
+     • Cada lista de la web tiene su propia fila de puestos (su «ámbito»):
+         - Solo Hotel / Paquetes ...... por destino y tipo; el puesto es del HOTEL (todas sus ofertas comparten el número)
+         - Home (inicio) .............. por sección (contenedor); sin sección, por tipo
+         - Circuitos .................. todos juntos (por idioma)
+         - Excursiones y Traslados .... por destino
+         - Cruceros ................... todos juntos
+     • Dentro de un ámbito los puestos son 1, 2, 3… sin repetir y sin huecos.
+     • Si se pone un puesto que ya tiene otro:
+         - si el que cambia ya tenía puesto → se INTERCAMBIAN (el otro se queda con el puesto viejo)
+         - si no tenía → se METE en ese puesto y los de detrás bajan uno (2→3, 3→4…)
+     • Si se quita la prioridad, los de detrás suben uno para no dejar huecos.
+     • Lo hace la base de datos (triggers), así vale igual para formularios, Excel, cargas y la Home.
+   Cambios:
+     • CAMBIO 118: vista Eurovip.vPeso (tabla, clave, unidad, ámbito, peso, nombre) de las 6 tablas.
+     • CAMBIO 119: Eurovip.spPesoPoner (pone el puesto a todas las filas de una unidad) y
+                   Eurovip.spPesoOrdenar (intercambia / mete y deja el ámbito en 1, 2, 3…).
+     • CAMBIO 120: triggers trEurovip_<tabla>_peso en servicio, inicio, circuito, servicio_excursion, traslado y crucero.
+                   Si una sola orden cambia varias unidades a la vez (p. ej. spActualizaInicio al restaurar),
+                   solo se ordena el ámbito (sin intercambiar).
+     • CAMBIO 121: arreglo de los datos actuales (deja cada ámbito en 1, 2, 3…).
+   ########################################################################################## */
+SET XACT_ABORT ON;
+GO
+/* ---------- CAMBIO 118: vista de puestos ---------- */
+CREATE OR ALTER VIEW Eurovip.vPeso
+AS
+    SELECT 'servicio' AS tabla, CAST(s.id_servicio AS varchar(120)) AS clave, CAST(d.id_alojamiento AS varchar(120)) AS unidad,
+           CAST(s.id_tipo_servicio + '|' + ISNULL(a.id_destino, '') AS varchar(160)) AS ambito, s.peso, CAST(ISNULL(a.nombre, '#' + CAST(d.id_alojamiento AS varchar(20))) AS nvarchar(200)) AS nombre
+    FROM Eurovip.servicio s
+        CROSS APPLY (SELECT TOP 1 sd.id_alojamiento FROM Eurovip.servicio_detalle sd WHERE sd.id_servicio = s.id_servicio ORDER BY sd.secuencia) d
+        LEFT JOIN Eurovip.alojamiento a ON a.id_alojamiento = d.id_alojamiento AND a.id_idioma = 'ES'
+    WHERE s.id_tipo_servicio IN ('OFERTA', 'PAQUETES')
+    UNION ALL
+    SELECT 'inicio', CAST(i.id AS varchar(120)), CAST(i.id AS varchar(120)),
+           CAST(CASE WHEN i.id_contenedor IS NULL THEN 'T|' + ISNULL(i.tipo_servicio, '') ELSE 'C|' + CAST(i.id_contenedor AS varchar(20)) END AS varchar(160)),
+           i.peso, CAST(ISNULL(i.id_destino, '#' + CAST(i.id AS varchar(20))) AS nvarchar(200))
+    FROM Eurovip.inicio i
+    UNION ALL
+    SELECT 'circuito', CAST(c.nombre_circuito + '|' + c.id_idioma AS varchar(120)), CAST(c.nombre_circuito AS varchar(120)), CAST(c.id_idioma AS varchar(160)), c.peso, CAST(c.nombre_circuito AS nvarchar(200))
+    FROM Eurovip.circuito c
+    UNION ALL
+    SELECT 'excursion', CAST(e.id_Excursion AS varchar(120)), CAST(e.id_Excursion AS varchar(120)), CAST(ISNULL(e.id_destino, '') AS varchar(160)), e.peso, CAST(e.nombre AS nvarchar(200))
+    FROM Eurovip.servicio_excursion e
+    UNION ALL
+    SELECT 'traslado', CAST(t.id_traslado AS varchar(120)), CAST(t.id_traslado AS varchar(120)), CAST(ISNULL(t.id_destino, '') AS varchar(160)), t.peso, CAST(t.nombre AS nvarchar(200))
+    FROM Eurovip.traslado t
+    UNION ALL
+    SELECT 'crucero', CAST(c.id_crucero AS varchar(120)), CAST(c.id_crucero AS varchar(120)), CAST('CRUCERO' AS varchar(160)), c.peso, CAST(c.titulo AS nvarchar(200))
+    FROM Eurovip.crucero c;
+GO
+/* ---------- CAMBIO 119: poner el puesto a una unidad y ordenar un ámbito ---------- */
+CREATE OR ALTER PROCEDURE Eurovip.spPesoPoner @tabla varchar(20), @ambito varchar(160), @unidad varchar(120), @peso smallint
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @tabla = 'servicio'
+        UPDATE s SET peso = @peso FROM Eurovip.servicio s JOIN Eurovip.vPeso v ON v.tabla = 'servicio' AND v.clave = CAST(s.id_servicio AS varchar(120))
+        WHERE v.ambito = @ambito AND v.unidad = @unidad AND ISNULL(s.peso, -1) <> ISNULL(@peso, -1);
+    ELSE IF @tabla = 'inicio'
+        UPDATE Eurovip.inicio SET peso = @peso WHERE id = TRY_CAST(@unidad AS int) AND ISNULL(peso, -1) <> ISNULL(@peso, -1);
+    ELSE IF @tabla = 'circuito'
+        UPDATE Eurovip.circuito SET peso = @peso WHERE nombre_circuito = @unidad AND id_idioma = @ambito AND ISNULL(peso, -1) <> ISNULL(@peso, -1);
+    ELSE IF @tabla = 'excursion'
+        UPDATE Eurovip.servicio_excursion SET peso = @peso WHERE id_Excursion = TRY_CAST(@unidad AS int) AND ISNULL(peso, -1) <> ISNULL(@peso, -1);
+    ELSE IF @tabla = 'traslado'
+        UPDATE Eurovip.traslado SET peso = @peso WHERE id_traslado = TRY_CAST(@unidad AS int) AND ISNULL(peso, -1) <> ISNULL(@peso, -1);
+    ELSE IF @tabla = 'crucero'
+        UPDATE Eurovip.crucero SET peso = @peso WHERE id_crucero = TRY_CAST(@unidad AS int) AND ISNULL(peso, -1) <> ISNULL(@peso, -1);
+END
+GO
+/* @unidad/@nuevo/@viejo = la unidad que cambió (NULL = solo dejar el ámbito en 1, 2, 3…). */
+CREATE OR ALTER PROCEDURE Eurovip.spPesoOrdenar @tabla varchar(20), @ambito varchar(160), @unidad varchar(120) = NULL, @nuevo smallint = NULL, @viejo smallint = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @u varchar(120), @p smallint;
+    IF @unidad IS NOT NULL AND @nuevo IS NOT NULL AND @nuevo <> ISNULL(@viejo, -1)
+    BEGIN
+        IF @viejo IS NOT NULL AND EXISTS (SELECT 1 FROM Eurovip.vPeso WHERE tabla = @tabla AND ambito = @ambito AND unidad <> @unidad AND peso = @nuevo)
+        BEGIN
+            -- intercambio: el que tenía ese puesto se queda con el viejo
+            DECLARE c1 CURSOR LOCAL FAST_FORWARD FOR SELECT DISTINCT unidad FROM Eurovip.vPeso WHERE tabla = @tabla AND ambito = @ambito AND unidad <> @unidad AND peso = @nuevo;
+            OPEN c1; FETCH NEXT FROM c1 INTO @u;
+            WHILE @@FETCH_STATUS = 0 BEGIN EXEC Eurovip.spPesoPoner @tabla, @ambito, @u, @viejo; FETCH NEXT FROM c1 INTO @u; END
+            CLOSE c1; DEALLOCATE c1;
+        END
+        ELSE
+        BEGIN
+            -- se mete en ese puesto: los de detrás bajan uno
+            DECLARE c2 CURSOR LOCAL FAST_FORWARD FOR SELECT unidad, MIN(peso) FROM Eurovip.vPeso WHERE tabla = @tabla AND ambito = @ambito AND unidad <> @unidad AND peso >= @nuevo GROUP BY unidad;
+            OPEN c2; FETCH NEXT FROM c2 INTO @u, @p;
+            WHILE @@FETCH_STATUS = 0 BEGIN SET @p = @p + 1; EXEC Eurovip.spPesoPoner @tabla, @ambito, @u, @p; FETCH NEXT FROM c2 INTO @u, @p; END
+            CLOSE c2; DEALLOCATE c2;
+        END
+        EXEC Eurovip.spPesoPoner @tabla, @ambito, @unidad, @nuevo;   -- todas las filas de la unidad con el mismo puesto
+    END
+    ELSE IF @unidad IS NOT NULL AND @nuevo IS NULL
+        EXEC Eurovip.spPesoPoner @tabla, @ambito, @unidad, NULL;     -- quitó la prioridad: también en sus otras filas
+    -- dejar el ámbito en 1, 2, 3… sin huecos ni repetidos (en empate gana la unidad que se acaba de cambiar)
+    DECLARE @r TABLE (unidad varchar(120), n smallint);
+    INSERT INTO @r (unidad, n)
+    SELECT unidad, ROW_NUMBER() OVER (ORDER BY p, CASE WHEN unidad = @unidad THEN 0 ELSE 1 END, unidad)
+    FROM (SELECT unidad, MIN(peso) AS p FROM Eurovip.vPeso WHERE tabla = @tabla AND ambito = @ambito AND peso IS NOT NULL GROUP BY unidad) x;
+    DECLARE c3 CURSOR LOCAL FAST_FORWARD FOR
+        SELECT r.unidad, r.n FROM @r r WHERE EXISTS (SELECT 1 FROM Eurovip.vPeso v WHERE v.tabla = @tabla AND v.ambito = @ambito AND v.unidad = r.unidad AND ISNULL(v.peso, -1) <> r.n);
+    OPEN c3; FETCH NEXT FROM c3 INTO @u, @p;
+    WHILE @@FETCH_STATUS = 0 BEGIN EXEC Eurovip.spPesoPoner @tabla, @ambito, @u, @p; FETCH NEXT FROM c3 INTO @u, @p; END
+    CLOSE c3; DEALLOCATE c3;
+END
+GO
+/* ---------- CAMBIO 120: triggers (mismo cuerpo en las 6 tablas; cambia la tabla y la clave) ---------- */
+DECLARE @t TABLE (tabla sysname, vista varchar(20), clave nvarchar(400));
+INSERT INTO @t VALUES
+ ('servicio',           'servicio',  N'CAST(x.id_servicio AS varchar(120))'),
+ ('inicio',             'inicio',    N'CAST(x.id AS varchar(120))'),
+ ('circuito',           'circuito',  N'CAST(x.nombre_circuito + ''|'' + x.id_idioma AS varchar(120))'),
+ ('servicio_excursion', 'excursion', N'CAST(x.id_Excursion AS varchar(120))'),
+ ('traslado',           'traslado',  N'CAST(x.id_traslado AS varchar(120))'),
+ ('crucero',            'crucero',   N'CAST(x.id_crucero AS varchar(120))');
+DECLARE @tabla sysname, @vista varchar(20), @clave nvarchar(400), @sql nvarchar(max);
+DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT tabla, vista, clave FROM @t;
+OPEN c; FETCH NEXT FROM c INTO @tabla, @vista, @clave;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @sql = N'CREATE OR ALTER TRIGGER Eurovip.trEurovip_' + @tabla + N'_peso ON Eurovip.' + QUOTENAME(@tabla) + N'
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    -- FASE 37: prioridad sin repetidos (ver Eurovip.spPesoOrdenar). Sus propios cambios no lo vuelven a disparar.
+    SET NOCOUNT ON;
+    IF TRIGGER_NESTLEVEL(@@PROCID) > 1 OR NOT UPDATE(peso) RETURN;
+    DECLARE @c TABLE (ambito varchar(160), unidad varchar(120), nuevo smallint, viejo smallint);
+    INSERT INTO @c (ambito, unidad, nuevo, viejo)
+    SELECT v.ambito, v.unidad, MIN(i.peso),
+           -- el puesto que tenía la unidad: el de antes de esta orden o el de sus otras filas (ofertas del mismo hotel)
+           COALESCE(MIN(d.peso), (SELECT MIN(o.peso) FROM Eurovip.vPeso o WHERE o.tabla = ''' + @vista + N''' AND o.ambito = v.ambito AND o.unidad = v.unidad
+                                   AND o.clave NOT IN (SELECT ' + @clave + N' FROM inserted x)))
+    FROM inserted i
+        JOIN Eurovip.vPeso v ON v.tabla = ''' + @vista + N''' AND v.clave = ' + REPLACE(@clave, N'x.', N'i.') + N'
+        LEFT JOIN deleted d ON ' + REPLACE(@clave, N'x.', N'd.') + N' = ' + REPLACE(@clave, N'x.', N'i.') + N'
+    GROUP BY v.ambito, v.unidad;
+    DELETE FROM @c WHERE ISNULL(nuevo, -1) = ISNULL(viejo, -1);   -- no cambió de puesto
+    IF NOT EXISTS (SELECT 1 FROM @c) RETURN;
+    DECLARE @a varchar(160), @u varchar(120), @n smallint, @o smallint;
+    IF (SELECT COUNT(*) FROM @c) = 1
+    BEGIN
+        SELECT @a = ambito, @u = unidad, @n = nuevo, @o = viejo FROM @c;
+        EXEC Eurovip.spPesoOrdenar ''' + @vista + N''', @a, @u, @n, @o;
+    END
+    ELSE
+    BEGIN
+        -- varias unidades en una sola orden (restaurar, importar): solo ordenar cada ámbito
+        DECLARE k CURSOR LOCAL FAST_FORWARD FOR SELECT DISTINCT ambito FROM @c;
+        OPEN k; FETCH NEXT FROM k INTO @a;
+        WHILE @@FETCH_STATUS = 0 BEGIN EXEC Eurovip.spPesoOrdenar ''' + @vista + N''', @a; FETCH NEXT FROM k INTO @a; END
+        CLOSE k; DEALLOCATE k;
+    END
+END';
+    EXEC sp_executesql @sql;
+    FETCH NEXT FROM c INTO @tabla, @vista, @clave;
+END
+CLOSE c; DEALLOCATE c;
+GO
+/* ---------- CAMBIO 121: dejar los datos actuales en 1, 2, 3… ---------- */
+DECLARE @tb varchar(20), @am varchar(160);
+DECLARE r CURSOR LOCAL FAST_FORWARD FOR SELECT DISTINCT tabla, ambito FROM Eurovip.vPeso WHERE peso IS NOT NULL;
+OPEN r; FETCH NEXT FROM r INTO @tb, @am;
+WHILE @@FETCH_STATUS = 0 BEGIN EXEC Eurovip.spPesoOrdenar @tb, @am; FETCH NEXT FROM r INTO @tb, @am; END
+CLOSE r; DEALLOCATE r;
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -5635,6 +5813,11 @@ GO
                el tipo vuelve a ser Oferta (fila de ViajeVDT «Oferta · Servicios hoteleros · 700»); pasaron a OFERTA 649 servicios,
                1 campaña, 5 tarjetas, 22 filas de alojamiento_destino y 6 de flyer_config; fnSecuencia y spActualizaInicio con OFERTA.
                PAQUETES se queda. En pantallas se sigue leyendo «Solo Hotel». Ensayado antes con ROLLBACK.
+   27/10/2026  FASE 37 aplicada SOLO en el 93 (CAMBIO 118-121), pedido de la usuaria «el peso debe ser 1, 2, 3, 4… en orden,
+               que no se repita y que me indique el orden o me permita cambiar con uno que esté»: vista vPeso, spPesoPoner,
+               spPesoOrdenar y 6 triggers trEurovip_*_peso. Datos: la Home sección 47 tenía dos hoteles en 1 → «Hotel El
+               Convento» 1 y «Costa de Sol» 2; las 149 ofertas en 1 son del mismo hotel (#9761, Samaná) y se quedan. Probado
+               con ROLLBACK: se mete (los demás bajan), sin huecos (9 → 3), intercambio, quitar (suben) y ofertas por hotel.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

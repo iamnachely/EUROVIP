@@ -732,7 +732,7 @@ const HW = (() => {
         $('#tSecF').value = v.id_Contenedor ?? ''; $('#tPO').value = (v.id_Pais_Origen || 'ES').toUpperCase(); $('#tPD').value = (v.id_PaisDestino || 'DO').toUpperCase();
         $('#tOri').value = v.origen || ''; $('#tDes').value = v.id_Destino || ''; $('#tImg').value = v.caratulaDestino || ''; $('#tDesc').value = v.descripcion || '';
         $('#tPre').value = v.precioWeb != null ? Math.round(v.precioWeb) : ''; $('#tNoc').value = v.noches ?? ''; $('#tNot').value = v.notas || ''; $('#tEstF').checked = v.estado !== false;
-        $('#tPrio').innerHTML = EVPrioridad.campos({ peso: v.peso, proveedor: v.precio_Proveedor, precio: v.precioWeb, ayuda: 'Compáralo con el precio «desde».' });
+        $('#tPrio').innerHTML = EVPrioridad.campos({ peso: v.peso, proveedor: v.precio_Proveedor, precio: v.precioWeb, ayuda: 'Compáralo con el precio «desde».', contexto: { que: 'tarjeta', id: v.id, contenedor: v.id_Contenedor, tipo: v.tipo_Servicio } });
         EVPrioridad.vivo($('#tPrio'), () => $('#tPre').value);
         // caratulaDestino se conserva tal cual (en hoteles es el destino, no una imagen). Las fotos se cambian arriba y se guardan al momento.
         if (t) EVFotos.montar($('#tdFotos'), { tipo: t.foto_Tipo, clave: t.foto_Clave, alCambiar: items => {

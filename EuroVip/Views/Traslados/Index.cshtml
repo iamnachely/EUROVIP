@@ -521,7 +521,7 @@
         $('#edPrecioIV').value = t?.precio_Ida_Vuelta ?? '';
         $('#edPrecioI').value = t?.precio_Ida ?? '';
         $('#edCancelable').checked = t ? t.cancelable : true;
-        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: t?.peso, proveedor: t?.precio_Proveedor, precio: t?.precio_Ida_Vuelta ?? t?.precio_Ida, ayuda: 'Compáralo con nuestro precio de ida y vuelta (o solo ida).' });
+        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: t?.peso, proveedor: t?.precio_Proveedor, precio: t?.precio_Ida_Vuelta ?? t?.precio_Ida, ayuda: 'Compáralo con nuestro precio de ida y vuelta (o solo ida).', contexto: { que: 'traslado', id: t?.id_Traslado, destino: t?.id_Destino } });
         EVPrioridad.vivo($('#edPrio'), () => $('#edPrecioIV').value || $('#edPrecioI').value);
         $('#edHoras').value = t?.horas_Cancelacion ?? '';
         $('#edDesc').value = t?.descripcion || '';

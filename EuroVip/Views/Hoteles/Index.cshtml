@@ -1139,7 +1139,7 @@ const HX = (() => {
 
     /** Prioridad y precio del proveedor (FASE 29): los dos opcionales; la diferencia se compara con «Precio desde». */
     function prioridad(h) {
-        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: h?.peso, proveedor: h?.precio_Proveedor, precio: h?.precioWeb, ayuda: 'Compáralo con el «Precio desde».' });
+        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: h?.peso, proveedor: h?.precio_Proveedor, precio: h?.precioWeb, ayuda: 'Compáralo con el «Precio desde».', contexto: { que: 'hotel', id: h?.id_Servicio, tipo: 'HOTEL' } });
         const pinta = EVPrioridad.vivo($('#edPrio'), () => campo('PrecioWeb').value);
         campo('PrecioWeb').oninput = () => pinta?.();
     }

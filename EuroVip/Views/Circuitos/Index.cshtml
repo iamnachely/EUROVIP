@@ -329,7 +329,7 @@ const CX = (() => {
         $('#edProveedor').value = c.proveedor ? `${c.proveedor}` : ''; $('#edProveedor').dataset.valor = c.id_Proveedor || '';
         $('#edNoches').value = c.noches; $('#edCaratula').value = c.caratula || ''; delete $('#edPortada').dataset.vista; delete $('#edCaratula').dataset.quitada; $('#edResumen').value = c.itinerario || '';
         const desde = lista.find(x => x.codigo === c.codigoOriginal)?.precioDesde;
-        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: c.peso, proveedor: c.precio_Proveedor, precio: desde, ayuda: 'Compáralo con el «desde» del circuito.' });
+        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: c.peso, proveedor: c.precio_Proveedor, precio: desde, ayuda: 'Compáralo con el «desde» del circuito.', contexto: { que: 'circuito', id: c.codigoOriginal } });
         EVPrioridad.vivo($('#edPrio'), () => desde);
         $('#edEliminar').hidden = !c.codigoOriginal;
         $('#tabSalidas').hidden = !c.codigoOriginal;

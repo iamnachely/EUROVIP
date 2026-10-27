@@ -272,7 +272,7 @@ const OF = (() => {
             $('#eCampanya').value = String(o.id_Campanya);
             $('#eTotal').value = Math.round((o.precio_Base + o.tasas) * 100) / 100; $('#eDescuento').value = o.descuento;
             $('#eActivo').checked = o.activo;
-            $('#ePrio').innerHTML = EVPrioridad.campos({ peso: o.peso, proveedor: o.precio_Proveedor, precio: o.precioWeb, ayuda: 'Compáralo con el precio web.' });
+            $('#ePrio').innerHTML = EVPrioridad.campos({ peso: o.peso, proveedor: o.precio_Proveedor, precio: o.precioWeb, ayuda: 'Compáralo con el precio web.', contexto: { que: 'oferta', id: o.id_Servicio } });
             EVPrioridad.vivo($('#ePrio'), () => $('#eTotal').value);
             $('#ePrioTodas').checked = true;
             sups = EVC.filas($('#eSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento / tasa', valorEtiqueta: 'Importe', sufijo: EV.simbolo(), onChange: precioVivo, placeholder: 'Elige…', inicial: o.tasasDetalle.map(t => ({ opcion: t.id_Tasa, valor: t.valor })) });

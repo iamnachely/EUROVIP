@@ -734,7 +734,7 @@
             <div class="cz-blq"><h3><i class="bi bi-star-fill" style="color:#F5A623"></i> Prioridad y precio del proveedor <small>los dos opcionales</small></h3><div id="edPrio"></div></div>
             <div class="cz-blq" id="edPdfs"></div>`;
         const desde = D.cruceros.find(x => x.id_Crucero === C.id_Crucero)?.desde_Pp;
-        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: C.peso, proveedor: C.precio_Proveedor, precio: desde, ayuda: 'Compáralo con el «desde» por persona del crucero.' });
+        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: C.peso, proveedor: C.precio_Proveedor, precio: desde, ayuda: 'Compáralo con el «desde» por persona del crucero.', contexto: { que: 'crucero', id: C.id_Crucero } });
         EVPrioridad.vivo($('#edPrio'), () => desde);
         pintarPdfs();
     }

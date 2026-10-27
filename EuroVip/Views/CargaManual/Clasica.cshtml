@@ -335,7 +335,7 @@ const CL = (() => {
                 <div class="ui-f"><label>Régimen del hotel <em>sobrescribe el global</em></label><select data-k="regimen">${cat.regimenes.map(r => `<option value="${esc(r.valor)}" ${r.valor === h.regimen ? 'selected' : ''}>${esc(r.valor)} · ${esc(r.texto)}</option>`).join('')}</select></div>
             </div>
             <div class="ui-row">
-                <div class="ui-f"><label><i class="bi bi-star-fill" style="color:#F5A623"></i> Prioridad en la web <em>opcional · elige el puesto</em></label><input data-k="peso" data-prio type="number" min="1" max="999" step="1" value="${h.peso ?? ''}"></div>
+                <div class="ui-f"><label><i class="bi bi-star-fill" style="color:#F5A623"></i> Prioridad en la web <em>opcional · elige el puesto</em></label><input data-k="peso" data-prio type="number" min="1" max="999" step="1" value="${h.peso ?? ''}"${h.elegido ? ` data-prio-ctx="${EV.esc(JSON.stringify({ que: 'oferta', aloj: h.elegido.id, tipo: TIPO }))}"` : ''}></div>
                 <div class="ui-f"><label><i class="bi bi-shop"></i> Precio del proveedor <em>opcional · solo informativo</em></label><input data-k="proveedor" type="number" min="0" step="1" value="${h.proveedor ?? ''}" placeholder="Precio en su web"></div>
             </div>
             <div style="display:flex;align-items:center;gap:10px;margin:6px 0 10px;flex-wrap:wrap">

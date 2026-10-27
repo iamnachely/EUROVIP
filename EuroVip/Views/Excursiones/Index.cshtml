@@ -427,7 +427,8 @@ const EX = (() => {
         $('#edDestino').value = x?.id_Destino || destinoInicial || st.destino || (todas[0]?.id_Destino ?? '');
         $('#edPrecio').value = x?.precio ?? '';
         $('#edCancelable').checked = !!x?.cancelable;
-        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: x?.peso, proveedor: x?.precio_Proveedor, precio: x?.precio });
+        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: x?.peso, proveedor: x?.precio_Proveedor, precio: x?.precio, contexto: { que: 'excursion', id: x?.id_Excursion, destino: $('#edDestino').value } });
+        $('#edDestino').onchange = () => EVPrioridad.contexto($('#pPeso'), { que: 'excursion', id: x?.id_Excursion, destino: $('#edDestino').value });   // los puestos son por destino
         EVPrioridad.vivo($('#edPrio'), () => $('#edPrecio').value);
         $('#edDesc').value = x?.descripcion || '';
         $('#edEliminar').hidden = !x;
