@@ -4992,6 +4992,88 @@ GO
 
 
 /* ##########################################################################################
+   FASE 35 — HOTELES REPETIDOS: SE UNIFICAN  (27/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «Eliminar hoteles repetidos: hay 74 nombres repetidos (148 hoteles)».
+   Qué había: 74 parejas de Eurovip.alojamiento con el mismo nombre (sin contar mayúsculas ni espacios), venidas de
+   ViajeVDT. En todas, los dos hoteles tienen distinto destino (uno la zona —Belle Mare, La Habana, Riviera Maya…— y
+   otro la región —Isla Mauricio, Cuba, Playa del Carmen…—). NINGUNO tenía ofertas, circuitos, fotos ni traslados:
+   solo habitaciones.
+   Explicado fácil:
+     • En cada pareja se queda el ORIGINAL (el de número más bajo: casi siempre el de la zona y con más habitaciones).
+     • CAMBIO 114: las habitaciones del repetido que el original no tiene (por nombre) se pasan al original con un
+       número nuevo; así no se pierde ninguna.
+     • CAMBIO 115: se eliminan las habitaciones del repetido, sus filas de alojamiento_destino y el hotel repetido.
+       Todo queda guardado en Eurovip.registro_eliminado (FASE 33) con la fila completa, por si hay que recuperarlo.
+   Se comprueba antes que el repetido sigue sin ofertas, circuitos, habitaciones en ofertas, fotos ni traslados; si
+   alguno tuviera algo, NO se toca (se informa).
+   ########################################################################################## */
+SET XACT_ABORT ON;
+GO
+EXEC sp_set_session_context @key = N'usuario', @value = N'sistema (FASE 35 repetidos)';   -- así queda en registro_eliminado
+BEGIN TRAN;
+
+-- parejas: el original (número más bajo) y los repetidos
+SELECT a.id_alojamiento AS repetido,
+       MIN(a.id_alojamiento) OVER (PARTITION BY LOWER(LTRIM(RTRIM(a.nombre)))) AS original,
+       LOWER(LTRIM(RTRIM(a.nombre))) AS k
+  INTO #p
+  FROM Eurovip.alojamiento a
+ WHERE a.id_idioma = 'ES'
+   AND LOWER(LTRIM(RTRIM(a.nombre))) IN (SELECT LOWER(LTRIM(RTRIM(nombre))) FROM Eurovip.alojamiento WHERE id_idioma = 'ES'
+                                         GROUP BY LOWER(LTRIM(RTRIM(nombre))) HAVING COUNT(*) > 1);
+DELETE FROM #p WHERE repetido = original;
+
+-- los que tienen algo en uso no se tocan
+SELECT p.repetido INTO #usados FROM #p p
+ WHERE EXISTS (SELECT 1 FROM Eurovip.servicio_detalle x WHERE x.id_alojamiento = p.repetido)
+    OR EXISTS (SELECT 1 FROM Eurovip.servicio_circuito_alojamiento x WHERE x.id_alojamiento = p.repetido)
+    OR EXISTS (SELECT 1 FROM Eurovip.servicio_habitacion x WHERE x.id_alojamiento = p.repetido)
+    OR EXISTS (SELECT 1 FROM Eurovip.multimedia x WHERE x.id_alojamiento = p.repetido OR x.id_hotel = p.repetido)
+    OR EXISTS (SELECT 1 FROM Eurovip.traslado_alojamiento x WHERE x.id_alojamiento = p.repetido);
+SELECT COUNT(*) AS repetidos_con_uso_no_tocados FROM #usados;
+DELETE p FROM #p p JOIN #usados u ON u.repetido = p.repetido;
+
+/* ---------- CAMBIO 114: pasar al original las habitaciones que no tiene ---------- */
+SELECT h.id_alojamiento AS de, h.id_habitacion AS hab_de, p.original AS a, h.id_idioma,
+       ROW_NUMBER() OVER (PARTITION BY p.original ORDER BY h.id_habitacion) AS n
+  INTO #mover
+  FROM Eurovip.alojamiento_habitacion h
+  JOIN #p p ON p.repetido = h.id_alojamiento
+ WHERE NOT EXISTS (SELECT 1 FROM Eurovip.alojamiento_habitacion o
+                    WHERE o.id_alojamiento = p.original AND o.id_idioma = h.id_idioma
+                      AND LOWER(LTRIM(RTRIM(o.nombre))) = LOWER(LTRIM(RTRIM(h.nombre))));
+-- si el mismo nombre está dos veces en el repetido, solo se pasa una
+DELETE m FROM #mover m
+ WHERE EXISTS (SELECT 1 FROM #mover m2 JOIN Eurovip.alojamiento_habitacion h2 ON h2.id_alojamiento = m2.de AND h2.id_habitacion = m2.hab_de AND h2.id_idioma = m2.id_idioma
+                JOIN Eurovip.alojamiento_habitacion h1 ON h1.id_alojamiento = m.de AND h1.id_habitacion = m.hab_de AND h1.id_idioma = m.id_idioma
+                WHERE m2.a = m.a AND m2.n < m.n AND LOWER(LTRIM(RTRIM(h2.nombre))) = LOWER(LTRIM(RTRIM(h1.nombre))));
+SELECT * INTO #nuevas FROM Eurovip.alojamiento_habitacion WHERE 1 = 0;
+INSERT INTO #nuevas
+SELECT h.* FROM Eurovip.alojamiento_habitacion h JOIN #mover m ON m.de = h.id_alojamiento AND m.hab_de = h.id_habitacion AND m.id_idioma = h.id_idioma;
+-- número nuevo: como InsertarAlojamientoHabitacion, el mayor de TODA la tabla + 1, + 2… (no se repite)
+DECLARE @maxHab int = (SELECT ISNULL(MAX(id_habitacion), 0) FROM Eurovip.alojamiento_habitacion WITH (UPDLOCK, HOLDLOCK));
+SELECT m.de, m.hab_de, m.id_idioma, m.a, @maxHab + ROW_NUMBER() OVER (ORDER BY m.a, m.de, m.hab_de) AS nuevo
+  INTO #num FROM #mover m;
+UPDATE n SET id_alojamiento = m.a, id_habitacion = m.nuevo,
+             usuario_alta = NULL, fecha_alta = NULL, usuario_modificacion = NULL, fecha_modificacion = NULL
+  FROM #nuevas n JOIN #num m ON m.de = n.id_alojamiento AND m.hab_de = n.id_habitacion AND m.id_idioma = n.id_idioma;
+INSERT INTO Eurovip.alojamiento_habitacion SELECT * FROM #nuevas;
+SELECT @@ROWCOUNT AS habitaciones_pasadas_al_original;
+
+/* ---------- CAMBIO 115: eliminar los repetidos (quedan en registro_eliminado) ---------- */
+DELETE h FROM Eurovip.alojamiento_habitacion h JOIN #p p ON p.repetido = h.id_alojamiento;
+SELECT @@ROWCOUNT AS habitaciones_eliminadas;
+DELETE d FROM Eurovip.alojamiento_destino d JOIN #p p ON p.repetido = d.id_alojamiento;
+DELETE a FROM Eurovip.alojamiento a JOIN #p p ON p.repetido = a.id_alojamiento;
+SELECT @@ROWCOUNT AS hoteles_eliminados;
+
+SELECT COUNT(*) AS nombres_repetidos_que_quedan FROM (SELECT LOWER(LTRIM(RTRIM(nombre))) k FROM Eurovip.alojamiento WHERE id_idioma = 'ES' GROUP BY LOWER(LTRIM(RTRIM(nombre))) HAVING COUNT(*) > 1) x;
+COMMIT;
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -5486,6 +5568,11 @@ GO
                134 destinos recibieron código nuevo (124 sin código y 10 repetidos, ej. 5429 Atenas/Athens: se queda el primero por
                país y nombre; el resto pasa a 68003…68136), con usuario_modificacion = «sistema (FASE 34)». Índice único
                UX_Eurovip_destino_id y trigger trEurovip_destino_codigo. Nadie usaba destino.id como referencia.
+   27/10/2026  FASE 35 aplicada SOLO en el 93 (CAMBIO 114-115), pedido de la usuaria «eliminar hoteles repetidos»: 74 parejas con el
+               mismo nombre (ninguna con ofertas, circuitos, fotos ni traslados). Se quedó el original (número más bajo); 191 habitaciones
+               que el original no tenía pasaron a él (n.º 368833-369023); se eliminaron 74 hoteles y 647 habitaciones, guardados en
+               registro_eliminado (721 filas, usuario «sistema (FASE 35 repetidos)»). Hoteles: 2105 → 2031. Lista de parejas en
+               Database/FASE35_hoteles_unificados.csv. Ensayado antes con ROLLBACK.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
