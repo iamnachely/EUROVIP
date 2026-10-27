@@ -184,19 +184,30 @@ namespace EuroVip.Repositories
                 var p = new DynamicParameters();
                 p.Add("in_id_alojamiento", nuevo ? null : v.GetValueOrDefault("id_alojamiento"));
                 p.Add("id_idioma", Idioma);
-                foreach (var col in new[] { "id_tipo_alojamiento", "id_destino", "id_pais", "nombre", "caratula", "descripcion", "grupo", "categoria", "latitude", "longitude", "categoria_circuito", "circuito", "activo" })
+                foreach (var col in new[] { "id_tipo_alojamiento", "id_destino", "id_pais", "nombre", "caratula", "descripcion", "categoria", "latitude", "longitude", "activo" })
                     p.Add(col, v.GetValueOrDefault(col));
+                // Campos ocultos en la pantalla: al editar se dejan como estaban; en uno nuevo, Grupo = su número (abajo)
+                var oc = nuevo ? default : await cn.QueryFirstOrDefaultAsync<(int? Grupo, string? CategoriaCircuito, bool? Circuito)>(
+                    "SELECT grupo, categoria_circuito, circuito FROM Eurovip.alojamiento WHERE id_alojamiento = @id AND id_idioma = @Idioma",
+                    new { id = v.GetValueOrDefault("id_alojamiento"), Idioma });
+                p.Add("grupo", oc.Grupo ?? 0); p.Add("categoria_circuito", oc.CategoriaCircuito); p.Add("circuito", oc.Circuito ?? false);
                 p.Add("id_alojamiento", dbType: DbType.Int32, direction: ParameterDirection.Output);
                 await cn.ExecuteAsync("Eurovip.InsertarOActualizarAlojamiento", p, commandType: CommandType.StoredProcedure);
-                return (new() { ["id_alojamiento"] = p.Get<int>("id_alojamiento") }, null);
+                var idAloj = p.Get<int>("id_alojamiento");
+                if (nuevo) await cn.ExecuteAsync("UPDATE Eurovip.alojamiento SET grupo = id_alojamiento WHERE id_alojamiento = @idAloj AND ISNULL(grupo, 0) = 0", new { idAloj });
+                return (new() { ["id_alojamiento"] = idAloj }, null);
             }
             if (c.Especial == "habitacion")
             {
+                // Código / Nombre Newblue ya no salen en el formulario: al editar se mantienen los guardados (el procedimiento los reescribe)
+                var nb = nuevo ? default : await cn.QueryFirstOrDefaultAsync<(string? Codigo, string? Nombre)>(
+                    "SELECT codigo_newblue, nombre_newblue FROM Eurovip.alojamiento_habitacion WHERE id_alojamiento = @a AND id_habitacion = @h AND id_idioma = @Idioma",
+                    new { a = v["id_alojamiento"], h = v.GetValueOrDefault("id_habitacion"), Idioma });
                 var id = await cn.ExecuteScalarAsync<int>("Eurovip.InsertarAlojamientoHabitacion", new
                 {
                     id_alojamiento = v["id_alojamiento"], id_idioma = Idioma, id_tipo_habitacion = v["id_tipo_habitacion"], codigo = v["codigo"] ?? "",
                     nombre = v["nombre"], grupo = v.GetValueOrDefault("grupo") ?? 0, nota = v.GetValueOrDefault("nota"), precio = v.GetValueOrDefault("precio") ?? 0m,
-                    codigo_newblue = v.GetValueOrDefault("codigo_newblue"), nombre_newblue = v.GetValueOrDefault("nombre_newblue"),
+                    codigo_newblue = nb.Codigo, nombre_newblue = nb.Nombre,
                     id_habitacion = nuevo ? null : v.GetValueOrDefault("id_habitacion")
                 }, commandType: CommandType.StoredProcedure);
                 return (new() { ["id_alojamiento"] = v["id_alojamiento"], ["id_habitacion"] = id }, null);

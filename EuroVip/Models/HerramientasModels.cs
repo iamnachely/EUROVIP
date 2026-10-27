@@ -156,9 +156,8 @@ namespace EuroVip.Models
                     new("descripcion", "Descripción", "textarea", EnTabla: false),
                     new("latitude", "Latitud", Max: 50, EnTabla: false),
                     new("longitude", "Longitud", Max: 50, EnTabla: false),
-                    new("grupo", "Grupo", "number", EnTabla: false),
-                    new("categoria_circuito", "Categoría en circuitos", "select", 50, Lista: "categorias", EnTabla: false),
-                    new("circuito", "Se usa en circuitos", "bool", EnTabla: false),
+                    // Grupo (= número del hotel), Categoría en circuitos y Se usa en circuitos: ocultos (pedido de la usuaria);
+                    // al editar se conservan y en un hotel nuevo Grupo = su número (HerramientasRepository)
                     new("activo", "Activo", "bool", Defecto: "1")
                 }, "nombre", new[] { "nombre", "id_destino", "CAST(t.id_alojamiento AS varchar(12))" },
                 new[] {
@@ -178,9 +177,8 @@ namespace EuroVip.Models
                     new("codigo", "Código", Max: 50, Req: true, Defecto: ""),
                     new("precio", "Suplemento", "decimal", Req: true, Defecto: "0"),
                     new("grupo", "Grupo", "number", Req: true, EnTabla: false, Defecto: "0"),
-                    new("nota", "Nota", "textarea", EnTabla: false),
-                    new("codigo_newblue", "Código Newblue", Max: 50, EnTabla: false),
-                    new("nombre_newblue", "Nombre Newblue", Max: 255, EnTabla: false)
+                    new("nota", "Nota", "textarea", EnTabla: false)
+                    // Código / Nombre Newblue: quitados de la pantalla (pedido de la usuaria); al editar se conservan los que haya
                 }, "nombre", new[] { "nombre", "id_tipo_habitacion", "codigo", "CAST(t.id_habitacion AS varchar(12))" },
                 new[] { new HrUso("servicio_habitacion", "id_habitacion = @id_habitacion AND id_alojamiento = @id_alojamiento AND id_idioma = 'ES'", "ofertas") },
                 Filtros: new[] { "id_alojamiento" },
