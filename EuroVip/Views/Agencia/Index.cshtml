@@ -89,6 +89,13 @@
     .tp-postal .pf-card small { font-size: 1.15rem; font-weight: 700; color: #e07b39; }
     .tp-postal .pf-card.top small { color: #FFD08A; }
     .tp-postal .pf-card .pr { margin-top: auto; align-self: flex-start; background: #FF8A3D; color: #fff; font-weight: 900; font-size: 2rem; padding: 8px 16px; border-radius: 14px; }
+    /* tarjeta destacada (ancho completo): datos a la izquierda y precio grande a la derecha, sin hueco vacío */
+    .tp-postal .pf-card.top { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 32px; row-gap: 8px; align-items: center; padding: 30px 36px; }
+    .tp-postal .pf-card.top > b, .tp-postal .pf-card.top > small, .tp-postal .pf-card.top > .tp-trofeo { grid-column: 1; justify-self: start; }
+    .tp-postal .pf-card.top > b { font-size: 2.4rem; }
+    .tp-postal .pf-card.top > small { font-size: 1.3rem; }
+    .tp-postal .pf-card.top > .pr { grid-column: 2; grid-row: 1 / span 3; align-self: center; margin: 0; font-size: 3.2rem; padding: 16px 30px; border-radius: 20px; text-align: center; line-height: 1.05; box-shadow: 0 12px 28px -10px rgba(255,138,61,.7); }
+    .tp-postal .pf-card.top > .pr::before { content: 'Desde'; display: block; font-size: 1rem; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; opacity: .85; margin-bottom: 4px; }
     .tp-postal .pf-pie { background: #003d52; color: #fff; padding: 24px 56px; display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem; }
     /* Elegante */
     .tp-elegante { background: radial-gradient(circle at 20% 0%, #13365a 0%, #0A1A30 60%) !important; color: #F3E7C9; }
