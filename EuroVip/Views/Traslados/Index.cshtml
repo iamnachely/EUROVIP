@@ -154,6 +154,7 @@
     <select class="ui-select" id="trOrigen" title="Aeropuerto"><option value="">Todos los aeropuertos</option></select>
     <select class="ui-select" id="trDestino" title="Destino"><option value="">Todos los destinos</option></select>
     <select class="ui-select" id="trOrden" title="Ordenar">
+        <option value="prioridad">Prioridad (como en la web)</option>
         <option value="precio_asc">Precio: menor a mayor</option>
         <option value="precio_desc">Precio: mayor a menor</option>
         <option value="nombre">Nombre (A-Z)</option>
@@ -241,6 +242,7 @@
         <section class="tr-paso"><h3><span class="n">5</span> Condiciones y descripción</h3>
             <div class="ui-row">
                 <div class="ui-f"><label class="ui-switch"><input type="checkbox" id="edCancelable" checked><span class="tr"></span> Se puede cancelar</label></div>
+                <div class="ui-f" id="edPrio" style="grid-column:1/-1"></div>
                 <div class="ui-f" id="edHorasF"><label for="edHoras">Gratis hasta (horas antes)</label><input id="edHoras" type="number" min="0" max="720" placeholder="Ej. 24"><span class="msg"></span></div>
             </div>
             <div class="ui-f"><label for="edDesc">Descripción <em>se ve en la web: punto de encuentro, qué incluye…</em></label>
@@ -278,6 +280,7 @@
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-excel.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
 <script>
 (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -290,7 +293,7 @@
     let actual = null, fotoNueva = null, quitarFoto = false, verId = null, nombreTocado = false;
     let hoteles = [];                  // [{valor, texto}] elegidos en el editor
     let origenNombre = '';             // nombre del aeropuerto elegido (para el nombre y la vista)
-    const st = { q: '', origen: '', destino: '', filtro: '', orden: 'precio_asc' };
+    const st = { q: '', origen: '', destino: '', filtro: '', orden: 'prioridad' };
     let plegadas = new Set();
     try { plegadas = new Set(JSON.parse(localStorage.getItem('ev-traslados-plegadas') || '[]')); } catch { }
     const guardarPlegadas = () => { try { localStorage.setItem('ev-traslados-plegadas', JSON.stringify([...plegadas])); } catch { } };
@@ -324,12 +327,13 @@
             (st.filtro === '' || (st.filtro === 'activos' && t.activo) || (st.filtro === 'inactivos' && !t.activo) || (st.filtro === 'sinfoto' && !t.imagen) ||
              (st.filtro === 'COMPARTIDO' && t.tipo === 'COMPARTIDO') || (st.filtro === 'PRIVADO' && t.tipo === 'PRIVADO')));
         const cmp = {
+            prioridad: null,
             precio_asc: (a, b) => menor(a) - menor(b),
             precio_desc: (a, b) => menor(b) - menor(a),
             nombre: (a, b) => a.nombre.localeCompare(b.nombre, 'es'),
             recientes: (a, b) => b.id_Traslado - a.id_Traslado
         }[st.orden];
-        return l.sort(cmp);
+        return cmp === null ? EVPrioridad.ordenar(l, x => x.peso, menor) : l.sort(cmp);
     }
 
     function pintarKpis() {
@@ -349,12 +353,12 @@
     function tarjeta(t, conAcciones = true) {
         const pv = t.precio_Ida_Vuelta, pi = t.precio_Ida;
         const para = t.cobro === 'PERSONA' ? 'por persona' : 'para todos los viajeros';
-        return `<article class="tr-card ${t.activo ? '' : 'off'}" data-id="${t.id_Traslado ?? ''}">
+        return `<article class="tr-card ${t.activo ? '' : 'off'} ${t.peso ? 'ev-con-prioridad' : ''}" data-id="${t.id_Traslado ?? ''}">
             <div class="tr-foto" ${conAcciones ? `data-accion="ver" data-soltar="${t.id_Traslado}" title="Ver · arrastra una foto aquí para cambiarla"` : ''}>
                 ${t.imagen ? `<img src="${esc(t.imagen)}" alt="Foto del vehículo" loading="lazy">` : `<span class="sin"><i class="bi ${ICONO[t.vehiculo] || 'bi-bus-front'}"></i>Sin foto${conAcciones ? '<br><small>Arrastra una aquí</small>' : ''}</span>`}
             </div>
             <div class="tr-mid">
-                <div class="tr-tit"><h3>${esc(V.tipos[t.tipo] || t.tipo)}</h3><span class="tr-cat ${esc(t.categoria)}">${esc(V.categorias[t.categoria] || t.categoria)} ${t.vehiculo === 'BUS' || t.vehiculo === 'MINIBUS' ? 'shuttle' : esc((V.vehiculos[t.vehiculo] || '').toLowerCase())}</span></div>
+                <div class="tr-tit">${EVPrioridad.estrella(t.peso, true)}<h3>${esc(V.tipos[t.tipo] || t.tipo)}</h3><span class="tr-cat ${esc(t.categoria)}">${esc(V.categorias[t.categoria] || t.categoria)} ${t.vehiculo === 'BUS' || t.vehiculo === 'MINIBUS' ? 'shuttle' : esc((V.vehiculos[t.vehiculo] || '').toLowerCase())}</span></div>
                 ${conAcciones ? `<div class="tr-nom">n.º ${t.id_Traslado} · ${esc(t.nombre)}</div>` : ''}
                 <div class="tr-feat">
                     <span><i class="bi bi-suitcase2"></i> ${t.maletas} maleta${t.maletas === 1 ? '' : 's'} permitida${t.maletas === 1 ? '' : 's'}</span>
@@ -370,6 +374,7 @@
             </div>
             <div class="tr-der">
                 ${pv != null ? `<div class="pr">${precio(pv)}</div><div class="nota">Precio ida y vuelta, ${para}.</div>` : `<div class="pr">${precio(pi)}</div><div class="nota">Precio solo ida, ${para}.</div>`}
+                ${t.precio_Proveedor ? `<div>${EVPrioridad.proveedor(pv ?? pi, t.precio_Proveedor)}</div>` : ''}
                 ${pv != null && pi != null ? `<div class="ida">Solo ida: ${precio(pi)}</div>` : ''}
                 <div class="acc">${conAcciones ? acciones(t) : '<span class="ev-btn sm" style="pointer-events:none">Seleccionar traslado</span>'}</div>
             </div>
@@ -478,7 +483,8 @@
             Maletas: num('#edMaletas') ?? 0, Duracion_Min: num('#edDuracion'), Pasajeros_Min: num('#edPmin') ?? 1, Pasajeros_Max: num('#edPmax') ?? 1,
             Cobro: segVal('#edCobro'), Precio_Ida_Vuelta: num('#edPrecioIV'), Precio_Ida: num('#edPrecioI'),
             Cancelable: $('#edCancelable').checked, Horas_Cancelacion: $('#edCancelable').checked ? num('#edHoras') : null,
-            Descripcion: $('#edDesc').value.trim() || null, Todos_Hoteles: $('#edTodos').checked, Hoteles: hoteles.map(h => +h.valor), Activo: $('#edActivo').checked
+            Descripcion: $('#edDesc').value.trim() || null, Todos_Hoteles: $('#edTodos').checked, Hoteles: hoteles.map(h => +h.valor), Activo: $('#edActivo').checked,
+            ...EVPrioridad.leer($('#trEditor'))
         };
     }
 
@@ -513,6 +519,8 @@
         $('#edPrecioIV').value = t?.precio_Ida_Vuelta ?? '';
         $('#edPrecioI').value = t?.precio_Ida ?? '';
         $('#edCancelable').checked = t ? t.cancelable : true;
+        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: t?.peso, proveedor: t?.precio_Proveedor, precio: t?.precio_Ida_Vuelta ?? t?.precio_Ida, ayuda: 'Compáralo con nuestro precio de ida y vuelta (o solo ida).' });
+        EVPrioridad.vivo($('#edPrio'), () => $('#edPrecioIV').value || $('#edPrecioI').value);
         $('#edHoras').value = t?.horas_Cancelacion ?? '';
         $('#edDesc').value = t?.descripcion || '';
         $('#edActivo').checked = t ? t.activo : true;

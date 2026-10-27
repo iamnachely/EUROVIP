@@ -128,7 +128,7 @@ namespace EuroVip.Controllers
         private static readonly string[] Columnas =
         {
             "Nombre", "Tipo", "Categoría", "Vehículo", "Aeropuerto", "Destino", "Maletas", "Duración (min)", "Pasajeros mín", "Pasajeros máx",
-            "Cobro", "Precio ida y vuelta", "Precio solo ida", "Cancelable", "Horas cancelación", "Descripción", "Activo"
+            "Cobro", "Precio ida y vuelta", "Precio solo ida", "Cancelable", "Horas cancelación", "Descripción", "Activo", "Prioridad", "Precio proveedor"
         };
 
         /// <summary>Plantilla: hoja «Traslados» (una fila por traslado) y hoja «Instrucciones» con los valores válidos.</summary>
@@ -146,10 +146,10 @@ namespace EuroVip.Controllers
             var datos = new ExcelTabla.Hoja("Traslados", Columnas, new List<object?[]>
             {
                 new object?[] { "Aeropuerto Punta Cana → hoteles de Bávaro", "Compartido", "Estándar", "Autobús", "PUJ", "Punta Cana", 2, 30, 1, 1,
-                                "Por persona", 25m, 15m, "Sí", 24, "Traslado compartido desde el aeropuerto a tu hotel en Bávaro.", "Sí" },
+                                "Por persona", 25m, 15m, "Sí", 24, "Traslado compartido desde el aeropuerto a tu hotel en Bávaro.", "Sí", 1, 35m },
                 new object?[] { "Privado Santo Domingo → La Romana", "Privado", "Premium", "Van", "SDQ", "La Romana", 6, 90, 1, 6,
                                 "Para todos los viajeros", 180m, 100m, "Sí", 48, "Van privada con aire acondicionado para hasta 6 personas.", "Sí" },
-            }, new double[] { 40, 13, 12, 12, 12, 18, 9, 14, 13, 13, 22, 18, 15, 12, 17, 60, 9 });
+            }, new double[] { 40, 13, 12, 12, 12, 18, 9, 14, 13, 13, 22, 18, 15, 12, 17, 60, 9, 11, 16 });
             var ayuda = new ExcelTabla.Hoja("Instrucciones", new[] { "Columna", "Qué poner", "" }, new List<object?[]>
             {
                 new object?[] { "Nombre", "Obligatorio. No se puede repetir la misma ruta con el mismo tipo, categoría y vehículo.", null },
@@ -163,6 +163,8 @@ namespace EuroVip.Controllers
                 new object?[] { "Precios", "Al menos uno de los dos: ida y vuelta o solo ida.", null },
                 new object?[] { "Cancelable / Activo", "Sí o No. Vacío = Sí.", null },
                 new object?[] { "Horas cancelación", "Hasta cuántas horas antes se puede cancelar (opcional).", null },
+                new object?[] { "Prioridad", "Opcional. 1 sale primero en la web, 2 segundo… Vacío = se ordena por precio.", null },
+                new object?[] { "Precio proveedor", "Opcional. Precio del proveedor en su web (nuestro precio no cambia).", null },
                 new object?[] { "", "", null },
                 new object?[] { "Aeropuertos válidos", "Nombre", "Destino" },
             }.Concat(aeropuertos.Select(a => new object?[] { a.Codigo, a.Nombre, a.Destino }))
@@ -194,7 +196,8 @@ namespace EuroVip.Controllers
                     Pasajeros_Min = Corto(f, 1, "Pasajeros mín", "Pasajeros minimo"), Pasajeros_Max = Corto(f, 1, "Pasajeros máx", "Pasajeros maximo"),
                     Precio_Ida_Vuelta = f.Cifra("Precio ida y vuelta"), Precio_Ida = f.Cifra("Precio solo ida", "Precio ida"),
                     Cancelable = f.SiNo(true, "Cancelable"), Horas_Cancelacion = f.Cifra("Horas cancelación", "Horas cancelacion") is decimal h ? (short)Math.Round(h) : null,
-                    Descripcion = f.Texto("Descripción", "Descripcion"), Activo = f.SiNo(true, "Activo"), Todos_Hoteles = true
+                    Descripcion = f.Texto("Descripción", "Descripcion"), Activo = f.SiNo(true, "Activo"), Todos_Hoteles = true,
+                    Peso = f.Cifra("Prioridad", "Peso") is decimal pe ? (short)Math.Round(pe) : null, Precio_Proveedor = f.Cifra("Precio proveedor", "Precio del proveedor")
                 };
                 var fila = new CargaExcelFila { Fila = f.Numero, Nombre = dto.Nombre, Detalle = $"{dto.Id_Estacion_Origen} → {dto.Id_Destino} · {f.Texto("Tipo")} · {f.Texto("Vehículo")}" };
                 r.Filas.Add(fila);

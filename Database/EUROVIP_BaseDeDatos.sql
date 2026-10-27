@@ -4629,6 +4629,56 @@ COMMIT;
 
 
 /* ##########################################################################################
+   FASE 29 — PESO/PRIORIDAD Y PRECIO_PROVEEDOR  (26/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedidos de la usuaria:
+     • «PESO/Prioridad: un campo al cargar para marcarle prioridad a lo que se cargue. Si a un hotel le pongo peso 1 y a
+       otro peso 2, aunque sean más caros salen primero (1.º y 2.º); lo que no tiene peso se ordena de precio menor a mayor.
+       Para Hoteles, Solo Hotel, Excursiones, Circuitos, Traslados y Cruceros, y que se vea en el back con una estrella.
+       En inicio, que una sección (contenedor) se pueda marcar con un check de prioridad.»
+     • «Precio_Proveedor, opcional: el precio que tiene el proveedor en su web, para que el usuario vea la diferencia con
+       nuestro precio (que no cambia).»
+   Explicado fácil:
+     • peso = 1, 2, 3… (opcional): 1 va primero. Vacío = sin prioridad (se ordena por precio).
+     • precio_proveedor = precio del proveedor en su web (opcional, informativo: nuestro precio no cambia).
+     • contenedores.prioridad = la sección de la Home ordena sus tarjetas por peso y después por precio (en vez del orden a mano).
+   Cambios:
+     • CAMBIO 102: columnas peso y precio_proveedor en servicio (Solo Hotel / Paquetes), inicio (tarjetas y Hoteles),
+       circuito, servicio_excursion, traslado y crucero.
+     • CAMBIO 103: contenedores.prioridad.
+   No cambia ningún dato.
+   ########################################################################################## */
+SET XACT_ABORT ON;
+GO
+DECLARE @t TABLE (tabla sysname);
+INSERT INTO @t VALUES ('servicio'), ('inicio'), ('circuito'), ('servicio_excursion'), ('traslado'), ('crucero');
+DECLARE @n sysname, @sql nvarchar(max);
+DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT tabla FROM @t;
+OPEN c; FETCH NEXT FROM c INTO @n;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    /* ---------- CAMBIO 102 ---------- */
+    IF COL_LENGTH('Eurovip.' + @n, 'peso') IS NULL
+    BEGIN
+        SET @sql = N'ALTER TABLE Eurovip.' + QUOTENAME(@n) + N' ADD peso SMALLINT NULL CONSTRAINT ' + QUOTENAME('CK_Eurovip_' + @n + '_peso') + N' CHECK (peso BETWEEN 1 AND 999);';
+        EXEC sp_executesql @sql;
+    END
+    IF COL_LENGTH('Eurovip.' + @n, 'precio_proveedor') IS NULL
+    BEGIN
+        SET @sql = N'ALTER TABLE Eurovip.' + QUOTENAME(@n) + N' ADD precio_proveedor DECIMAL(12, 2) NULL CONSTRAINT ' + QUOTENAME('CK_Eurovip_' + @n + '_precio_proveedor') + N' CHECK (precio_proveedor >= 0);';
+        EXEC sp_executesql @sql;
+    END
+    FETCH NEXT FROM c INTO @n;
+END
+CLOSE c; DEALLOCATE c;
+GO
+/* ---------- CAMBIO 103: sección de la Home ordenada por prioridad ---------- */
+IF COL_LENGTH('Eurovip.contenedores', 'prioridad') IS NULL
+    ALTER TABLE Eurovip.contenedores ADD prioridad BIT NOT NULL CONSTRAINT DF_Eurovip_contenedores_prioridad DEFAULT (0);
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -5107,6 +5157,8 @@ COMMIT;
                fnSecuencia y spActualizaInicio actualizados. Ensayado antes con ROLLBACK. El back, la web pública y la API se cambiaron
                el mismo día: hay que publicar los tres. VDTDESA (93): no tenía datos con OFERTA; la migración 008 de la web ajusta la
                regla de solicitud_servicio cuando se cree la tabla.
+   27/10/2026  FASE 29 aplicada SOLO en el 93 (CAMBIO 102-103): peso y precio_proveedor en servicio, inicio, circuito,
+               servicio_excursion, traslado y crucero; contenedores.prioridad. No cambió ningún dato.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

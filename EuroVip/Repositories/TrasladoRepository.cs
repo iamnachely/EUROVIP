@@ -38,7 +38,7 @@ namespace EuroVip.Repositories
             t.pasajeros_min AS Pasajeros_Min, t.pasajeros_max AS Pasajeros_Max, t.cobro AS Cobro,
             t.precio_ida AS Precio_Ida, t.precio_ida_vuelta AS Precio_Ida_Vuelta, t.id_moneda AS Id_Moneda,
             t.cancelable AS Cancelable, t.horas_cancelacion AS Horas_Cancelacion, t.descripcion AS Descripcion, t.imagen AS Archivo,
-            t.todos_hoteles AS Todos_Hoteles, t.activo AS Activo, t.usuario AS Usuario, t.fecha_alta AS Fecha_Alta, t.fecha_modificacion AS Fecha_Modificacion";
+            t.todos_hoteles AS Todos_Hoteles, t.activo AS Activo, t.peso AS Peso, t.precio_proveedor AS Precio_Proveedor, t.usuario AS Usuario, t.fecha_alta AS Fecha_Alta, t.fecha_modificacion AS Fecha_Modificacion";
 
         private const string SelHoteles = @"
             SELECT ta.id_traslado AS Id, CAST(ta.id_alojamiento AS varchar(20)) AS Valor, ISNULL(LTRIM(RTRIM(a.nombre)), 'Hotel ' + CAST(ta.id_alojamiento AS varchar(20))) AS Texto,
@@ -80,7 +80,7 @@ namespace EuroVip.Repositories
                 id = d.Id_Traslado, d.Nombre, d.Tipo, d.Categoria, d.Vehiculo, d.Id_Estacion_Origen, d.Id_Destino, d.Maletas, d.Duracion_Min,
                 d.Pasajeros_Min, d.Pasajeros_Max, d.Cobro, d.Precio_Ida, d.Precio_Ida_Vuelta, d.Cancelable,
                 Horas = d.Cancelable ? d.Horas_Cancelacion : null,
-                Descripcion = string.IsNullOrWhiteSpace(d.Descripcion) ? null : d.Descripcion.Trim(), d.Todos_Hoteles, d.Activo, usuario
+                Descripcion = string.IsNullOrWhiteSpace(d.Descripcion) ? null : d.Descripcion.Trim(), d.Todos_Hoteles, d.Activo, usuario, d.Peso, d.Precio_Proveedor
             };
             int id;
             string? destinoAntes = null;
@@ -94,7 +94,7 @@ namespace EuroVip.Repositories
                            maletas = @Maletas, duracion_min = @Duracion_Min, pasajeros_min = @Pasajeros_Min, pasajeros_max = @Pasajeros_Max,
                            cobro = @Cobro, precio_ida = @Precio_Ida, precio_ida_vuelta = @Precio_Ida_Vuelta, id_moneda = 'DOP',
                            cancelable = @Cancelable, horas_cancelacion = @Horas, descripcion = @Descripcion, todos_hoteles = @Todos_Hoteles,
-                           activo = @Activo, usuario = @usuario, fecha_modificacion = SYSDATETIME()
+                           activo = @Activo, peso = @Peso, precio_proveedor = @Precio_Proveedor, usuario = @usuario, fecha_modificacion = SYSDATETIME()
                     WHERE id_traslado = @id", p, tx);
                 if (n == 0) throw new InvalidOperationException("Ese traslado ya no existe. Recarga la página.");
                 id = existente;
@@ -104,11 +104,11 @@ namespace EuroVip.Repositories
                 id = await cn.ExecuteScalarAsync<int>(@"
                     INSERT INTO Eurovip.traslado (nombre, tipo, categoria, vehiculo, id_estacion_origen, id_destino, id_pais, maletas, duracion_min,
                                                   pasajeros_min, pasajeros_max, cobro, precio_ida, precio_ida_vuelta, id_moneda, cancelable,
-                                                  horas_cancelacion, descripcion, todos_hoteles, activo, usuario)
+                                                  horas_cancelacion, descripcion, todos_hoteles, activo, usuario, peso, precio_proveedor)
                     VALUES (@Nombre, @Tipo, @Categoria, @Vehiculo, @Id_Estacion_Origen, @Id_Destino,
                             (SELECT TOP 1 id_pais FROM Eurovip.destino WHERE id_destino = @Id_Destino AND id_idioma = 'ES'),
                             @Maletas, @Duracion_Min, @Pasajeros_Min, @Pasajeros_Max, @Cobro, @Precio_Ida, @Precio_Ida_Vuelta, 'DOP', @Cancelable,
-                            @Horas, @Descripcion, @Todos_Hoteles, @Activo, @usuario);
+                            @Horas, @Descripcion, @Todos_Hoteles, @Activo, @usuario, @Peso, @Precio_Proveedor);
                     SELECT CAST(SCOPE_IDENTITY() AS int);", p, tx);
             }
 

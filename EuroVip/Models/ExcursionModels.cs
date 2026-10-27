@@ -14,6 +14,10 @@ namespace EuroVip.Models
         public string? Descripcion { get; set; }
         public bool? Cancelable { get; set; }
         public decimal? Precio { get; set; }
+        /// <summary>Prioridad (FASE 29): 1 sale primero en la web, 2 segundo… null = sin prioridad (por precio).</summary>
+        [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
+        /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
+        [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
         /// <summary>URL de la foto (wwwroot/imagenes/excursiones/{Nombre sin espacios}.webp) o null.</summary>
         public string? Imagen { get; set; }
     }
@@ -48,5 +52,10 @@ namespace EuroVip.Models
         public bool Cancelable { get; set; }
 
         public string? Descripcion { get; set; }
+
+        /// <summary>Prioridad (FASE 29): 1 sale primero en la web, 2 segundo… null = sin prioridad (por precio).</summary>
+        [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
+        /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
+        [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
     }
 }

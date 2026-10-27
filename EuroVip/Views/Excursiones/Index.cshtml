@@ -137,6 +137,7 @@
     <select class="ui-select" id="exDestino" title="Destino"><option value="">Todos los destinos</option></select>
     <select class="ui-select" id="exOrden" title="Ordenar">
         <option value="nombre">Nombre (A-Z)</option>
+        <option value="prioridad">Prioridad (como en la web)</option>
         <option value="precio_asc">Precio: menor a mayor</option>
         <option value="precio_desc">Precio: mayor a menor</option>
         <option value="recientes">Más recientes</option>
@@ -180,6 +181,7 @@
                 <div class="ex-money"><b class="sim">RD$</b><input id="edPrecio" type="number" min="0" step="0.01" placeholder="0"></div><span class="msg"></span></div>
         </div>
         <div class="ui-f"><label class="ui-switch"><input type="checkbox" id="edCancelable"><span class="tr"></span> Se puede cancelar</label></div>
+        <div class="ui-f" id="edPrio"></div>
 
         <div class="ui-f"><label for="edDesc">Descripción <em>se ve en la web</em></label>
             <div class="ex-herr" aria-label="Formato">
@@ -219,6 +221,7 @@
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-excel.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
 <script>
 const EX = (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -232,7 +235,7 @@ const EX = (() => {
     let plegadas = new Set();
     try { plegadas = new Set(JSON.parse(localStorage.getItem('ev-excursiones-plegadas') || '[]')); } catch { }
     const guardarPlegadas = () => { try { localStorage.setItem('ev-excursiones-plegadas', JSON.stringify([...plegadas])); } catch { } };
-    const st = { q: '', destino: '', filtro: '', orden: 'nombre', vista: 'tarjetas' };
+    const st = { q: '', destino: '', filtro: '', orden: 'prioridad', vista: 'tarjetas' };
     try { st.vista = localStorage.getItem('ev-excursiones-vista') || 'tarjetas'; } catch { }
 
     const precio = v => v == null ? '—' : `${EV.simbolo()} ${EV.fmt(v, Number(v) % 1 ? 2 : 0)}`;
@@ -280,11 +283,12 @@ const EX = (() => {
              (st.filtro === 'cancelables' && x.cancelable) || (st.filtro === 'nocancel' && !x.cancelable)));
         const cmp = {
             nombre: (a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'),
+            prioridad: null,
             precio_asc: (a, b) => (a.precio ?? 0) - (b.precio ?? 0),
             precio_desc: (a, b) => (b.precio ?? 0) - (a.precio ?? 0),
             recientes: (a, b) => b.id_Excursion - a.id_Excursion
         }[st.orden];
-        return l.sort(cmp);
+        return cmp === null ? EVPrioridad.ordenar(l) : l.sort(cmp);
     }
 
     function pintarKpis() {
@@ -334,17 +338,18 @@ const EX = (() => {
             ? `<div class="ui-table-wrap"><table class="ui-table ex-tabla"><thead><tr><th></th><th>Excursión</th><th class="num">Precio</th><th>Cancelable</th><th style="width:150px"></th></tr></thead><tbody>
                 ${lista.map(x => `<tr data-id="${x.id_Excursion}" data-accion="ver">
                     <td class="img">${x.imagen ? `<img src="${esc(x.imagen)}" alt="" loading="lazy">` : '<span></span>'}</td>
-                    <td><b>${esc(x.nombre)}</b>${!x.imagen ? ' <span class="ex-chip av">Sin foto</span>' : ''}${sinTexto(x.descripcion) ? ' <span class="ex-chip av">Sin descripción</span>' : ''}</td>
-                    <td class="num"><b>${precio(x.precio)}</b></td>
+                    <td>${EVPrioridad.estrella(x.peso)} <b>${esc(x.nombre)}</b>${!x.imagen ? ' <span class="ex-chip av">Sin foto</span>' : ''}${sinTexto(x.descripcion) ? ' <span class="ex-chip av">Sin descripción</span>' : ''}</td>
+                    <td class="num"><b>${precio(x.precio)}</b>${x.precio_Proveedor ? '<br>' + EVPrioridad.proveedor(x.precio, x.precio_Proveedor) : ''}</td>
                     <td>${x.cancelable ? '<span class="ex-chip ok">Sí</span>' : '<span class="ex-chip no">No</span>'}</td>
                     <td style="text-align:right;white-space:nowrap">${acciones(x)}</td></tr>`).join('')}
                 </tbody></table></div>`
-            : `<div class="ex-grid">${lista.map(x => `<article class="ex-card" style="--n:${Math.min(sig(), 20)}" data-id="${x.id_Excursion}">
+            : `<div class="ex-grid">${lista.map(x => `<article class="ex-card ${x.peso ? 'ev-con-prioridad' : ''}" style="--n:${Math.min(sig(), 20)}" data-id="${x.id_Excursion}">
                 <div class="ex-foto" data-accion="ver" data-soltar="${x.id_Excursion}" title="Ver · arrastra una foto aquí para cambiarla">
                     ${x.imagen ? `<img src="${esc(x.imagen)}" alt="Foto de ${esc(x.nombre)}" loading="lazy">` : '<span class="sin"><span><i class="bi bi-image"></i>Sin foto<br><small>Arrastra una aquí</small></span></span>'}
-                    <span class="ex-precio">${precio(x.precio)}</span></div>
+                    <span class="ex-precio">${precio(x.precio)}</span>${x.peso ? `<span style="position:absolute;left:10px;top:10px;z-index:2">${EVPrioridad.estrella(x.peso, true)}</span>` : ''}</div>
                 <div class="ex-cuerpo">
                     <h3>${esc(x.nombre)}</h3>
+                    ${x.precio_Proveedor ? `<div>${EVPrioridad.proveedor(x.precio, x.precio_Proveedor)}</div>` : ''}
                     <div class="ex-chips">
                         ${x.cancelable ? '<span class="ex-chip ok"><i class="bi bi-check2"></i> Cancelable</span>' : '<span class="ex-chip no"><i class="bi bi-x"></i> No cancelable</span>'}
                         ${sinTexto(x.descripcion) ? '<span class="ex-chip av">Sin descripción</span>' : ''}</div>
@@ -420,6 +425,8 @@ const EX = (() => {
         $('#edDestino').value = x?.id_Destino || destinoInicial || st.destino || (todas[0]?.id_Destino ?? '');
         $('#edPrecio').value = x?.precio ?? '';
         $('#edCancelable').checked = !!x?.cancelable;
+        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: x?.peso, proveedor: x?.precio_Proveedor, precio: x?.precio });
+        EVPrioridad.vivo($('#edPrio'), () => $('#edPrecio').value);
         $('#edDesc').value = x?.descripcion || '';
         $('#edEliminar').hidden = !x;
         $$('#exEditor .ui-f').forEach(f => f.classList.remove('err'));
@@ -463,7 +470,8 @@ const EX = (() => {
             Nombre: $('#edNombre').value.trim(), Id_Destino: $('#edDestino').value.trim(),
             Precio: $('#edPrecio').value === '' ? null : Number($('#edPrecio').value),
             Cancelable: $('#edCancelable').checked,
-            Descripcion: limpiarHtml($('#edDesc').value) || null
+            Descripcion: limpiarHtml($('#edDesc').value) || null,
+            ...EVPrioridad.leer($('#exEditor'))
         };
         const faltan = [];
         if (!dto.Nombre) faltan.push(['Nombre', 'Escribe el nombre']);

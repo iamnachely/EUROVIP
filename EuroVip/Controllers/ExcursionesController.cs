@@ -144,7 +144,7 @@ namespace EuroVip.Controllers
         }
 
         // ================= CARGAR EXCEL (muchas excursiones de una vez) =================
-        private static readonly string[] Columnas = { "Nombre", "Destino", "Precio", "Cancelable", "Descripción" };
+        private static readonly string[] Columnas = { "Nombre", "Destino", "Precio", "Cancelable", "Descripción", "Prioridad", "Precio proveedor" };
 
         /// <summary>Plantilla: hoja «Excursiones» (una fila por excursión) y hoja «Instrucciones» con los destinos que existen.</summary>
         [HttpGet]
@@ -155,9 +155,9 @@ namespace EuroVip.Controllers
                 LEFT JOIN Eurovip.pais p ON p.id_pais = d.id_pais AND p.id_idioma = 'ES' WHERE d.id_idioma = 'ES' ORDER BY d.id_destino")).ToList();
             var datos = new ExcelTabla.Hoja("Excursiones", Columnas, new List<object?[]>
             {
-                new object?[] { "Isla Saona en catamarán", "Punta Cana", 4500m, "Sí", "Día completo en Isla Saona: catamarán, almuerzo buffet, bebidas y piscina natural." },
+                new object?[] { "Isla Saona en catamarán", "Punta Cana", 4500m, "Sí", "Día completo en Isla Saona: catamarán, almuerzo buffet, bebidas y piscina natural.", 1, 5200m },
                 new object?[] { "Cascada El Limón a caballo", "Samaná", 3200m, "No", "Paseo a caballo hasta la cascada El Limón con almuerzo típico." },
-            }, new double[] { 42, 22, 12, 12, 80 });
+            }, new double[] { 42, 22, 12, 12, 80, 11, 16 });
             var ayuda = new ExcelTabla.Hoja("Instrucciones", new[] { "Columna", "Qué poner" }, new List<object?[]>
             {
                 new object?[] { "Nombre", "Obligatorio. Nombre de la excursión (no se puede repetir en el mismo destino)." },
@@ -165,6 +165,8 @@ namespace EuroVip.Controllers
                 new object?[] { "Precio", "Obligatorio. Precio por persona (número, sin símbolo)." },
                 new object?[] { "Cancelable", "Sí o No. Vacío = No." },
                 new object?[] { "Descripción", "Opcional." },
+                new object?[] { "Prioridad", "Opcional. 1 sale primero en la web, 2 segundo… Vacío = se ordena por precio." },
+                new object?[] { "Precio proveedor", "Opcional. Precio del proveedor en su web (nuestro precio no cambia)." },
                 new object?[] { "", "" },
                 new object?[] { "Destinos válidos", "País" },
             }.Concat(destinos.Select(d => new object?[] { d.Destino, d.Pais })).ToList(), new double[] { 32, 90 });
@@ -188,7 +190,8 @@ namespace EuroVip.Controllers
                 var dto = new ExcursionGuardarDto
                 {
                     Nombre = f.Texto("Nombre", "Excursión", "Excursion") ?? "", Id_Destino = f.Texto("Destino") ?? "",
-                    Precio = f.Cifra("Precio", "Precio por persona"), Cancelable = f.SiNo(false, "Cancelable"), Descripcion = f.Texto("Descripción", "Descripcion")
+                    Precio = f.Cifra("Precio", "Precio por persona"), Cancelable = f.SiNo(false, "Cancelable"), Descripcion = f.Texto("Descripción", "Descripcion"),
+                    Peso = f.Cifra("Prioridad", "Peso") is decimal pe ? (short)Math.Round(pe) : null, Precio_Proveedor = f.Cifra("Precio proveedor", "Precio del proveedor")
                 };
                 var fila = new CargaExcelFila { Fila = f.Numero, Nombre = dto.Nombre, Detalle = $"{dto.Id_Destino} · {(dto.Precio is decimal p ? p.ToString("N2") : "sin precio")}" };
                 r.Filas.Add(fila);

@@ -32,6 +32,10 @@ namespace EuroVip.Models
         public string Cobro { get; set; } = "VEHICULO";
         public decimal? Precio_Ida { get; set; }
         public decimal? Precio_Ida_Vuelta { get; set; }
+        /// <summary>Prioridad (FASE 29): 1 sale primero en la web, 2 segundo… null = sin prioridad (por precio).</summary>
+        [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
+        /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
+        [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
         public string Id_Moneda { get; set; } = "DOP";
         public bool Cancelable { get; set; }
         public short? Horas_Cancelacion { get; set; }
@@ -82,5 +86,9 @@ namespace EuroVip.Models
         public bool Todos_Hoteles { get; set; } = true;
         public List<int> Hoteles { get; set; } = new();
         public bool Activo { get; set; } = true;
+        /// <summary>Prioridad (FASE 29): 1 sale primero en la web, 2 segundo… null = sin prioridad (por precio).</summary>
+        [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
+        /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
+        [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
     }
 }
