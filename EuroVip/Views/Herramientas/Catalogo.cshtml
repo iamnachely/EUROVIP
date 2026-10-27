@@ -71,7 +71,39 @@
     .hc-rev-g td.d { color: var(--ev-muted); font-weight: 600; }
     .hc-rev-g tr[data-r] { cursor: pointer; }
     .hc-rev-g tr[data-r]:hover { background: var(--ev-surface-2); }
-    .hb-form { padding: 14px; border-radius: 16px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); margin-bottom: 12px; }
+    /* ---- Habitaciones del hotel: formulario en tarjeta y lista en filas ---- */
+    .hb-form { border-radius: 20px; background: var(--ev-surface); border: 1px solid var(--ev-line); margin-bottom: 14px; overflow: hidden;
+        box-shadow: 0 14px 34px -18px rgba(14, 60, 58, .35); animation: hbEntra .22s cubic-bezier(.2, .8, .2, 1); }
+    @@keyframes hbEntra { from { opacity: 0; transform: translateY(-6px) scale(.99); } }
+    .hb-cab { display: flex; gap: 12px; align-items: center; padding: 14px 16px; background: var(--ev-grad-soft); border-bottom: 1px solid var(--ev-line); }
+    .hb-ico { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; font-size: 20px; color: #fff; flex-shrink: 0;
+        background: linear-gradient(135deg, #0E8F86, #16B3A7); box-shadow: 0 6px 14px -6px rgba(14,143,134,.6); }
+    .hb-cab h4 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.2px; }
+    .hb-cab small { color: var(--ev-muted); font-weight: 600; display: block; margin-top: 1px; }
+    .hb-cab .hb-num { margin-left: auto; font: 800 12px var(--ev-font); padding: 4px 10px; border-radius: 99px; background: var(--ev-surface); border: 1px solid var(--ev-line); color: var(--ev-muted); white-space: nowrap; }
+    .hb-cuerpo { padding: 16px; display: grid; gap: 4px 14px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .hb-cuerpo > .ui-f { grid-column: span 2; margin-bottom: 8px; }
+    .hb-cuerpo > .ui-f:has([data-c="nombre"]) { grid-column: span 4; }
+    .hb-cuerpo > .ui-f:has([data-c="nota"]) { grid-column: 1 / -1; }
+    .hb-cuerpo > .ui-f:has([data-c="id_habitacion"]) { display: none; }
+    .hb-cuerpo textarea { min-height: 70px; }
+    .hb-pie { display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding: 12px 16px; border-top: 1px solid var(--ev-line); background: var(--ev-surface-2); }
+    .hb-pie small { margin-right: auto; color: var(--ev-muted); font-weight: 600; }
+    @@media (max-width: 720px) { .hb-cuerpo { grid-template-columns: 1fr; } .hb-cuerpo > .ui-f, .hb-cuerpo > .ui-f:has([data-c="nombre"]) { grid-column: 1 / -1; } }
+    .hb-lista { display: grid; gap: 8px; }
+    .hb-fila { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 16px;
+        border: 1px solid var(--ev-line); background: var(--ev-surface); transition: border-color .15s, box-shadow .15s, transform .15s; }
+    .hb-fila:hover { border-color: #9ED9D3; box-shadow: 0 8px 20px -14px rgba(14,60,58,.45); transform: translateY(-1px); }
+    .hb-fila.editando { border-color: #0E8F86; box-shadow: 0 0 0 3px rgba(14,143,134,.15); }
+    .hb-fila .hb-mini { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #E7F6F4; color: #0E8F86; font-size: 18px; }
+    .hb-fila b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; }
+    .hb-fila .hb-datos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
+    .hb-fila .hb-datos span { font: 700 11.5px var(--ev-font); padding: 2px 8px; border-radius: 8px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); color: var(--ev-muted); }
+    .hb-sup { font: 800 13px var(--ev-font); padding: 5px 10px; border-radius: 10px; white-space: nowrap; }
+    .hb-sup.base { background: #E7F6F4; color: #0B6E67; }
+    .hb-sup.mas { background: #FFF4E5; color: #8A4B00; }
+    .hb-acc { display: flex; gap: 4px; }
+    @@media (max-width: 560px) { .hb-fila { grid-template-columns: 34px minmax(0, 1fr) auto; } .hb-acc { grid-column: 2 / -1; justify-content: flex-end; } }
     @@media (max-width: 1100px) { .hc { grid-template-columns: 1fr; } .hc-nav { position: static; display: flex; flex-wrap: wrap; } .hc-nav .g { display: none; } }
     /* Categoría del hotel: estrellas de verdad (1 a 6) */
     .hc-est { display: inline-flex; gap: 4px; align-items: center; padding: 6px 10px; border: 1.5px solid var(--ev-line); border-radius: 14px; background: var(--ev-surface); }
@@ -549,22 +581,33 @@ const HC = (() => {
         habFilas = d.filas;
         $('#eNumHabs').textContent = d.total;
         $('#hbLista').innerHTML = !d.filas.length ? '<div class="ui-empty" style="padding:22px"><p style="margin:0">Sin habitaciones. Agrega la primera.</p></div>'
-            : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Habitación</th><th>Tipo</th><th class="num">Supl.</th><th style="width:90px"></th></tr></thead><tbody>
-              ${d.filas.map((h, i) => `<tr><td class="k">${h.id_habitacion}</td><td><b>${esc(h.nombre)}</b>${h.codigo ? ` <small style="color:var(--ev-muted)">${esc(h.codigo)}</small>` : ''}</td><td>${esc(h.id_tipo_habitacion)}</td><td class="num">${EV.fmt(h.precio, 2)}</td>
-                <td style="text-align:right;white-space:nowrap"><button class="ui-ibtn" data-hed="${i}" title="Editar"><i class="bi bi-pencil"></i></button><button class="ui-ibtn danger" data-hdel="${i}" title="Eliminar"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
-              </tbody></table></div>${d.total > 100 ? `<div class="ui-help">Mostrando 100 de ${EV.fmt(d.total)}. Usa el filtro para encontrar la que buscas.</div>` : ''}`;
+            : `<div class="hb-lista">${d.filas.map((h, i) => `<div class="hb-fila ${habEdit && habEdit.id_habitacion === h.id_habitacion ? 'editando' : ''}" data-hid="${h.id_habitacion}">
+                <span class="hb-mini"><i class="bi ${/suite/i.test(h.nombre + ' ' + h.id_tipo_habitacion) ? 'bi-gem' : /individual|single|sencilla/i.test(h.nombre + ' ' + h.id_tipo_habitacion) ? 'bi-person' : /famil|cuadr|triple/i.test(h.nombre + ' ' + h.id_tipo_habitacion) ? 'bi-people' : 'bi-door-open'}"></i></span>
+                <div style="min-width:0"><b title="${esc(h.nombre)}">${esc(h.nombre)}</b><div class="hb-datos"><span>#${h.id_habitacion}</span>${h.id_tipo_habitacion ? `<span>${esc(h.id_tipo_habitacion)}</span>` : ''}${h.codigo ? `<span>Código ${esc(h.codigo)}</span>` : ''}</div></div>
+                <span class="hb-sup ${+h.precio ? 'mas' : 'base'}">${+h.precio ? '+ ' + EV.dinero(h.precio) : 'Base'}</span>
+                <div class="hb-acc"><button class="ui-ibtn" data-hed="${i}" title="Editar"><i class="bi bi-pencil"></i></button><button class="ui-ibtn danger" data-hdel="${i}" title="Eliminar"><i class="bi bi-trash3"></i></button></div>
+              </div>`).join('')}</div>${d.total > 100 ? `<div class="ui-help">Mostrando 100 de ${EV.fmt(d.total)}. Usa el filtro para encontrar la que buscas.</div>` : ''}`;
     }
     async function habForm(h) {
         habEdit = h;
         const campos = HAB.campos.filter(c => c.tipo !== 'hotel' && !(c.auto && !h));
         const htmls = await Promise.all(campos.map(c => campoHtml(c, h?.[c.col], !h, 'h')));
-        $('#hbForm').innerHTML = `<div class="hb-form"><b style="display:block;margin-bottom:10px">${h ? 'Editar habitación #' + h.id_habitacion : 'Nueva habitación'}</b><div class="ui-row r3">${htmls.join('')}</div>
-            <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="ev-btn ghost sm" id="hbCancelar">Cancelar</button><button type="button" class="ev-btn sm" id="hbGuardar"><i class="bi bi-check2"></i> Guardar habitación</button></div></div>`;
+        $('#hbForm').innerHTML = `<div class="hb-form">
+            <div class="hb-cab"><span class="hb-ico"><i class="bi ${h ? 'bi-pencil-square' : 'bi-door-open'}"></i></span>
+                <div style="min-width:0"><h4>${h ? esc(h.nombre) : 'Nueva habitación'}</h4><small>${esc(actual?.nombre || 'Hotel')}${h ? '' : ' · completa los datos y guarda'}</small></div>
+                ${h ? `<span class="hb-num">Habitación #${h.id_habitacion}</span>` : ''}
+                <button type="button" class="ui-ibtn" id="hbCerrar" title="Cerrar" style="${h ? '' : 'margin-left:auto'}"><i class="bi bi-x-lg"></i></button></div>
+            <div class="hb-cuerpo">${htmls.join('')}</div>
+            <div class="hb-pie"><small><i class="bi bi-info-circle"></i> El suplemento se suma al precio de la oferta.</small>
+                <button type="button" class="ev-btn ghost sm" id="hbCancelar">Cancelar</button><button type="button" class="ev-btn sm" id="hbGuardar"><i class="bi bi-check2-circle"></i> ${h ? 'Guardar cambios' : 'Crear habitación'}</button></div></div>`;
+        $('#hbForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        $$('#hbLista .hb-fila').forEach(f => f.classList.toggle('editando', !!h && +f.dataset.hid === h.id_habitacion));
         if (h) $('[data-c="id_tipo_habitacion"]', $('#hbForm')).dataset.valor = h.id_tipo_habitacion;
         // aviso en vivo: solo contra las habitaciones de ESTE hotel (y sin compararse consigo misma)
         activarCampos($('#hbForm'), { ...HAB, campos, contexto: { id_alojamiento: String(actual.id_alojamiento) },
             propio: h ? { id_alojamiento: String(actual.id_alojamiento), id_habitacion: String(h.id_habitacion), id_idioma: h.id_idioma ?? null } : null }, !h);
-        $('#hbCancelar').onclick = () => $('#hbForm').innerHTML = '';
+        const cerrarForm = () => { $('#hbForm').innerHTML = ''; habEdit = null; $$('#hbLista .hb-fila.editando').forEach(f => f.classList.remove('editando')); };
+        $('#hbCancelar').onclick = cerrarForm; $('#hbCerrar').onclick = cerrarForm;
         $('#hbGuardar').onclick = async () => {
             const { datos, err } = leer($('#hbForm'), { campos });
             if (err.length) { EV.toast(err[0], 'err'); return; }
@@ -572,7 +615,7 @@ const HC = (() => {
             if (rojos.length && !await EV.confirmar({ titulo: 'Este hotel ya tiene una habitación así', peligro: true, si: h ? 'Guardar igualmente' : 'Crear igualmente', texto: rojos.map(esc).join('<br>') })) return;
             datos.id_alojamiento = actual.id_alojamiento;
             if (h) datos.id_habitacion = h.id_habitacion;
-            try { const r = await EV.post('/Herramientas/Guardar?id=habitaciones', { Datos: datos, Nuevo: !h }); EV.toast(r.mensaje); $('#hbForm').innerHTML = ''; habs(); cargar(); }
+            try { const r = await EV.post('/Herramientas/Guardar?id=habitaciones', { Datos: datos, Nuevo: !h }); EV.toast(r.mensaje); $('#hbForm').innerHTML = ''; habEdit = null; habs(); cargar(); }
             catch (e) { EV.toast(e.message, 'err'); }
         };
         $('#hbForm input:not([readonly])')?.focus();

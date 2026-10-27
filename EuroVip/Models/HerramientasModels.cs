@@ -179,7 +179,7 @@ namespace EuroVip.Models
                     new("nombre", "Nombre", Max: 255, Req: true),
                     new("id_tipo_habitacion", "Tipo", "tipohab", 100, Req: true),
                     new("codigo", "Código", Max: 50, Req: true, Defecto: ""),
-                    new("precio", "Suplemento", "decimal", Req: true, Defecto: "0"),
+                    new("precio", "Suplemento", "decimal", Req: true, Defecto: "0", Ayuda: "0 = habitación base"),
                     new("grupo", "Grupo", "number", Req: true, EnTabla: false, Defecto: "0"),
                     new("nota", "Nota", "textarea", EnTabla: false)
                     // Código / Nombre Newblue: quitados de la pantalla (pedido de la usuaria); al editar se conservan los que haya
