@@ -191,7 +191,8 @@
             <div id="eForm"></div>
             @if (fotos is not null)
             {
-                <div class="ui-f" style="margin-top:14px"><label>@(fotos.Value.Portada ? "Fotos" : "Galería") <em>se guardan al momento en multimedia</em></label><div id="eFotos"></div></div>
+                <div class="ui-f" style="margin-top:14px"><label style="display:flex;align-items:center;gap:8px">@(fotos.Value.Portada ? "Fotos" : "Galería") <em>se guardan al momento en multimedia</em>
+                    <button type="button" class="ev-btn ghost sm" id="eVerFotos" style="margin-left:auto" title="Ver las fotos en grande, una tras otra"><i class="bi bi-play-circle"></i> Ver carrusel</button></label><div id="eFotos"></div></div>
             }
         </div>
         @if (Model.Especial == "alojamiento")
@@ -218,6 +219,7 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-mapa.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-carrusel.js" asp-append-version="true"></script>
 <script>window.EV_MAPS_KEY = @Json.Serialize(((Microsoft.Extensions.Configuration.IConfiguration)Context.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration))!)["GoogleMaps:ApiKey"] ?? "");</script>
 <script>
 const HC = (() => {
@@ -279,7 +281,7 @@ const HC = (() => {
             ${d.filas.map((f, i) => `<tr data-i="${i}">
                 ${cols.map(c => `<td class="${c.clave && (c.tipo === 'number' || (c.max && c.max <= 10)) ? 'k' : ''}">${c.tipo === 'hotel' ? esc(f.hotel_nombre || f[c.col]) + ` <small style="color:var(--ev-muted)">#${f[c.col]}</small>` : fmtCelda(c, f[c.col])}</td>`).join('')}
                 ${extras.map(x => `<td>${x.alias === 'habitaciones' ? `<span class="ui-chip ${f[x.alias] ? '' : 'ghost'}" style="padding:2px 9px">${EV.fmt(f[x.alias])}</span>` : esc(f[x.alias] ?? '—')}</td>`).join('')}
-                <td style="white-space:nowrap;text-align:right"><button class="ui-ibtn" title="Editar" data-ed="${i}"><i class="bi bi-pencil"></i></button>
+                <td style="white-space:nowrap;text-align:right">${FOTOS ? `<button class="ui-ibtn" title="Ver fotos (carrusel)" data-fotos="${i}"><i class="bi bi-images"></i></button>` : ''}<button class="ui-ibtn" title="Editar" data-ed="${i}"><i class="bi bi-pencil"></i></button>
                     <button class="ui-ibtn danger" title="Eliminar" data-del="${i}"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
             </tbody></table></div>`;
         HC._filas = d.filas;
@@ -486,6 +488,25 @@ const HC = (() => {
         if (!esNuevo && el.value.trim()) revisarTexto();
     }
 
+    // ---------- Carrusel de fotos (Eurovip.multimedia: portada, banner y galería; y la imagen del catálogo si es otra) ----------
+    async function fotosDe(fila) {
+        const clave = fila?.[FOTOS?.col];
+        if (!FOTOS || clave == null || clave === '') return [];
+        let items = [];
+        try { items = (await EV.api(`/Multimedia/Listar?tipo=${encodeURIComponent(FOTOS.tipo)}&clave=${encodeURIComponent(clave)}`)).items || []; } catch { }
+        const orden = { PORTADA: 0, INTERMEDIA: 1, GALERIA: 2 };
+        const l = items.sort((a, b) => (orden[a.uso] ?? 3) - (orden[b.uso] ?? 3) || a.orden - b.orden)
+            .map(x => ({ url: x.url, texto: x.texto_Alternativo || { PORTADA: 'Portada', INTERMEDIA: 'Banner' }[x.uso] || '' }));
+        const img = DEF.campos.find(c => c.tipo === 'imagen'), u = img ? fila[img.col] : null;
+        // la imagen del catálogo solo si no tiene fotos propias; la de ViajeVDT que comparten ~2.000 hoteles se avisa como genérica
+        if (!l.length && u && esImg(u)) l.push({ url: u, texto: String(u).includes("d2poxrheyfxwbo.cloudfront.net/hotel/a058b389") ? 'Imagen genérica de ViajeVDT (no es de este hotel): sube sus fotos en la Galería' : 'Imagen del catálogo' });
+        return l;
+    }
+    async function verFotos(fila) {
+        const nombre = fila?.nombre || fila?.id_destino || DEF.singular;
+        EVCarrusel.abrir({ fotos: await fotosDe(fila), titulo: nombre, vacio: `${nombre} todavía no tiene fotos. Súbelas en Editar › ${FOTOS?.portada ? 'Fotos' : 'Galería'}.` });
+    }
+
     function leer(cont, def) {
         const datos = {}, err = [];
         $$('.ui-f.err', cont).forEach(f => f.classList.remove('err'));
@@ -541,6 +562,7 @@ const HC = (() => {
             galeria.cambiar(nuevo ? null : actual?.[FOTOS.col]);
         }
         if (tabs) { tabs.ir('ePaneDatos'); $('#eTabs [data-tab="ePaneHabs"]').disabled = nuevo; $('#eNumHabs').textContent = actual?.habitaciones ?? 0; if (!nuevo) habs(); }
+        if ($('#eVerFotos')) { $('#eVerFotos').hidden = nuevo; $('#eVerFotos').onclick = () => verFotos(actual); }
         drawer.abrir();
         setTimeout(() => $('#eForm input:not([readonly]), #eForm select:not([disabled])')?.focus(), 80);
     }
@@ -655,6 +677,7 @@ const HC = (() => {
         $('#hcTam').onchange = e => { st.tam = +e.target.value; st.pagina = 1; cargar(); };
         $('#hcPages').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b && !b.disabled) { st.pagina = +b.dataset.p; cargar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
         $('#hcLista').addEventListener('click', e => {
+            const vf = e.target.closest('[data-fotos]'); if (vf) { verFotos(HC._filas[+vf.dataset.fotos]); return; }
             const del = e.target.closest('[data-del]'); if (del) { e.stopPropagation(); return eliminar(HC._filas[+del.dataset.del]); }
             const tr = e.target.closest('tr[data-i]'); if (tr) abrir(HC._filas[+tr.dataset.i]);
         });
