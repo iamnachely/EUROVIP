@@ -235,6 +235,8 @@
         <div class="ag-ed-c">
             <div class="ag-box"><h3><i class="bi bi-geo-alt-fill"></i> Destino</h3><select class="ui-select" id="fDestino" style="width:100%"></select></div>
             <div class="ag-box"><h3><i class="bi bi-palette-fill"></i> Plantilla</h3><div class="ag-plant" id="fPlantillas"></div>
+                <div id="fColores" hidden style="margin-top:10px"></div>
+                <div id="fMoneda" style="margin-top:10px"></div>
                 <div class="ui-help" style="margin:8px 0 0">Se usa al guardar, descargar y en «Guardar imágenes de todos».</div></div>
             <div class="ag-box"><h3><i class="bi bi-lightning-charge-fill"></i> Acciones</h3>
                 <button type="button" class="ev-btn ghost" id="fGuardarUno"><i class="bi bi-download"></i> Guardar este flyer</button>
@@ -345,6 +347,8 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carrusel.js" asp-append-version="true"></script>
+<link rel="stylesheet" href="~/css/eurovip-flyer-disenos.css" asp-append-version="true" />
+<script src="~/js/eurovip-flyer-disenos.js" asp-append-version="true"></script>
 <script>
 (() => {
     const $ = (s, el = document) => el.querySelector(s);
@@ -354,6 +358,8 @@
     const drawer = EV.drawer($('#agDrawer'));
     const tabs = EV.tabs($('#agTabs'), id => { if (id === 'tFly') setTimeout(escalar, 30); if (id === 'tEnv') pintarEnvio(); });
     const precio = n => n == null ? '—' : `RD$ ${EV.fmt(n)}`;
+    // en el flyer: con el símbolo elegido y en su sitio («RD$ 12.990» / «12.990 €»)
+    const precioFly = n => window.EVDisenos ? EVDisenos.precio(n) : precio(n);
     const clave = t => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9 -]/g, '').trim().replace(/ /g, '-');
     const destinoDe = archivo => { const m = /^agencia_(.+?)(_\d{8}_\d{6}(_\d+)?)?\.\w+$/.exec(archivo); return m ? m[1] : null; };
     const configDe = archivo => { const k = destinoDe(archivo); return k && D.configs.find(c => clave(c.id_Destino) === k || clave(c.nombre_Destino || '') === k); };
@@ -371,7 +377,8 @@
         sel.innerHTML = D.destinos.length ? D.destinos.map(d => `<option value="${esc(d.id_Destino)}">${esc(d.nombre_Destino)}</option>`).join('') : '<option value="">Sin destinos con precios</option>';
         if (antes && D.destinos.some(d => d.id_Destino === antes)) sel.value = antes;
         actual = D.destinos.find(d => d.id_Destino === sel.value) || null;
-        pintarPlantillas(); pintarFlyer(actual); pintarEstado(); pintarDestinos(); pintarGaleria(); pintarAgencias(); pintarLinks(); pintarMonitor();
+        pintarPlantillas(); if (window.EVDisenos && !$('#fMoneda').children.length) EVDisenos.panelMoneda($('#fMoneda'), () => pintarFlyer(actual));
+        pintarFlyer(actual); pintarEstado(); pintarDestinos(); pintarGaleria(); pintarAgencias(); pintarLinks(); pintarMonitor();
         if (D.enCurso) { tabs.ir('tEnv'); seguir(D.enCurso); }
     }
 
@@ -383,12 +390,15 @@
         { id: 'elegante', nombre: 'Elegante', mini: 'linear-gradient(180deg,#0A1A30,#13365a)' },
         { id: 'minimal', nombre: 'Minimal', mini: 'linear-gradient(180deg,#fff 0 60%,#E2E8F0 60%)' },
         { id: 'vibrante', nombre: 'Vibrante', mini: 'linear-gradient(170deg,#FF8A3D,#E0306B)' },
+        // modernos (eurovip-flyer-disenos.js): mismo HTML que la Clásica, colores a elegir
+        ...(window.EVDisenos ? EVDisenos.LISTA.map(d => ({ ...d, moderno: true })) : []),
     ];
     let plantilla = (() => { try { return localStorage.getItem('ag-plantilla') || 'clasica'; } catch { return 'clasica'; } })();
     if (!PLANTILLAS.some(p => p.id === plantilla)) plantilla = 'clasica';
     function pintarPlantillas() {
         $('#fPlantillas').innerHTML = PLANTILLAS.map(p => `<button type="button" class="${p.id === plantilla ? 'on' : ''}" data-plantilla="${p.id}" title="Plantilla ${p.nombre}">
-            <span class="mini" style="background:${p.mini}"></span>${p.nombre}</button>`).join('');
+            <span class="mini" style="background:${p.mini}"></span>${p.nombre}${p.moderno ? ' <small style="color:#FF8A3D">✦</small>' : ''}</button>`).join('');
+        if (window.EVDisenos) EVDisenos.panelColores($('#fColores'), plantilla, () => pintarFlyer(actual));
     }
     $('#fPlantillas').addEventListener('click', e => {
         const b = e.target.closest('[data-plantilla]'); if (!b) return;
@@ -406,33 +416,35 @@
             <div class="pf-foto" style="background:linear-gradient(180deg,rgba(0,20,30,.05) 30%,rgba(0,20,30,.78)),${fotoFondo(d)}">
                 <div class="pf-logo">${logo}</div><span class="pf-chip">Oferta especial</span>
                 <div class="pf-tit">${esc(d.nombre_Destino)}</div><div class="pf-sub">${sub}</div></div>
-            ${hs.length ? `<div class="pf-grid">${hs.map((h, i) => `<div class="pf-card ${i === 0 ? 'top' : ''}"><b>${esc(h.nombre_Hotel)}</b><small>${i === 0 ? '✦ Mejor precio · ' : ''}${esc(h.regimen || '')}</small><span class="pr">${precio(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            ${hs.length ? `<div class="pf-grid">${hs.map((h, i) => `<div class="pf-card ${i === 0 ? 'top' : ''}"><b>${esc(h.nombre_Hotel)}</b><small>${i === 0 ? '✦ Mejor precio · ' : ''}${esc(h.regimen || '')}</small><span class="pr">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
             <div class="pf-pie"><span class="tp-url">${webCorta()}</span><span>Tu agencia de confianza</span></div>`;
         if (plantilla === 'elegante') return `
             <div class="el-cab"><span class="el-logo">${logo}</span><div class="el-orn">✦ Selección exclusiva ✦</div>
                 <div class="el-tit">${esc(d.nombre_Destino)}</div><div class="el-sub">${sub}</div></div>
             <div class="el-foto" style="background:${fotoFondo(d)}"></div>
-            ${hs.length ? `<div class="el-lista">${hs.map((h, i) => `<div class="el-fila"><span class="n">${i + 1}</span><span><span class="h">${esc(h.nombre_Hotel)}</span><span class="r">${esc(h.regimen || '')}</span></span><span class="pts"></span><span class="p">${precio(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            ${hs.length ? `<div class="el-lista">${hs.map((h, i) => `<div class="el-fila"><span class="n">${i + 1}</span><span><span class="h">${esc(h.nombre_Hotel)}</span><span class="r">${esc(h.regimen || '')}</span></span><span class="pts"></span><span class="p">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
             <div class="el-pie tp-url">${webCorta()}</div>`;
         if (plantilla === 'minimal') return `
             <div class="mi-cab"><span class="mi-tag">Oferta especial</span>${logo}</div>
             <div class="mi-tit">${esc(d.nombre_Destino)}</div><div class="mi-sub">${sub}</div>
             <div class="mi-foto" style="background:${fotoFondo(d)}"></div>
-            ${hs.length ? `<div class="mi-lista">${hs.map((h, i) => `<div class="mi-fila ${i === 0 ? 'top' : ''}"><span class="n">0${i + 1}</span><span><div class="h">${esc(h.nombre_Hotel)}</div><div class="r">${esc(h.regimen || '')}</div></span><span class="p">${precio(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            ${hs.length ? `<div class="mi-lista">${hs.map((h, i) => `<div class="mi-fila ${i === 0 ? 'top' : ''}"><span class="n">0${i + 1}</span><span><div class="h">${esc(h.nombre_Hotel)}</div><div class="r">${esc(h.regimen || '')}</div></span><span class="p">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
             <div class="mi-pie"><span class="tp-url">${webCorta()}</span><span>Precios por persona · desde</span></div>`;
         /* vibrante */ return `
-            <div class="vi-cab"><span class="vi-logo">${logo}</span>${hs.length ? `<span class="vi-sello">desde<b>${precio(Math.min(...hs.map(h => h.precio_Final ?? Infinity)))}</b></span>` : ''}</div>
+            <div class="vi-cab"><span class="vi-logo">${logo}</span>${hs.length ? `<span class="vi-sello">desde<b>${precioFly(Math.min(...hs.map(h => h.precio_Final ?? Infinity)))}</b></span>` : ''}</div>
             <div class="vi-tit">${esc(d.nombre_Destino)}</div><div class="vi-sub">${sub}</div>
             <div class="vi-foto" style="background:${fotoFondo(d)}"></div>
-            ${hs.length ? `<div class="vi-lista">${hs.map((h, i) => `<div class="vi-fila"><span class="n">${i + 1}</span><span class="h">${esc(h.nombre_Hotel)}<span class="r">${esc(h.regimen || '')}</span></span><span class="p">${precio(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            ${hs.length ? `<div class="vi-lista">${hs.map((h, i) => `<div class="vi-fila"><span class="n">${i + 1}</span><span class="h">${esc(h.nombre_Hotel)}<span class="r">${esc(h.regimen || '')}</span></span><span class="p">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
             <div class="vi-pie"><span class="tp-url">${webCorta()}</span><span>¡Reserva ya!</span></div>`;
     }
 
     // ================= FLYER (HTML → PNG con html2canvas, como BackTiTan) =================
     function pintarFlyer(d) {
         const fl = $('#flyer');
-        fl.className = 'flyer' + (d && plantilla !== 'clasica' ? ' tp tp-' + plantilla : '');
-        if (d && plantilla !== 'clasica') { fl.innerHTML = flyerNuevo(d); setTimeout(escalar, 30); return; }
+        const moderno = !!window.EVDisenos && EVDisenos.es(plantilla);
+        fl.className = 'flyer' + (d && plantilla !== 'clasica' && !moderno ? ' tp tp-' + plantilla : '');
+        if (window.EVDisenos) EVDisenos.aplicar(fl, d && moderno ? plantilla : null);
+        if (d && plantilla !== 'clasica' && !moderno) { fl.innerHTML = flyerNuevo(d); setTimeout(escalar, 30); return; }
         if (!d) { fl.innerHTML = '<div class="flyer-accent"></div><div class="flyer-no-data"><i class="bi bi-image" style="font-size:3rem"></i><p>Agrega destinos en la pestaña <b>Destinos</b> y pulsa <b>Actualizar precios</b>.</p></div>'; setTimeout(escalar, 30); return; }
         const fondo = d.fondo ? `linear-gradient(to bottom, rgba(0,30,42,.15) 0%, rgba(0,30,42,.72) 100%), url('${d.fondo}') center/cover no-repeat` : 'linear-gradient(155deg, #003d52 0%, #00647a 55%, #003d52 100%)';
         const reg = (d.hoteles.find(h => h.regimen) || {}).regimen;
@@ -441,7 +453,7 @@
             const pos = h.posicion, best = pos === 1, pc = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
             return `<div class="fh-row${best ? ' best' : ''}"><div class="fh-pos ${pc}">${pos}</div><div class="fh-sep"></div>
                 <div class="fh-info"><div class="fh-name">${esc(h.nombre_Hotel)}</div><div class="fh-meta">${esc(h.regimen || '')}</div>${best ? '<div class="fh-best-tag">✦ mejor precio</div>' : ''}</div>
-                <div class="fh-price${best ? ' rank1' : ''}">${precio(h.precio_Final)}</div></div>`;
+                <div class="fh-price${best ? ' rank1' : ''}">${precioFly(h.precio_Final)}</div></div>`;
         }).join('');
         fl.innerHTML = `<div class="flyer-accent"></div>
             <div class="flyer-hero" style="background:${fondo};background-color:#003d52">

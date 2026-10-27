@@ -344,6 +344,9 @@
         <button id="btnToggleLogo" class="st-btn"><i class="bi bi-image"></i> Logo</button>
         <span class="st-sep"></span>
         <span class="st-dis" id="stDisenos" title="Diseño del flyer: los mismos de Flyer Agencia. Se usa al guardar y descargar.">Diseño:</span>
+        <span class="st-sep"></span>
+        <span id="stMoneda"></span>
+        <div id="stColores" hidden style="flex-basis:100%;border-top:1px dashed #e2e8f0;padding-top:8px"></div>
     </div>
 
     <!-- ══════════════════════════════════
@@ -794,34 +797,49 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
         integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="~/css/eurovip-flyer-disenos.css" asp-append-version="true" />
+<script src="~/js/eurovip-flyer-disenos.js" asp-append-version="true"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 (function () {
-    // ── Diseños del flyer (pieles CSS sobre #flyerTemplate y #flyerTemplateEditor; la Clásica es la de siempre) ──
+    // ── Diseños del flyer: la Clásica (la de siempre), 4 pieles (Postal, Elegante, Minimal, Vibrante) y 6 modernos con colores
+    //    a elegir (EVDisenos, eurovip-flyer-disenos.js). Se aplican a #flyerTemplate y #flyerTemplateEditor; el HTML no cambia. ──
     (function () {
         var DIS = [['clasica', 'Clásica', 'linear-gradient(180deg,#003d52 0 45%,#fff 45%)'], ['postal', 'Postal', 'linear-gradient(180deg,#5b8fa8 0 55%,#F6F8FA 55%)'],
                    ['elegante', 'Elegante', 'linear-gradient(180deg,#0A1A30,#13365a)'], ['minimal', 'Minimal', 'linear-gradient(180deg,#fff 0 60%,#E2E8F0 60%)'],
-                   ['vibrante', 'Vibrante', 'linear-gradient(170deg,#FF8A3D,#E0306B)']];
+                   ['vibrante', 'Vibrante', 'linear-gradient(170deg,#FF8A3D,#E0306B)']]
+            .concat(window.EVDisenos ? EVDisenos.LISTA.map(function (d) { return [d.id, d.nombre, d.mini, true]; }) : []);
         var actual = 'clasica';
         try { actual = localStorage.getItem('fe-diseno') || 'clasica'; } catch (e) { }
+        if (!DIS.some(function (d) { return d[0] === actual; })) actual = 'clasica';
+        var flyers = function () { return ['flyerTemplate', 'flyerTemplateEditor'].map(function (id) { return document.getElementById(id); }).filter(Boolean); };
         function aplicar() {
-            ['flyerTemplate', 'flyerTemplateEditor'].forEach(function (id) {
-                var f = document.getElementById(id); if (!f) return;
+            flyers().forEach(function (f) {
                 DIS.forEach(function (d) { f.classList.remove('sk-' + d[0]); });
-                if (actual !== 'clasica') f.classList.add('sk-' + actual);
+                if (window.EVDisenos) EVDisenos.aplicar(f, actual);   // los modernos (o los quita)
+                if (actual !== 'clasica' && !(window.EVDisenos && EVDisenos.es(actual))) f.classList.add('sk-' + actual);
             });
-            var caja = document.getElementById('stDisenos'); if (!caja) return;
-            caja.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.dis === actual); });
+            var caja = document.getElementById('stDisenos');
+            if (caja) caja.querySelectorAll('button[data-dis]').forEach(function (b) { b.classList.toggle('on', b.dataset.dis === actual); });
+            if (window.EVDisenos) EVDisenos.panelColores(document.getElementById('stColores'), actual, aplicar);
         }
+        function moneda() { if (window.EVDisenos) flyers().forEach(function (f) { EVDisenos.aplicarMoneda(f); }); }
         document.addEventListener('DOMContentLoaded', function () {
             var caja = document.getElementById('stDisenos'); if (!caja) return;
             DIS.forEach(function (d) {
                 var b = document.createElement('button'); b.type = 'button'; b.dataset.dis = d[0];
-                b.innerHTML = '<i style="background:' + d[2] + '"></i>' + d[1];
+                b.innerHTML = '<i style="background:' + d[2] + '"></i>' + d[1] + (d[3] ? ' <small style="color:#FF8A3D;font-weight:900">✦</small>' : '');
+                b.title = d[3] ? 'Diseño moderno: puedes cambiarle los colores' : 'Diseño ' + d[1];
                 b.addEventListener('click', function () { actual = d[0]; try { localStorage.setItem('fe-diseno', actual); } catch (e) { } aplicar(); });
                 caja.appendChild(b);
             });
             aplicar();
+            if (window.EVDisenos) EVDisenos.panelMoneda(document.getElementById('stMoneda'), moneda);
+            moneda();
+            // los hoteles se vuelven a pintar al cambiar de destino o de plantilla: el símbolo se coloca de nuevo
+            var obs = new MutationObserver(function () { obs.disconnect(); moneda(); observar(); });
+            function observar() { ['flyerHoteles', 'flyerHotelesEditor'].forEach(function (id) { var c = document.getElementById(id); if (c) obs.observe(c, { childList: true, subtree: true }); }); }
+            observar();
         });
     })();
 

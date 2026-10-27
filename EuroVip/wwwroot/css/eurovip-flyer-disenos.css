@@ -1,0 +1,110 @@
+/* Diseños modernos del flyer (Flyer Agencia y Flyer Editor): Neón, Cristal, Bento, Bloque, Editorial y Aurora.
+   Van sobre el mismo HTML del flyer clásico (.flyer-accent, .flyer-hero, .flyer-title, .flyer-section-title, .fh-row,
+   .fh-pos, .fh-name, .fh-meta, .fh-price, .flyer-footer…), así que no cambian la edición ni la descarga.
+   Todos los colores salen de variables que el usuario puede cambiar (eurovip-flyer-disenos.js las pone en el .flyer):
+     --fx-fondo  fondo del flyer        --fx-tarjeta  fondo de cada hotel     --fx-texto  títulos y nombres
+     --fx-suave  texto secundario       --fx-num      números (1, 2, 3…)      --fx-precio precios
+     --fx-acento detalles (bordes, etiquetas, barras)   --fx-titulo título y subtítulo sobre la foto (blanco)
+   Los !important pisan los colores que el editor pone en línea (posiciones, régimen, precios). */
+
+/* ── base común de los 6 ── */
+.flyer.fx { background: var(--fx-fondo) !important; color: var(--fx-texto); }
+.flyer.fx .flyer-title { color: var(--fx-titulo, #fff) !important; }   /* va sobre la foto: claro aunque el diseño sea claro */
+.flyer.fx .flyer-subtitle { color: var(--fx-titulo, #fff) !important; opacity: .85; }
+.flyer.fx .flyer-section-title { color: var(--fx-acento) !important; border-color: transparent !important; }
+.flyer.fx .fh-name { color: var(--fx-texto) !important; }
+.flyer.fx .fh-meta { color: var(--fx-suave) !important; }
+.flyer.fx .fh-pos { color: var(--fx-num) !important; text-shadow: none; }
+.flyer.fx .fh-best-tag { color: var(--fx-acento) !important; }
+.flyer.fx .fh-price, .flyer.fx .fh-price.rank1 { color: var(--fx-precio) !important; }
+.flyer.fx .precio-sym { opacity: .8; }
+.flyer.fx .flyer-footer { background: transparent !important; border-top-color: transparent !important; }
+.flyer.fx .ff-url { color: var(--fx-texto) !important; }
+.flyer.fx .ff-tag { color: var(--fx-suave) !important; }
+.flyer.fx .ff-line { background: var(--fx-acento) !important; opacity: .45; }
+
+/* ── 1. Neón: noche, bordes que brillan ── */
+.flyer.fx-neon { --fx-fondo: #0B0B1A; --fx-tarjeta: #14142B; --fx-texto: #FFFFFF; --fx-suave: #A5A8D6; --fx-num: #00F0FF; --fx-precio: #FF3DF2; --fx-acento: #7C4DFF; }
+.flyer.fx-neon .flyer-accent { background: linear-gradient(90deg, var(--fx-num), var(--fx-acento), var(--fx-precio)) !important; height: 6px; }
+.flyer.fx-neon .flyer-hero { margin: 26px 36px 0; border-radius: 28px; border: 2px solid var(--fx-num); box-shadow: 0 0 34px -4px var(--fx-num), inset 0 0 40px rgba(0,0,0,.35); }
+.flyer.fx-neon .flyer-title { text-shadow: 0 0 22px var(--fx-acento), 0 0 4px rgba(255,255,255,.6); }
+.flyer.fx-neon .flyer-section-title { letter-spacing: 6px; }
+.flyer.fx-neon .flyer-section-title::after { background: linear-gradient(90deg, var(--fx-acento), transparent) !important; }
+.flyer.fx-neon .flyer-hotels { padding: 4px 36px 14px; }
+.flyer.fx-neon .fh-row, .flyer.fx-neon .fh-row.best { background: var(--fx-tarjeta) !important; border: 1px solid rgba(255,255,255,.08) !important; border-left: 4px solid var(--fx-acento) !important; border-radius: 16px; margin-bottom: 12px; padding: 16px 24px 16px 14px; }
+.flyer.fx-neon .fh-row.best { border-left-color: var(--fx-precio) !important; box-shadow: 0 0 26px -8px var(--fx-precio); }
+.flyer.fx-neon .fh-pos { text-shadow: 0 0 14px var(--fx-num); }
+.flyer.fx-neon .fh-sep { background: rgba(255,255,255,.12) !important; }
+.flyer.fx-neon .fh-price { text-shadow: 0 0 16px var(--fx-precio); }
+
+/* ── 2. Cristal: foto de fondo en todo el flyer y tarjetas translúcidas ── */
+.flyer.fx-cristal { --fx-fondo: #0E3B4A; --fx-tarjeta: rgba(255,255,255,.14); --fx-texto: #FFFFFF; --fx-suave: #CFEFF2; --fx-num: #FFFFFF; --fx-precio: #FFD166; --fx-acento: #7FE7DC; }
+.flyer.fx-cristal { background: linear-gradient(160deg, var(--fx-fondo) 0%, #071E26 100%) !important; }
+.flyer.fx-cristal .flyer-accent { display: none; }
+.flyer.fx-cristal .flyer-hero { margin: 0; border-radius: 0 0 40px 40px; }
+.flyer.fx-cristal .flyer-section-title { padding-top: 30px; }
+.flyer.fx-cristal .flyer-section-title::after { background: linear-gradient(90deg, rgba(255,255,255,.35), transparent) !important; }
+.flyer.fx-cristal .flyer-hotels { padding: 4px 40px 16px; }
+.flyer.fx-cristal .fh-row, .flyer.fx-cristal .fh-row.best { background: var(--fx-tarjeta) !important; border: 1px solid rgba(255,255,255,.28) !important; border-radius: 22px; margin-bottom: 12px; padding: 16px 26px 16px 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+.flyer.fx-cristal .fh-row.best { background: rgba(255,255,255,.24) !important; }
+.flyer.fx-cristal .fh-pos { width: 52px; height: 52px; min-width: 52px; border-radius: 50%; background: rgba(255,255,255,.18); display: grid; place-items: center; font-size: 1.6rem; align-self: center; }
+.flyer.fx-cristal .fh-sep { display: none; }
+
+/* ── 3. Bento: mosaico de tarjetas en dos columnas ── */
+.flyer.fx-bento { --fx-fondo: #F2F0EB; --fx-tarjeta: #FFFFFF; --fx-texto: #111111; --fx-suave: #6B6B6B; --fx-num: #FF5A36; --fx-precio: #111111; --fx-acento: #FF5A36; }
+.flyer.fx-bento .flyer-accent { display: none; }
+.flyer.fx-bento .flyer-hero { margin: 28px 32px 0; border-radius: 30px; }
+.flyer.fx-bento .flyer-section-title { padding: 22px 32px 10px; }
+.flyer.fx-bento .flyer-section-title::after { background: var(--fx-acento) !important; opacity: .3; }
+.flyer.fx-bento .flyer-hotels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 6px 32px 18px; align-content: start; }
+.flyer.fx-bento .fh-row, .flyer.fx-bento .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-radius: 26px; padding: 18px 20px !important; flex-direction: column; gap: 6px; box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 12px 28px -18px rgba(0,0,0,.35); }
+.flyer.fx-bento .fh-row.best { grid-column: 1 / -1; background: var(--fx-acento) !important; }
+.flyer.fx-bento .fh-row.best .fh-name, .flyer.fx-bento .fh-row.best .fh-pos, .flyer.fx-bento .fh-row.best .fh-price, .flyer.fx-bento .fh-row.best .fh-best-tag { color: #FFFFFF !important; }
+.flyer.fx-bento .fh-row.best .fh-meta { color: rgba(255,255,255,.85) !important; }
+.flyer.fx-bento .fh-pos { text-align: left; font-size: 1.5rem; min-width: 0; }
+.flyer.fx-bento .fh-sep { display: none; }
+.flyer.fx-bento .fh-info { width: 100%; }
+.flyer.fx-bento .fh-price { align-self: flex-start; padding-top: 6px; }
+
+/* ── 4. Bloque: dos colores fuertes, números enormes ── */
+.flyer.fx-bloque { --fx-fondo: #1F2BFF; --fx-tarjeta: #1F2BFF; --fx-texto: #FFFFFF; --fx-suave: #C9CCFF; --fx-num: #E8FF3A; --fx-precio: #E8FF3A; --fx-acento: #E8FF3A; }
+.flyer.fx-bloque .flyer-accent { background: var(--fx-acento) !important; height: 14px; }
+.flyer.fx-bloque .flyer-hero { margin: 0 36px; border-radius: 0 0 0 80px; }
+.flyer.fx-bloque .flyer-title { text-transform: uppercase; font-family: 'Plus Jakarta Sans', Arial, sans-serif !important; letter-spacing: -3px; font-weight: 900; }
+.flyer.fx-bloque .flyer-section-title { font-size: 1.1rem; letter-spacing: 5px; }
+.flyer.fx-bloque .flyer-section-title::after { background: var(--fx-acento) !important; height: 3px; }
+.flyer.fx-bloque .flyer-hotels { padding: 0 36px 10px; }
+.flyer.fx-bloque .fh-row, .flyer.fx-bloque .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-bottom: 3px solid rgba(255,255,255,.18) !important; padding: 14px 0 !important; align-items: center; }
+.flyer.fx-bloque .fh-pos { font-size: 4.4rem; min-width: 84px; line-height: 1; }
+.flyer.fx-bloque .fh-sep { display: none; }
+.flyer.fx-bloque .fh-name { text-transform: uppercase; letter-spacing: .5px; }
+.flyer.fx-bloque .fh-price { align-self: center; padding-top: 0; margin-top: 0; font-size: calc(var(--tam-precio, 2.75rem) * 1.1); }
+
+/* ── 5. Editorial: revista, papel claro y letra con serifa ── */
+.flyer.fx-editorial { --fx-fondo: #FBF8F2; --fx-tarjeta: transparent; --fx-texto: #1B1B1B; --fx-suave: #7A7369; --fx-num: #B08D57; --fx-precio: #1B1B1B; --fx-acento: #B08D57; }
+.flyer.fx-editorial .flyer-accent { background: var(--fx-texto) !important; height: 2px; margin: 26px 56px 0; }
+.flyer.fx-editorial .flyer-hero { margin: 22px 56px 0; border-radius: 2px; outline: 1px solid var(--fx-texto); outline-offset: 8px; }
+.flyer.fx-editorial .flyer-section-title { font-family: 'Playfair Display', Georgia, serif; text-transform: none; letter-spacing: 0; font-size: 1.9rem; font-style: italic; padding: 34px 56px 10px; }
+.flyer.fx-editorial .flyer-section-title::after { background: var(--fx-texto) !important; opacity: .25; }
+.flyer.fx-editorial .flyer-hotels { padding: 0 56px 10px; }
+.flyer.fx-editorial .fh-row, .flyer.fx-editorial .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-bottom: 1px solid rgba(0,0,0,.12) !important; padding: 16px 0 !important; }
+.flyer.fx-editorial .fh-pos { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 2.4rem; }
+.flyer.fx-editorial .fh-sep { background: var(--fx-acento) !important; opacity: .5; }
+.flyer.fx-editorial .fh-name { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; }
+.flyer.fx-editorial .fh-meta { text-transform: uppercase; letter-spacing: 2px; font-size: calc(var(--tam-regimen, 1.85rem) * .6) !important; }
+.flyer.fx-editorial .fh-price { font-family: 'Playfair Display', Georgia, serif; }
+
+/* ── 6. Aurora: degradado suave, píldoras blancas ── */
+.flyer.fx-aurora { --fx-fondo: #FFE3EC; --fx-tarjeta: #FFFFFF; --fx-texto: #2A1B4D; --fx-suave: #7D6FA3; --fx-num: #8B5CF6; --fx-precio: #EC4899; --fx-acento: #8B5CF6; }
+.flyer.fx-aurora { background: radial-gradient(circle at 0% 0%, #C7D2FE 0%, transparent 45%), radial-gradient(circle at 100% 30%, #FBCFE8 0%, transparent 45%), radial-gradient(circle at 30% 100%, #A7F3D0 0%, transparent 45%), var(--fx-fondo) !important; }
+.flyer.fx-aurora .flyer-accent { display: none; }
+.flyer.fx-aurora .flyer-hero { margin: 30px 36px 0; border-radius: 36px; box-shadow: 0 24px 50px -24px rgba(42,27,77,.6); }
+.flyer.fx-aurora .flyer-section-title::after { background: linear-gradient(90deg, var(--fx-acento), transparent) !important; opacity: .4; }
+.flyer.fx-aurora .flyer-hotels { padding: 4px 36px 16px; }
+.flyer.fx-aurora .fh-row, .flyer.fx-aurora .fh-row.best { background: var(--fx-tarjeta) !important; border: 0 !important; border-radius: 99px; margin-bottom: 12px; padding: 12px 30px 12px 12px !important; align-items: center; box-shadow: 0 10px 24px -16px rgba(42,27,77,.5); }
+.flyer.fx-aurora .fh-pos { width: 56px; height: 56px; min-width: 56px; border-radius: 50%; background: var(--fx-fondo); display: grid; place-items: center; font-size: 1.6rem; }
+.flyer.fx-aurora .fh-sep { display: none; }
+.flyer.fx-aurora .fh-price { align-self: center; padding-top: 0; margin-top: 0; }
+
+/* ── símbolo de moneda detrás («12.990 €») ── */
+.flyer .fh-price.sym-detras { display: inline-flex; align-items: baseline; justify-content: flex-end; }
