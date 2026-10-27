@@ -195,6 +195,65 @@
 
 /* ── Template strip ── */
 .tpl-strip { display:flex; gap:6px; align-items:center; padding:8px 0 4px; flex-wrap:wrap; }
+
+/* ── Diseños (los mismos 5 de /Agencia). Clásica = sin clase. Solo CSS: el flyer, la edición y la descarga no cambian ── */
+.st-dis { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .82rem; font-weight: 700; color: #334155; }
+.st-dis button { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 5px 10px 5px 6px; background: #f8fafc; font-size: .8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; color: #334155; }
+.st-dis button i { width: 18px; height: 18px; border-radius: 5px; display: inline-block; }
+.st-dis button.on { border-color: #FF8A3D; background: #FFF7F0; box-shadow: 0 0 0 2px rgba(255,138,61,.2); }
+/* Postal: tarjetas blancas sobre gris, precio en etiqueta naranja, pie azul */
+.flyer.sk-postal .flyer-accent { background: #FF8A3D; }
+.flyer.sk-postal .flyer-section-title { color: #fff; background: #FF8A3D; margin: 22px 40px 6px; border-radius: 99px; padding: 10px 22px; border: 0; align-self: flex-start; }
+.flyer.sk-postal .flyer-section-title::after { display: none; }
+.flyer.sk-postal .flyer-hotels { background: #F6F8FA; padding: 10px 40px 20px; }
+.flyer.sk-postal .fh-row { background: #fff; border-radius: 20px; margin-bottom: 12px; border: 0; box-shadow: 0 10px 26px -14px rgba(0,40,60,.35); padding: 18px 26px 18px 14px; }
+.flyer.sk-postal .fh-row.best { background: linear-gradient(135deg, #003d52, #00647a); border: 0; }
+.flyer.sk-postal .fh-row.best .fh-name { color: #fff !important; }
+.flyer.sk-postal .fh-row.best .fh-meta, .flyer.sk-postal .fh-row.best .fh-best-tag { color: #FFD08A !important; }
+.flyer.sk-postal .fh-sep { display: none; }
+.flyer.sk-postal .fh-price { background: #FF8A3D; color: #fff !important; border-radius: 14px; padding: 8px 16px; align-self: center; margin-top: 0; }
+.flyer.sk-postal .flyer-footer { background: #003d52; border: 0; }
+.flyer.sk-postal .ff-url { color: #fff !important; } .flyer.sk-postal .ff-tag { color: #9FD3DC !important; } .flyer.sk-postal .ff-line { background: rgba(255,255,255,.25); }
+/* Elegante: azul noche y dorado */
+.flyer.sk-elegante { background: radial-gradient(circle at 20% 0%, #13365a 0%, #0A1A30 60%); }
+.flyer.sk-elegante .flyer-accent { background: linear-gradient(90deg, transparent, #D4AF37, transparent); height: 3px; }
+.flyer.sk-elegante .flyer-hero { margin: 18px 40px 0; border-radius: 26px; border: 2px solid rgba(212,175,55,.55); }
+.flyer.sk-elegante .flyer-section-title { color: #D4AF37; border-color: rgba(212,175,55,.25); justify-content: center; }
+.flyer.sk-elegante .flyer-section-title::after { display: none; }
+.flyer.sk-elegante .fh-row, .flyer.sk-elegante .fh-row.best { background: transparent; border-left-color: transparent; border-bottom: 1px solid rgba(212,175,55,.2); }
+.flyer.sk-elegante .fh-pos { color: #D4AF37 !important; text-shadow: none; }
+.flyer.sk-elegante .fh-sep { background: rgba(212,175,55,.35); }
+.flyer.sk-elegante .fh-name { color: #fff !important; }
+.flyer.sk-elegante .fh-meta { color: #C9B98F !important; }
+.flyer.sk-elegante .fh-best-tag { color: #D4AF37 !important; }
+.flyer.sk-elegante .fh-price { color: #D4AF37 !important; }
+.flyer.sk-elegante .flyer-footer { background: transparent; border-top: 1px solid rgba(212,175,55,.3); }
+.flyer.sk-elegante .ff-url { color: #D4AF37 !important; } .flyer.sk-elegante .ff-tag { color: #C9B98F !important; } .flyer.sk-elegante .ff-line { background: linear-gradient(90deg, transparent, rgba(212,175,55,.6), transparent); }
+/* Minimal: blanco, líneas finas, números grises, precios negros */
+.flyer.sk-minimal .flyer-accent { display: none; }
+.flyer.sk-minimal .flyer-hero { margin: 28px 40px 0; border-radius: 8px; }
+.flyer.sk-minimal .flyer-section-title { color: #64748B; letter-spacing: 4px; }
+.flyer.sk-minimal .fh-row, .flyer.sk-minimal .fh-row.best { background: transparent; border-left-color: transparent; border-bottom: 1px solid #E2E8F0; }
+.flyer.sk-minimal .fh-pos { color: #94A3B8 !important; text-shadow: none; font-size: 1.6rem; }
+.flyer.sk-minimal .fh-sep { display: none; }
+.flyer.sk-minimal .fh-meta { color: #64748B !important; }
+.flyer.sk-minimal .fh-best-tag { color: #E25A00 !important; }
+.flyer.sk-minimal .fh-price { color: #0F172A !important; }
+.flyer.sk-minimal .fh-price.rank1 { color: #E25A00 !important; }
+.flyer.sk-minimal .ff-url { color: #0F172A !important; } .flyer.sk-minimal .ff-line { background: #E2E8F0; }
+/* Vibrante: degradado naranja-rosa, filas blancas y precio en etiqueta oscura */
+.flyer.sk-vibrante { background: linear-gradient(170deg, #FF8A3D 0%, #FF5E3A 45%, #E0306B 100%); }
+.flyer.sk-vibrante .flyer-accent { background: #FFE14D; }
+.flyer.sk-vibrante .flyer-hero { margin: 22px 36px 0; border-radius: 30px; border: 6px solid rgba(255,255,255,.85); }
+.flyer.sk-vibrante .flyer-section-title { color: #fff; border: 0; }
+.flyer.sk-vibrante .flyer-section-title::after { background: rgba(255,255,255,.4); }
+.flyer.sk-vibrante .flyer-hotels { padding: 0 36px 16px; }
+.flyer.sk-vibrante .fh-row, .flyer.sk-vibrante .fh-row.best { background: #fff; border-radius: 20px; margin-bottom: 12px; border: 0; padding: 16px 22px 16px 12px; box-shadow: 0 8px 20px -10px rgba(0,0,0,.35); }
+.flyer.sk-vibrante .fh-pos { color: #E25A00 !important; text-shadow: none; }
+.flyer.sk-vibrante .fh-sep { display: none; }
+.flyer.sk-vibrante .fh-price { background: #1F2937; color: #FFE14D !important; border-radius: 12px; padding: 8px 14px; align-self: center; margin-top: 0; }
+.flyer.sk-vibrante .flyer-footer { background: transparent; border: 0; }
+.flyer.sk-vibrante .ff-url { color: #fff !important; } .flyer.sk-vibrante .ff-tag { color: #FFE14D !important; } .flyer.sk-vibrante .ff-line { background: rgba(255,255,255,.4); }
 .tpl-tab { display:inline-flex; align-items:center; gap:7px; padding:7px 14px; border:1.5px solid #e2e8f0; border-radius:9px; background:#fff; font-size:.82rem; font-weight:600; color:#64748b; cursor:pointer; transition:all .15s; user-select:none; }
 .tpl-tab:hover { border-color:#94a3b8; background:#f8fafc; }
 .tpl-tab.active { border-color:#0d7377; background:#f0fdfa; color:#0d7377; }
@@ -283,6 +342,8 @@
         <button id="btnAbrirFondo" class="st-btn"><i class="bi bi-image-fill"></i> Fondos</button>
         <span class="st-sep"></span>
         <button id="btnToggleLogo" class="st-btn"><i class="bi bi-image"></i> Logo</button>
+        <span class="st-sep"></span>
+        <span class="st-dis" id="stDisenos" title="Diseño del flyer: los mismos de Flyer Agencia. Se usa al guardar y descargar.">Diseño:</span>
     </div>
 
     <!-- ══════════════════════════════════
@@ -736,6 +797,34 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 (function () {
+    // ── Diseños del flyer (pieles CSS sobre #flyerTemplate y #flyerTemplateEditor; la Clásica es la de siempre) ──
+    (function () {
+        var DIS = [['clasica', 'Clásica', 'linear-gradient(180deg,#003d52 0 45%,#fff 45%)'], ['postal', 'Postal', 'linear-gradient(180deg,#5b8fa8 0 55%,#F6F8FA 55%)'],
+                   ['elegante', 'Elegante', 'linear-gradient(180deg,#0A1A30,#13365a)'], ['minimal', 'Minimal', 'linear-gradient(180deg,#fff 0 60%,#E2E8F0 60%)'],
+                   ['vibrante', 'Vibrante', 'linear-gradient(170deg,#FF8A3D,#E0306B)']];
+        var actual = 'clasica';
+        try { actual = localStorage.getItem('fe-diseno') || 'clasica'; } catch (e) { }
+        function aplicar() {
+            ['flyerTemplate', 'flyerTemplateEditor'].forEach(function (id) {
+                var f = document.getElementById(id); if (!f) return;
+                DIS.forEach(function (d) { f.classList.remove('sk-' + d[0]); });
+                if (actual !== 'clasica') f.classList.add('sk-' + actual);
+            });
+            var caja = document.getElementById('stDisenos'); if (!caja) return;
+            caja.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.dis === actual); });
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            var caja = document.getElementById('stDisenos'); if (!caja) return;
+            DIS.forEach(function (d) {
+                var b = document.createElement('button'); b.type = 'button'; b.dataset.dis = d[0];
+                b.innerHTML = '<i style="background:' + d[2] + '"></i>' + d[1];
+                b.addEventListener('click', function () { actual = d[0]; try { localStorage.setItem('fe-diseno', actual); } catch (e) { } aplicar(); });
+                caja.appendChild(b);
+            });
+            aplicar();
+        });
+    })();
+
 
     // Eurovip valida el token antiforgery en todos los POST: se agrega solo a los fetch de esta pantalla
     var _tokenEv = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
