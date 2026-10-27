@@ -321,7 +321,7 @@ const HC = (() => {
         if (c.tipo === 'url') return `<div class="ui-f" style="grid-column:1/-1">${lab}<input id="${id}" data-c="${c.col}" maxlength="${c.max || ''}" value="${esc(val)}" placeholder="https://…"><span class="msg"></span><div class="hc-prev" data-prev="${c.col}">${EV.esUrl(val) ? `<img src="${esc(val)}" alt="" onerror="this.remove()">` : ''}</div></div>`;
         // Latitud: con el botón para elegir la ubicación en el mapa (rellena latitud y longitud)
         if (LAT[c.col]) return `<div class="ui-f">${lab}<div style="display:flex;gap:8px"><input id="${id}" data-c="${c.col}" maxlength="${c.max || ''}" value="${esc(val)}" inputmode="decimal" placeholder="Ej. 18.582010" autocomplete="off" style="flex:1">
-            <button type="button" class="ev-btn ghost sm" data-mapa="${c.col}" title="Buscar el lugar y elegirlo en el mapa" style="white-space:nowrap"><i class="bi bi-geo-alt-fill"></i> Elegir en el mapa</button></div><span class="msg"></span></div>`;
+            <button type="button" class="ev-btn sm" data-mapa="${c.col}" title="Buscar el lugar y elegirlo en el mapa (rellena latitud y longitud)" style="white-space:nowrap"><i class="bi bi-geo-alt-fill"></i> Seleccionar ubicación</button></div><span class="msg"></span></div>`;
         const tipo = c.tipo === 'number' || c.tipo === 'decimal' ? `type="number" step="${c.tipo === 'decimal' ? '0.01' : '1'}"` : '';
         const disp = c.tipo === 'hotel' && val ? (v && actual?.hotel_nombre ? `${actual.hotel_nombre}` : `#${val}`) : val;
         return `<div class="ui-f">${lab}<input id="${id}" data-c="${c.col}" ${tipo} maxlength="${c.max || ''}" value="${esc(disp)}" data-valor="${esc(val)}" class="${c.mayus ? 'may' : ''}" ${ro} autocomplete="off"><span class="msg"></span></div>`;
