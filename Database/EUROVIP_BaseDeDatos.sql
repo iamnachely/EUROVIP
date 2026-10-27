@@ -4763,6 +4763,78 @@ GO
 
 
 /* ##########################################################################################
+   FASE 32 — LA WEB ORDENA POR PRIORIDAD (★) Y DEVUELVE EL PRECIO DEL PROVEEDOR  (27/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «si a uno le pongo peso 1 y a otro peso 2, aunque sean más caros salen primero;
+   lo que no tiene peso, de precio menor a mayor» y «el precio del proveedor, para que se vea la diferencia (tachado)».
+   Explicado fácil: las consultas de la web (spPortal*) ponen primero lo que tiene prioridad (1, 2, 3…) y después el
+   resto como antes; y devuelven también peso y precio_proveedor para que la API/web los use.
+     • fnPortalServicios: columnas peso y precio_proveedor (de la salida; en circuitos, si la salida no tiene, las del circuito).
+     • spPortalBuscarServicios: orden PRECIO = prioridad y después precio (el orden FECHA no cambia).
+     • spPortalListarInicio: en las secciones con «★ Prioridad» (contenedores.prioridad) las tarjetas van por peso
+       y después por precio; las demás siguen con el orden a mano.
+     • spPortalListarExcursiones, spPortalListarTraslados, spPortalBuscarTraslados, spPortalListarCruceros y
+       spPortalListarPublico (circuitos): prioridad primero + columnas peso y precio_proveedor.
+   Cambios: CAMBIO 107 (todo lo anterior). Se aplica con REPLACE sobre la definición actual de cada uno: si un texto
+   no aparece exactamente una vez, no se toca nada y avisa. No cambia ningún dato.
+   ########################################################################################## */
+SET XACT_ABORT ON;
+GO
+DECLARE @c TABLE (n int IDENTITY, obj sysname, viejo nvarchar(max), nuevo nvarchar(max));
+INSERT INTO @c (obj, viejo, nuevo) VALUES
+ (N'fnPortalServicios', N'AS circuito_imagen,', N'AS circuito_imagen, COALESCE(s.peso, c.peso) AS peso, CAST(COALESCE(s.precio_proveedor, c.precio_proveedor) AS decimal(19,4)) AS precio_proveedor,'),
+ (N'fnPortalServicios', N'CREATE   FUNCTION', N'CREATE OR ALTER FUNCTION'),
+ (N'spPortalBuscarServicios', N'f.circuito_imagen, f.apertura,', N'f.circuito_imagen, f.apertura, f.peso, f.precio_proveedor,'),
+ (N'spPortalBuscarServicios', N'ORDER BY CASE WHEN @Orden = ''FECHA'' THEN f.salida END,',
+     N'ORDER BY CASE WHEN @Orden = ''FECHA'' THEN f.salida END,
+              CASE WHEN @Orden <> ''FECHA'' AND f.peso IS NOT NULL THEN 0 ELSE 1 END, CASE WHEN @Orden <> ''FECHA'' THEN f.peso END,   -- CAMBIO 107'),
+ (N'spPortalListarInicio', N'i.caratulaDestino AS imagen, i.noches,', N'i.caratulaDestino AS imagen, i.noches, i.peso,'),
+ (N'spPortalListarInicio', N'ORDER BY c.posicion, c.id_contenedor, i.posicion_destino, i.id;',
+     N'ORDER BY c.posicion, c.id_contenedor,
+              -- CAMBIO 107: sección con «★ Prioridad» = por peso y después por precio; si no, el orden a mano
+              CASE WHEN c.prioridad = 1 THEN CASE WHEN i.peso IS NULL THEN 1 ELSE 0 END END, CASE WHEN c.prioridad = 1 THEN i.peso END,
+              CASE WHEN c.prioridad = 1 THEN i.precioWeb END, i.posicion_destino, i.id;'),
+ (N'spPortalListarExcursiones', N'''DOP'' AS id_moneda,', N'''DOP'' AS id_moneda, e.peso, CAST(e.precio_proveedor AS decimal(19,4)) AS precio_proveedor,'),
+ (N'spPortalListarExcursiones', N'ORDER BY destino, CASE WHEN ISNULL(e.precio, 0) > 0', N'ORDER BY destino, CASE WHEN e.peso IS NULL THEN 1 ELSE 0 END, e.peso, CASE WHEN ISNULL(e.precio, 0) > 0'),
+ (N'spPortalListarTraslados', N't.id_moneda, t.cancelable,', N't.id_moneda, t.peso, CAST(t.precio_proveedor AS decimal(19,4)) AS precio_proveedor, t.cancelable,'),
+ (N'spPortalListarTraslados', N'ORDER BY t.id_destino, t.id_estacion_origen,', N'ORDER BY t.id_destino, t.id_estacion_origen, CASE WHEN t.peso IS NULL THEN 1 ELSE 0 END, t.peso,'),
+ (N'spPortalBuscarTraslados', N't.id_moneda, t.cancelable,', N't.id_moneda, t.peso, CAST(t.precio_proveedor AS decimal(19,4)) AS precio_proveedor, t.cancelable,'),
+ (N'spPortalBuscarTraslados', N'ORDER BY precio_total,', N'ORDER BY CASE WHEN t.peso IS NULL THEN 1 ELSE 0 END, t.peso, precio_total,'),
+ (N'spPortalListarCruceros', N'c.puerto_salida, c.puerto_llegada, c.id_moneda,', N'c.puerto_salida, c.puerto_llegada, c.id_moneda, c.peso, CAST(c.precio_proveedor AS decimal(19,4)) AS precio_proveedor,'),
+ (N'spPortalListarCruceros', N'ORDER BY c.titulo;', N'ORDER BY CASE WHEN c.peso IS NULL THEN 1 ELSE 0 END, c.peso, c.titulo;'),
+ (N'spPortalListarPublico', N'c.noches, c.caratula AS imagen, c.itinerario,', N'c.noches, c.caratula AS imagen, c.itinerario, c.peso, CAST(c.precio_proveedor AS decimal(19,4)) AS precio_proveedor,'),
+ (N'spPortalListarPublico', N'ORDER BY c.nombre_circuito;', N'ORDER BY CASE WHEN c.peso IS NULL THEN 1 ELSE 0 END, c.peso, c.nombre_circuito;');
+
+-- 1) comprobar: cada texto aparece UNA vez y el cambio no está ya hecho
+DECLARE @def TABLE (obj sysname PRIMARY KEY, def nvarchar(max));
+INSERT INTO @def SELECT DISTINCT obj, OBJECT_DEFINITION(OBJECT_ID(N'Eurovip.' + obj)) FROM @c;
+IF EXISTS (SELECT 1 FROM @def WHERE def IS NULL OR CHARINDEX(N'precio_proveedor', def) > 0)
+    THROW 50107, 'CAMBIO 107: falta un procedimiento o ya estaba cambiado', 1;
+DECLARE @mal nvarchar(max) = (SELECT STRING_AGG(c.obj + N': «' + LEFT(c.viejo, 60) + N'» x' + CAST((LEN(d.def) - LEN(REPLACE(d.def, c.viejo, N''))) / LEN(c.viejo) AS nvarchar(5)), N' · ')
+                                FROM @c c JOIN @def d ON d.obj = c.obj
+                               WHERE (LEN(d.def) - LEN(REPLACE(d.def, c.viejo, N''))) / LEN(c.viejo) <> 1
+                                 AND c.viejo NOT LIKE N'CREATE%');
+IF @mal IS NOT NULL THROW 50107, @mal, 1;
+
+-- 2) aplicar
+DECLARE @o sysname, @t nvarchar(max), @n int = 1, @max int = (SELECT MAX(n) FROM @c);
+WHILE @n <= @max
+BEGIN
+    UPDATE d SET def = REPLACE(d.def, c.viejo, c.nuevo) FROM @def d JOIN @c c ON c.obj = d.obj WHERE c.n = @n;
+    SET @n += 1;
+END
+UPDATE @def SET def = REPLACE(def, N'CREATE   PROCEDURE', N'CREATE OR ALTER PROCEDURE') WHERE obj <> N'fnPortalServicios';
+IF EXISTS (SELECT 1 FROM @def WHERE def NOT LIKE N'%CREATE OR ALTER%') THROW 50107, 'CAMBIO 107: no se encontró CREATE para cambiar a CREATE OR ALTER', 1;
+-- la función primero (los procedimientos usan sus columnas nuevas)
+SELECT @t = def FROM @def WHERE obj = N'fnPortalServicios'; EXEC sp_executesql @t;
+DECLARE k CURSOR LOCAL FAST_FORWARD FOR SELECT obj, def FROM @def WHERE obj <> N'fnPortalServicios';
+OPEN k; FETCH NEXT FROM k INTO @o, @t;
+WHILE @@FETCH_STATUS = 0 BEGIN EXEC sp_executesql @t; FETCH NEXT FROM k INTO @o, @t; END
+CLOSE k; DEALLOCATE k;
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -5247,6 +5319,9 @@ GO
                Los archivos van en ...\eurovip\PDF\cruceros\{crucero}\. No cambió ningún dato.
    27/10/2026  FASE 31 aplicada SOLO en el 93 (CAMBIO 106): spActualizaInicio conserva peso y precio_proveedor de la tarjeta al
                refrescarla. Probado con ROLLBACK (tarjeta 135 → 143 con su prioridad). No cambió ningún dato.
+   27/10/2026  FASE 32 aplicada SOLO en el 93 (CAMBIO 107): la web ordena por prioridad (★) y devuelve peso y precio_proveedor
+               (fnPortalServicios y 7 spPortal*). Probado: prioridad 1 a la oferta más cara (#188) → sale la primera (con ROLLBACK);
+               los demás procedimientos ejecutan sin error. No cambió ningún dato.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
