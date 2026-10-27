@@ -16,6 +16,13 @@
 .evp-fondo.on { opacity: 1; }
 .evp-caja { width: min(480px, 100%); background: var(--ev-surface, #fff); color: var(--ev-text, #0B1215); border-radius: 24px; padding: 26px 28px;
             box-shadow: 0 24px 60px rgba(11,18,21,.25); font-family: var(--ev-font, system-ui, sans-serif); }
+.evp-ava { width: 108px; height: 108px; margin: -4px auto 14px; border-radius: 50%; overflow: hidden; background: #EAF6FF;
+            box-shadow: 0 0 0 6px var(--ev-mint, #D9FBF6), 0 16px 32px -14px rgba(11,18,21,.35); animation: evp-flota 3.4s ease-in-out infinite; }
+.evp-ava img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 14%; display: block; }
+@keyframes evp-flota { 50% { transform: translateY(-7px); } }
+.evp-caja { text-align: center; }
+.evp-pie { text-align: left; }
+.evp-caja h3 { justify-content: center; }
 .evp-caja h3 { margin: 0 0 4px; font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
 .evp-caja .evp-sub { margin: 0 0 18px; color: var(--ev-muted, #5B726F); font-size: 13px; font-weight: 600; }
 .evp-pct { font-size: 40px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
@@ -31,7 +38,7 @@
 .evp-lento { color: #B54708; }
 .evp-ok .evp-barra i { background: #12B76A; }
 .evp-ok .evp-barra i::after { animation: none; }
-@media (prefers-reduced-motion: reduce) { .evp-barra i, .evp-fondo { transition: none; } .evp-barra i::after { animation: none; } }`;
+@media (prefers-reduced-motion: reduce) { .evp-barra i, .evp-fondo { transition: none; } .evp-barra i::after, .evp-ava { animation: none; } }`;
     let estilo = null;
 
     const fmtTiempo = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -41,7 +48,7 @@
         const f = document.createElement('div');
         f.className = 'evp-fondo';
         f.setAttribute('role', 'dialog'); f.setAttribute('aria-modal', 'true'); f.setAttribute('aria-label', titulo);
-        f.innerHTML = `<div class="evp-caja"><h3></h3><p class="evp-sub"></p>
+        f.innerHTML = `<div class="evp-caja"><div class="evp-ava"><img src="/img/ava/tablet.jpg" alt=""></div><h3></h3><p class="evp-sub"></p>
             <div class="evp-pct" aria-live="polite"><span>0</span><small>%</small></div>
             <div class="evp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
             <div class="evp-paso">Empezando…</div>

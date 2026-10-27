@@ -294,3 +294,14 @@
     .ui-toolbar { position: static; }
 }
 @media (prefers-reduced-motion: reduce) { .ui-hero-waves g, .ui-hero-ico, .ui-empty i.big, .ui-success .ring { animation: none !important; } }
+
+/* ── Formularios más cómodos y amables (todo el sistema) ──
+   Los números, fechas y precios no necesitan media pantalla: se quedan del tamaño de lo que se escribe.
+   Los errores avisan en naranja suave, sin asustar. */
+.ui-f input[type=number], .ui-f input[type=date], .ui-f input[type=time], .ui-f input[type=datetime-local] { max-width: 280px; }
+.ui-f .ui-money { max-width: 300px; }
+.ui-f .ui-money input { max-width: none; }
+.ui-f > label { line-height: 1.35; }
+.ui-f.err input, .ui-f.err select, .ui-f.err textarea, .ui-f.err .ui-input { border-color: #F79009; background: #FFFCF5; box-shadow: 0 0 0 4px rgba(247,144,9,.12); }
+.ui-f .msg { color: #B54708; }
+.ui-f .msg:not(:empty)::before { content: '💡 '; }

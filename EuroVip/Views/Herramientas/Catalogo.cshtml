@@ -322,7 +322,13 @@ const HC = (() => {
 
     // Pares latitud → longitud de los catálogos (destinos y países: latitud/longitud; alojamientos: latitude/longitude)
     const LAT = { latitud: 'longitud', latitude: 'longitude' };
+    // Los campos que no son obligatorios llevan data-opcional: si están vacíos, EV los recoge en «Más opciones»
+    // para que el formulario no abrume (se abren con un clic; los que tienen dato siempre se ven).
     async function campoHtml(c, v, esNuevo, pref = 'e') {
+        const html = await campoHtmlBase(c, v, esNuevo, pref);
+        return !c.req && !c.clave && !c.auto && c.tipo !== 'bool' ? html.replace('<div class="ui-f"', '<div data-opcional class="ui-f"') : html;
+    }
+    async function campoHtmlBase(c, v, esNuevo, pref) {
         const id = `${pref}_${c.col}`, bloqueado = (c.clave && !esNuevo) || (c.auto);
         const val = v ?? (esNuevo ? (c.defecto ?? '') : '');
         const lab = `<label for="${id}">${esc(c.etiqueta)}${c.req ? ' *' : ''}${c.ayuda ? ` <em>${esc(c.ayuda)}</em>` : ''}</label>`;
