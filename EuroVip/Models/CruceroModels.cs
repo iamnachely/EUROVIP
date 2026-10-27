@@ -79,6 +79,25 @@ namespace EuroVip.Models
         public DateTime Fecha_Alta { get; set; }
         /// <summary>Portada (Eurovip.multimedia, tipo CRUCERO).</summary>
         public string? Imagen { get; set; }
+        public short? Peso { get; set; }
+        public decimal? Precio_Proveedor { get; set; }
+        /// <summary>Cuántos PDF tiene (FASE 30).</summary>
+        public int Pdfs { get; set; }
+    }
+
+    /// <summary>PDF de un crucero (Eurovip.crucero_pdf, FASE 30). Ruta relativa a la carpeta PDF; Url = la que ve el cliente.</summary>
+    public class CruceroPdf
+    {
+        public int Id_Pdf { get; set; }
+        public int Id_Crucero { get; set; }
+        public string Titulo { get; set; } = "";
+        public string Ruta { get; set; } = "";
+        public int Bytes { get; set; }
+        public short Orden { get; set; }
+        public string? Usuario { get; set; }
+        public DateTime Fecha_Alta { get; set; }
+        public string? Url { get; set; }
+        public string? Local { get; set; }
     }
 
     // ---------- Crucero completo (lo que carga y guarda el editor) ----------
@@ -105,6 +124,10 @@ namespace EuroVip.Models
         public string? No_Incluye { get; set; }
         [StringLength(150)] public string? Titulo_Seccion { get; set; }
         public bool Activo { get; set; } = true;
+        /// <summary>Prioridad (FASE 29): 1 sale primero en la web, 2 segundo… null = sin prioridad (por precio).</summary>
+        [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
+        /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
+        [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
         public List<int> Categorias { get; set; } = new();
         /// <summary>Categorías nuevas escritas en el editor (se crean al guardar).</summary>
         public List<string> Categorias_Nuevas { get; set; } = new();

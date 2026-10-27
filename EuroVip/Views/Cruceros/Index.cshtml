@@ -308,6 +308,16 @@
     .cz-home .ev-btn { flex-shrink: 0; }
     @@media (max-width: 1000px) { .cz-paso { grid-template-columns: 70px minmax(0, 1fr); } .cz-paso-f, .cz-paso-a { grid-column: 2; } .cz-paso-a { display: flex; }
         .cz-paso-g, .cz-g4, .cz-g3, .cz-fechas2 { grid-template-columns: 1fr; } .cz-tipo2, .cz-act2 { grid-template-columns: 1fr; } .cz-acts2 { grid-template-columns: 1fr; } }
+    /* PDF del crucero (FASE 30) */
+    .cz-pdfs { display: grid; gap: 8px; margin-bottom: 10px; }
+    .cz-pdf { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto auto auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--ev-line); border-radius: 14px; background: var(--ev-surface-2); }
+    .cz-pdf .ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: #FDE8E7; color: #B42318; font-size: 19px; }
+    .cz-pdf input { width: 100%; border: 1px solid transparent; background: transparent; border-radius: 9px; padding: 6px 8px; font: 700 14px var(--ev-font); }
+    .cz-pdf input:hover, .cz-pdf input:focus { border-color: var(--ev-line); background: var(--ev-surface); outline: 0; }
+    .cz-pdf small { color: var(--ev-muted); font-weight: 700; white-space: nowrap; }
+    .cz-pdf-sube { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 14px; border: 2px dashed var(--ev-line); border-radius: 14px; cursor: pointer; color: var(--ev-muted); font-weight: 700; }
+    .cz-pdf-sube:hover, .cz-pdf-sube.sobre { border-color: var(--ev-primary, #0F766E); color: var(--ev-text); }
+    @@media (max-width: 640px) { .cz-pdf { grid-template-columns: 34px minmax(0, 1fr) auto; } .cz-pdf small { display: none; } }
 </style>
 }
 
@@ -351,6 +361,7 @@
         <select class="ui-select" id="czNaviera" title="Naviera"><option value="">Todas las navieras</option></select>
         <select class="ui-select" id="czCategoria" title="Categoría"><option value="">Todas las categorías</option></select>
         <select class="ui-select" id="czOrden" title="Ordenar">
+            <option value="prioridad">Prioridad (como en la web)</option>
             <option value="fecha">Próxima salida</option>
             <option value="precio">Precio: menor a mayor</option>
             <option value="titulo">Título (A-Z)</option>
@@ -438,6 +449,7 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
 <script>window.EV_MAPS_KEY = @Json.Serialize(((Microsoft.Extensions.Configuration.IConfiguration)Context.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration))!)["GoogleMaps:ApiKey"] ?? "");</script>
 <script>
 (() => {
@@ -453,7 +465,7 @@
     let C = null, verId = null, sec = 0, tarSel = null;
     let fotosMontadas = false;          // componente de fotos (crucero ya guardado)
     let P = { PORTADA: null, INTERMEDIA: null, GALERIA: [] };   // fotos elegidas en un crucero nuevo: se suben al guardar
-    const st = { q: '', naviera: '', categoria: '', filtro: '', orden: 'fecha' };
+    const st = { q: '', naviera: '', categoria: '', filtro: '', orden: 'prioridad' };
     const CATS = ['INTERIOR', 'EXTERIOR', 'BALCON', 'SUITE'];
     const CAT_CORTO = { INTERIOR: 'Interior', EXTERIOR: 'Exterior', BALCON: 'Balcón', SUITE: 'Suite' };
     const IMG_OK = /^image\/(jpeg|png|webp)$/;
@@ -480,13 +492,14 @@
 
     function filtrados() {
         const q = st.q.toLowerCase();
-        return D.cruceros.filter(c =>
+        const l = D.cruceros.filter(c =>
             (!st.naviera || String(c.id_Naviera) === st.naviera) &&
             (!st.categoria || (c.ids_Categoria || '').split(',').includes(st.categoria)) &&
             (!q || [c.titulo, c.barco, c.naviera, c.puerto_Salida, c.puerto_Llegada, c.codigo, c.itinerario, c.categorias].some(x => (x || '').toLowerCase().includes(q)) || String(c.id_Crucero) === q) &&
             (st.filtro === '' || (st.filtro === 'activos' && c.activo) || (st.filtro === 'inactivos' && !c.activo) ||
-             (st.filtro === 'sinfoto' && !c.imagen) || (st.filtro === 'sinprecio' && c.desde_Pp == null) || (st.filtro === 'venta' && c.activo && c.desde_Pp != null)))
-            .sort({
+             (st.filtro === 'sinfoto' && !c.imagen) || (st.filtro === 'sinprecio' && c.desde_Pp == null) || (st.filtro === 'venta' && c.activo && c.desde_Pp != null)));
+        if (st.orden === 'prioridad') return EVPrioridad.ordenar(l, c => c.peso, c => c.desde_Pp);
+        return l.sort({
                 fecha: (a, b) => (a.proxima_Salida || '9999').localeCompare(b.proxima_Salida || '9999'),
                 precio: (a, b) => (a.desde_Pp ?? 1e12) - (b.desde_Pp ?? 1e12),
                 titulo: (a, b) => a.titulo.localeCompare(b.titulo, 'es'),
@@ -511,10 +524,10 @@
     function tarjeta(c) {
         const p = (cat, v) => `<div class="${v == null ? 'sin' : ''}"><small>${cat}</small><b>${v == null ? '—' : dinero(v)}</b></div>`;
         const puertos = [c.puerto_Salida, c.puerto_Llegada !== c.puerto_Salida ? c.puerto_Llegada : null].filter(Boolean).map(esc).join(' / ');
-        return `<article class="cz-card ${c.activo ? '' : 'off'}" data-id="${c.id_Crucero}">
+        return `<article class="cz-card ${c.activo ? '' : 'off'} ${c.peso ? 'ev-con-prioridad' : ''}" data-id="${c.id_Crucero}">
             <div class="foto" data-accion="ver">${c.imagen ? `<img src="${esc(c.imagen)}" alt="" loading="lazy">` : '<span class="sin"><i class="bi bi-water"></i>Sin foto</span>'}</div>
             <div style="min-width:0">
-                <h3>${esc(c.titulo)}</h3>
+                <h3>${c.peso ? EVPrioridad.estrella(c.peso, true) + ' ' : ''}${esc(c.titulo)}</h3>
                 <dl class="cz-dl">
                     <dt>Fecha</dt><dd>${c.proxima_Salida ? fechaTxt(c.proxima_Salida) + (c.salidas_Futuras > 1 ? ` <small style="color:var(--ev-muted)">(+${c.salidas_Futuras - 1} fechas)</small>` : '') : '<span style="color:#B54708">Sin fechas a la venta</span>'}</dd>
                     <dt>Duración</dt><dd>${c.noches ? `${c.noches + 1} días · ${c.noches} noches` : '—'}</dd>
@@ -523,15 +536,18 @@
                     <dt>Itinerario</dt><dd>${esc(c.itinerario || '—')}</dd>
                 </dl>
                 <div class="cz-precios">${p('Interior', c.interior_Pp)}${p('Exterior', c.exterior_Pp)}${p('Balcón', c.balcon_Pp)}${p('Suite', c.suite_Pp)}</div>
+                ${c.precio_Proveedor ? `<div style="margin-top:8px">${EVPrioridad.proveedor(c.desde_Pp, c.precio_Proveedor)}</div>` : ''}
             </div>
             <div class="cz-der">
                 ${c.naviera_Logo ? `<img class="logo" src="${esc(c.naviera_Logo)}" alt="${esc(c.naviera || '')}">` : `<span class="nav">${esc(c.naviera || '')}</span>`}
                 <div class="chips">${c.activo ? '<span class="cz-chip ok"><i class="bi bi-broadcast"></i> En la web</span>' : '<span class="cz-chip av">Desactivado</span>'}
                     ${c.categorias ? `<span class="cz-chip"><i class="bi bi-tags"></i> ${esc(c.categorias)}</span>` : '<span class="cz-chip av">Sin categoría</span>'}
+                    ${c.pdfs ? `<span class="cz-chip" title="Archivos PDF del crucero"><i class="bi bi-file-earmark-pdf" style="color:#B42318"></i> ${c.pdfs} PDF</span>` : ''}
                     <span class="cz-chip">n.º ${c.id_Crucero}${c.codigo ? ' · ' + esc(c.codigo) : ''}</span></div>
                 <div class="acc">
                     <button type="button" class="ui-ibtn" data-accion="ver" title="Ver como la web"><i class="bi bi-eye"></i></button>
                     <button type="button" class="ui-ibtn" data-accion="fotos" title="Fotos: portada, banner y galería"><i class="bi bi-images"></i></button>
+                    <button type="button" class="ui-ibtn" data-accion="pdf" title="Archivos PDF del crucero"><i class="bi bi-file-earmark-pdf"></i></button>
                     <button type="button" class="ui-ibtn" data-accion="editar" title="Editar"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="ui-ibtn" data-accion="duplicar" title="Duplicar"><i class="bi bi-copy"></i></button>
                     <button type="button" class="ui-ibtn" data-accion="activar" title="${c.activo ? 'Desactivar' : 'Activar'}"><i class="bi ${c.activo ? 'bi-pause-circle' : 'bi-play-circle'}"></i></button>
@@ -712,8 +728,60 @@
                     <div class="ui-f"><label>Código / ID del proveedor</label>${inp('codigo', 'maxlength="50" placeholder="Ej. 2256635"')}</div></div>
                 <div class="ui-f"><label>Descripción</label>${txt('descripcion', 'rows="4"')}</div>
                 <div class="ui-row"><div class="ui-f"><label>Incluye</label>${txt('incluye', 'rows="3"')}</div><div class="ui-f"><label>No incluye</label>${txt('no_Incluye', 'rows="3"')}</div></div>
-            </div></details>`;
+            </div></details>
+            <div class="cz-blq"><h3><i class="bi bi-star-fill" style="color:#F5A623"></i> Prioridad y precio del proveedor <small>los dos opcionales</small></h3><div id="edPrio"></div></div>
+            <div class="cz-blq" id="edPdfs"></div>`;
+        const desde = D.cruceros.find(x => x.id_Crucero === C.id_Crucero)?.desde_Pp;
+        $('#edPrio').innerHTML = EVPrioridad.campos({ peso: C.peso, proveedor: C.precio_Proveedor, precio: desde, ayuda: 'Compáralo con el «desde» por persona del crucero.' });
+        EVPrioridad.vivo($('#edPrio'), () => desde);
+        pintarPdfs();
     }
+
+    // ---------- PDF del crucero (FASE 30): se suben y se quitan al momento ----------
+    let PDFS = [];
+    const pesoTxt = b => b >= 1e6 ? EV.fmt(b / 1e6, 1) + ' MB' : EV.fmt(Math.max(1, Math.round(b / 1e3))) + ' KB';
+    async function pintarPdfs(recargar = true) {
+        const caja = $('#edPdfs'); if (!caja) return;
+        const cab = '<h3><i class="bi bi-file-earmark-pdf" style="color:#B42318"></i> Archivos PDF <small>folleto de la naviera, itinerario, condiciones, plano de cubiertas… · ' + opc + '</small></h3>';
+        if (!C.id_Crucero) { caja.innerHTML = cab + '<p class="ui-help"><i class="bi bi-info-circle"></i> Guarda primero el crucero; después podrás añadirle los PDF que quieras.</p>'; return; }
+        if (recargar) { caja.innerHTML = cab + '<div class="ui-skel" style="height:60px"></div>'; try { PDFS = await EV.api('/Cruceros/Pdfs?id=' + C.id_Crucero); } catch (e) { caja.innerHTML = cab + '<p class="ui-help">' + esc(e.message) + '</p>'; return; } }
+        caja.innerHTML = cab + '<div class="cz-pdfs">' + PDFS.map(p => `<div class="cz-pdf" data-pdf="${p.id_Pdf}">
+                <span class="ic"><i class="bi bi-file-earmark-pdf-fill"></i></span>
+                <input data-pdf-titulo="${p.id_Pdf}" maxlength="150" value="${esc(p.titulo)}" title="Título que ve el cliente (se guarda al salir del campo)">
+                <small>${pesoTxt(p.bytes)}</small>
+                <a class="ui-ibtn" href="${esc(p.url)}" target="_blank" rel="noopener" title="Abrir el PDF"><i class="bi bi-box-arrow-up-right"></i></a>
+                <button type="button" class="ui-ibtn danger" data-pdf-quitar="${p.id_Pdf}" title="Quitar el PDF"><i class="bi bi-trash3"></i></button>
+            </div>`).join('') + '</div>' +
+            '<label class="cz-pdf-sube" id="edPdfSube"><i class="bi bi-cloud-arrow-up" style="font-size:22px"></i> Pulsa o arrastra aquí uno o varios PDF (hasta 25 MB cada uno). El título es el nombre del archivo: lo puedes cambiar después.' +
+            '<input type="file" accept="application/pdf,.pdf" multiple hidden data-pdf-subir></label>';
+        const z = $('#edPdfSube');
+        z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('sobre'); });
+        z.addEventListener('dragleave', () => z.classList.remove('sobre'));
+        z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('sobre'); subirPdfs(e.dataTransfer.files); });
+    }
+    async function subirPdfs(archivos) {
+        const lista = [...archivos];
+        const malos = lista.filter(f => !/\.pdf$/i.test(f.name) || f.size > 25e6);
+        if (malos.length) EV.toast(malos.map(f => f.name).join(', ') + ': solo PDF de hasta 25 MB.', 'err');
+        let ok = 0;
+        for (const f of lista.filter(x => !malos.includes(x))) {
+            const fd = new FormData(); fd.append('id', C.id_Crucero); fd.append('titulo', f.name.replace(/\.pdf$/i, '')); fd.append('archivo', f);
+            try { const r = await EVProgreso.subir('/Cruceros/SubirPdf', fd); PDFS = r.pdfs; ok++; } catch (e) { EV.toast(f.name + ': ' + e.message, 'err'); }
+        }
+        if (ok) { EV.toast(ok === 1 ? 'PDF agregado.' : ok + ' PDF agregados.'); pintarPdfs(false); contarPdfs(); }
+    }
+    async function quitarPdf(idPdf) {
+        const p = PDFS.find(x => x.id_Pdf === idPdf); if (!p) return;
+        if (!await EV.confirmar({ titulo: '¿Quitar el PDF?', peligro: true, si: 'Sí, quitar', texto: 'Se borra <b>' + esc(p.titulo) + '</b> del crucero y de la carpeta de archivos.' })) return;
+        try { const r = await EV.post('/Cruceros/QuitarPdf?idPdf=' + idPdf); PDFS = r.pdfs; EV.toast(r.mensaje); pintarPdfs(false); contarPdfs(); } catch (e) { EV.toast(e.message, 'err'); }
+    }
+    async function tituloPdf(idPdf, titulo) {
+        const p = PDFS.find(x => x.id_Pdf === idPdf); if (!p || p.titulo === titulo.trim()) return;
+        if (!titulo.trim()) { EV.toast('El PDF necesita un título.', 'err'); pintarPdfs(false); return; }
+        try { const r = await EV.post('/Cruceros/TituloPdf?idPdf=' + idPdf + '&titulo=' + encodeURIComponent(titulo.trim())); p.titulo = titulo.trim(); EV.toast(r.mensaje); } catch (e) { EV.toast(e.message, 'err'); }
+    }
+    // el contador de la tarjeta se actualiza sin recargar la lista
+    function contarPdfs() { const c = D.cruceros.find(x => x.id_Crucero === C?.id_Crucero); if (c) { c.pdfs = PDFS.length; pintar(); } }
 
     // ---------- 2. Fotos ----------
     function pintarFotos() {
@@ -1258,7 +1326,7 @@
         $('#czLista').addEventListener('click', e => {
             const card = e.target.closest('.cz-card'); if (!card) return;
             const id = +card.dataset.id, acc = e.target.closest('[data-accion]')?.dataset.accion;
-            ({ ver, editar: abrir, duplicar, activar, eliminar, fotos: x => EVFotos.abrir({ tipo: 'CRUCERO', clave: x, titulo: D.cruceros.find(c => c.id_Crucero === x)?.titulo, alCambiar: EV.debounce(cargar, 400) }) })[acc]?.(id);
+            ({ ver, editar: abrir, duplicar, activar, eliminar, pdf: async x => { await abrir(x); setTimeout(() => $('#edPdfs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350); }, fotos: x => EVFotos.abrir({ tipo: 'CRUCERO', clave: x, titulo: D.cruceros.find(c => c.id_Crucero === x)?.titulo, alCambiar: EV.debounce(cargar, 400) }) })[acc]?.(id);
         });
         $('#czCats').addEventListener('click', e => {
             const n = e.target.closest('[data-cat-nuevo]'), ed = e.target.closest('[data-cat-ed]');
@@ -1282,6 +1350,7 @@
                 const k = C.cabinas.find(x => x.clave === t.dataset.cab).cabinas[+t.dataset.i];
                 k[t.dataset.campo] = t.dataset.campo === 'cubierta' ? (t.value === '' ? null : Number(t.value)) : t.value;
             } else if (t.dataset.precio) ponerPrecio(t.dataset.precio, t.value === '' ? 0 : Number(t.value));
+            else if (t.id === 'pPeso' || t.id === 'pProveedor') { const p = EVPrioridad.leer($('#edPrio')); C.peso = p.Peso; C.precio_Proveedor = p.Precio_Proveedor; }
         };
         // input + change: las horas (type=time) avisan con uno u otro según el navegador
         ed.addEventListener('input', e => leer(e.target));
@@ -1289,6 +1358,8 @@
             const t = e.target;
             if (t.dataset.subirFoto && t.files[0]) { subirFoto(t.dataset.subirFoto, t.files[0], t.closest('.cz-foto')); t.value = ''; return; }
             if (t.dataset.pendSubir && t.files.length) { ponerPendientes(t.dataset.pendSubir, t.files); return; }
+            if (t.dataset.pdfSubir !== undefined && t.files.length) { subirPdfs(t.files); t.value = ''; return; }
+            if (t.dataset.pdfTitulo) { tituloPdf(+t.dataset.pdfTitulo, t.value); return; }
             if (t.id === 'prTarifa') { tarSel = t.value; pintarPrecios(); return; }
             leer(t);
             if (t.dataset.b?.endsWith('en_Navegacion')) pintarItin();
@@ -1306,6 +1377,8 @@
         ed.addEventListener('drop', e => { const z = e.target.closest('[data-pend]'); if (!z) return; e.preventDefault(); z.classList.remove('sobre'); ponerPendientes(z.dataset.pend, e.dataTransfer.files); });
         ed.addEventListener('click', e => {
             const cambio = () => $('#czEditor').dispatchEvent(new Event('ev-cambio'));
+            const qp = e.target.closest('[data-pdf-quitar]');
+            if (qp) { e.preventDefault(); quitarPdf(+qp.dataset.pdfQuitar); return; }
             const q = e.target.closest('[data-quitar-foto]');
             if (q) { e.preventDefault(); ponerFoto(q.dataset.quitarFoto, null); q.closest('.cz-foto').outerHTML = fotoHtml(q.dataset.quitarFoto, null, q.closest('.cz-foto').classList.contains('grande')); cambio(); return; }
             const pq = e.target.closest('[data-pend-quitar]');

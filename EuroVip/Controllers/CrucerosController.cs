@@ -19,10 +19,11 @@ namespace EuroVip.Controllers
         private readonly ICircuitoRepository _aud;
         private readonly IMultimedia _mm;
         private readonly ILogger<CrucerosController> _logger;
+        private readonly IConfiguration _cfg;
 
-        public CrucerosController(ICruceroRepository repo, ICircuitoRepository aud, IMultimedia mm, ILogger<CrucerosController> logger)
+        public CrucerosController(ICruceroRepository repo, ICircuitoRepository aud, IMultimedia mm, IConfiguration cfg, ILogger<CrucerosController> logger)
         {
-            _repo = repo; _aud = aud; _mm = mm; _logger = logger;
+            _repo = repo; _aud = aud; _mm = mm; _cfg = cfg; _logger = logger;
         }
 
         public IActionResult Index() => View();
@@ -181,7 +182,7 @@ namespace EuroVip.Controllers
             var (nuevo, cats) = await _repo.GuardarAsync(c, User.Identity?.Name ?? "desconocido");
             await _repo.ActualizarInicioAsync(cats);
             await Auditar("Crucero_Duplicar", nuevo, new { de = id, titulo });
-            return Json(new { ok = true, id = nuevo, mensaje = $"Se duplicó como «{titulo}» (desactivado, sin fotos de portada/galería). Cámbiale lo que haga falta y actívalo." });
+            return Json(new { ok = true, id = nuevo, mensaje = $"Se duplicó como «{titulo}» (desactivado, sin fotos de portada/galería ni PDF). Cámbiale lo que haga falta y actívalo." });
         }
 
         [HttpPost, ValidateAntiForgeryToken]
@@ -199,10 +200,12 @@ namespace EuroVip.Controllers
         {
             var c = await _repo.ObtenerAsync(id);
             if (c is null) return NotFound(new { mensaje = "Ese crucero ya no existe." });
+            var pdfs = await _repo.PdfsAsync(id);
             var cats = await _repo.EliminarAsync(id) ?? new List<int>();
             var fotos = await _mm.EliminarProductoAsync("CRUCERO", id.ToString());
+            foreach (var p in pdfs) ArchivosPdf.Borrar(_cfg, p.Ruta);
             await _repo.ActualizarInicioAsync(cats);
-            await Auditar("Crucero_Eliminar", id, new { c.Titulo, fotos });
+            await Auditar("Crucero_Eliminar", id, new { c.Titulo, fotos, pdfs = pdfs.Count });
             return Json(new { ok = true, mensaje = $"Se eliminó «{c.Titulo}»." });
         }
 
@@ -237,6 +240,64 @@ namespace EuroVip.Controllers
                 return Json(new { ok = true, url, mensaje = "Foto subida. Se guarda en el crucero al pulsar Guardar." });
             }
             catch (InvalidOperationException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        }
+
+        // ---------------- PDF de cada crucero (FASE 30) ----------------
+        // Pedido de la usuaria: «asociar archivos PDF a cada crucero, los que se pueda». Se guardan al momento (no hace falta pulsar Guardar)
+        // en {carpeta PDF}/cruceros/{n.º}-{crucero}/{título}.pdf; si se elimina el crucero, se borran también.
+        private async Task<List<CruceroPdf>> ListaPdf(int id)
+        {
+            var l = await _repo.PdfsAsync(id);
+            var url = ArchivosPdf.UrlDe(_cfg);
+            foreach (var p in l) { p.Url = $"{url}/{p.Ruta}"; p.Local = $"{ArchivosPdf.RutaLocal}/{p.Ruta}"; }
+            return l;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Pdfs(int id) => Json(await ListaPdf(id));
+
+        [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(ArchivosPdf.Maximo + 1_000_000)]
+        public async Task<IActionResult> SubirPdf([FromForm] int id, [FromForm] string? titulo, IFormFile? archivo)
+        {
+            var c = await _repo.ObtenerAsync(id);
+            if (c is null) return NotFound(new { mensaje = "Guarda primero el crucero (o ya no existe)." });
+            if (archivo is null || archivo.Length == 0) return BadRequest(new { mensaje = "Elige un archivo PDF." });
+            if (archivo.Length > ArchivosPdf.Maximo) return BadRequest(new { mensaje = $"«{archivo.FileName}» pesa más de {ArchivosPdf.Maximo / 1_000_000} MB." });
+            if (!await ArchivosPdf.EsPdfAsync(archivo)) return BadRequest(new { mensaje = $"«{archivo.FileName}» no es un PDF." });
+            var t = Texto(titulo) ?? Texto(Path.GetFileNameWithoutExtension(archivo.FileName)) ?? "Documento";
+            if (t.Length > 150) t = t[..150].Trim();
+            try
+            {
+                var carpeta = $"cruceros/{id}-{Multimedia.NombreArchivo(c.Titulo, "crucero")}";
+                var ruta = await ArchivosPdf.GuardarAsync(_cfg, carpeta, Multimedia.NombreArchivo(t, "documento"), archivo);
+                var idPdf = await _repo.AgregarPdfAsync(id, t, ruta, (int)archivo.Length, User.Identity?.Name ?? "desconocido");
+                await Auditar("Crucero_Pdf_Subir", id, new { idPdf, t, ruta, archivo.Length });
+                return Json(new { ok = true, pdfs = await ListaPdf(id), mensaje = $"PDF «{t}» agregado." });
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.LogError(ex, "No se pudo guardar el PDF del crucero {Id}", id);
+                return StatusCode(500, new { mensaje = "No se pudo guardar el archivo en la carpeta de PDF: " + ex.Message });
+            }
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> QuitarPdf(int idPdf)
+        {
+            var p = await _repo.QuitarPdfAsync(idPdf);
+            if (p is null) return NotFound(new { mensaje = "Ese PDF ya no existe." });
+            ArchivosPdf.Borrar(_cfg, p.Ruta);
+            await Auditar("Crucero_Pdf_Quitar", p.Id_Crucero, new { idPdf, p.Titulo, p.Ruta });
+            return Json(new { ok = true, pdfs = await ListaPdf(p.Id_Crucero), mensaje = $"Se quitó «{p.Titulo}»." });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> TituloPdf(int idPdf, string? titulo)
+        {
+            var t = Texto(titulo);
+            if (t is null) return BadRequest(new { mensaje = "Escribe el título del PDF." });
+            if (t.Length > 150) t = t[..150].Trim();
+            return await _repo.TituloPdfAsync(idPdf, t) ? Json(new { ok = true, mensaje = "Título guardado." }) : NotFound(new { mensaje = "Ese PDF ya no existe." });
         }
 
         // ---------------- catálogos ----------------

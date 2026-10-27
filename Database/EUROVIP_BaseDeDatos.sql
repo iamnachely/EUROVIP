@@ -4679,6 +4679,57 @@ GO
 
 
 /* ##########################################################################################
+   FASE 30 — ARCHIVOS PDF DE CADA CRUCERO  (27/10/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedido de la usuaria: «/Cruceros/Index asociar archivos PDF a cada crucero, los que se pueda».
+   Explicado fácil:
+     • Cada crucero puede tener varios PDF (folleto de la naviera, itinerario detallado, condiciones, plano de cubiertas…).
+     • El archivo se guarda en la carpeta de archivos de Eurovip, al lado de las imágenes:
+         C:\inetpub\wwwroot\photosVacacionalparce\eurovip\PDF\cruceros\{crucero}\{nombre}.pdf
+       y se ve en https://fotos.eurovip.com.do/eurovip/PDF/cruceros/{crucero}/{nombre}.pdf
+     • En la tabla solo va la ruta (cruceros/{crucero}/{nombre}.pdf), el título que ve el cliente, el orden y quién lo subió.
+     • Si se elimina el crucero se borran sus filas (ON DELETE CASCADE); el back también borra los archivos.
+   Cambios:
+     • CAMBIO 104: tabla Eurovip.crucero_pdf.
+     • CAMBIO 105: consulta para la web Eurovip.spPortalCruceroPdfs (solo de cruceros activos).
+   No cambia ningún dato.
+   ########################################################################################## */
+SET XACT_ABORT ON;
+GO
+/* ---------- CAMBIO 104 ---------- */
+IF OBJECT_ID('Eurovip.crucero_pdf') IS NULL
+CREATE TABLE Eurovip.crucero_pdf (
+    id_pdf          int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_crucero_pdf PRIMARY KEY,
+    id_crucero      int            NOT NULL CONSTRAINT FK_Eurovip_crucero_pdf_crucero REFERENCES Eurovip.crucero (id_crucero) ON DELETE CASCADE,
+    titulo          nvarchar(150)  NOT NULL,                 -- lo que ve el cliente: «Folleto de la naviera»
+    ruta            nvarchar(300)  NOT NULL,                 -- relativa a la carpeta PDF: cruceros/{crucero}/{nombre}.pdf
+    bytes           int            NOT NULL CONSTRAINT CK_Eurovip_crucero_pdf_bytes CHECK (bytes > 0),
+    orden           smallint       NOT NULL CONSTRAINT DF_Eurovip_crucero_pdf_orden DEFAULT (1),
+    usuario         varchar(50)    NULL,
+    fecha_alta      datetime2(0)   NOT NULL CONSTRAINT DF_Eurovip_crucero_pdf_alta DEFAULT (SYSDATETIME()),
+    CONSTRAINT CK_Eurovip_crucero_pdf_ruta CHECK (ruta LIKE 'cruceros/%.pdf' AND ruta NOT LIKE '%..%'),
+    CONSTRAINT UQ_Eurovip_crucero_pdf_ruta UNIQUE (ruta)
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Eurovip_crucero_pdf_crucero')
+    CREATE INDEX IX_Eurovip_crucero_pdf_crucero ON Eurovip.crucero_pdf (id_crucero, orden);
+GO
+/* ---------- CAMBIO 105: consulta para la web — PDF del crucero (la API arma la URL con la base de PDF) ---------- */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalCruceroPdfs
+    @IdCrucero int
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT p.id_pdf, p.titulo, p.ruta, p.bytes, p.orden
+      FROM Eurovip.crucero_pdf p
+      JOIN Eurovip.crucero c ON c.id_crucero = p.id_crucero AND c.activo = 1
+     WHERE p.id_crucero = @IdCrucero
+     ORDER BY p.orden, p.id_pdf;
+END
+GO
+
+
+/* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
    ##########################################################################################
@@ -5159,6 +5210,8 @@ GO
                regla de solicitud_servicio cuando se cree la tabla.
    27/10/2026  FASE 29 aplicada SOLO en el 93 (CAMBIO 102-103): peso y precio_proveedor en servicio, inicio, circuito,
                servicio_excursion, traslado y crucero; contenedores.prioridad. No cambió ningún dato.
+   27/10/2026  FASE 30 aplicada SOLO en el 93 (CAMBIO 104-105): tabla crucero_pdf (PDF de cada crucero) y spPortalCruceroPdfs.
+               Los archivos van en ...\eurovip\PDF\cruceros\{crucero}\. No cambió ningún dato.
 
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los

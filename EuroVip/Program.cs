@@ -122,6 +122,14 @@ app.UseStaticFiles();
             RequestPath = urlMultimedia.StartsWith('/') ? urlMultimedia : "/fotos-locales"
         });
     }
+    // PDF de los productos (FASE 30): carpeta «PDF» al lado de las imágenes; aquí también en /pdf-locales para verlos en local.
+    var carpetaPdf = EuroVip.Services.ArchivosPdf.CarpetaDe(app.Configuration);
+    Directory.CreateDirectory(carpetaPdf);
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(carpetaPdf),
+        RequestPath = EuroVip.Services.ArchivosPdf.RutaLocal
+    });
 }
 app.UseRouting();
 app.UseSession();

@@ -25,6 +25,13 @@ namespace EuroVip.Repositories
         Task<string?> EliminarNavieraAsync(int id);
         Task<string?> EliminarBarcoAsync(int id);
         Task<string?> EliminarCategoriaAsync(int id);
+
+        // PDF de cada crucero (FASE 30)
+        Task<List<CruceroPdf>> PdfsAsync(int idCrucero);
+        Task<int> AgregarPdfAsync(int idCrucero, string titulo, string ruta, int bytes, string usuario);
+        /// <summary>Quita la fila y la devuelve (con la ruta del archivo); null si no existía.</summary>
+        Task<CruceroPdf?> QuitarPdfAsync(int idPdf);
+        Task<bool> TituloPdfAsync(int idPdf, string titulo);
     }
 
     /// <summary>
@@ -43,7 +50,8 @@ namespace EuroVip.Repositories
             return (await cn.QueryAsync<CruceroLista>(@"
                 SELECT c.id_crucero AS Id_Crucero, c.titulo AS Titulo, c.codigo AS Codigo, c.id_barco AS Id_Barco, b.nombre AS Barco,
                        n.id_naviera AS Id_Naviera, n.nombre AS Naviera, n.logo AS Naviera_Logo, c.noches AS Noches,
-                       c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.activo AS Activo,
+                       c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.activo AS Activo, c.peso AS Peso, c.precio_proveedor AS Precio_Proveedor,
+                       (SELECT COUNT(*) FROM Eurovip.crucero_pdf p WHERE p.id_crucero = c.id_crucero) AS Pdfs,
                        (SELECT STRING_AGG(CAST(i.puerto AS nvarchar(max)), N' / ') WITHIN GROUP (ORDER BY i.dia)
                           FROM Eurovip.crucero_itinerario i WHERE i.id_crucero = c.id_crucero AND i.en_navegacion = 0) AS Itinerario,
                        (SELECT COUNT(*) FROM Eurovip.crucero_salida s WHERE s.id_crucero = c.id_crucero) AS Salidas,
@@ -71,7 +79,7 @@ namespace EuroVip.Repositories
             var c = await cn.QueryFirstOrDefaultAsync<CruceroDto>(@"
                 SELECT c.id_crucero AS Id_Crucero, c.titulo AS Titulo, c.subtitulo AS Subtitulo, c.id_barco AS Id_Barco, b.nombre AS Barco_Nombre, n.nombre AS Naviera_Nombre,
                        c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.noches AS Noches, c.codigo AS Codigo, c.descripcion AS Descripcion,
-                       c.incluye AS Incluye, c.no_incluye AS No_Incluye, c.titulo_seccion AS Titulo_Seccion, c.activo AS Activo, c.usuario AS Usuario,
+                       c.incluye AS Incluye, c.no_incluye AS No_Incluye, c.titulo_seccion AS Titulo_Seccion, c.activo AS Activo, c.peso AS Peso, c.precio_proveedor AS Precio_Proveedor, c.usuario AS Usuario,
                        c.fecha_alta AS Fecha_Alta, c.fecha_modificacion AS Fecha_Modificacion
                 FROM Eurovip.crucero c
                 LEFT JOIN Eurovip.crucero_barco b ON b.id_barco = c.id_barco
@@ -154,7 +162,7 @@ namespace EuroVip.Repositories
             {
                 id = d.Id_Crucero, Titulo = d.Titulo.Trim(), Subtitulo = Nulo(d.Subtitulo), Id_Barco = idBarco, Puerto_Salida = Nulo(d.Puerto_Salida), Puerto_Llegada = Nulo(d.Puerto_Llegada),
                 d.Noches, Codigo = Nulo(d.Codigo), Descripcion = Nulo(d.Descripcion), Incluye = Nulo(d.Incluye), No_Incluye = Nulo(d.No_Incluye),
-                Titulo_Seccion = Nulo(d.Titulo_Seccion), d.Activo, usuario
+                Titulo_Seccion = Nulo(d.Titulo_Seccion), d.Activo, usuario, d.Peso, d.Precio_Proveedor
             };
             int id;
             var antes = new List<int>();
@@ -164,7 +172,8 @@ namespace EuroVip.Repositories
                 var n = await cn.ExecuteAsync(@"
                     UPDATE Eurovip.crucero SET titulo = @Titulo, subtitulo = @Subtitulo, id_barco = @Id_Barco, puerto_salida = @Puerto_Salida,
                            puerto_llegada = @Puerto_Llegada, noches = @Noches, codigo = @Codigo, descripcion = @Descripcion, incluye = @Incluye,
-                           no_incluye = @No_Incluye, titulo_seccion = @Titulo_Seccion, activo = @Activo, usuario = @usuario, fecha_modificacion = SYSDATETIME()
+                           no_incluye = @No_Incluye, titulo_seccion = @Titulo_Seccion, activo = @Activo, peso = @Peso, precio_proveedor = @Precio_Proveedor,
+                           usuario = @usuario, fecha_modificacion = SYSDATETIME()
                     WHERE id_crucero = @id", p, tx);
                 if (n == 0) throw new InvalidOperationException("Ese crucero ya no existe. Recarga la página.");
                 id = existente;
@@ -186,9 +195,9 @@ namespace EuroVip.Repositories
             {
                 id = await cn.ExecuteScalarAsync<int>(@"
                     INSERT INTO Eurovip.crucero (titulo, subtitulo, id_barco, puerto_salida, puerto_llegada, noches, codigo, descripcion, incluye, no_incluye,
-                                                 titulo_seccion, activo, usuario)
+                                                 titulo_seccion, activo, usuario, peso, precio_proveedor)
                     VALUES (@Titulo, @Subtitulo, @Id_Barco, @Puerto_Salida, @Puerto_Llegada, @Noches, @Codigo, @Descripcion, @Incluye, @No_Incluye,
-                            @Titulo_Seccion, @Activo, @usuario);
+                            @Titulo_Seccion, @Activo, @usuario, @Peso, @Precio_Proveedor);
                     SELECT CAST(SCOPE_IDENTITY() AS int);", p, tx);
             }
 
@@ -282,6 +291,37 @@ namespace EuroVip.Repositories
             await cn.ExecuteAsync(@"DELETE p FROM Eurovip.crucero_precio p JOIN Eurovip.crucero_salida s ON s.id_salida = p.id_salida WHERE s.id_crucero = @id;
                                     DELETE k FROM Eurovip.crucero_cabina k JOIN Eurovip.crucero_cabina_tipo t ON t.id_cabina_tipo = k.id_cabina_tipo WHERE t.id_crucero = @id;", new { id });
             return await cn.ExecuteAsync("DELETE FROM Eurovip.crucero WHERE id_crucero = @id", new { id }) > 0 ? cats : null;
+        }
+
+        // ---------------- PDF de cada crucero (FASE 30) ----------------
+        public async Task<List<CruceroPdf>> PdfsAsync(int idCrucero)
+        {
+            using var cn = _db.Conexion();
+            return (await cn.QueryAsync<CruceroPdf>(@"SELECT id_pdf AS Id_Pdf, id_crucero AS Id_Crucero, titulo AS Titulo, ruta AS Ruta, bytes AS Bytes, orden AS Orden,
+                       usuario AS Usuario, fecha_alta AS Fecha_Alta FROM Eurovip.crucero_pdf WHERE id_crucero = @idCrucero ORDER BY orden, id_pdf", new { idCrucero })).ToList();
+        }
+
+        public async Task<int> AgregarPdfAsync(int idCrucero, string titulo, string ruta, int bytes, string usuario)
+        {
+            using var cn = _db.Conexion();
+            return await cn.ExecuteScalarAsync<int>(@"
+                INSERT INTO Eurovip.crucero_pdf (id_crucero, titulo, ruta, bytes, orden, usuario)
+                VALUES (@idCrucero, @titulo, @ruta, @bytes, (SELECT ISNULL(MAX(orden), 0) + 1 FROM Eurovip.crucero_pdf WHERE id_crucero = @idCrucero), @usuario);
+                SELECT CAST(SCOPE_IDENTITY() AS int);", new { idCrucero, titulo, ruta, bytes, usuario });
+        }
+
+        public async Task<CruceroPdf?> QuitarPdfAsync(int idPdf)
+        {
+            using var cn = _db.Conexion();
+            return await cn.QueryFirstOrDefaultAsync<CruceroPdf>(@"DELETE FROM Eurovip.crucero_pdf
+                OUTPUT deleted.id_pdf AS Id_Pdf, deleted.id_crucero AS Id_Crucero, deleted.titulo AS Titulo, deleted.ruta AS Ruta, deleted.bytes AS Bytes
+                WHERE id_pdf = @idPdf", new { idPdf });
+        }
+
+        public async Task<bool> TituloPdfAsync(int idPdf, string titulo)
+        {
+            using var cn = _db.Conexion();
+            return await cn.ExecuteAsync("UPDATE Eurovip.crucero_pdf SET titulo = @titulo WHERE id_pdf = @idPdf", new { idPdf, titulo }) > 0;
         }
 
         public async Task<List<int>?> ActivarAsync(int id, bool activo)
