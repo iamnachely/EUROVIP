@@ -412,29 +412,31 @@
         const sub = [reg, d.origen ? 'Salida desde ' + d.origen : null].filter(Boolean).map(esc).join(' · ');
         const logo = `<img class="tp-logo" src="${esc(D.logo)}" alt="Eurovip Travel">`;
         const hs = d.hoteles, sinHoteles = '<div class="flyer-no-data"><p>Sin hoteles a la venta para este destino.</p></div>';
+        // 🏆 el precio más bajo, esté en el puesto que esté
+        const iMin = hs.reduce((m, h, i) => h.precio_Final != null && (m < 0 || h.precio_Final < hs[m].precio_Final) ? i : m, -1);
         if (plantilla === 'postal') return `
             <div class="pf-foto" style="background:linear-gradient(180deg,rgba(0,20,30,.05) 30%,rgba(0,20,30,.78)),${fotoFondo(d)}">
                 <div class="pf-logo">${logo}</div><span class="pf-chip">Oferta especial</span>
                 <div class="pf-tit">${esc(d.nombre_Destino)}</div><div class="pf-sub">${sub}</div></div>
-            ${hs.length ? `<div class="pf-grid">${hs.map((h, i) => `<div class="pf-card ${i === 0 ? 'top' : ''}"><b>${esc(h.nombre_Hotel)}</b><small>${i === 0 ? '✦ Mejor precio · ' : ''}${esc(h.regimen || '')}</small><span class="pr">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            ${hs.length ? `<div class="pf-grid">${hs.map((h, i) => `<div class="pf-card ${i === 0 ? 'top' : ''} ${i === iMin ? 'tp-barato' : ''}"><b>${esc(h.nombre_Hotel)}</b><small>${esc(h.regimen || '')}</small>${i === iMin ? '<span class="tp-trofeo">🏆 El más económico</span>' : ''}<span class="pr">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
             <div class="pf-pie"><span class="tp-url">${webCorta()}</span><span>Tu agencia de confianza</span></div>`;
         if (plantilla === 'elegante') return `
             <div class="el-cab"><span class="el-logo">${logo}</span><div class="el-orn">✦ Selección exclusiva ✦</div>
                 <div class="el-tit">${esc(d.nombre_Destino)}</div><div class="el-sub">${sub}</div></div>
             <div class="el-foto" style="background:${fotoFondo(d)}"></div>
-            ${hs.length ? `<div class="el-lista">${hs.map((h, i) => `<div class="el-fila"><span class="n">${i + 1}</span><span><span class="h">${esc(h.nombre_Hotel)}</span><span class="r">${esc(h.regimen || '')}</span></span><span class="pts"></span><span class="p">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            ${hs.length ? `<div class="el-lista">${hs.map((h, i) => `<div class="el-fila ${i === iMin ? 'tp-barato' : ''}"><span class="n">${i + 1}</span><span><span class="h">${esc(h.nombre_Hotel)}</span><span class="r">${esc(h.regimen || '')}</span>${i === iMin ? '<span class="tp-trofeo">🏆 El más económico</span>' : ''}</span><span class="pts"></span><span class="p">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
             <div class="el-pie tp-url">${webCorta()}</div>`;
         if (plantilla === 'minimal') return `
             <div class="mi-cab"><span class="mi-tag">Oferta especial</span>${logo}</div>
             <div class="mi-tit">${esc(d.nombre_Destino)}</div><div class="mi-sub">${sub}</div>
             <div class="mi-foto" style="background:${fotoFondo(d)}"></div>
-            ${hs.length ? `<div class="mi-lista">${hs.map((h, i) => `<div class="mi-fila ${i === 0 ? 'top' : ''}"><span class="n">0${i + 1}</span><span><div class="h">${esc(h.nombre_Hotel)}</div><div class="r">${esc(h.regimen || '')}</div></span><span class="p">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            ${hs.length ? `<div class="mi-lista">${hs.map((h, i) => `<div class="mi-fila ${i === iMin ? 'top tp-barato' : ''}"><span class="n">0${i + 1}</span><span><div class="h">${esc(h.nombre_Hotel)}</div><div class="r">${esc(h.regimen || '')}</div>${i === iMin ? '<span class="tp-trofeo">🏆 El más económico</span>' : ''}</span><span class="p">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
             <div class="mi-pie"><span class="tp-url">${webCorta()}</span><span>Precios por persona · desde</span></div>`;
         /* vibrante */ return `
             <div class="vi-cab"><span class="vi-logo">${logo}</span>${hs.length ? `<span class="vi-sello">desde<b>${precioFly(Math.min(...hs.map(h => h.precio_Final ?? Infinity)))}</b></span>` : ''}</div>
             <div class="vi-tit">${esc(d.nombre_Destino)}</div><div class="vi-sub">${sub}</div>
             <div class="vi-foto" style="background:${fotoFondo(d)}"></div>
-            ${hs.length ? `<div class="vi-lista">${hs.map((h, i) => `<div class="vi-fila"><span class="n">${i + 1}</span><span class="h">${esc(h.nombre_Hotel)}<span class="r">${esc(h.regimen || '')}</span></span><span class="p">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
+            ${hs.length ? `<div class="vi-lista">${hs.map((h, i) => `<div class="vi-fila ${i === iMin ? 'tp-barato' : ''}"><span class="n">${i + 1}</span><span class="h">${esc(h.nombre_Hotel)}<span class="r">${esc(h.regimen || '')}</span>${i === iMin ? '<span class="tp-trofeo">🏆 El más económico</span>' : ''}</span><span class="p">${precioFly(h.precio_Final)}</span></div>`).join('')}</div>` : sinHoteles}
             <div class="vi-pie"><span class="tp-url">${webCorta()}</span><span>¡Reserva ya!</span></div>`;
     }
 
@@ -444,6 +446,7 @@
         const moderno = !!window.EVDisenos && EVDisenos.es(plantilla);
         fl.className = 'flyer' + (d && plantilla !== 'clasica' && !moderno ? ' tp tp-' + plantilla : '');
         if (window.EVDisenos) EVDisenos.aplicar(fl, d && moderno ? plantilla : null);
+        setTimeout(() => window.EVDisenos?.marcarMasBarato(fl), 0);   // 🏆 cuando ya está pintado
         if (d && plantilla !== 'clasica' && !moderno) { fl.innerHTML = flyerNuevo(d); setTimeout(escalar, 30); return; }
         if (!d) { fl.innerHTML = '<div class="flyer-accent"></div><div class="flyer-no-data"><i class="bi bi-image" style="font-size:3rem"></i><p>Agrega destinos en la pestaña <b>Destinos</b> y pulsa <b>Actualizar precios</b>.</p></div>'; setTimeout(escalar, 30); return; }
         const fondo = d.fondo ? `linear-gradient(to bottom, rgba(0,30,42,.15) 0%, rgba(0,30,42,.72) 100%), url('${d.fondo}') center/cover no-repeat` : 'linear-gradient(155deg, #003d52 0%, #00647a 55%, #003d52 100%)';

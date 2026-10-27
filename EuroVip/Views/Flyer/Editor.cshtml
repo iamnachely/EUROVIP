@@ -823,7 +823,8 @@
             if (caja) caja.querySelectorAll('button[data-dis]').forEach(function (b) { b.classList.toggle('on', b.dataset.dis === actual); });
             if (window.EVDisenos) EVDisenos.panelColores(document.getElementById('stColores'), actual, aplicar);
         }
-        function moneda() { if (window.EVDisenos) flyers().forEach(function (f) { EVDisenos.aplicarMoneda(f); }); }
+        // símbolo de la moneda en su sitio y 🏆 en el precio más bajo (se repite al pintar, ocultar o editar hoteles)
+        function moneda() { if (window.EVDisenos) flyers().forEach(function (f) { EVDisenos.aplicarMoneda(f); EVDisenos.marcarMasBarato(f); }); }
         document.addEventListener('DOMContentLoaded', function () {
             var caja = document.getElementById('stDisenos'); if (!caja) return;
             DIS.forEach(function (d) {
@@ -840,6 +841,8 @@
             var obs = new MutationObserver(function () { obs.disconnect(); moneda(); observar(); });
             function observar() { ['flyerHoteles', 'flyerHotelesEditor'].forEach(function (id) { var c = document.getElementById(id); if (c) obs.observe(c, { childList: true, subtree: true }); }); }
             observar();
+            // al escribir un precio a mano
+            flyers().forEach(function (f) { f.addEventListener('input', function (e) { if (e.target.closest && e.target.closest('.precio-val')) { obs.disconnect(); EVDisenos.marcarMasBarato(f); observar(); } }); });
         });
     })();
 

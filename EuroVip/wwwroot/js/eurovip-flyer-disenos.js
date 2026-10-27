@@ -6,6 +6,7 @@
 //   EVDisenos.panelMoneda(caja, alCambiar)  → símbolo (RD$, US$, €, $) y posición (automática, delante, detrás)
 //   EVDisenos.precio(n)                     → «RD$ 12.990» o «12.990 €» según la moneda elegida
 //   EVDisenos.aplicarMoneda(raiz)           → cambia y coloca el símbolo en los precios del flyer del Editor (.precio-sym / .precio-val)
+//   EVDisenos.marcarMasBarato(raiz)         → 🏆 «El más económico» en el hotel con el precio más bajo (.fh-row)
 // Colores y moneda se guardan en este navegador (los comparten Flyer Agencia y Flyer Editor).
 window.EVDisenos = (() => {
     const LISTA = [
@@ -103,6 +104,21 @@ window.EVDisenos = (() => {
         }));
     }
 
+    // ---- el más económico (🏆): el precio más bajo de los hoteles que se ven, esté en el puesto que esté ----
+    const valor = el => { const v = el?.querySelector('.precio-val') || el?.querySelector('.fh-price'); const n = +(v?.textContent || '').replace(/[^\d]/g, ''); return n > 0 ? n : null; };
+    function marcarMasBarato(raiz) {
+        if (!raiz) return;
+        const filas = [...raiz.querySelectorAll('.fh-row')];
+        let min = null, elegida = null;
+        filas.forEach(f => { const n = valor(f); if (n != null && (min == null || n < min)) { min = n; elegida = f; } });
+        filas.forEach(f => {
+            const es = f === elegida, t = f.querySelector('.fx-trofeo');
+            if (f.classList.contains('mas-barato') !== es) f.classList.toggle('mas-barato', es);
+            if (es && !t) f.querySelector('.fh-info')?.insertAdjacentHTML('beforeend', '<span class="fx-trofeo">🏆 El más económico</span>');
+            if (!es && t) t.remove();
+        });
+    }
+
     const css = document.createElement('style');
     css.textContent = `.evd-colores { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .evd-colores label { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 700; color: #334155; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 9px; padding: 4px 8px 4px 4px; cursor: pointer; }
@@ -112,5 +128,5 @@ window.EVDisenos = (() => {
 .evd-mon select { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 5px 8px; font-weight: 700; font-size: .8rem; font-family: inherit; background: #f8fafc; color: #334155; }`;
     document.head.appendChild(css);
 
-    return { LISTA, es, aplicar, panelColores, panelMoneda, precio, aplicarMoneda, moneda, detras };
+    return { LISTA, es, aplicar, panelColores, panelMoneda, precio, aplicarMoneda, moneda, detras, marcarMasBarato };
 })();
