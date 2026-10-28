@@ -76,6 +76,27 @@ namespace EuroVip.Models
         public int Tam { get; set; } = 25;
     }
 
+    /// <summary>Vista «Por hotel» de /Ofertas: resumen de las ofertas de un hotel (con los filtros de la lista).</summary>
+    public class OfertaHotel
+    {
+        public int Id_Alojamiento { get; set; }
+        public string Hotel { get; set; } = "";
+        public string? Caratula { get; set; }
+        public string? Destino { get; set; }
+        public int Ofertas { get; set; }
+        public int Activas { get; set; }
+        public int ConVuelo { get; set; }
+        public DateTime Primera { get; set; }
+        public DateTime Ultima { get; set; }
+        public decimal? PrecioDesde { get; set; }
+        public decimal? PrecioHasta { get; set; }
+        public string Id_Moneda { get; set; } = "";
+        public short? Peso { get; set; }
+        /// <summary>Regímenes distintos (vienen repetidos de la consulta y se limpian aquí).</summary>
+        public string? Regimenes { get => _reg; set => _reg = value is null ? null : string.Join(", ", value.Split(',').Select(x => x.Trim()).Where(x => x != "").Distinct()); }
+        private string? _reg;
+    }
+
     public class OfertaItem
     {
         public int Id_Servicio { get; set; }

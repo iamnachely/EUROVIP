@@ -48,6 +48,63 @@
     .of-precio-vivo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 14px 16px; border-radius: 16px; background: var(--ev-grad-soft); border: 1px solid var(--ev-line); font-weight: 700; margin-bottom: 18px; }
     .of-precio-vivo span { padding: 5px 10px; border-radius: 10px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
     .of-precio-vivo .eq { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); font-size: 16px; }
+    /* ---- vista «Por hotel» ---- */
+    .of-hgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 16px; }
+    .of-hcard { background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 22px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column;
+        transition: transform .25s var(--ev-ease), box-shadow .25s; text-align: left; padding: 0; font: inherit; color: inherit; }
+    .of-hcard:hover, .of-hcard:focus-visible { transform: translateY(-3px); box-shadow: var(--ev-shadow-lg); outline: 0; }
+    .of-hcard .ft { height: 150px; background: var(--ev-grad); position: relative; display: grid; place-items: center; font: 900 30px var(--ev-font); color: var(--ev-ink); }
+    .of-hcard .ft img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .of-hcard .ft::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(11,18,21,.55)); }
+    .of-hcard .ft .pr { position: absolute; right: 12px; bottom: 12px; z-index: 1; background: var(--ev-ink); color: var(--ev-aqua); padding: 7px 12px; border-radius: 12px; font: 800 14px var(--ev-font); }
+    .of-hcard .ft .pr small { display: block; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #fff; opacity: .8; }
+    .of-hcard .ft .es { position: absolute; left: 12px; top: 12px; z-index: 1; }
+    .of-hcard .bd { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .of-hcard h3 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.3px; line-height: 1.25; }
+    .of-hcard .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+    .of-hcard .meta span { background: var(--ev-surface-2); border: 1px solid var(--ev-line); padding: 3px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 700; }
+    .of-hcard .ver { margin-top: auto; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; font: 800 13px var(--ev-font); color: var(--ev-deep); }
+    .of-meses { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+    .of-meses i { height: 22px; border-radius: 6px; background: var(--ev-surface-2); display: grid; place-items: center; font: 800 9.5px var(--ev-font); font-style: normal; color: var(--ev-muted); }
+    .of-meses i.si { background: var(--ev-mint); color: var(--ev-ink); box-shadow: inset 0 -3px 0 var(--ev-teal); }
+    /* ---- calendario del hotel ---- */
+    .oc-cab { display: flex; gap: 14px; align-items: center; }
+    .oc-cab .th { width: 58px; height: 58px; border-radius: 16px; overflow: hidden; background: var(--ev-grad); flex-shrink: 0; display: grid; place-items: center; font-weight: 900; }
+    .oc-cab .th img { width: 100%; height: 100%; object-fit: cover; }
+    .oc { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; align-items: start; }
+    .oc-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+    .oc-nav b { font-size: 17px; font-weight: 800; letter-spacing: -.3px; flex: 1; min-width: 0; text-align: center; }
+    .oc-nav b::first-letter, .oc-mes h4::first-letter, .oc-det h3::first-letter { text-transform: uppercase; }
+    .oc-meses { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 18px; }
+    .oc-mes h4 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+    .oc-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+    .oc-grid .dn { text-align: center; font: 800 11px var(--ev-font); color: var(--ev-muted); padding: 4px 0; }
+    .oc-d { min-height: 56px; border-radius: 12px; border: 1px solid transparent; background: var(--ev-surface-2); padding: 5px 6px; display: flex; flex-direction: column; justify-content: space-between;
+        font: 700 12px var(--ev-font); color: var(--ev-muted); position: relative; text-align: left; }
+    .oc-d.vacio { background: transparent; }
+    .oc-d.hay { cursor: pointer; color: var(--ev-ink); border-color: rgba(0,0,0,.04); transition: transform .15s, box-shadow .2s; }
+    .oc-d.hay:hover { transform: translateY(-2px); box-shadow: 0 8px 18px -10px rgba(11,18,21,.45); }
+    .oc-d .p { font: 800 11.5px var(--ev-font); letter-spacing: -.2px; }
+    .oc-d .n { position: absolute; top: 4px; right: 5px; min-width: 17px; height: 17px; border-radius: 99px; background: var(--ev-ink); color: var(--ev-aqua); font-size: 10px; display: grid; place-items: center; padding: 0 4px; }
+    .oc-d.off { background: repeating-linear-gradient(135deg, #F2F4F4 0 6px, #E8ECEB 6px 12px) !important; color: var(--ev-muted) !important; }
+    .oc-d.pasado { opacity: .45; }
+    .oc-d.hoy { box-shadow: inset 0 0 0 2px var(--ev-teal); }
+    .oc-d.sel { box-shadow: 0 0 0 3px var(--ev-ink) !important; transform: none; }
+    .oc-ley { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 14px; font: 600 12px var(--ev-font); color: var(--ev-muted); }
+    .oc-ley i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 4px; }
+    .oc-det { position: sticky; top: 0; background: var(--ev-surface-2); border: 1px solid var(--ev-line); border-radius: 22px; padding: 16px; }
+    .oc-det h3 { margin: 0 0 2px; font-size: 18px; font-weight: 800; }
+    .oc-det .sub { color: var(--ev-muted); font-weight: 600; font-size: 12.5px; margin-bottom: 12px; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .oc-of { background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 18px; padding: 14px; margin-bottom: 10px; animation: uiFade .3s var(--ev-ease); }
+    .oc-of.off { opacity: .6; }
+    .oc-of .top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .oc-of .precio { font: 900 22px var(--ev-font); letter-spacing: -.6px; line-height: 1; }
+    .oc-of .precio small { display: block; font: 600 11px var(--ev-font); color: var(--ev-muted); letter-spacing: 0; margin-top: 4px; }
+    .oc-of dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 12px 0; font-size: 12.5px; }
+    .oc-of dt { color: var(--ev-muted); font-weight: 700; }
+    .oc-of dd { margin: 0; font-weight: 700; }
+    .oc-of .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    @@media (max-width: 1100px) { .oc { grid-template-columns: 1fr; } .oc-det { position: static; } }
     @@media (max-width: 1100px) { .of-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 }
@@ -80,6 +137,10 @@
 </section>
 
 <div class="ui-toolbar">
+    <div class="ui-chips" id="fVista" role="group" aria-label="Cómo ver los @ofs">
+        <button type="button" class="ui-pick on" data-v="lista"><i class="bi bi-list-ul"></i> Lista</button>
+        <button type="button" class="ui-pick" data-v="hoteles"><i class="bi bi-grid-3x2-gap"></i> Por hotel</button>
+    </div>
     <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar hotel, destino, campaña, código o nº de @of1…" /></label>
     <select class="ui-select" id="fDestino"><option value="">Todos los destinos</option></select>
     <select class="ui-select" id="fCampanya"><option value="">Todas las campañas</option></select>
@@ -117,6 +178,15 @@
     <span class="sp"></span>
     <button class="ev-btn light sm" type="button" onclick="OF.limpiarSel()">Quitar selección</button>
 </div>
+
+<!-- CALENDARIO DE UN HOTEL (vista «Por hotel») -->
+<aside class="ui-drawer" id="ofCal" style="width:min(1240px, calc(100vw - 24px))" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="oc-cab" id="cCab" style="min-width:0;flex:1"></div>
+        <button class="ui-ibtn x" type="button" onclick="OF.cerrarCal()" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="cCuerpo"></div>
+</aside>
 
 <!-- EDITOR -->
 <aside class="ui-drawer" id="ofEditor" aria-hidden="true">
@@ -179,19 +249,21 @@ const OF = (() => {
     const $ = (s, el = document) => el.querySelector(s);
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
     const esc = EV.esc;
-    const st = { q: '', destino: '', campanya: '', estado: '', vuelo: '', desde: '', hasta: '', pasadas: false, orden: 'fecha', pagina: 1 };
+    const st = { vista: 'lista', q: '', destino: '', campanya: '', estado: '', vuelo: '', desde: '', hasta: '', pasadas: false, orden: 'fecha', pagina: 1 };
     const DEF = { ...st };   // valores por defecto: lo que no es igual a esto se guarda en la dirección (?destino=…)
 
     /** Pone en pantalla los filtros de st (al volver a la página o al limpiar). */
     function filtrosAPantalla() {
         $('#fQ').value = st.q; $('#fDestino').value = st.destino; $('#fCampanya').value = st.campanya; $('#fOrden').value = st.orden;
         $('#fDesde').value = st.desde; $('#fHasta').value = st.hasta; $('#fPasadas').checked = st.pasadas;
-        [['#fEstado', 'estado'], ['#fVuelo', 'vuelo']].forEach(([id, k]) => $$(id + ' .ui-pick').forEach(x => x.classList.toggle('on', (x.dataset.v ?? '') === String(st[k]))));
+        [['#fEstado', 'estado'], ['#fVuelo', 'vuelo'], ['#fVista', 'vista']].forEach(([id, k]) => $$(id + ' .ui-pick').forEach(x => x.classList.toggle('on', (x.dataset.v ?? '') === String(st[k]))));
     }
     function limpiarFiltros() { Object.assign(st, DEF); filtrosAPantalla(); cargar(); }
     const sel = new Set();
     let items = [], cat, actual = null, sups = null;
     const drawer = EV.drawer($('#ofEditor'));
+    const calDrawer = EV.drawer($('#ofCal'));
+    let cal = null, volverCal = null;   // calendario abierto { hotel, ofertas, mes, dia } y a dónde volver tras editar
 
     const params = () => new URLSearchParams({ tipo: TIPO, q: st.q, destino: st.destino, campanya: st.campanya, estado: st.estado, vuelo: st.vuelo, desde: st.desde, hasta: st.hasta, pasadas: st.pasadas, orden: st.orden, pagina: st.pagina, tam: 25 });
     const thumb = o => EV.esUrl(o.caratula) ? `<img src="${esc(o.caratula)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${esc(EV.iniciales(o.hotel)).replace(/'/g, '')}'">` : esc(EV.iniciales(o.hotel));
@@ -210,6 +282,7 @@ const OF = (() => {
         const filtrando = st.q || st.destino || st.campanya || st.estado || st.vuelo || st.desde || st.hasta || st.pasadas;
         $('#ofLimpiar').hidden = !filtrando;
         $('#ofLista').innerHTML = '<div class="ui-skel" style="height:320px"></div>';
+        if (st.vista === 'hoteles') return cargarHoteles();
         try {
             const d = await EV.api('/Ofertas/Listar?' + params());
             items = d.items;
@@ -255,6 +328,105 @@ const OF = (() => {
             `<button ${d.pagina === pags ? 'disabled' : ''} data-p="${d.pagina + 1}"><i class="bi bi-chevron-right"></i></button>`;
     }
 
+    // ================= VISTA «POR HOTEL» =================
+    const MESES = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    const dia = d => (d || '').slice(0, 10);
+    async function cargarHoteles() {
+        $('#ofPager').hidden = true; $('#ofBulk').hidden = true;
+        try {
+            const [hs, d] = await Promise.all([EV.api('/Ofertas/Hoteles?' + params()), EV.api('/Ofertas/Listar?' + params())]);
+            $('#kFut').textContent = EV.fmt(d.stats.futuras); $('#kHot').textContent = EV.fmt(d.stats.hoteles);
+            $('#kVue').textContent = EV.fmt(d.stats.conVuelo); $('#kDesde').textContent = d.stats.precioDesde != null ? EV.dinero(d.stats.precioDesde) : '—';
+            if (!hs.length) { pintar({ items: [] }); return; }
+            // meses (de los próximos 12) en los que el hotel tiene salidas: se piden al abrir; aquí solo el rango
+            const hoy = new Date(), m0 = hoy.getFullYear() * 12 + hoy.getMonth();
+            const meses = h => { const a = new Date(dia(h.primera) + 'T00:00:00'), b = new Date(dia(h.ultima) + 'T00:00:00'), ia = a.getFullYear() * 12 + a.getMonth(), ib = b.getFullYear() * 12 + b.getMonth();
+                return Array.from({ length: 12 }, (_, i) => { const k = m0 + i; return `<i class="${k >= ia && k <= ib ? 'si' : ''}" title="${new Date(Math.floor(k / 12), k % 12, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}">${MESES[k % 12]}</i>`; }).join(''); };
+            $('#ofLista').innerHTML = `<div class="of-hgrid">${hs.map(h => `<button type="button" class="of-hcard ${h.peso ? 'ev-con-prioridad' : ''}" data-hotel="${h.id_Alojamiento}">
+                <div class="ft">${EV.esUrl(h.caratula) ? `<img src="${esc(h.caratula)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(EV.iniciales(h.hotel))}
+                    ${h.peso ? `<span class="es">${EVPrioridad.estrella(h.peso, true)}</span>` : ''}
+                    <span class="pr"><small>desde</small>${EV.dinero(h.precioDesde, h.id_Moneda)}</span></div>
+                <div class="bd"><h3>${esc(h.hotel)}</h3>
+                    <div class="meta"><span><i class="bi bi-geo-alt-fill"></i> ${esc(h.destino || '—')}</span><span>${h.ofertas} ${OF1}${h.ofertas === 1 ? '' : 's'}</span>
+                        ${h.activas < h.ofertas ? `<span>${h.ofertas - h.activas} inactiva${h.ofertas - h.activas === 1 ? '' : 's'}</span>` : ''}${h.conVuelo ? '<span><i class="bi bi-airplane"></i> con vuelo</span>' : ''}${h.regimenes ? `<span>${esc(h.regimenes)}</span>` : ''}</div>
+                    <div class="of-meses" aria-label="Meses con salidas">${meses(h)}</div>
+                    <div class="ver"><span>${EV.fecha(dia(h.primera))} → ${EV.fecha(dia(h.ultima))}</span><span><i class="bi bi-calendar3"></i> Ver calendario</span></div></div></button>`).join('')}</div>`;
+        } catch (e) { $('#ofLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar los hoteles</h3><p>${esc(e.message)}</p><button type="button" class="ev-btn" onclick="OF.recargar()"><i class="bi bi-arrow-clockwise"></i> Reintentar</button></div>`; }
+    }
+
+    /** Abre el calendario de un hotel (fecha = día a mostrar seleccionado). */
+    async function abrirCal(hotel, fecha) {
+        try {
+            const ofs = await EV.api(`/Ofertas/Calendario?hotel=${hotel}&` + params());
+            if (!ofs.length) { EV.toast('Este hotel ya no tiene ' + OFS + ' con esos filtros.', 'info'); return; }
+            const porDia = new Map();
+            ofs.forEach(o => { const k = dia(o.desde); if (!porDia.has(k)) porDia.set(k, []); porDia.get(k).push(o); });
+            const precios = ofs.filter(o => o.activo && o.precioWeb != null).map(o => o.precioWeb);
+            const primero = fecha && porDia.has(fecha) ? fecha : ([...porDia.keys()].find(k => k > EV.hoy()) || [...porDia.keys()][0]);
+            cal = { hotel, ofs, porDia, min: precios.length ? Math.min(...precios) : null, max: precios.length ? Math.max(...precios) : null, mes: primero.slice(0, 7), dia: primero };
+            const o = ofs[0];
+            $('#cCab').innerHTML = `<div class="th">${EV.esUrl(o.caratula) ? `<img src="${esc(o.caratula)}" alt="">` : esc(EV.iniciales(o.hotel))}</div>
+                <div style="min-width:0"><h2 style="margin:0;font-size:21px;font-weight:800;letter-spacing:-.5px">${esc(o.hotel)}</h2>
+                <small style="color:var(--ev-muted);font-weight:600">${esc(o.destino || '')} · ${ofs.length} ${OF1}${ofs.length === 1 ? '' : 's'} en ${porDia.size} fecha${porDia.size === 1 ? '' : 's'} · ${cal.min != null ? `desde ${EV.dinero(cal.min, o.id_Moneda)}` : 'sin precio activo'}</small></div>`;
+            pintarCal();
+            if (!calDrawer.abierto()) calDrawer.abrir();
+        } catch (e) { EV.toast(e.message, 'err'); }
+    }
+
+    /** Color según el precio: verde = de los más baratos del hotel, naranja = de los más caros. */
+    const color = p => {
+        if (p == null || !isFinite(p) || cal.min == null || cal.max <= cal.min) return '#E6FBF8';
+        const t = (p - cal.min) / (cal.max - cal.min);
+        return t < .34 ? '#DCFCE7' : t < .67 ? '#FEF7C3' : '#FFE4CC';
+    };
+    const sumarMes = (ym, n) => { const [y, m] = ym.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+    function mesHtml(ym) {
+        const [y, m] = ym.split('-').map(Number), primero = new Date(y, m - 1, 1), dias = new Date(y, m, 0).getDate(), hueco = (primero.getDay() + 6) % 7, hoy = EV.hoy();
+        let html = ['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => `<span class="dn">${d}</span>`).join('') + '<span class="oc-d vacio"></span>'.repeat(hueco);
+        for (let d = 1; d <= dias; d++) {
+            const k = `${ym}-${String(d).padStart(2, '0')}`, l = cal.porDia.get(k);
+            if (!l) { html += `<span class="oc-d ${k < hoy ? 'pasado' : ''} ${k === hoy ? 'hoy' : ''}">${d}</span>`; continue; }
+            const act = l.filter(o => o.activo), p = Math.min(...(act.length ? act : l).map(o => o.precioWeb ?? Infinity));
+            html += `<button type="button" class="oc-d hay ${act.length ? '' : 'off'} ${k <= hoy ? 'pasado' : ''} ${k === hoy ? 'hoy' : ''} ${k === cal.dia ? 'sel' : ''}" data-dia="${k}" style="background:${color(p)}"
+                title="${EV.fecha(k)} · ${l.length} ${OF1}${l.length === 1 ? '' : 's'} · desde ${EV.dinero(p, l[0].id_Moneda)}">${d}${l.length > 1 ? `<span class="n">${l.length}</span>` : ''}<span class="p">${isFinite(p) ? EV.fmt(p) : '—'}</span></button>`;
+        }
+        return `<div class="oc-mes"><h4>${primero.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</h4><div class="oc-grid">${html}</div></div>`;
+    }
+    function pintarCal() {
+        const dias = [...cal.porDia.keys()], i = dias.indexOf(cal.dia);
+        const l = cal.porDia.get(cal.dia) || [];
+        const m2 = sumarMes(cal.mes, 1);
+        $('#cCuerpo').innerHTML = `<div class="oc"><div>
+                <div class="oc-nav"><button type="button" class="ev-btn ghost sm" data-mes="-1" aria-label="Meses anteriores"><i class="bi bi-chevron-left"></i></button>
+                    <b>${new Date(cal.mes + '-01T00:00:00').toLocaleDateString('es-ES', { month: 'long' })} – ${new Date(m2 + '-01T00:00:00').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</b>
+                    <button type="button" class="ev-btn ghost sm" data-mes="1" aria-label="Meses siguientes"><i class="bi bi-chevron-right"></i></button>
+                    <span style="flex:1"></span><button type="button" class="ev-btn ghost sm" data-ir="primero"><i class="bi bi-skip-start"></i> Primera fecha</button></div>
+                <div class="oc-meses">${mesHtml(cal.mes)}${mesHtml(m2)}</div>
+                <div class="oc-ley"><span><i style="background:#DCFCE7"></i>Más barato</span><span><i style="background:#FEF7C3"></i>Medio</span><span><i style="background:#FFE4CC"></i>Más caro</span>
+                    <span><i style="background:repeating-linear-gradient(135deg,#F2F4F4 0 4px,#E8ECEB 4px 8px)"></i>Inactiva</span><span><i style="box-shadow:inset 0 0 0 2px var(--ev-teal)"></i>Hoy</span>
+                    <span>El número de cada día es el precio web más bajo; el círculo, cuántas ${OFS} hay ese día.</span></div></div>
+            <div class="oc-det" aria-live="polite">
+                <h3>${new Date(cal.dia + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h3>
+                <div class="sub"><span>${l.length} ${OF1}${l.length === 1 ? '' : 's'} con entrada este día</span>
+                    <span style="display:flex;gap:6px"><button type="button" class="ui-ibtn" data-salto="-1" ${i <= 0 ? 'disabled' : ''} title="Fecha anterior con ${OFS}"><i class="bi bi-chevron-left"></i></button>
+                    <button type="button" class="ui-ibtn" data-salto="1" ${i >= dias.length - 1 ? 'disabled' : ''} title="Fecha siguiente con ${OFS}"><i class="bi bi-chevron-right"></i></button></span></div>
+                ${l.map(o => `<div class="oc-of ${o.activo ? '' : 'off'}">
+                    <div class="top"><div><span class="of-reg" title="${esc(o.regimen || '')}">${esc(o.id_Regimen)}</span> ${EVPrioridad.estrella(o.peso)}
+                        <div class="of-sub" style="margin-top:6px">#${o.id_Servicio}${o.codigo ? ' · ' + esc(o.codigo) : ''}</div></div>
+                        <div class="precio" title="Base ${EV.fmt(o.precio_Base)} + tasas ${EV.fmt(o.tasas)}${o.descuento ? ' − ' + EV.fmt(o.descuento, 1) + '%' : ''}">${EV.dinero(o.precioWeb, o.id_Moneda)}<small>precio web${o.descuento ? ` · -${EV.fmt(o.descuento, 1)}%` : ''}</small></div></div>
+                    ${o.precio_Proveedor ? `<div style="margin-top:6px">${EVPrioridad.proveedor(o.precioWeb, o.precio_Proveedor)}</div>` : ''}
+                    <dl><dt>Estancia</dt><dd>${o.noches} noches · sale ${EV.fecha(dia(o.hasta))}</dd>
+                        <dt>Campaña</dt><dd>${esc(o.campanya || '#' + o.id_Campanya)}</dd>
+                        <dt>Precio</dt><dd>Base ${EV.dinero(o.precio_Base, o.id_Moneda)} + tasas ${EV.dinero(o.tasas, o.id_Moneda)}</dd>
+                        <dt>Vuelo</dt><dd>${o.vuelos ? `<i class="bi bi-airplane"></i> ${o.vuelos} vuelos` : 'Sin vuelo'}</dd>
+                        <dt>Origen</dt><dd>${esc(o.origen || 'Sin origen')}</dd>
+                        <dt>Habitaciones</dt><dd>${o.habitaciones}</dd>
+                        <dt>Proveedor</dt><dd>${esc(o.proveedor || '—')}</dd></dl>
+                    <div class="acts"><label class="ui-switch"><input type="checkbox" data-calact="${o.id_Servicio}" ${o.activo ? 'checked' : ''}><span class="tr"></span> A la venta</label>
+                        <span style="flex:1"></span><button type="button" class="ev-btn sm" data-caledit="${o.id_Servicio}"><i class="bi bi-pencil"></i> Editar</button>
+                        <button type="button" class="ui-ibtn danger" data-caldel="${o.id_Servicio}" title="Eliminar"><i class="bi bi-trash3"></i></button></div></div>`).join('')}
+            </div></div>`;
+    }
     function barraLote() { $('#ofBulk').hidden = sel.size === 0; $('#bNum').textContent = sel.size; }
 
     // ---------------- editor ----------------
@@ -322,6 +494,7 @@ const OF = (() => {
         try {
             const r = await EV.post('/Ofertas/Editar', dto); EV.toast(r.mensaje); drawer.cerrar(true);
             await cargar();
+            if (volverCal) { const v = volverCal; volverCal = null; return abrirCal(v.hotel, dto.Desde || v.dia); }   // vuelve al calendario del hotel
             EV.resaltar(document.querySelector(`#ofLista tr[data-id="${dto.Id_Servicio}"]`));   // se ve la fila que cambió
         }
         catch (e) { EV.toast(e.message, 'err'); }
@@ -334,7 +507,7 @@ const OF = (() => {
             texto: `Se borran con sus habitaciones, tasas, notas y vuelos. No se puede deshacer.<br>Si solo no quieres que se venda, es mejor <b>desactivarla</b>.`,
             escribir: n > 10 ? 'ELIMINAR' : null });
         if (!ok) return;
-        try { const r = await EV.post('/Ofertas/Eliminar', ids); EV.toast(r.mensaje); ids.forEach(i => sel.delete(i)); barraLote(); drawer.cerrar(); cargar(); }
+        try { const r = await EV.post('/Ofertas/Eliminar', ids); EV.toast(r.mensaje); ids.forEach(i => sel.delete(i)); barraLote(); drawer.cerrar(true); await cargar(); if (cal && calDrawer.abierto()) abrirCal(cal.hotel, cal.dia); }
         catch (e) { EV.toast(e.message, 'err'); }
     }
 
@@ -349,7 +522,7 @@ const OF = (() => {
         $('#fQ').addEventListener('input', EV.debounce(e => { st.q = e.target.value.trim(); st.pagina = 1; cargar(); }, 300));
         [['#fDestino', 'destino'], ['#fCampanya', 'campanya'], ['#fOrden', 'orden'], ['#fDesde', 'desde'], ['#fHasta', 'hasta']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; st.pagina = 1; cargar(); }));
         $('#fPasadas').addEventListener('change', e => { st.pasadas = e.target.checked; st.pagina = 1; cargar(); });
-        [['#fEstado', 'estado'], ['#fVuelo', 'vuelo']].forEach(([id, k]) => $$(id + ' [data-v]').forEach(b => b.addEventListener('click', () => { $$(id + ' .ui-pick').forEach(x => x.classList.toggle('on', x === b)); st[k] = b.dataset.v; st.pagina = 1; cargar(); })));
+        [['#fEstado', 'estado'], ['#fVuelo', 'vuelo'], ['#fVista', 'vista']].forEach(([id, k]) => $$(id + ' [data-v]').forEach(b => b.addEventListener('click', () => { $$(id + ' .ui-pick').forEach(x => x.classList.toggle('on', x === b)); st[k] = b.dataset.v; st.pagina = 1; cargar(); })));
         $('#ofExportar').addEventListener('click', e => { e.preventDefault(); location.href = '/Ofertas/Exportar?' + params(); });
 
         $('#ofLista').addEventListener('change', async e => {
@@ -364,6 +537,7 @@ const OF = (() => {
             }
         });
         $('#ofLista').addEventListener('click', e => {
+            const hc = e.target.closest('[data-hotel]'); if (hc) return abrirCal(+hc.dataset.hotel);
             const ed = e.target.closest('[data-edit]'); if (ed) return editar(+ed.dataset.edit);
             const de = e.target.closest('[data-del]'); if (de) return eliminarIds([+de.dataset.del]);
         });
@@ -380,8 +554,28 @@ const OF = (() => {
         }); $('#eHabs').addEventListener('change', precioVivo);
         ['#eDesde', '#eNoches'].forEach(id => $(id).addEventListener('input', hasta));
         $('#eGuardar').onclick = guardar;
+        // calendario del hotel: meses, días, saltos y acciones de cada oferta
+        $('#cCuerpo').addEventListener('click', async e => {
+            const t = e.target.closest('button'); if (!t || !cal) return;
+            if (t.dataset.mes) { cal.mes = sumarMes(cal.mes, +t.dataset.mes * 2); return pintarCal(); }
+            if (t.dataset.ir) { const k = [...cal.porDia.keys()][0]; cal.dia = k; cal.mes = k.slice(0, 7); return pintarCal(); }
+            if (t.dataset.dia) { cal.dia = t.dataset.dia; return pintarCal(); }
+            if (t.dataset.salto) {
+                const ds = [...cal.porDia.keys()], k = ds[ds.indexOf(cal.dia) + +t.dataset.salto]; if (!k) return;
+                cal.dia = k; if (k.slice(0, 7) !== cal.mes && k.slice(0, 7) !== sumarMes(cal.mes, 1)) cal.mes = k.slice(0, 7);
+                return pintarCal();
+            }
+            if (t.dataset.caledit) { volverCal = { hotel: cal.hotel, dia: cal.dia }; await calDrawer.cerrar(true); return editar(+t.dataset.caledit); }
+            if (t.dataset.caldel) return eliminarIds([+t.dataset.caldel]);
+        });
+        $('#cCuerpo').addEventListener('change', async e => {
+            const t = e.target; if (!t.dataset.calact) return;
+            const id = +t.dataset.calact, o = cal.ofs.find(x => x.id_Servicio === id);
+            try { await EV.post('/Ofertas/Lote', { Ids: [id], Activo: t.checked }); o.activo = t.checked; pintarCal(); EV.toast(t.checked ? 'Vuelve a estar a la venta.' : 'Ya no se vende.'); }
+            catch (err) { t.checked = !t.checked; EV.toast(err.message, 'err'); }
+        });
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') drawer.cerrar();
+            if (e.key === 'Escape') { if (drawer.abierto()) drawer.cerrar(); else calDrawer.cerrar(); }
             if (drawer.abierto() && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); guardar(); }
         });
         cargar();
@@ -391,6 +585,7 @@ const OF = (() => {
 
     return {
         cerrar: () => drawer.cerrar(),
+        cerrarCal: () => calDrawer.cerrar(),
         recargar: () => cargar(),
         limpiarFiltros: () => limpiarFiltros(),
         limpiarSel: () => { sel.clear(); $$('[data-sel]').forEach(c => { c.checked = false; c.closest('tr').classList.remove('sel'); }); if ($('#selTodo')) $('#selTodo').checked = false; barraLote(); },

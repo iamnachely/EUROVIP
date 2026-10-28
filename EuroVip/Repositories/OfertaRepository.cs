@@ -8,6 +8,8 @@ namespace EuroVip.Repositories
     public interface IOfertaRepository
     {
         Task<(IEnumerable<OfertaItem> Items, int Total)> ListarAsync(OfertaFiltro f);
+        Task<IEnumerable<OfertaHotel>> HotelesAsync(OfertaFiltro f);
+        Task<IEnumerable<OfertaItem>> CalendarioAsync(int hotel, OfertaFiltro f);
         Task<OfertaEstadisticas> EstadisticasAsync(string? tipo = null);
         Task<OfertaDetalle?> ObtenerAsync(int id);
         Task<string?> EditarAsync(OfertaEditarDto dto);
@@ -72,6 +74,67 @@ namespace EuroVip.Repositories
             var tam = Math.Clamp(f.Tam, 10, 100);
             var pagina = Math.Max(1, f.Pagina);
             var p = new DynamicParameters();
+            var filtro = Filtro(f, p);
+            var orden = f.Orden switch
+            {
+                "precio" => "Eurovip.fnPrecioWeb(s.id_servicio), sd.desde",
+                "hotel" => "a.nombre, sd.desde",
+                "recientes" => "s.id_servicio DESC",
+                // como en la web: prioridad 1, 2, 3… y después de menor a mayor precio
+                "prioridad" => "CASE WHEN s.peso IS NULL THEN 1 ELSE 0 END, s.peso, Eurovip.fnPrecioWeb(s.id_servicio), sd.desde",
+                _ => "sd.desde, a.nombre, s.id_servicio"
+            };
+            p.Add("offset", (pagina - 1) * tam); p.Add("tam", tam);
+
+            using var cn = _db.Conexion();
+            using var m = await cn.QueryMultipleAsync($@"
+                SELECT COUNT(*) {Base} {filtro};
+                SELECT {Columnas} {Base} {filtro} ORDER BY {orden} OFFSET @offset ROWS FETCH NEXT @tam ROWS ONLY;", p);
+            var total = await m.ReadSingleAsync<int>();
+            return (await m.ReadAsync<OfertaItem>(), total);
+        }
+
+        /// <summary>Vista «Por hotel»: un resumen por hotel con los mismos filtros de la lista (máx. 500 hoteles).</summary>
+        public async Task<IEnumerable<OfertaHotel>> HotelesAsync(OfertaFiltro f)
+        {
+            var p = new DynamicParameters();
+            var filtro = Filtro(f, p);
+            var orden = f.Orden switch
+            {
+                "precio" => "MIN(Eurovip.fnPrecioWeb(s.id_servicio))",
+                "recientes" => "MAX(s.id_servicio) DESC",
+                "prioridad" => "CASE WHEN MIN(s.peso) IS NULL THEN 1 ELSE 0 END, MIN(s.peso), MIN(Eurovip.fnPrecioWeb(s.id_servicio))",
+                "fecha" => "MIN(sd.desde), MAX(a.nombre)",
+                _ => "MAX(a.nombre)"
+            };
+            using var cn = _db.Conexion();
+            return await cn.QueryAsync<OfertaHotel>($@"
+                SELECT TOP 500 a.id_alojamiento AS Id_Alojamiento, MAX(a.nombre) AS Hotel, MAX(a.caratula) AS Caratula,
+                       MAX(COALESCE(sdx.destino, a.id_destino)) AS Destino, COUNT(*) AS Ofertas,
+                       SUM(CASE WHEN s.activo = 1 THEN 1 ELSE 0 END) AS Activas,
+                       SUM(CASE WHEN v.id_servicio IS NOT NULL THEN 1 ELSE 0 END) AS ConVuelo,
+                       MIN(sd.desde) AS Primera, MAX(sd.desde) AS Ultima,
+                       MIN(Eurovip.fnPrecioWeb(s.id_servicio)) AS PrecioDesde, MAX(Eurovip.fnPrecioWeb(s.id_servicio)) AS PrecioHasta,
+                       MAX(s.id_moneda) AS Id_Moneda, MIN(s.peso) AS Peso,
+                       STRING_AGG(CAST(sd.id_regimen AS varchar(max)), ',') AS Regimenes
+                {Base} {filtro}
+                GROUP BY a.id_alojamiento ORDER BY {orden}", p);
+        }
+
+        /// <summary>Todas las ofertas de un hotel (con los filtros de la lista) para su calendario, por fecha de entrada.</summary>
+        public async Task<IEnumerable<OfertaItem>> CalendarioAsync(int hotel, OfertaFiltro f)
+        {
+            var p = new DynamicParameters();
+            var filtro = Filtro(f, p) + " AND a.id_alojamiento = @hotel";
+            p.Add("hotel", hotel);
+            using var cn = _db.Conexion();
+            return await cn.QueryAsync<OfertaItem>($@"
+                SELECT TOP 3000 {Columnas} {Base} {filtro} ORDER BY sd.desde, Eurovip.fnPrecioWeb(s.id_servicio)", p);
+        }
+
+        /// <summary>WHERE de la lista (lo comparten Listar, Hoteles y Calendario).</summary>
+        private static string Filtro(OfertaFiltro f, DynamicParameters p)
+        {
             var where = new List<string>();
             if (!string.IsNullOrWhiteSpace(f.Q))
             {
@@ -86,24 +149,8 @@ namespace EuroVip.Repositories
             if (f.Desde is not null) { where.Add("sd.desde >= @desde"); p.Add("desde", f.Desde.Value.Date); }
             if (f.Hasta is not null) { where.Add("sd.desde <= @hasta"); p.Add("hasta", f.Hasta.Value.Date); }
             if (!f.Pasadas && f.Desde is null) where.Add("sd.desde >= CAST(GETDATE() AS date)");
-            var orden = f.Orden switch
-            {
-                "precio" => "Eurovip.fnPrecioWeb(s.id_servicio), sd.desde",
-                "hotel" => "a.nombre, sd.desde",
-                "recientes" => "s.id_servicio DESC",
-                // como en la web: prioridad 1, 2, 3… y después de menor a mayor precio
-                "prioridad" => "CASE WHEN s.peso IS NULL THEN 1 ELSE 0 END, s.peso, Eurovip.fnPrecioWeb(s.id_servicio), sd.desde",
-                _ => "sd.desde, a.nombre, s.id_servicio"
-            };
-            var filtro = where.Count > 0 ? " AND " + string.Join(" AND ", where) : "";
-            p.Add("offset", (pagina - 1) * tam); p.Add("tam", tam); p.Add("tipos", new[] { TipoDe(f.Tipo) });
-
-            using var cn = _db.Conexion();
-            using var m = await cn.QueryMultipleAsync($@"
-                SELECT COUNT(*) {Base} {filtro};
-                SELECT {Columnas} {Base} {filtro} ORDER BY {orden} OFFSET @offset ROWS FETCH NEXT @tam ROWS ONLY;", p);
-            var total = await m.ReadSingleAsync<int>();
-            return (await m.ReadAsync<OfertaItem>(), total);
+            p.Add("tipos", new[] { TipoDe(f.Tipo) });
+            return where.Count > 0 ? " AND " + string.Join(" AND ", where) : "";
         }
 
         public async Task<OfertaEstadisticas> EstadisticasAsync(string? tipo = null)

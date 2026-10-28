@@ -31,6 +31,11 @@ namespace EuroVip.Controllers
             return Json(new { items, total, pagina = Math.Max(1, f.Pagina), tam = Math.Clamp(f.Tam, 10, 100), stats = await _repo.EstadisticasAsync(OfertaRepository.TipoDe(f.Tipo)) });
         }
 
+        /// <summary>Vista «Por hotel»: un resumen por hotel con los mismos filtros de Listar.</summary>
+        [HttpGet] public async Task<IActionResult> Hoteles([FromQuery] OfertaFiltro f) => Json(await _repo.HotelesAsync(f));
+        /// <summary>Calendario de un hotel: todas sus ofertas (con los filtros de Listar) por fecha de entrada.</summary>
+        [HttpGet] public async Task<IActionResult> Calendario(int hotel, [FromQuery] OfertaFiltro f) => Json(await _repo.CalendarioAsync(hotel, f));
+
         [HttpGet] public async Task<IActionResult> Destinos(string? tipo) => Json(await _repo.DestinosConOfertasAsync(OfertaRepository.TipoDe(tipo)));
         [HttpGet] public async Task<IActionResult> Habitaciones(int hotel) => Json(await _repo.HabitacionesAsync(hotel));
 
