@@ -5819,6 +5819,17 @@ GO
                Convento» 1 y «Costa de Sol» 2; las 149 ofertas en 1 son del mismo hotel (#9761, Samaná) y se quedan. Probado
                con ROLLBACK: se mete (los demás bajan), sin huecos (9 → 3), intercambio, quitar (suben) y ofertas por hotel.
 
+   28/10/2026  NOCHES = 1 en Eurovip.servicio (solo en el 93), pedido de la usuaria «noches = 1 en toda la base en solo hotel y
+               hoteles; circuitos no»: los 649 servicios OFERTA (Solo Hotel) que tenían 7 noches pasaron a 1 (los otros 129 ya
+               tenían 1). Ahora las 778 OFERTA tienen 1 noche. Los 1203 CIRCUITO no se tocaron (6 a 15 noches). Solo cambia la
+               columna noches; el trigger anotó usuario_modificacion/fecha_modificacion. Para deshacer (todas tenían 7):
+               UPDATE Eurovip.servicio SET noches = 7 WHERE id_tipo_servicio = 'OFERTA'
+                 AND (id_servicio BETWEEN 70 AND 191 OR id_servicio BETWEEN 229 AND 451 OR id_servicio BETWEEN 2758 AND 3061);
+               Mismo día, también en Eurovip.inicio (tarjetas de la Home), tipos HOTEL y OFERTA: 14 tarjetas pasaron a 1 noche
+               (la 4 ya tenía 1). Antes: 7 noches en las 1, 5, 26 y 1147; vacío en 27, 28, 29, 30, 1170 y 1165-1169. CIRCUITO,
+               CRUCERO, EXCURSION y TRASLADO siguen vacías (no se tocaron). La visibilidad (estado) de las tarjetas no cambió.
+               Para deshacer: UPDATE Eurovip.inicio SET noches = 7 WHERE id IN (1, 5, 26, 1147);
+                              UPDATE Eurovip.inicio SET noches = NULL WHERE id IN (27, 28, 29, 30, 1170, 1165, 1166, 1167, 1168, 1169);
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
