@@ -6130,6 +6130,14 @@ GO
                de circuito (3223) se guardó con los mismos valores para probar el editor (sin cambios). La «imagen por defecto» para lo
                que ya existe NO se corrió desde el equipo de desarrollo (allí no están las fotos viejas): hay que hacerlo en el servidor
                con Herramientas › «Imagen por defecto a lo que no tiene foto» después de «Pasar las fotos de antes».
+   10/11/2026  IMAGEN POR DEFECTO a lo que ya existía sin foto (pedido de la usuaria «que coja una por defecto siempre, al crear y
+               las que ya están creadas»), con Herramientas › «Imagen por defecto…» (POST /Multimedia/PorDefecto). Las fotos de antes
+               por nombre se comprobaron en https://bktitan.eurovip.com.do/imagenes/… (ImagenesPorDefecto:UrlFotosViejas) para no taparlas.
+               Se enlazó la portada de su destino o la general (imagen 44, Punta Cana) a: 13 destinos de la web, 106 hoteles del catálogo
+               (alojamiento.caratula copiada), 37 excursiones (ninguna tenía foto vieja en el servidor) y 1 hotel de la vitrina (los otros 2
+               tenían foto vieja). Traslados, circuitos, cruceros, tarjetas y días de itinerario ya tenían foto. Filas marcadas con
+               multimedia.texto_alternativo = «Imagen por defecto». Para deshacer: DELETE FROM Eurovip.multimedia WHERE texto_alternativo =
+               «Imagen por defecto» (y vaciar alojamiento.caratula de esos 106 si se quiere volver a dejarlos sin foto).
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

@@ -74,6 +74,7 @@ builder.Services.AddSingleton<EuroVip.Services.AgenciaImagenes>();
 builder.Services.AddSingleton<EuroVip.Services.AgenciaEnvioJob>();
 builder.Services.AddSingleton<EuroVip.Services.IProgresoCargas, EuroVip.Services.ProgresoCargas>();   // barra de progreso de las cargas
 builder.Services.AddHttpClient("whatsapp");
+builder.Services.AddHttpClient("fotos", c => c.Timeout = TimeSpan.FromSeconds(10));   // imagen por defecto: comprobar fotos de antes en el servidor
 builder.Services.AddMemoryCache();
 // /health para el despliegue (Deploy.ps1): la app arrancó y llega a la base
 builder.Services.AddHealthChecks().AddCheck<EuroVip.Services.BaseDatosHealthCheck>("base_de_datos");

@@ -78,6 +78,11 @@ namespace EuroVip.Controllers
                 if (dto.QuitarPortada) await _mm.QuitarUsoAsync("CIRCUITO", dto.Nombre.Trim(), "PORTADA");
                 else await _mm.ResincronizarAsync("CIRCUITO", dto.Nombre.Trim());
                 await PorDefectoAsync("CIRCUITO", dto.Nombre.Trim(), dto.Destinos.FirstOrDefault()?.Id_Destino, !dto.QuitarPortada && !string.IsNullOrWhiteSpace(dto.Caratula));
+                // Punto 2: los días del itinerario sin foto llevan la portada del circuito
+                using (var cnd = _repo.Conexion())
+                    await Dapper.SqlMapper.ExecuteAsync(cnd, @"UPDATE ci SET caratula = c.caratula FROM Eurovip.circuito_itinerario ci
+                        JOIN Eurovip.circuito c ON c.nombre_circuito = ci.nombre_circuito
+                        WHERE ci.nombre_circuito = @n AND ISNULL(ci.caratula, '') = '' AND ISNULL(c.caratula, '') <> ''", new { n = dto.Nombre.Trim() });
                 await Auditar(excepto is null ? "Circuito_Crear" : "Circuito_Editar", dto);
                 return Json(new { ok = true, codigo = dto.Codigo.Trim(), mensaje = excepto is null ? $"Circuito \"{dto.Nombre}\" creado." : "Cambios guardados." });
             }

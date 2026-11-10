@@ -158,6 +158,13 @@ namespace EuroVip.Controllers
             {
                 var (clave, error) = await _repo.GuardarAsync(c, dto.Datos, dto.Nuevo);
                 if (error is not null) return BadRequest(new { mensaje = error });
+                // Punto 2: un hotel o destino sin foto recibe la imagen por defecto (la de su destino o la general)
+                if (HrCatalogos.Fotos(c) is { } mmc && mmc.Tipo is "ALOJAMIENTO" or "DESTINO" && clave is not null && clave.TryGetValue(mmc.Col, out var kv) && kv?.ToString() is { Length: > 0 } valor)
+                {
+                    string? Dato(string k) => dto.Datos.TryGetValue(k, out var v) && v.ValueKind == System.Text.Json.JsonValueKind.String ? v.GetString() : null;
+                    var tieneFoto = !string.IsNullOrWhiteSpace(Dato("caratula")) || (mmc.Tipo == "DESTINO" && _img.Buscar("destinos", valor) is not null);
+                    await HttpContext.RequestServices.GetRequiredService<IImagenesPorDefecto>().AsegurarAsync(mmc.Tipo, valor, mmc.Tipo == "ALOJAMIENTO" ? Dato("id_destino") : null, tieneFoto);
+                }
                 await Auditar($"Herramienta_{c.Clave}_{(dto.Nuevo ? "Crear" : "Editar")}", new { clave, datos = dto.Datos });
                 return Json(new { ok = true, clave, mensaje = dto.Nuevo ? $"Se creó {c.El} {c.Singular}." : $"Se guardaron los cambios de {c.El} {c.Singular}." });
             }

@@ -134,6 +134,8 @@ namespace EuroVip.Controllers
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> PorDefecto([FromServices] IImagenesPorDefecto def)
         {
+            if ((HttpContext.Items[AccesoModuloFilter.ClavePermisos] as PermisosUsuario)?.EsSuper != true)
+                return StatusCode(403, new { mensaje = "Solo un Superadministrador puede rellenar las imágenes por defecto." });
             var r = await def.RellenarTodoAsync();
             await Auditar("Multimedia_PorDefecto", r);
             var total = r.Values.Sum();

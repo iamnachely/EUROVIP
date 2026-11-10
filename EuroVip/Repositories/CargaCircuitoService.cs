@@ -54,6 +54,7 @@ namespace EuroVip.Repositories
             {
                 var n = dto.NuevoCircuito;
                 if (await _circuitos.CodigoExisteAsync(n.Codigo)) errores.Add($"Ya existe un circuito con el código \"{n.Codigo}\".");
+                else if (await EuroVip.Services.CodigoInterno.ErrorAsync(cn, n.Codigo, "CIRCUITO_CAT", null) is string malCodCir) errores.Add(malCodCir);   // FASE 38
                 if (await _circuitos.NombreExisteAsync(n.Nombre)) errores.Add($"Ya existe un circuito llamado \"{n.Nombre}\".");
                 if (n.Destinos.Count == 0) errores.Add("Agrega al menos un destino al circuito.");
             }

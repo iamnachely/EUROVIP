@@ -131,7 +131,7 @@
         <!-- DATOS -->
         <section class="ui-pane on" id="tDatos">
             <div class="ui-row">
-                <div class="ui-f"><label for="edCodigo">Código único <em>letras, números y espacios</em></label><input id="edCodigo" maxlength="100" placeholder="Ej. Costa Rica Esencial"><span class="msg"></span></div>
+                <div class="ui-f"><label for="edCodigo">Código único <em>letras y números, sin espacios · único en todo el sistema</em></label><input id="edCodigo" maxlength="100" placeholder="Ej. CostaRicaEsencial"><span class="msg"></span></div>
                 <div class="ui-f"><label for="edNombre">Nombre del circuito <em>máx. 50</em></label><input id="edNombre" maxlength="50" placeholder="Ej. Costa Rica Esencial"><span class="msg"></span></div>
             </div>
             <div class="ui-row">
@@ -496,7 +496,10 @@ const CX = (() => {
         };
         const errores = [];
         const marcar = (id, msg, tab) => { const f = $(id).closest('.ui-f'); f.classList.add('err'); const m = $('.msg', f); if (m) m.textContent = msg; errores.push([tab, msg]); };
-        if (!/^[A-Za-z0-9 ]+$/.test(dto.Codigo)) marcar('#edCodigo', 'Solo letras, números y espacios', 'tDatos');
+        // FASE 38: un código nuevo o cambiado va sin espacios ni símbolos y no puede existir en ningún producto (los de antes se pueden dejar)
+        if (dto.Codigo !== (estado.codigoOriginal || '') && !/^[A-Za-z0-9]+$/.test(dto.Codigo)) marcar('#edCodigo', 'Solo letras y números, sin espacios', 'tDatos');
+        else if (dto.Codigo !== (estado.codigoOriginal || '') && !(await EVCodigo.validar($('#edCodigo')))) marcar('#edCodigo', $('#edCodigo').nextElementSibling?.textContent?.trim() || 'Ese código ya existe', 'tDatos');
+        else if (!/^[A-Za-z0-9 ]+$/.test(dto.Codigo)) marcar('#edCodigo', 'Solo letras, números y espacios', 'tDatos');
         if (!dto.Nombre) marcar('#edNombre', 'Escribe el nombre', 'tDatos');
         else if (!/^[\p{L}\p{M}\p{N}' ]+$/u.test(dto.Nombre)) marcar('#edNombre', 'Sin guiones ni símbolos', 'tDatos');
         if (!dto.Id_Proveedor) marcar('#edProveedor', 'Elige el tour operador de la lista', 'tDatos');
@@ -592,7 +595,8 @@ const CX = (() => {
         soltar($('#edPortada'), e => subirPortada(e.dataTransfer.files[0]));
         soltar($('#edDias'), e => { const z = e.target.closest('.cx-dimg'); if (z) subirDia(+z.dataset.dia, e.dataTransfer.files[0]); });
         $('#edNombre').addEventListener('input', EV.debounce(portada, 250));
-        $('#edNombre').addEventListener('input', () => { if (!estado.codigoOriginal && !$('#edCodigo').dataset.tocado) $('#edCodigo').value = $('#edNombre').value.replace(/[^\p{L}\p{N} ]/gu, '').normalize('NFD').replace(/[̀-ͯ]/g, ''); });
+        $('#edNombre').addEventListener('input', () => { if (!estado.codigoOriginal && !$('#edCodigo').dataset.tocado) { $('#edCodigo').value = EVCodigo.limpiar($('#edNombre').value); $('#edCodigo').evCodigo?.revisar(); } });
+        EVCodigo.campo($('#edCodigo'), { producto: 'CIRCUITO_CAT', clave: () => '', anterior: () => estado?.codigoOriginal || '' });
         $('#edCodigo').addEventListener('input', () => $('#edCodigo').dataset.tocado = '1');
 
         // Disponibilidad en vivo de código y nombre

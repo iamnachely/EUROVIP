@@ -1104,6 +1104,8 @@
     }
 
     // ---------- 6. Fechas y precios ----------
+    // FASE 38: monedas para el selector de la pestaña de precios (también está en «El crucero»)
+    EV.api('/Codigos/Monedas').then(l => window._czMonedas = l.map(m => m.valor.trim())).catch(() => { });
     function pintarPrecios() {
         C.salidas.sort((a, b) => a.fecha.localeCompare(b.fecha));
         if (tarSel && !C.tarifas.some(f => f.clave === tarSel)) tarSel = C.tarifas[0]?.clave || null;
@@ -1129,6 +1131,7 @@
                 </div>
             </div>
             <div class="cz-blq"><h3><i class="bi bi-currency-dollar"></i> Precios por persona en ${EV.simbolo(C.id_Moneda || 'DOP')} <span class="sp"></span>
+                <label class="cz-c" style="flex-direction:row;align-items:center;gap:6px" title="Moneda de todos los precios del crucero"><span>Moneda</span><select data-b="id_Moneda">${(window._czMonedas || ['DOP', 'USD', 'EUR']).map(m => `<option value="${esc(m)}" ${m === (C.id_Moneda || 'DOP').trim() ? 'selected' : ''}>${esc(m)} · ${esc(EV.simbolo(m))}</option>`).join('')}</select></label>
                 ${C.tarifas.length > 1 ? `<label class="cz-c" style="flex-direction:row;align-items:center;gap:6px"><span>Tarifa</span><select id="prTarifa">${C.tarifas.map(f => `<option value="${f.clave}" ${f.clave === tarSel ? 'selected' : ''}>${esc(f.codigo || f.nombre || '¿?')}</option>`).join('')}</select></label>` : ''}
                 ${C.salidas.length > 1 && tipos.length ? '<button type="button" class="ev-btn ghost sm" data-pr="copiar"><i class="bi bi-files"></i> Copiar la 1.ª fecha a todas</button>' : ''}</h3>
                 <div class="cz-barra" style="margin-bottom:10px"><span class="cz-c" style="flex-direction:row;align-items:center;gap:8px"><span>Agregar otra columna (tipo de cabina)</span>

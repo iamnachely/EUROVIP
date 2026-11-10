@@ -178,6 +178,12 @@ namespace EuroVip.Controllers
             await _mm.ResincronizarAsync("INICIO", id.ToString());
             if (dto.Tipo_Servicio?.Trim().ToUpperInvariant() is "OFERTA" or "PAQUETES" or "COMBINADO" && !string.IsNullOrWhiteSpace(dto.Id_Destino))
                 await _mm.ResincronizarAsync("DESTINO", dto.Id_Destino.Trim());
+            // Punto 2: la tarjeta nunca queda sin foto. Según el tipo, la foto es la del hotel, la del destino o la propia de la tarjeta.
+            var def = HttpContext.RequestServices.GetRequiredService<IImagenesPorDefecto>();
+            var tipoT = dto.Tipo_Servicio?.Trim().ToUpperInvariant();
+            if (tipoT == "HOTEL") { var t = await _repo.TarjetaAsync(id); if (t is not null) await def.AsegurarAsync("HOTEL", t.Id_Servicio.ToString(), t.CaratulaDestino, _img.Buscar("hoteles", t.Id_Destino) is not null); }
+            else if (tipoT is "OFERTA" or "PAQUETES" or "COMBINADO") await def.AsegurarAsync("DESTINO", dto.Id_Destino.Trim(), null, _img.Buscar("destinos", dto.Id_Destino) is not null);
+            else if (tipoT != "CIRCUITO") await def.AsegurarAsync("INICIO", id.ToString(), dto.Id_Destino, !string.IsNullOrWhiteSpace(dto.CaratulaDestino) && dto.CaratulaDestino.StartsWith("http"));
             await Auditar(dto.Id is null ? "Home_TarjetaCrear" : "Home_TarjetaEditar", new { antes, despues = dto });
             return Json(new { ok = true, id, mensaje = dto.Id is null ? "Tarjeta agregada a la Home." : "Tarjeta guardada." });
         }
