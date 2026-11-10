@@ -152,6 +152,7 @@ namespace EuroVip.Controllers
             }
             Normalizar(dto);
             if (Revisar(dto, out var campo) is string mal) return Mal(mal, campo);
+            if (await _repo.RevisarCodigoMonedaAsync(dto) is var (campoCod, malCod)) return Mal(malCod, campoCod);   // FASE 38
             if (await _repo.RepetidoAsync(dto.Titulo, dto.Id_Barco, dto.Id_Crucero) is int otro)
                 return Mal($"Ya existe el crucero «{dto.Titulo}» en ese barco (n.º {otro}).", "Titulo");
             try
@@ -159,6 +160,7 @@ namespace EuroVip.Controllers
                 var antes = dto.Id_Crucero is int idA ? await _repo.ObtenerAsync(idA) : null;
                 if (dto.Id_Crucero is not null && antes is null) return NotFound(new { mensaje = "Ese crucero ya no existe. Recarga la página." });
                 var (id, cats) = await _repo.GuardarAsync(dto, User.Identity?.Name ?? "desconocido");
+                await PorDefectoAsync("CRUCERO", id, null, false);
                 await _repo.ActualizarInicioAsync(cats);
                 await Auditar(antes is null ? "Crucero_Crear" : "Crucero_Editar", id, new { dto.Titulo, dto.Id_Barco, dto.Noches, salidas = dto.Salidas.Count, cabinas = dto.Cabinas.Count, precios = dto.Precios.Count });
                 return Json(new { ok = true, id, mensaje = antes is null ? $"¡Listo! Se creó «{dto.Titulo}»." : "Cambios guardados." });
@@ -179,6 +181,7 @@ namespace EuroVip.Controllers
             var titulo = c.Titulo + " (copia)";
             for (var i = 2; await _repo.RepetidoAsync(titulo, c.Id_Barco, null) is not null; i++) titulo = $"{c.Titulo} (copia {i})";
             c.Id_Crucero = null; c.Titulo = titulo; c.Activo = false;   // la copia empieza desactivada (no sale dos veces en la web)
+            c.Codigo_Interno = null;   // el código interno es único: la copia va sin él
             var (nuevo, cats) = await _repo.GuardarAsync(c, User.Identity?.Name ?? "desconocido");
             await _repo.ActualizarInicioAsync(cats);
             await Auditar("Crucero_Duplicar", nuevo, new { de = id, titulo });
@@ -362,5 +365,9 @@ namespace EuroVip.Controllers
         private Task Auditar(string tipo, int id, object cambios) =>
             _aud.AuditarAsync(tipo, new[] { id }, cambios, User.Identity?.Name ?? "desconocido",
                 HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
+
+        /// <summary>Punto 2: si no tiene foto (ni nueva ni la de antes), se le pone la imagen por defecto (la de su destino o la general).</summary>
+        private Task PorDefectoAsync(string tipo, object clave, string? destino, bool yaTieneFoto) =>
+            HttpContext.RequestServices.GetRequiredService<IImagenesPorDefecto>().AsegurarAsync(tipo, clave.ToString()!, destino, yaTieneFoto);
     }
 }

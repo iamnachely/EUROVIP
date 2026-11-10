@@ -129,6 +129,17 @@ namespace EuroVip.Controllers
             return Json(new { ok = true, mensaje = "Ahora es la portada." });
         }
 
+        /// <summary>Punto 2: pone la imagen por defecto a todo lo que ya estaba cargado sin foto (destinos de la web, hoteles,
+        /// excursiones, traslados, circuitos, cruceros y días de itinerario). Se puede repetir: solo toca lo que no tiene foto.</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> PorDefecto([FromServices] IImagenesPorDefecto def)
+        {
+            var r = await def.RellenarTodoAsync();
+            await Auditar("Multimedia_PorDefecto", r);
+            var total = r.Values.Sum();
+            return Json(new { ok = true, resultado = r, mensaje = total == 0 ? "Todo ya tenía foto." : $"Se puso la imagen por defecto a {total} elemento(s)." });
+        }
+
         private Task Auditar(string tipo, object cambios) =>
             _aud.AuditarAsync(tipo, Array.Empty<int>(), cambios, User.Identity?.Name ?? "desconocido",
                 HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());

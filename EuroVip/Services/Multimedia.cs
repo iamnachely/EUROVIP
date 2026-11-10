@@ -51,6 +51,10 @@ namespace EuroVip.Services
         Task<string?> PortadaAsync(string tipo, string clave);
         /// <summary>Vuelve a copiar la portada real en la columna de antes (después de un Guardar que pudo escribir una foto vieja). Si no hay portada, no toca nada.</summary>
         Task ResincronizarAsync(string tipo, string clave);
+        /// <summary>Imagen por defecto (punto 2): si el producto no tiene portada, le enlaza una imagen que ya existe —la portada de su
+        /// destino o la general (config_sistema «imagen_por_defecto»)— marcada «Imagen por defecto». Si sube su foto, la reemplaza como siempre
+        /// (la imagen enlazada no se borra porque la sigue usando el destino). Devuelve true si puso una.</summary>
+        Task<bool> PonerPorDefectoAsync(string tipo, string clave, string? destino);
         Task<MultimediaItem> SubirAsync(string tipo, string clave, string uso, Stream origen, string? nombreOriginal, string? texto = null);
         Task<MultimediaItem?> QuitarAsync(int id);
         Task<int> QuitarUsoAsync(string tipo, string clave, string uso);
@@ -335,6 +339,30 @@ namespace EuroVip.Services
         {
             var t = Validar(tipo, clave);
             if (await PortadaAsync(t.Tipo, clave) is not null) await SincronizarProductoAsync(t, clave);
+        }
+
+        public const string TextoPorDefecto = "Imagen por defecto";
+
+        public async Task<bool> PonerPorDefectoAsync(string tipo, string clave, string? destino)
+        {
+            var t = Validar(tipo, clave);
+            var v = Valor(t, clave);
+            using (var cn = _db.Conexion())
+            {
+                if (await cn.ExecuteScalarAsync<int>($"SELECT COUNT(*) FROM Eurovip.multimedia WHERE tipo = @tipo AND {t.Columna} = @v AND uso = 'PORTADA'", new { tipo = t.Tipo, v }) > 0)
+                    return false;
+                var idImagen = await cn.ExecuteScalarAsync<int?>(@"
+                    SELECT COALESCE(
+                        (SELECT TOP 1 m.id_imagen FROM Eurovip.multimedia m WHERE m.tipo = 'DESTINO' AND m.uso = 'PORTADA' AND m.id_destino = LTRIM(RTRIM(@destino))),
+                        (SELECT TOP 1 i.id FROM Eurovip.imagen i WHERE i.id = TRY_CAST((SELECT valor FROM Eurovip.config_sistema WHERE clave = 'imagen_por_defecto') AS int)),
+                        (SELECT TOP 1 m.id_imagen FROM Eurovip.multimedia m WHERE m.tipo = 'DESTINO' AND m.uso = 'PORTADA' ORDER BY m.id))",
+                    new { destino = destino ?? "" });
+                if (idImagen is null) return false;
+                await cn.ExecuteAsync($@"INSERT INTO Eurovip.multimedia (id_imagen, tipo, uso, {t.Columna}, orden, texto_alternativo)
+                                         VALUES (@idImagen, @tipo, 'PORTADA', @v, 1, @texto)", new { idImagen, tipo = t.Tipo, v, texto = TextoPorDefecto });
+            }
+            await ResincronizarAsync(t.Tipo, clave);   // la copia también en la columna de antes (Home, portal, flyers…)
+            return true;
         }
 
         public async Task<string?> PortadaAsync(string tipo, string clave)

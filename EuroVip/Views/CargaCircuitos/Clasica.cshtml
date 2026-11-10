@@ -475,6 +475,7 @@ const CL = (() => {
         $('#iNoches').addEventListener('input', recalcular);
         $('#iDivisa').addEventListener('change', () => { $$('.sim').forEach(x => x.textContent = EV.simbolo(moneda())); invalidar(); });
         ['#iCategoria', '#iCodigo'].forEach(id => $(id).addEventListener('change', invalidar));
+        EVCodigo.campo($('#iCodigo'), { producto: 'CIRCUITO', clave: () => '' });   // FASE 38: se revisa mientras se escribe
         tb.addEventListener('input', recalcular);
         tb.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.k === 'total') { e.preventDefault(); const u = filas().pop(); fila(u?.desde ? EV.sumarDias(u.desde, 7) : '', u?.tasas || '', ''); $$('[data-k=desde]', tb).pop()?.focus(); } });
         $('#vSin').addEventListener('change', () => {
@@ -507,7 +508,7 @@ const CL = (() => {
     return {
         ir: id => tabs.ir(id),
         fila: () => { const u = filas().pop(); fila(u?.desde ? EV.sumarDias(u.desde, 7) : '', u ? u.tasas : ($('#xTasa').value || ''), ''); $$('[data-k=desde]', tb).pop()?.focus(); },
-        generarCodigo: async () => { try { const r = await EV.api('/CargaCircuitos/CodigoServicio'); $('#iCodigo').value = r.codigo; } catch { } },
+        generarCodigo: async () => { try { const r = await EV.api('/CargaCircuitos/CodigoServicio'); $('#iCodigo').value = EVCodigo.limpiar(r.codigo); $('#iCodigo').dispatchEvent(new Event('input')); } catch { } },
         aplicarDatos,
         guardarTodo: async () => { if (await revisar()) guardar(); },
         tasasTodas: () => { const fs = filas(); if (!fs.length) return; const t = $('[data-k=tasas]', fs[0].tr).value; fs.forEach(f => $('[data-k=tasas]', f.tr).value = t); recalcular(); },

@@ -20,6 +20,10 @@ namespace EuroVip.Repositories
         Task<int> EliminarAsync(string codigo);
         Task<int> CambiarEstadoSalidaAsync(int idServicio, bool activo);
         Task<int> EliminarSalidaAsync(int idServicio);
+        Task<CircuitoSalidaEditar?> SalidaAsync(int idServicio);
+        Task<string?> EditarSalidaAsync(CircuitoSalidaEditar d);
+        Task<CargaTextosCircuito> TextosAsync(string codigo);
+        Task GuardarTextosAsync(CargaTextosCircuito t);
 
         // Categorías
         Task<IEnumerable<CategoriaDto>> CategoriasAsync();
@@ -283,6 +287,116 @@ namespace EuroVip.Repositories
             using var cn = Conexion();
             return await cn.ExecuteAsync("UPDATE Eurovip.servicio SET activo = @activo WHERE id_servicio = @idServicio AND id_tipo_servicio = 'CIRCUITO'",
                 new { idServicio, activo });
+        }
+
+        // ------------------------------------------------------------ editar una salida (punto 7)
+        private const string SelSalida = @"
+            SELECT s.id_servicio AS Id_Servicio, sc.nombre_circuito AS Nombre_Circuito, s.codigo AS Codigo, sc.desde AS Desde, sc.hasta AS Hasta,
+                   s.precio_base + Eurovip.fnTotalTasa(s.id_servicio) AS PrecioTotal, Eurovip.fnTotalTasa(s.id_servicio) AS Tasas, s.descuento AS Descuento,
+                   s.id_campanya AS Id_Campanya, ca.nombre AS Campanya, LTRIM(RTRIM(s.id_moneda)) AS Id_Moneda, s.id_Proveedor AS Id_Proveedor, p.nombre AS Proveedor,
+                   s.categoria_circuito AS Categoria, sc.id_pais_origen AS Id_Pais_Origen, sc.origen AS Origen, s.activo AS Activo,
+                   (SELECT COUNT(*) FROM Eurovip.servicio_itinerario x WHERE x.id_servicio = s.id_servicio) AS Vuelos
+            FROM Eurovip.servicio s
+            JOIN Eurovip.servicio_circuito sc ON sc.id_servicio = s.id_servicio
+            LEFT JOIN Eurovip.campanya ca ON ca.id_campanya = s.id_campanya AND ca.id_idioma = s.id_idioma
+            LEFT JOIN Eurovip.proveedor p ON p.id_proveedor = s.id_Proveedor
+            WHERE s.id_servicio = @id AND s.id_tipo_servicio = 'CIRCUITO'";
+
+        public async Task<CircuitoSalidaEditar?> SalidaAsync(int idServicio)
+        {
+            using var cn = Conexion();
+            return await cn.QueryFirstOrDefaultAsync<CircuitoSalidaEditar>(SelSalida, new { id = idServicio });
+        }
+
+        /// <summary>Edita una salida: fechas, precio, descuento, campaña, moneda, proveedor, categoría, origen y si se vende.
+        /// Los vuelos se mueven los mismos días que la fecha. Después se refresca la vitrina web (clave de antes y de ahora).</summary>
+        public async Task<string?> EditarSalidaAsync(CircuitoSalidaEditar d)
+        {
+            using var cn = Conexion();
+            await cn.OpenAsync();
+            var antes = await cn.QueryFirstOrDefaultAsync<CircuitoSalidaEditar>(SelSalida, new { id = d.Id_Servicio });
+            if (antes is null) return "Esa salida ya no existe.";
+            if (d.Hasta < d.Desde) return "La fecha de regreso no puede ser antes de la de salida.";
+            var noches = (short)Math.Clamp((d.Hasta.Date - d.Desde.Date).Days, 1, 60);
+            var (moneda, malMoneda) = EuroVip.Services.CatalogoCargas.Moneda(d.Id_Moneda, await EuroVip.Services.CatalogoCargas.MonedasAsync(cn));
+            if (malMoneda is not null) return malMoneda;
+            if (await cn.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM Eurovip.campanya WHERE id_campanya = @c AND id_idioma = @Idioma", new { c = d.Id_Campanya, Idioma }) == 0) return "Esa campaña no existe.";
+            var prov = string.IsNullOrWhiteSpace(d.Id_Proveedor) ? antes.Id_Proveedor : d.Id_Proveedor.Trim();
+            if (await EuroVip.Services.CatalogoCargas.ErrorProveedorAsync(cn, prov) is string malProv) return malProv;
+            var pais = (d.Id_Pais_Origen ?? "").Trim().ToUpperInvariant(); var origen = (d.Origen ?? "").Trim();
+            if (origen != "" && pais.Length != 2) return "Elige el país de origen.";
+            var precioBase = d.PrecioTotal - antes.Tasas;
+            if (precioBase <= 0) return $"El precio total tiene que ser mayor que las tasas ({antes.Tasas:N2}).";
+
+            using (var tx = cn.BeginTransaction())
+            {
+                await cn.ExecuteAsync(@"
+                    UPDATE Eurovip.servicio SET precio_base = @pb, descuento = @desc, id_campanya = @camp, id_moneda = @moneda, id_Proveedor = @prov,
+                           categoria_circuito = @cat, activo = @activo, noches = @noches
+                     WHERE id_servicio = @id AND id_tipo_servicio = 'CIRCUITO';
+                    UPDATE Eurovip.servicio_circuito SET desde = @desde, hasta = @hasta, id_pais_origen = @pais, origen = @origen WHERE id_servicio = @id;
+                    DECLARE @dif int = DATEDIFF(DAY, @desdeAntes, @desde);
+                    IF @dif <> 0
+                        UPDATE Eurovip.servicio_itinerario SET fecha_salida = DATEADD(DAY, @dif, fecha_salida), fecha_regreso = DATEADD(DAY, @dif, fecha_regreso) WHERE id_servicio = @id;",
+                    new { id = d.Id_Servicio, pb = precioBase, desc = d.Descuento, camp = d.Id_Campanya, moneda, prov, cat = string.IsNullOrWhiteSpace(d.Categoria) ? null : d.Categoria.Trim(),
+                          activo = d.Activo, noches, desde = d.Desde.Date, hasta = d.Hasta.Date, pais = pais == "" ? null : pais, origen = origen == "" ? null : origen, desdeAntes = antes.Desde.Date }, tx);
+                tx.Commit();
+            }
+
+            // Vitrina web de circuitos: la clave de antes (por si dejó de valer) y la de ahora
+            var paisesDestino = (await cn.QueryAsync<string>("SELECT DISTINCT id_pais FROM Eurovip.circuito_destino WHERE nombre_circuito = @n AND id_idioma = @Idioma",
+                new { n = antes.Nombre_Circuito, Idioma })).ToList();
+            var claves = new HashSet<(short, string, string?, string?)> { (antes.Id_Campanya, antes.Id_Moneda.Trim(), antes.Id_Pais_Origen?.Trim(), antes.Origen?.Trim()), (d.Id_Campanya, moneda, pais, origen) };
+            foreach (var (camp, mon, po, o) in claves)
+                foreach (var pd in paisesDestino)
+                    try
+                    {
+                        await cn.ExecuteAsync("Eurovip.spActualizaAlojamientoCircuito",
+                            new { idIdioma = Idioma, idTipoServicio = "CIRCUITO", idCampanya = camp, idMoneda = mon, idPaisOrigen = po ?? "", idOrigen = o ?? "", idPaisDestino = pd },
+                            commandType: CommandType.StoredProcedure);
+                    }
+                    catch { /* si falla la vitrina, la salida igual quedó editada */ }
+            return null;
+        }
+
+        // ------------------------------------------------------------ textos de la carga (punto 6)
+        // Se guardan como en la carga (CargaCircuitoService.GuardarDescripcionAsync): Incluye → incluye, No incluye → no_incluye,
+        // Oferta → oferta_especial y en «nota» las condiciones, luego «Documentación: …» e «Importante: …» separados por una línea en blanco.
+        public async Task<CargaTextosCircuito> TextosAsync(string codigo)
+        {
+            using var cn = Conexion();
+            var r = await cn.QueryFirstOrDefaultAsync<(string? Inc, string? NoInc, string? Nota, string? Ofe)>(
+                "SELECT incluye, no_incluye, nota, oferta_especial FROM Eurovip.servicio_descripcion WHERE codigo = @codigo AND id_idioma = @Idioma", new { codigo, Idioma });
+            var t = new CargaTextosCircuito { Codigo = codigo, Incluye = r.Inc, No_Incluye = r.NoInc, Oferta = r.Ofe };
+            var cond = new List<string>(); var docs = new List<string>(); var imp = new List<string>();
+            foreach (var b in (r.Nota ?? "").Replace("\r\n", "\n").Split("\n\n", StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (b.StartsWith("Documentación:", StringComparison.OrdinalIgnoreCase)) docs.Add(b["Documentación:".Length..].Trim());
+                else if (b.StartsWith("Importante:", StringComparison.OrdinalIgnoreCase)) imp.Add(b["Importante:".Length..].Trim());
+                else if (b.StartsWith("Condiciones:", StringComparison.OrdinalIgnoreCase)) cond.Add(b["Condiciones:".Length..].Trim());
+                else cond.Add(b.Trim());
+            }
+            t.Condiciones = cond.Count == 0 ? null : string.Join("\n\n", cond);
+            t.Documentacion = docs.Count == 0 ? null : string.Join("\n\n", docs);
+            t.Importante = imp.Count == 0 ? null : string.Join("\n\n", imp);
+            return t;
+        }
+
+        public async Task GuardarTextosAsync(CargaTextosCircuito t)
+        {
+            static string? N(string? x) => string.IsNullOrWhiteSpace(x) ? null : x.Trim();
+            var partes = new[] { N(t.Condiciones), N(t.Documentacion) is string dd ? "Documentación: " + dd : null, N(t.Importante) is string ii ? "Importante: " + ii : null }
+                .Where(x => x is not null).ToList();
+            var nota = partes.Count == 0 ? null : string.Join("\n\n", partes);
+            using var cn = Conexion();
+            await cn.ExecuteAsync(@"
+                IF EXISTS (SELECT 1 FROM Eurovip.servicio_descripcion WHERE codigo = @codigo AND id_idioma = @Idioma)
+                    UPDATE Eurovip.servicio_descripcion SET incluye = @inc, no_incluye = @noinc, nota = @nota, oferta_especial = @ofe
+                     WHERE codigo = @codigo AND id_idioma = @Idioma;
+                ELSE IF COALESCE(@inc, @noinc, @nota, @ofe) IS NOT NULL
+                    INSERT INTO Eurovip.servicio_descripcion (codigo, id_idioma, nota, incluye, no_incluye, oferta_especial)
+                    VALUES (@codigo, @Idioma, @nota, @inc, @noinc, @ofe);",
+                new { codigo = t.Codigo.Trim(), Idioma, inc = N(t.Incluye), noinc = N(t.No_Incluye), nota, ofe = N(t.Oferta) });
         }
 
         public async Task<int> EliminarSalidaAsync(int idServicio)

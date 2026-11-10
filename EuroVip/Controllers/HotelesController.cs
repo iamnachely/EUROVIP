@@ -89,6 +89,7 @@ namespace EuroVip.Controllers
                 if (dto.Id_Servicio is null)
                 {
                     var id = await _repo.CrearAsync(dto);
+                    await PorDefectoAsync(TipoMm, id, dto.CaratulaDestino, _img.Buscar(TipoImagen, dto.Id_Destino) is not null);
                     await Auditar("Hotel_Crear", id, dto);
                     _logger.LogInformation("Hotel {Id} creado por {Usuario}", id, User.Identity?.Name);
                     return Json(new { ok = true, id, mensaje = $"¡Listo! \"{dto.Id_Destino}\" se agregó a la vitrina." });
@@ -99,6 +100,7 @@ namespace EuroVip.Controllers
                     return NotFound(new { mensaje = "Ese hotel ya no existe. Recarga la página." });
 
                 await _repo.EditarAsync(dto);
+                await PorDefectoAsync(TipoMm, dto.Id_Servicio.Value, dto.CaratulaDestino, _img.Buscar(TipoImagen, dto.Id_Destino) is not null || _img.Buscar(TipoImagen, antes.Id_Destino ?? "") is not null);
                 await Auditar("Hotel_Editar", dto.Id_Servicio.Value, new { antes, despues = dto });
 
                 // La imagen va por nombre: si cambió el nombre del hotel, la imagen lo sigue.
@@ -137,6 +139,7 @@ namespace EuroVip.Controllers
             dto.CaratulaDestino = ReglasDatos.Limpiar(dto.CaratulaDestino);
             if (ReglasDatos.Nombre("nombre de hotel", dto.Id_Destino, 3) is string malHotel) return ("Id_Destino", malHotel);
             if (await _repo.ErrorDestinoAsync(dto.CaratulaDestino) is string malDestino) return ("CaratulaDestino", malDestino);
+            if (await _repo.RevisarCodigoProveedorAsync(dto) is var (campo, mal)) return (campo, mal);   // FASE 38
             return null;
         }
 
@@ -144,7 +147,7 @@ namespace EuroVip.Controllers
         private static readonly string[] Columnas =
         {
             "Hotel", "Destino", "Régimen", "Código hotel", "Precio", "Noches", "Moneda", "Campaña", "País salida", "Ciudad salida",
-            "País destino", "Latitud", "Longitud", "Sección de la web", "Visible", "Notas", "Prioridad", "Precio proveedor"
+            "País destino", "Latitud", "Longitud", "Sección de la web", "Visible", "Código interno", "Proveedor", "Notas", "Prioridad", "Precio proveedor"
         };
         private static readonly string[] Regimenes = { "Solo Habitación", "Alojamiento y Desayuno", "Media Pensión", "Pensión Completa", "Todo Incluido", "Room Only" };
 
@@ -156,15 +159,23 @@ namespace EuroVip.Controllers
             var conts = (await _repo.ContenedoresAsync(HotelRepository.IdiomaHotel)).ToList();
             var monedas = (await _repo.MonedasAsync()).ToList();
             var destinos = (await _repo.DestinosAsync()).ToList();
+            var proveedores = await _repo.ProveedoresAsync();
             var camp = CampanyaPorDefecto(camps)?.Id_Campanya.ToString() ?? camps.FirstOrDefault()?.Id_Campanya.ToString();
             // Destinos de ejemplo que SÍ existen (si no, la fila de ejemplo saldría con error al subirla)
             string Dest(string quiero, int i) => destinos.FirstOrDefault(x => ExcelTabla.Clave(x) == ExcelTabla.Clave(quiero)) ?? destinos.ElementAtOrDefault(i) ?? quiero;
             var seccion = conts.FirstOrDefault(c => ExcelTabla.Clave(c.Nombre).Contains("hotel"))?.Nombre ?? conts.FirstOrDefault()?.Nombre;
             var datos = new ExcelTabla.Hoja("Hoteles", Columnas, new List<object?[]>
             {
-                new object?[] { "Riu Palace Bavaro", Dest("Punta Cana", 0), "Todo Incluido", "603258", 1290m, 7, "DOP", camp, "ES", "Madrid", "DO", "18.7357", "-68.4447", seccion, "Sí", null, 1, 1450m },
-                new object?[] { "Iberostar Selection Hacienda Dominicus", Dest("La Romana", 1), "Todo Incluido", "702115", 1450m, 7, "DOP", camp, "ES", "Madrid", "DO", null, null, seccion, "Sí", "Ejemplo: borra estas filas y pon tus hoteles.", null, null },
-            }, new double[] { 38, 18, 20, 13, 11, 9, 9, 11, 11, 14, 12, 11, 11, 22, 9, 40, 11, 16 });
+                new object?[] { "Riu Palace Bavaro", Dest("Punta Cana", 0), "Todo Incluido", "603258", 1290m, 7, "DOP", camp, "ES", "Madrid", "DO", "18.7357", "-68.4447", seccion, "Sí", "HOTRIUPB1", proveedores.FirstOrDefault()?.Nombre, null, 1, 1450m },
+                new object?[] { "Iberostar Selection Hacienda Dominicus", Dest("La Romana", 1), "Todo Incluido", "702115", 1450m, 7, "DOP", camp, "ES", "Madrid", "DO", null, null, seccion, "Sí", "", "", "Ejemplo: borra estas filas y pon tus hoteles.", null, null },
+            }, new double[] { 38, 18, 20, 13, 11, 9, 9, 11, 11, 14, 12, 11, 11, 22, 9, 16, 30, 40, 11, 16 })
+            {
+                Listas = new Dictionary<string, IReadOnlyList<string>>
+                {
+                    ["Régimen"] = Regimenes, ["Moneda"] = monedas.Select(m => m.Codigo.Trim()).ToList(), ["Visible"] = ExcelTabla.SiNoLista,
+                    ["Sección de la web"] = conts.Select(c => c.Nombre).ToList()
+                }
+            };
             var ayuda = new List<object?[]>
             {
                 new object?[] { "Hotel", "Obligatorio. Nombre del hotel (no debe existir ya en la vitrina).", null },
@@ -179,6 +190,8 @@ namespace EuroVip.Controllers
                 new object?[] { "Latitud / Longitud", "Opcionales (para el mapa).", null },
                 new object?[] { "Sección de la web", "Nombre de la sección (lista abajo). Sin sección el hotel queda oculto.", null },
                 new object?[] { "Visible", "Sí o No. Vacío = Sí.", null },
+                new object?[] { "Código interno", "Opcional. Tu código: letras y números, sin espacios, tildes ni símbolos. No se puede repetir en ningún producto.", null },
+                new object?[] { "Proveedor", "Opcional. De dónde sale la oferta: nombre o código como en la hoja «Proveedores».", null },
                 new object?[] { "Prioridad", "Opcional. 1 sale primero en la web, 2 segundo… Vacío = se ordena por precio.", null },
                 new object?[] { "Precio proveedor", "Opcional. Precio del proveedor en su web (nuestro precio no cambia).", null },
                 new object?[] { "", "", null },
@@ -191,7 +204,7 @@ namespace EuroVip.Controllers
             ayuda.AddRange(monedas.Select(m => new object?[] { m.Codigo, m.Nombre, null }));
             ayuda.Add(new object?[] { "", "", null }); ayuda.Add(new object?[] { "Destinos válidos", "", null });
             ayuda.AddRange(destinos.Select(x => new object?[] { x, null, null }));
-            return File(ExcelTabla.Crear(datos, new ExcelTabla.Hoja("Instrucciones", new[] { "Columna", "Qué poner", "" }, ayuda, new double[] { 30, 80, 14 })),
+            return File(ExcelTabla.Crear(datos, new ExcelTabla.Hoja("Instrucciones", new[] { "Columna", "Qué poner", "" }, ayuda, new double[] { 30, 80, 14 }), CatalogoCargas.HojaProveedores(proveedores)),
                         CargaExcel.TipoXlsx, "Eurovip-plantilla-hoteles.xlsx");
         }
 
@@ -216,6 +229,8 @@ namespace EuroVip.Controllers
             var porDefecto = CampanyaPorDefecto(camps);
             var r = new CargaExcelResultado { Guardado = guardar };
             var vistas = new HashSet<string>();
+            var proveedores = await _repo.ProveedoresAsync();
+            var codigos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var f in filas!)
             {
                 var fila = new CargaExcelFila { Fila = f.Numero, Nombre = f.Texto("Hotel", "Nombre", "Nombre del hotel") ?? "" };
@@ -232,9 +247,11 @@ namespace EuroVip.Controllers
                 if (mal is null && ts is not null && cont is null) mal = $"La sección «{ts}» no existe. Mira la hoja Instrucciones.";
                 var moneda = (f.Texto("Moneda") ?? "DOP").Trim().ToUpperInvariant();
                 if (mal is null && !monedas.Contains(moneda)) mal = $"La moneda «{moneda}» no existe.";
-                var regimen = f.Texto("Régimen", "Regimen"); var codigo = f.Texto("Código hotel", "Codigo hotel", "Código", "Codigo");
+                var regimen = f.Texto("Régimen", "Regimen"); var codigo = f.Texto("Código hotel", "Codigo hotel");
                 if (mal is null && regimen is null) mal = "Escribe el régimen (ej. Todo Incluido).";
                 if (mal is null && codigo is null) mal = "Escribe el código del hotel.";
+                var (idProv, malProv) = CatalogoCargas.BuscarProveedor(f.Texto("Proveedor"), proveedores);
+                mal ??= malProv;
 
                 var dto = new HotelGuardarDto
                 {
@@ -246,13 +263,15 @@ namespace EuroVip.Controllers
                     Id_PaisDestino = (f.Texto("País destino", "Pais destino") ?? "DO").ToUpperInvariant(),
                     Latitud = f.Texto("Latitud"), Longitud = f.Texto("Longitud"), Id_Contenedor = cont?.Id_Contenedor,
                     Estado = f.SiNo(true, "Visible", "Activo"), Notas = f.Texto("Notas"),
-                    Peso = f.Cifra("Prioridad", "Peso") is decimal pe ? (short)Math.Round(pe) : null, Precio_Proveedor = f.Cifra("Precio proveedor", "Precio del proveedor")
+                    Peso = f.Cifra("Prioridad", "Peso") is decimal pe ? (short)Math.Round(pe) : null, Precio_Proveedor = f.Cifra("Precio proveedor", "Precio del proveedor"),
+                    Codigo = f.Texto("Código interno", "Codigo interno"), Id_Proveedor = idProv
                 };
                 Preparar(dto);
                 mal ??= CargaExcel.ErrorModelo(dto);
                 if (mal is null && await RevisarAsync(dto) is var (_, m)) mal = m;
                 if (mal is null && existentes.Contains(ExcelTabla.Clave(dto.Id_Destino))) mal = $"Ya hay un hotel «{dto.Id_Destino}» en la vitrina: edítalo en la lista.";
                 if (mal is null && !vistas.Add(ExcelTabla.Clave(dto.Id_Destino))) mal = "Está repetido en el Excel.";
+                if (mal is null && dto.Codigo is not null && !codigos.Add(dto.Codigo)) mal = $"El código «{dto.Codigo}» está repetido en el Excel.";
                 fila.Nombre = dto.Id_Destino;
                 fila.Detalle = $"{dto.CaratulaDestino} · {dto.Descripcion} · {(dto.PrecioWeb is decimal p ? p.ToString("N2") + " " + moneda : "sin precio")}";
                 fila.Mensaje = mal; fila.Ok = mal is null;
@@ -260,6 +279,7 @@ namespace EuroVip.Controllers
                 try
                 {
                     fila.Id = await _repo.CrearAsync(dto);
+                    await PorDefectoAsync(TipoMm, fila.Id.Value, dto.CaratulaDestino, _img.Buscar(TipoImagen, dto.Id_Destino) is not null);
                     r.Guardadas++;
                     await Auditar("Hotel_Crear", fila.Id.Value, new { dto, excel = archivo!.FileName, fila = f.Numero });
                 }
@@ -361,5 +381,9 @@ namespace EuroVip.Controllers
                 User.Identity?.Name ?? "desconocido",
                 HttpContext.Connection.RemoteIpAddress?.ToString(),
                 Request.Headers.UserAgent.ToString());
+
+        /// <summary>Punto 2: si no tiene foto (ni nueva ni la de antes), se le pone la imagen por defecto (la de su destino o la general).</summary>
+        private Task PorDefectoAsync(string tipo, object clave, string? destino, bool yaTieneFoto) =>
+            HttpContext.RequestServices.GetRequiredService<IImagenesPorDefecto>().AsegurarAsync(tipo, clave.ToString()!, destino, yaTieneFoto);
     }
 }

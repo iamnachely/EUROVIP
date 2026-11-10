@@ -13,6 +13,8 @@ namespace EuroVip.Repositories
         /// <summary>El destino de la tarjeta tiene que existir en Herramientas › Destinos. Devuelve el error o null.</summary>
         Task<string?> ErrorDestinoAsync(string? destino);
         Task<PaginaResultado<HotelListaItem>> ListarAsync(HotelFiltro f);
+        Task<(string Campo, string Mensaje)?> RevisarCodigoProveedorAsync(HotelGuardarDto dto);
+        Task<List<EuroVip.Services.CatalogoCargas.Proveedor>> ProveedoresAsync();
         Task<HotelEstadisticas> EstadisticasAsync();
         Task<Inicio?> ObtenerAsync(int id);
         Task<int> CrearAsync(HotelGuardarDto dto);
@@ -63,7 +65,7 @@ namespace EuroVip.Repositories
             if (!string.IsNullOrWhiteSpace(f.Q))
             {
                 where.Add(@"(i.id_destino LIKE @q OR i.origen LIKE @q OR i.descripcion LIKE @q
-                             OR i.contenedor LIKE @q OR c.nombre LIKE @q OR CAST(i.id_servicio AS varchar(12)) = @qExacto)");
+                             OR i.contenedor LIKE @q OR c.nombre LIKE @q OR CAST(i.id_servicio AS varchar(12)) = @qExacto OR i.codigo = @qExacto)");
                 p.Add("q", $"%{f.Q.Trim()}%");
                 p.Add("qExacto", f.Q.Trim());
             }
@@ -94,7 +96,8 @@ namespace EuroVip.Repositories
 
                 SELECT i.id_servicio, i.id_idioma, i.id_destino, i.descripcion, i.caratulaDestino, i.precioWeb,
                        i.id_moneda, i.origen, i.id_pais_origen, i.id_paisDestino, i.id_campanya, c.nombre AS Nombre_Campanya,
-                       i.id_contenedor, i.contenedor, i.posicion_destino, i.noches, CAST(ISNULL(i.estado, 1) AS bit) AS Estado, i.peso, i.precio_proveedor
+                       i.id_contenedor, i.contenedor, i.posicion_destino, i.noches, CAST(ISNULL(i.estado, 1) AS bit) AS Estado, i.peso, i.precio_proveedor,
+                       i.codigo, i.id_proveedor, (SELECT LTRIM(RTRIM(pr.nombre)) FROM Eurovip.proveedor pr WHERE pr.id_proveedor = i.id_proveedor) AS Proveedor
                 FROM Eurovip.inicio i
                 LEFT JOIN Eurovip.campanya c ON c.id_campanya = i.id_campanya AND c.id_idioma = i.id_idioma
                 WHERE {filtro}
@@ -142,14 +145,32 @@ namespace EuroVip.Repositories
             await cn.ExecuteAsync(@"
                 INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen,
                     id_paisDestino, id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb,
-                    id_contenedor, contenedor, posicion_contenedor, posicion_destino, estado, notas, noches, peso, precio_proveedor)
+                    id_contenedor, contenedor, posicion_contenedor, posicion_destino, estado, notas, noches, peso, precio_proveedor, codigo, id_proveedor)
                 VALUES (@Id, @Id_Idioma, @Tipo, @Id_Campanya, @Id_Moneda, @Id_Pais_Origen, @Origen,
                     @Id_PaisDestino, @Id_Destino, @CaratulaDestino, @Descripcion, @Latitud, @Longitud, @PrecioWeb,
-                    @Id_Contenedor, @Contenedor, @Posicion_Contenedor, @Posicion_Destino, @Estado, @Notas, @Noches, @Peso, @Precio_Proveedor)",
+                    @Id_Contenedor, @Contenedor, @Posicion_Contenedor, @Posicion_Destino, @Estado, @Notas, @Noches, @Peso, @Precio_Proveedor, @Codigo, @Id_Proveedor)",
                 Parametros(dto, id, cont), tx);
 
             tx.Commit();
             return id;
+        }
+
+        /// <summary>FASE 38: proveedor que exista y código interno único entre todos los productos. (campo, error) o null.</summary>
+        public async Task<(string Campo, string Mensaje)?> RevisarCodigoProveedorAsync(HotelGuardarDto dto)
+        {
+            using var cn = Conexion();
+            if (await EuroVip.Services.CatalogoCargas.ErrorProveedorAsync(cn, dto.Id_Proveedor) is string malProv) return ("Id_Proveedor", malProv);
+            dto.Codigo = EuroVip.Services.CodigoInterno.Limpiar(dto.Codigo);
+            var anterior = dto.Id_Servicio is int id
+                ? await cn.ExecuteScalarAsync<string?>("SELECT codigo FROM Eurovip.inicio WHERE id_servicio = @id AND tipo_servicio = @tipo", new { id, tipo = TipoHotel }) : null;
+            if (await EuroVip.Services.CodigoInterno.ErrorAsync(cn, dto.Codigo, "HOTEL", dto.Id_Servicio?.ToString(), anterior) is string malCodigo) return ("Codigo", malCodigo);
+            return null;
+        }
+
+        public async Task<List<EuroVip.Services.CatalogoCargas.Proveedor>> ProveedoresAsync()
+        {
+            using var cn = Conexion();
+            return await EuroVip.Services.CatalogoCargas.ProveedoresAsync(cn);
         }
 
         public async Task<bool> EditarAsync(HotelGuardarDto dto)
@@ -167,7 +188,7 @@ namespace EuroVip.Repositories
                     latitud = @Latitud, longitud = @Longitud, precioWeb = @PrecioWeb,
                     id_contenedor = @Id_Contenedor, contenedor = @Contenedor, posicion_contenedor = @Posicion_Contenedor,
                     posicion_destino = @Posicion_Destino, estado = @Estado, notas = @Notas, noches = @Noches,
-                    peso = @Peso, precio_proveedor = @Precio_Proveedor
+                    peso = @Peso, precio_proveedor = @Precio_Proveedor, codigo = @Codigo, id_proveedor = @Id_Proveedor
                 WHERE id_servicio = @Id AND tipo_servicio = @Tipo AND id_idioma = @Id_Idioma",
                 Parametros(dto, dto.Id_Servicio!.Value, cont), tx);
 
@@ -310,6 +331,8 @@ namespace EuroVip.Repositories
             d.Posicion_Destino,
             d.Estado,
             Notas = string.IsNullOrWhiteSpace(d.Notas) ? null : d.Notas.Trim(),
+            Codigo = EuroVip.Services.CodigoInterno.Limpiar(d.Codigo),
+            Id_Proveedor = string.IsNullOrWhiteSpace(d.Id_Proveedor) ? null : d.Id_Proveedor.Trim(),
             d.Noches,
             d.Peso,
             d.Precio_Proveedor

@@ -390,7 +390,8 @@ const CL = (() => {
         const marca = (id, msg) => { const f = $(id).closest('.ui-f'); f.classList.add('err'); const m = $('.msg', f); if (m) m.textContent = msg; e.push({ tab: 'pInicio', msg }); };
         if (!$('#iProveedor').dataset.valor) marca('#iProveedor', 'Elige el proveedor de la lista');
         const n = noches(); if (n < 1 || n > 60) marca('#iNoches', 'Entre 1 y 60');
-        if (!$('#iOrigen').dataset.valor) marca('#iOrigen', 'Elige la ciudad de la lista');
+        // el origen es obligatorio solo en Paquetes (en Solo Hotel es opcional, igual que en el servidor y en Express)
+        if (!$('#iOrigen').dataset.valor && ('@tipo' === 'PAQUETES' || $('#iOrigen').value.trim())) marca('#iOrigen', 'Elige la ciudad de la lista');
         if (!campanyas.datos().length) e.push({ tab: 'pInicio', msg: 'Agrega al menos una campaña.' });
         if (!H.length) e.push({ tab: 'pExcel', msg: 'Carga el Excel con los hoteles (o agrega un hotel sin Excel).' });
         H.forEach((h, i) => {
@@ -477,6 +478,7 @@ const CL = (() => {
 
         EV.picker($('#iProveedor'), { url: q => `/Circuitos/Proveedores?tipo=Tour%20Operador&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-briefcase' }), onSelect: m => { $('#iProveedor').dataset.valor = m.valor; $('#iProveedor').closest('.ui-f').classList.remove('err'); limpiarRevision(); } });
         $('#iProveedor').addEventListener('input', () => $('#iProveedor').dataset.valor = '');
+        EVCodigo.campo($('#iCodigo'), { producto: '@tipo', clave: () => '' });   // FASE 38: se revisa mientras se escribe
         EV.picker($('#iOrigen'), {
             url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#iPaisOrigen').value)}&q=${q}`, limpiar: false,
             map: x => ({ valor: x.valor, texto: x.texto, sub: x.extra2, icono: 'bi-geo' }),
@@ -546,7 +548,7 @@ const CL = (() => {
 
     return {
         ir: id => tabs.ir(id),
-        generarCodigo: async () => { try { const r = await EV.api('/CargaCircuitos/CodigoServicio'); $('#iCodigo').value = r.codigo; } catch { } },
+        generarCodigo: async () => { try { const r = await EV.api('/CargaCircuitos/CodigoServicio'); $('#iCodigo').value = EVCodigo.limpiar(r.codigo); $('#iCodigo').dispatchEvent(new Event('input')); } catch { } },
         navegar: d => { if (!H.length) return; actual = (actual + d + H.length) % H.length; pintar(); },
         aplicarGlobales: () => {
             if (!H.length) { EV.toast('Primero carga el Excel.', 'err'); return; }

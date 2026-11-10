@@ -45,6 +45,9 @@ namespace EuroVip.Repositories
             var errores = new List<string>();
             using var cn = _circuitos.Conexion();
             await cn.OpenAsync();
+            // FASE 38: el código de la carga (si se escribe) es el código interno: letras y números y único en todo el sistema
+            if (EuroVip.Services.CodigoInterno.Limpiar(dto.CodigoServicio) is string cod
+                && await EuroVip.Services.CodigoInterno.ErrorAsync(cn, cod, "CIRCUITO", null) is string malCod) errores.Add(malCod);
 
             // --- circuito ---
             if (dto.NuevoCircuito is not null)
@@ -260,7 +263,7 @@ namespace EuroVip.Repositories
                             await cn.ExecuteAsync(@"
                                 INSERT INTO Eurovip.servicio_circuito (id_servicio, nombre_circuito, id_idoma, desde, hasta, id_pais_origen, origen)
                                 VALUES (@id, @nombre, @Idioma, @desde, @hasta, @paisOrigen, @origen)",
-                                new { id, nombre = circuito.Nombre, Idioma, desde, hasta = desde.AddDays(noches), paisOrigen = dto.Id_Pais_Origen, origen = dto.Origen }, tx);
+                                new { id, nombre = circuito.Nombre, Idioma, desde, hasta = desde.AddDays(noches), paisOrigen, origen }, tx);
 
                             if (dto.ConVuelo)
                             {

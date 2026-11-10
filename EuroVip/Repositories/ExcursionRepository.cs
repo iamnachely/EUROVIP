@@ -29,37 +29,40 @@ namespace EuroVip.Repositories
         private readonly ICircuitoRepository _db;
         public ExcursionRepository(ICircuitoRepository db) => _db = db;
 
-        private const string Columnas = "id_Excursion, id_destino, id_tipo_servicio, nombre, descripcion, cancelable, precio, peso, precio_proveedor";
+        private const string Columnas = "e.id_Excursion, e.id_destino, e.id_tipo_servicio, e.nombre, e.descripcion, e.cancelable, e.precio, e.peso, e.precio_proveedor, e.codigo, e.id_proveedor, e.id_moneda, LTRIM(RTRIM(pr.nombre)) AS Proveedor";
+        private const string Desde = "Eurovip.servicio_excursion e LEFT JOIN Eurovip.proveedor pr ON pr.id_proveedor = e.id_proveedor";
 
         public async Task<List<Excursion>> ListarAsync()
         {
             using var cn = _db.Conexion();
             // Arregla las tarjetas EXCURSION / TRASLADO de la Home que falten o estén desactualizadas (no escribe si están bien)
             await cn.ExecuteAsync("Eurovip.spSincronizaInicio", commandType: System.Data.CommandType.StoredProcedure);
-            return (await cn.QueryAsync<Excursion>($"SELECT {Columnas} FROM Eurovip.servicio_excursion ORDER BY nombre")).ToList();
+            return (await cn.QueryAsync<Excursion>($"SELECT {Columnas} FROM {Desde} ORDER BY e.nombre")).ToList();
         }
 
         public async Task<Excursion?> ObtenerAsync(int id)
         {
             using var cn = _db.Conexion();
-            return await cn.QueryFirstOrDefaultAsync<Excursion>($"SELECT {Columnas} FROM Eurovip.servicio_excursion WHERE id_Excursion = @id", new { id });
+            return await cn.QueryFirstOrDefaultAsync<Excursion>($"SELECT {Columnas} FROM {Desde} WHERE e.id_Excursion = @id", new { id });
         }
 
         public async Task<int> GuardarAsync(ExcursionGuardarDto d)
         {
             using var cn = _db.Conexion();
-            var p = new { id = d.Id_Excursion, destino = d.Id_Destino, tipo = Tipo, nombre = d.Nombre, descripcion = string.IsNullOrWhiteSpace(d.Descripcion) ? null : d.Descripcion.Trim(), d.Cancelable, d.Precio, d.Peso, d.Precio_Proveedor };
+            var p = new { id = d.Id_Excursion, destino = d.Id_Destino, tipo = Tipo, nombre = d.Nombre, descripcion = string.IsNullOrWhiteSpace(d.Descripcion) ? null : d.Descripcion.Trim(), d.Cancelable, d.Precio, d.Peso, d.Precio_Proveedor,
+                      codigo = CodigoInterno.Limpiar(d.Codigo), proveedor = string.IsNullOrWhiteSpace(d.Id_Proveedor) ? null : d.Id_Proveedor.Trim(), moneda = (d.Id_Moneda ?? "DOP").Trim().ToUpperInvariant() };
             if (d.Id_Excursion is int id)
             {
                 var antes = await cn.ExecuteScalarAsync<string?>("SELECT id_destino FROM Eurovip.servicio_excursion WHERE id_Excursion = @id", new { id });
                 var n = await cn.ExecuteAsync(@"UPDATE Eurovip.servicio_excursion SET id_destino = @destino, id_tipo_servicio = @tipo, nombre = @nombre,
-                                                descripcion = @descripcion, cancelable = @Cancelable, precio = @Precio, peso = @Peso, precio_proveedor = @Precio_Proveedor WHERE id_Excursion = @id", p);
+                                                descripcion = @descripcion, cancelable = @Cancelable, precio = @Precio, peso = @Peso, precio_proveedor = @Precio_Proveedor,
+                                                codigo = @codigo, id_proveedor = @proveedor, id_moneda = @moneda WHERE id_Excursion = @id", p);
                 if (n == 0) throw new InvalidOperationException("Esa excursión ya no existe. Recarga la página.");
                 await ActualizarInicioAsync(cn, antes, d.Id_Destino);
                 return id;
             }
-            var nuevo = await cn.ExecuteScalarAsync<int>(@"INSERT INTO Eurovip.servicio_excursion (id_destino, id_tipo_servicio, nombre, descripcion, cancelable, precio, peso, precio_proveedor)
-                                                      VALUES (@destino, @tipo, @nombre, @descripcion, @Cancelable, @Precio, @Peso, @Precio_Proveedor);
+            var nuevo = await cn.ExecuteScalarAsync<int>(@"INSERT INTO Eurovip.servicio_excursion (id_destino, id_tipo_servicio, nombre, descripcion, cancelable, precio, peso, precio_proveedor, codigo, id_proveedor, id_moneda)
+                                                      VALUES (@destino, @tipo, @nombre, @descripcion, @Cancelable, @Precio, @Peso, @Precio_Proveedor, @codigo, @proveedor, @moneda);
                                                       SELECT CAST(SCOPE_IDENTITY() AS int);", p);
             await ActualizarInicioAsync(cn, d.Id_Destino);
             return nuevo;

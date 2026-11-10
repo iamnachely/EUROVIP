@@ -65,6 +65,7 @@ builder.Services.AddScoped<EuroVip.Services.IFlyerImagenService, EuroVip.Service
 builder.Services.AddSingleton<EuroVip.Services.IImagenesLocales, EuroVip.Services.ImagenesLocales>();
 // Fotos de productos en Eurovip.imagen / Eurovip.multimedia (documento esquema-multimedia.md)
 builder.Services.AddScoped<EuroVip.Services.IMultimedia, EuroVip.Services.Multimedia>();
+builder.Services.AddScoped<EuroVip.Services.IImagenesPorDefecto, EuroVip.Services.ImagenesPorDefecto>();   // punto 2: imagen por defecto
 builder.Services.AddScoped<EuroVip.Services.WhatsAppService>();
 builder.Services.AddSingleton<EuroVip.Services.FlyerEnvioJob>();
 // Flyer Agencia (/Agencia y el editor público /agencia/editor/{token})

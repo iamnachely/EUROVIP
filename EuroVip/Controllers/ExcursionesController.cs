@@ -109,6 +109,7 @@ namespace EuroVip.Controllers
                 var antes = dto.Id_Excursion is int idAntes ? await _repo.ObtenerAsync(idAntes) : null;
                 if (dto.Id_Excursion is not null && antes is null) return NotFound(new { mensaje = "Esa excursión ya no existe. Recarga la página." });
                 var id = await _repo.GuardarAsync(dto);
+                await PorDefectoAsync(TipoMm, id, dto.Id_Destino, _img.BuscarArchivo(TipoImagen, Archivo(dto.Nombre)) is not null);
 
                 // Si cambió el nombre, la foto pasa al nombre nuevo (se relaciona por nombre).
                 var fotoMovida = antes is not null && Archivo(antes.Nombre) != Archivo(dto.Nombre)
@@ -130,9 +131,18 @@ namespace EuroVip.Controllers
         /// Reglas para guardar una excursión (las mismas en el formulario y en Cargar Excel): nombre con letras, destino que exista
         /// (lo deja escrito como en Eurovip.destino) y que no se repita el nombre en ese destino. Devuelve el campo y el error, o null.
         /// </summary>
-        private async Task<(string Campo, string Mensaje)?> RevisarAsync(ExcursionGuardarDto dto)
+        private async Task<(string Campo, string Mensaje)?> RevisarAsync(ExcursionGuardarDto dto, ISet<string>? monedas = null)
         {
             dto.Nombre = ReglasDatos.Limpiar(dto.Nombre);
+            using var cn = _aud.Conexion();
+            // FASE 38: moneda que exista, proveedor que exista y código interno único entre todos los productos
+            var (moneda, malMoneda) = CatalogoCargas.Moneda(dto.Id_Moneda, monedas ?? await CatalogoCargas.MonedasAsync(cn));
+            if (malMoneda is not null) return ("Id_Moneda", malMoneda);
+            dto.Id_Moneda = moneda;
+            if (await CatalogoCargas.ErrorProveedorAsync(cn, dto.Id_Proveedor) is string malProv) return ("Id_Proveedor", malProv);
+            dto.Codigo = CodigoInterno.Limpiar(dto.Codigo);
+            var anterior = dto.Id_Excursion is int ida ? await cn.ExecuteScalarAsync<string?>("SELECT codigo FROM Eurovip.servicio_excursion WHERE id_Excursion = @ida", new { ida }) : null;
+            if (await CodigoInterno.ErrorAsync(cn, dto.Codigo, "EXCURSION", dto.Id_Excursion?.ToString(), anterior) is string malCodigo) return ("Codigo", malCodigo);
             if (ReglasDatos.Nombre("nombre de excursión", dto.Nombre, 3) is string malNombre) return ("Nombre", malNombre);
             var (malDestino, destino) = await _repo.ValidarDestinoAsync(dto.Id_Destino);
             if (malDestino is not null) return ("Id_Destino", malDestino);
@@ -144,7 +154,7 @@ namespace EuroVip.Controllers
         }
 
         // ================= CARGAR EXCEL (muchas excursiones de una vez) =================
-        private static readonly string[] Columnas = { "Nombre", "Destino", "Precio", "Cancelable", "Descripción", "Prioridad", "Precio proveedor" };
+        private static readonly string[] Columnas = { "Nombre", "Destino", "Moneda", "Precio", "Cancelable", "Código", "Proveedor", "Descripción", "Prioridad", "Precio proveedor" };
 
         /// <summary>Plantilla: hoja «Excursiones» (una fila por excursión) y hoja «Instrucciones» con los destinos que existen.</summary>
         [HttpGet]
@@ -153,16 +163,23 @@ namespace EuroVip.Controllers
             using var cn = _aud.Conexion();
             var destinos = (await cn.QueryAsync<(string Destino, string? Pais)>(@"SELECT d.id_destino, ISNULL(p.nombre, d.id_pais) FROM Eurovip.destino d
                 LEFT JOIN Eurovip.pais p ON p.id_pais = d.id_pais AND p.id_idioma = 'ES' WHERE d.id_idioma = 'ES' ORDER BY d.id_destino")).ToList();
+            var monedas = (await CatalogoCargas.MonedasAsync(cn)).OrderBy(m => m).ToList();
+            var proveedores = await CatalogoCargas.ProveedoresAsync(cn);
+            // Ejemplos con destinos que existen (si no, la fila de ejemplo daría error)
+            var ej = destinos.Select(d => d.Destino).Where(d => d is "Punta Cana" or "Samaná" or "La Romana").DefaultIfEmpty(destinos.FirstOrDefault().Destino ?? "Punta Cana").ToList();
             var datos = new ExcelTabla.Hoja("Excursiones", Columnas, new List<object?[]>
             {
-                new object?[] { "Isla Saona en catamarán", "Punta Cana", 4500m, "Sí", "Día completo en Isla Saona: catamarán, almuerzo buffet, bebidas y piscina natural.", 1, 5200m },
-                new object?[] { "Cascada El Limón a caballo", "Samaná", 3200m, "No", "Paseo a caballo hasta la cascada El Limón con almuerzo típico." },
-            }, new double[] { 42, 22, 12, 12, 80, 11, 16 });
+                new object?[] { "Isla Saona en catamarán", ej[0], "DOP", 4500m, "Sí", "EXCSAONA1", proveedores.FirstOrDefault()?.Nombre, "Día completo en Isla Saona: catamarán, almuerzo buffet, bebidas y piscina natural.", 1, 5200m },
+                new object?[] { "Cascada El Limón a caballo", ej[^1], "USD", 55m, "No", "", "", "Paseo a caballo hasta la cascada El Limón con almuerzo típico." },
+            }, new double[] { 42, 22, 10, 12, 12, 16, 30, 80, 11, 16 }) { Listas = new Dictionary<string, IReadOnlyList<string>> { ["Moneda"] = monedas, ["Cancelable"] = ExcelTabla.SiNoLista } };
             var ayuda = new ExcelTabla.Hoja("Instrucciones", new[] { "Columna", "Qué poner" }, new List<object?[]>
             {
                 new object?[] { "Nombre", "Obligatorio. Nombre de la excursión (no se puede repetir en el mismo destino)." },
                 new object?[] { "Destino", "Obligatorio. Tal cual está en Eurovip (lista abajo)." },
+                new object?[] { "Moneda", $"Moneda del precio: {string.Join(", ", monedas)}. Vacío = DOP." },
                 new object?[] { "Precio", "Obligatorio. Precio por persona (número, sin símbolo)." },
+                new object?[] { "Código", "Opcional. Tu código interno: letras y números, sin espacios, tildes ni símbolos. No se puede repetir en ningún producto." },
+                new object?[] { "Proveedor", "Opcional. De dónde sale la excursión: nombre o código como en la hoja «Proveedores»." },
                 new object?[] { "Cancelable", "Sí o No. Vacío = No." },
                 new object?[] { "Descripción", "Opcional." },
                 new object?[] { "Prioridad", "Opcional. 1 sale primero en la web, 2 segundo… Vacío = se ordena por precio." },
@@ -170,7 +187,7 @@ namespace EuroVip.Controllers
                 new object?[] { "", "" },
                 new object?[] { "Destinos válidos", "País" },
             }.Concat(destinos.Select(d => new object?[] { d.Destino, d.Pais })).ToList(), new double[] { 32, 90 });
-            return File(ExcelTabla.Crear(datos, ayuda), CargaExcel.TipoXlsx, "Eurovip-plantilla-excursiones.xlsx");
+            return File(ExcelTabla.Crear(datos, ayuda, CatalogoCargas.HojaProveedores(proveedores)), CargaExcel.TipoXlsx, "Eurovip-plantilla-excursiones.xlsx");
         }
 
         /// <summary>
@@ -185,25 +202,33 @@ namespace EuroVip.Controllers
             if (error is not null) return BadRequest(new { mensaje = error });
             var r = new CargaExcelResultado { Guardado = guardar };
             var vistas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var codigos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<CatalogoCargas.Proveedor> proveedores; ISet<string> monedas;
+            using (var cn = _aud.Conexion()) { proveedores = await CatalogoCargas.ProveedoresAsync(cn); monedas = await CatalogoCargas.MonedasAsync(cn); }
             foreach (var f in filas!)
             {
+                var (idProv, malProv) = CatalogoCargas.BuscarProveedor(f.Texto("Proveedor"), proveedores);
                 var dto = new ExcursionGuardarDto
                 {
+                    Id_Moneda = f.Texto("Moneda", "Divisa") ?? "DOP", Codigo = f.Texto("Código", "Codigo", "Código interno"), Id_Proveedor = idProv,
                     Nombre = f.Texto("Nombre", "Excursión", "Excursion") ?? "", Id_Destino = f.Texto("Destino") ?? "",
                     Precio = f.Cifra("Precio", "Precio por persona"), Cancelable = f.SiNo(false, "Cancelable"), Descripcion = f.Texto("Descripción", "Descripcion"),
                     Peso = f.Cifra("Prioridad", "Peso") is decimal pe ? (short)Math.Round(pe) : null, Precio_Proveedor = f.Cifra("Precio proveedor", "Precio del proveedor")
                 };
                 var fila = new CargaExcelFila { Fila = f.Numero, Nombre = dto.Nombre, Detalle = $"{dto.Id_Destino} · {(dto.Precio is decimal p ? p.ToString("N2") : "sin precio")}" };
                 r.Filas.Add(fila);
-                fila.Mensaje = CargaExcel.ErrorModelo(dto);
+                fila.Mensaje = malProv ?? CargaExcel.ErrorModelo(dto);
                 if (fila.Mensaje is null && f.Texto("Precio", "Precio por persona") is string tp && dto.Precio is null) fila.Mensaje = $"El precio «{tp}» no es un número.";
-                if (fila.Mensaje is null && await RevisarAsync(dto) is var (_, mal)) fila.Mensaje = mal;
+                if (fila.Mensaje is null && await RevisarAsync(dto, monedas) is var (_, mal)) fila.Mensaje = mal;
                 if (fila.Mensaje is null && !vistas.Add($"{dto.Id_Destino}|{dto.Nombre}")) fila.Mensaje = "Está repetida en el Excel (mismo nombre y destino).";
+                if (fila.Mensaje is null && dto.Codigo is not null && !codigos.Add(dto.Codigo)) fila.Mensaje = $"El código «{dto.Codigo}» está repetido en el Excel.";
+                fila.Detalle = $"{dto.Id_Destino} · {(dto.Precio is decimal pr ? $"{dto.Id_Moneda} {pr:N2}" : "sin precio")}" + (dto.Codigo is null ? "" : $" · {dto.Codigo}");
                 fila.Nombre = dto.Nombre; fila.Ok = fila.Mensaje is null;
                 if (!fila.Ok || !guardar) continue;
                 try
                 {
                     fila.Id = await _repo.GuardarAsync(dto);
+                    await PorDefectoAsync(TipoMm, fila.Id.Value, dto.Id_Destino, _img.BuscarArchivo(TipoImagen, Archivo(dto.Nombre)) is not null);
                     r.Guardadas++;
                     await Auditar("Excursion_Crear", fila.Id.Value, new { dto, excel = archivo!.FileName, fila = f.Numero });
                 }
@@ -223,8 +248,10 @@ namespace EuroVip.Controllers
             for (var i = 2; await _repo.RepetidaAsync(copia, e.Id_Destino ?? "", null) is not null; i++) copia = $"{nombre} (copia {i})";
             var nuevo = await _repo.GuardarAsync(new ExcursionGuardarDto
             {
-                Nombre = copia, Id_Destino = e.Id_Destino ?? "", Precio = e.Precio, Cancelable = e.Cancelable ?? false, Descripcion = e.Descripcion
+                Nombre = copia, Id_Destino = e.Id_Destino ?? "", Precio = e.Precio, Cancelable = e.Cancelable ?? false, Descripcion = e.Descripcion,
+                Id_Moneda = e.Id_Moneda, Id_Proveedor = e.Id_Proveedor, Precio_Proveedor = e.Precio_Proveedor   // el código no se copia: es único
             });
+            await PorDefectoAsync(TipoMm, nuevo, e.Id_Destino, false);
             await Auditar("Excursion_Duplicar", nuevo, new { de = id, nombre = copia });
             return Json(new { ok = true, id = nuevo, excursion = await ConImagenAsync((await _repo.ObtenerAsync(nuevo))!), mensaje = $"Se duplicó como «{copia}». Cámbiale lo que haga falta." });
         }
@@ -275,5 +302,9 @@ namespace EuroVip.Controllers
         private Task Auditar(string tipo, int id, object cambios) =>
             _aud.AuditarAsync(tipo, new[] { id }, cambios, User.Identity?.Name ?? "desconocido",
                 HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
+
+        /// <summary>Punto 2: si no tiene foto (ni nueva ni la de antes), se le pone la imagen por defecto (la de su destino o la general).</summary>
+        private Task PorDefectoAsync(string tipo, object clave, string? destino, bool yaTieneFoto) =>
+            HttpContext.RequestServices.GetRequiredService<IImagenesPorDefecto>().AsegurarAsync(tipo, clave.ToString()!, destino, yaTieneFoto);
     }
 }

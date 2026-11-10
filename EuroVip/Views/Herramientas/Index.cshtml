@@ -213,6 +213,7 @@
             @if ((Context.Items[EuroVip.Helpers.AccesoModuloFilter.ClavePermisos] as PermisosUsuario)?.EsSuper == true)
             {
                 <button type="button" class="ev-btn ghost sm" id="mmMigrar"><i class="bi bi-arrow-left-right"></i> Pasar las fotos de antes</button>
+                <button type="button" class="ev-btn ghost sm" id="mmDefecto"><i class="bi bi-image-alt"></i> Imagen por defecto a lo que no tiene foto</button>
                 <button type="button" class="ev-btn ghost sm" id="mmRenombrar" hidden><i class="bi bi-input-cursor-text"></i> Poner nombres a las fotos</button>
                 <div id="mmInforme" style="margin-top:8px;font-size:12.5px"></div>
             }
@@ -280,6 +281,19 @@
             $('#mmInforme').innerHTML = `<div><b>Renombradas:</b> ${EV.fmt(r.renombradas)} · <b>Ya estaban bien:</b> ${EV.fmt(r.yaBien)}</div>` +
                 (r.sinArchivo.length ? `<details><summary>${r.sinArchivo.length} sin archivo en este servidor</summary><div style="max-height:160px;overflow:auto">${r.sinArchivo.map(esc).join('<br>')}</div></details>` : '') +
                 (r.errores.length ? `<div style="color:#B42318"><b>Errores:</b><br>${r.errores.map(esc).join('<br>')}</div>` : '');
+            resumenFotos();
+        } catch (er) { EV.toast(er.message, 'err'); }
+        finally { b.disabled = false; b.innerHTML = html; }
+    });
+    // Punto 2: a lo que no tiene ninguna foto se le pone la del destino o la general (no copia archivos; si después suben una foto, la reemplaza)
+    $('#mmDefecto')?.addEventListener('click', async e => {
+        if (!await EV.confirmar({ titulo: '¿Poner la imagen por defecto?', si: 'Sí, ponerla',
+            texto: 'A los destinos de la web, hoteles, excursiones, traslados, circuitos, cruceros y días de itinerario que <b>no tienen ninguna foto</b> se les pone la foto de su destino (o la general: Punta Cana). No borra ni cambia ninguna foto que ya exista. <b>Hazlo en la app del servidor y después de «Pasar las fotos de antes»</b>, para que las fotos viejas cuenten como foto.' })) return;
+        const b = e.currentTarget, html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Poniendo…';
+        try {
+            const r = await EV.post('/Multimedia/PorDefecto');
+            EV.toast(r.mensaje);
+            $('#mmInforme').innerHTML = '<b>Imagen por defecto:</b> ' + (Object.entries(r.resultado).map(([t, n]) => `${EV.fmt(n)} ${esc(t)}`).join(' · ') || 'nada');
             resumenFotos();
         } catch (er) { EV.toast(er.message, 'err'); }
         finally { b.disabled = false; b.innerHTML = html; }

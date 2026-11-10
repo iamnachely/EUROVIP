@@ -581,6 +581,18 @@
                     <span class="msg"></span>
                 </div>
             </div>
+            <div class="hx-row">
+                <div class="hx-f">
+                    <label for="Codigo">Código interno <em>opcional · único en todo el sistema</em></label>
+                    <input id="Codigo" name="Codigo" />
+                    <span class="msg"></span>
+                </div>
+                <div class="hx-f">
+                    <label for="Id_Proveedor">Proveedor <em>de dónde sale la oferta</em></label>
+                    <select id="Id_Proveedor" name="Id_Proveedor"><option value="">— Sin proveedor —</option></select>
+                    <span class="msg"></span>
+                </div>
+            </div>
         </div>
 
         <!-- 3. Viaje -->
@@ -983,6 +995,8 @@ const HX = (() => {
                         <span><i class="bi bi-airplane"></i> ${esc(h.origen)} → ${esc(h.id_PaisDestino)}</span>
                         ${h.contenedor ? `<span><i class="bi bi-grid"></i> ${esc(h.contenedor)}${h.posicion_Destino != null ? ' · #' + h.posicion_Destino : ''}</span>` : ''}
                         ${h.nombre_Campanya ? `<span><i class="bi bi-megaphone"></i> ${esc(h.nombre_Campanya)}</span>` : ''}
+                        ${h.codigo ? `<span title="Código interno"><i class="bi bi-upc"></i> ${esc(h.codigo)}</span>` : ''}
+                        ${h.proveedor ? `<span title="Proveedor"><i class="bi bi-briefcase"></i> ${esc(h.proveedor)}</span>` : ''}
                     </div>
                     ${estadoHome(h)}
                 </div>
@@ -1081,7 +1095,17 @@ const HX = (() => {
     // «!» en «Más datos» si tiene algo en rojo
     function marcarPestanas() { const e = $('.hx-tab-err', $('#hxForm')); if (e) e.hidden = !$('[data-pane="mas"] .hx-f.err', frm); }
     // Lo habitual para un hotel nuevo (pedido de la usuaria: que no tenga que escribir tanto)
+    // FASE 38: código interno (se revisa mientras se escribe) y proveedor
+    let codigoAntes = '';
+    function codigoProveedor(h) {
+        codigoAntes = h?.codigo || '';
+        EVCodigo.proveedores(campo('Id_Proveedor'), h?.id_Proveedor || '').catch(() => { });
+        const c = EVCodigo.campo(campo('Codigo'), { producto: 'HOTEL', clave: () => editandoId ?? '', anterior: () => codigoAntes });
+        campo('Codigo').value = codigoAntes; c.reiniciar();
+    }
+
     function valoresPorDefecto() {
+        codigoProveedor(null);
         const poner = (n, v) => { const el = campo(n); if (el && [...(el.options || [{ value: v }])].some(o => o.value === v)) el.value = v; };
         poner('Id_Pais_Origen', 'ES'); campo('Origen').value = 'Madrid'; poner('Id_PaisDestino', 'DO');
         poner('Id_Moneda', 'DOP'); campo('Noches').value = 1; campo('Posicion_Destino').value = 1; campo('Estado').checked = true;
@@ -1180,6 +1204,7 @@ const HX = (() => {
             set('Origen', h.origen); set('Id_PaisDestino', (h.id_PaisDestino || '').trim()); set('Latitud', h.latitud); set('Longitud', h.longitud);
             set('Posicion_Destino', h.posicion_Destino); set('Notas', h.notas);
             prioridad(h);
+            codigoProveedor(h);
             campo('Estado').checked = h.estado !== false;
             $('#frmTitulo').textContent = 'Editar hotel';
             $('#frmSub').textContent = `#${h.id_Servicio} · los cambios se ven en la vista previa`; EVQuien.pintar($('#frmSub'), 'hotel', h.id_Servicio);
@@ -1199,6 +1224,7 @@ const HX = (() => {
         if (!formAbierto()) return;
         editandoId = null;
         campo('Id_Servicio').value = '';
+        codigoAntes = ''; campo('Codigo').value = ''; campo('Codigo').evCodigo?.reiniciar();   // el código es único: la copia va sin código
         $('#frmTitulo').textContent = 'Duplicar hotel';
         $('#frmSub').textContent = 'Copia lista: cambia la campaña, el origen, el precio o la sección y guarda. Es un hotel nuevo en la web.'; EVQuien.quitar($('#frmSub'));
         $('#frmIcon').className = 'bi bi-copy';
@@ -1220,6 +1246,7 @@ const HX = (() => {
             Latitud: v('Latitud') || null, Longitud: v('Longitud') || null,
             Id_Contenedor: num('Id_Contenedor'), Posicion_Destino: num('Posicion_Destino'),
             Estado: campo('Estado').checked, Notas: v('Notas') || null,
+            Codigo: v('Codigo') || null, Id_Proveedor: v('Id_Proveedor') || null,
             ...EVPrioridad.leer($('#edPrio'))
         };
 
@@ -1233,6 +1260,7 @@ const HX = (() => {
         if (!dto.Id_Campanya) faltan.push(['Id_Campanya', 'Elige la campaña']);
         if (!dto.Origen) faltan.push(['Origen', 'Escribe la ciudad de salida']);
         if (dto.PrecioWeb != null && dto.PrecioWeb < 0) faltan.push(['PrecioWeb', 'El precio no puede ser negativo']);
+        if (dto.Codigo && !(await EVCodigo.validar(campo('Codigo')))) faltan.push(['Codigo', campo('Codigo').nextElementSibling?.textContent?.trim() || 'Revisa el código']);
         if (faltan.length) {
             faltan.forEach(([n, m]) => marcarError(n, m));
             irPestana(campo(faltan[0][0]).closest('[data-pane]')?.dataset.pane || 'principal');

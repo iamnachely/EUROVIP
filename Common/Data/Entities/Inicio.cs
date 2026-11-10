@@ -30,6 +30,10 @@ public class Inicio
     /// <summary>Prioridad (FASE 29): 1 sale primero; null = por precio.</summary>
     public short? Peso { get; set; }
     public decimal? Precio_Proveedor { get; set; }
+    /// <summary>Código interno (FASE 38): letras y números, único entre todos los productos.</summary>
+    public string? Codigo { get; set; }
+    /// <summary>Proveedor de donde sale (Eurovip.proveedor, FASE 38).</summary>
+    public string? Id_Proveedor { get; set; }
 }
 
 /// <summary>[Eurovip].[contenedores] — secciones de la web.</summary>

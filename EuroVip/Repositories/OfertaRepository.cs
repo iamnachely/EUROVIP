@@ -1,5 +1,6 @@
 using Dapper;
 using EuroVip.Models;
+using EuroVip.Services;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -208,6 +209,46 @@ namespace EuroVip.Repositories
 
             var claves = await ClavesVitrinaAsync(cn, tx, new[] { d.Id_Servicio });
             var tasas = d.Suplementos.Sum(x => x.Valor);
+
+            // ---- Punto 7: nombre, moneda, proveedor, origen, código de la carga y textos ----
+            var cab = await cn.QueryFirstAsync<(string? Codigo, string Tipo)>("SELECT codigo, id_tipo_servicio FROM Eurovip.servicio WHERE id_servicio = @id", new { id = d.Id_Servicio }, tx);
+            if (d.Id_Moneda is not null)
+            {
+                var (moneda, malMoneda) = CatalogoCargas.Moneda(d.Id_Moneda, await CatalogoCargas.MonedasAsync(cn, tx));
+                if (malMoneda is not null) return malMoneda;
+                d.Id_Moneda = moneda;
+            }
+            if (!string.IsNullOrWhiteSpace(d.Id_Proveedor) && await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.proveedor WHERE id_proveedor = @p", new { p = d.Id_Proveedor.Trim() }, tx) == 0)
+                return $"El proveedor «{d.Id_Proveedor}» no existe.";
+            await cn.ExecuteAsync(@"UPDATE Eurovip.servicio SET nombre = ISNULL(@nombre, nombre), id_moneda = ISNULL(@moneda, id_moneda),
+                                        id_Proveedor = ISNULL(@prov, id_Proveedor) WHERE id_servicio = @id",
+                new { id = d.Id_Servicio, nombre = string.IsNullOrWhiteSpace(d.Nombre) ? null : d.Nombre.Trim(), moneda = d.Id_Moneda,
+                      prov = string.IsNullOrWhiteSpace(d.Id_Proveedor) ? null : d.Id_Proveedor.Trim() }, tx);
+            if (d.CambiarOrigen)
+            {
+                var pais = (d.Id_Pais_Origen ?? "").Trim().ToUpperInvariant(); var ciudad = (d.Origen ?? "").Trim();
+                await cn.ExecuteAsync("DELETE FROM Eurovip.servicio_origen WHERE id_servicio = @id", new { id = d.Id_Servicio }, tx);
+                if (ciudad != "")
+                {
+                    if (pais.Length != 2) return "Elige el país de origen.";
+                    await cn.ExecuteAsync("INSERT INTO Eurovip.servicio_origen (id_servicio, id_pais_origen, origen) VALUES (@id, @pais, @ciudad)", new { id = d.Id_Servicio, pais, ciudad }, tx);
+                }
+            }
+            var codigo = cab.Codigo;
+            var nuevoCodigo = CodigoInterno.Limpiar(d.Codigo);
+            if (nuevoCodigo is not null && !string.Equals(nuevoCodigo, cab.Codigo?.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                if (CodigoInterno.ErrorFormato(nuevoCodigo) is string malF) return malF;
+                if (await CodigoInterno.UsadoPorAsync(cn, nuevoCodigo, cab.Tipo, cab.Codigo, tx) is var (prod, nom))
+                    return $"El código «{nuevoCodigo}» ya lo usa «{nom}» en {(CodigoInterno.Productos.TryGetValue(prod, out var t) ? t : prod)}.";
+                // el código es de TODA la carga: todas sus fechas y sus textos pasan al nuevo
+                await cn.ExecuteAsync(@"UPDATE Eurovip.servicio SET codigo = @nuevo WHERE codigo = @viejo AND id_tipo_servicio = @tipo;
+                                        UPDATE Eurovip.servicio_descripcion SET codigo = @nuevo WHERE codigo = @viejo;",
+                    new { nuevo = nuevoCodigo, viejo = cab.Codigo, tipo = cab.Tipo }, tx);
+                codigo = nuevoCodigo;
+            }
+            if (d.Textos is not null && !string.IsNullOrWhiteSpace(codigo))
+                await GuardarTextosAsync(cn, tx, codigo, d.Textos);
             await cn.ExecuteAsync(@"
                 UPDATE Eurovip.servicio SET precio_base = @pb, descuento = @desc, id_campanya = @camp, activo = @activo, noches = @noches,
                        peso = @peso, precio_proveedor = @prov WHERE id_servicio = @id;
@@ -239,6 +280,20 @@ namespace EuroVip.Repositories
             tx.Commit();
             await RefrescarVitrinaAsync(claves);
             return null;
+        }
+
+        /// <summary>Textos de una carga (una fila de servicio_descripcion por código): crea o reemplaza los 4 textos.</summary>
+        internal static async Task GuardarTextosAsync(SqlConnection cn, SqlTransaction tx, string codigo, CargaTextosDto t)
+        {
+            static string? N(string? x) => string.IsNullOrWhiteSpace(x) ? null : x.Trim();
+            await cn.ExecuteAsync(@"
+                IF EXISTS (SELECT 1 FROM Eurovip.servicio_descripcion WHERE codigo = @codigo AND id_idioma = 'ES')
+                    UPDATE Eurovip.servicio_descripcion SET incluye = @inc, no_incluye = @noinc, nota = @nota, oferta_especial = @ofe
+                     WHERE codigo = @codigo AND id_idioma = 'ES';
+                ELSE IF COALESCE(@inc, @noinc, @nota, @ofe) IS NOT NULL
+                    INSERT INTO Eurovip.servicio_descripcion (codigo, id_idioma, nota, incluye, no_incluye, oferta_especial)
+                    VALUES (@codigo, 'ES', @nota, @inc, @noinc, @ofe);",
+                new { codigo, inc = N(t.Incluye), noinc = N(t.No_Incluye), nota = N(t.Nota), ofe = N(t.Oferta_Especial) }, tx);
         }
 
         public async Task<int> LoteAsync(OfertaLoteDto d)

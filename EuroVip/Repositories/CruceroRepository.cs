@@ -9,6 +9,7 @@ namespace EuroVip.Repositories
     {
         Task<List<CruceroLista>> ListarAsync();
         Task<CruceroDto?> ObtenerAsync(int id);
+        Task<(string Campo, string Mensaje)?> RevisarCodigoMonedaAsync(CruceroDto d);
         /// <summary>Crea (Id_Crucero null) o reemplaza el crucero con todo lo suyo; devuelve el número y las categorías que hay que refrescar en la Home.</summary>
         Task<(int Id, List<int> Categorias)> GuardarAsync(CruceroDto d, string usuario);
         Task<List<int>?> EliminarAsync(int id);
@@ -48,7 +49,7 @@ namespace EuroVip.Repositories
         {
             using var cn = _db.Conexion();
             return (await cn.QueryAsync<CruceroLista>(@"
-                SELECT c.id_crucero AS Id_Crucero, c.titulo AS Titulo, c.codigo AS Codigo, c.id_barco AS Id_Barco, b.nombre AS Barco,
+                SELECT c.id_crucero AS Id_Crucero, c.titulo AS Titulo, c.codigo AS Codigo, c.codigo_interno AS Codigo_Interno, c.id_moneda AS Id_Moneda, c.id_barco AS Id_Barco, b.nombre AS Barco,
                        n.id_naviera AS Id_Naviera, n.nombre AS Naviera, n.logo AS Naviera_Logo, c.noches AS Noches,
                        c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.activo AS Activo, c.peso AS Peso, c.precio_proveedor AS Precio_Proveedor,
                        (SELECT COUNT(*) FROM Eurovip.crucero_pdf p WHERE p.id_crucero = c.id_crucero) AS Pdfs,
@@ -73,12 +74,25 @@ namespace EuroVip.Repositories
         private static string? Hora(TimeSpan? t) => t?.ToString(@"hh\:mm", CultureInfo.InvariantCulture);
         private sealed class TipoFila : CruceroCabinaTipoDto { public int Id { get; set; } }
 
+        /// <summary>FASE 38: moneda que exista y código interno único entre todos los productos. (campo, error) o null.</summary>
+        public async Task<(string Campo, string Mensaje)?> RevisarCodigoMonedaAsync(CruceroDto d)
+        {
+            using var cn = _db.Conexion();
+            var (moneda, malMoneda) = EuroVip.Services.CatalogoCargas.Moneda(d.Id_Moneda, await EuroVip.Services.CatalogoCargas.MonedasAsync(cn));
+            if (malMoneda is not null) return ("Id_Moneda", malMoneda);
+            d.Id_Moneda = moneda;
+            d.Codigo_Interno = EuroVip.Services.CodigoInterno.Limpiar(d.Codigo_Interno);
+            var anterior = d.Id_Crucero is int id ? await cn.ExecuteScalarAsync<string?>("SELECT codigo_interno FROM Eurovip.crucero WHERE id_crucero = @id", new { id }) : null;
+            if (await EuroVip.Services.CodigoInterno.ErrorAsync(cn, d.Codigo_Interno, "CRUCERO", d.Id_Crucero?.ToString(), anterior) is string mal) return ("Codigo_Interno", mal);
+            return null;
+        }
+
         public async Task<CruceroDto?> ObtenerAsync(int id)
         {
             using var cn = _db.Conexion();
             var c = await cn.QueryFirstOrDefaultAsync<CruceroDto>(@"
                 SELECT c.id_crucero AS Id_Crucero, c.titulo AS Titulo, c.subtitulo AS Subtitulo, c.id_barco AS Id_Barco, b.nombre AS Barco_Nombre, n.nombre AS Naviera_Nombre,
-                       c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.noches AS Noches, c.codigo AS Codigo, c.descripcion AS Descripcion,
+                       c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.noches AS Noches, c.codigo AS Codigo, c.codigo_interno AS Codigo_Interno, c.id_moneda AS Id_Moneda, c.descripcion AS Descripcion,
                        c.incluye AS Incluye, c.no_incluye AS No_Incluye, c.titulo_seccion AS Titulo_Seccion, c.activo AS Activo, c.peso AS Peso, c.precio_proveedor AS Precio_Proveedor, c.usuario AS Usuario,
                        c.fecha_alta AS Fecha_Alta, c.fecha_modificacion AS Fecha_Modificacion
                 FROM Eurovip.crucero c
@@ -162,7 +176,8 @@ namespace EuroVip.Repositories
             {
                 id = d.Id_Crucero, Titulo = d.Titulo.Trim(), Subtitulo = Nulo(d.Subtitulo), Id_Barco = idBarco, Puerto_Salida = Nulo(d.Puerto_Salida), Puerto_Llegada = Nulo(d.Puerto_Llegada),
                 d.Noches, Codigo = Nulo(d.Codigo), Descripcion = Nulo(d.Descripcion), Incluye = Nulo(d.Incluye), No_Incluye = Nulo(d.No_Incluye),
-                Titulo_Seccion = Nulo(d.Titulo_Seccion), d.Activo, usuario, d.Peso, d.Precio_Proveedor
+                Titulo_Seccion = Nulo(d.Titulo_Seccion), d.Activo, usuario, d.Peso, d.Precio_Proveedor,
+                Codigo_Interno = EuroVip.Services.CodigoInterno.Limpiar(d.Codigo_Interno), Id_Moneda = string.IsNullOrWhiteSpace(d.Id_Moneda) ? "DOP" : d.Id_Moneda.Trim().ToUpperInvariant()
             };
             int id;
             var antes = new List<int>();
@@ -173,7 +188,7 @@ namespace EuroVip.Repositories
                     UPDATE Eurovip.crucero SET titulo = @Titulo, subtitulo = @Subtitulo, id_barco = @Id_Barco, puerto_salida = @Puerto_Salida,
                            puerto_llegada = @Puerto_Llegada, noches = @Noches, codigo = @Codigo, descripcion = @Descripcion, incluye = @Incluye,
                            no_incluye = @No_Incluye, titulo_seccion = @Titulo_Seccion, activo = @Activo, peso = @Peso, precio_proveedor = @Precio_Proveedor,
-                           usuario = @usuario, fecha_modificacion = SYSDATETIME()
+                           codigo_interno = @Codigo_Interno, id_moneda = @Id_Moneda, usuario = @usuario, fecha_modificacion = SYSDATETIME()
                     WHERE id_crucero = @id", p, tx);
                 if (n == 0) throw new InvalidOperationException("Ese crucero ya no existe. Recarga la página.");
                 id = existente;
@@ -195,9 +210,9 @@ namespace EuroVip.Repositories
             {
                 id = await cn.ExecuteScalarAsync<int>(@"
                     INSERT INTO Eurovip.crucero (titulo, subtitulo, id_barco, puerto_salida, puerto_llegada, noches, codigo, descripcion, incluye, no_incluye,
-                                                 titulo_seccion, activo, usuario, peso, precio_proveedor)
+                                                 titulo_seccion, activo, usuario, peso, precio_proveedor, codigo_interno, id_moneda)
                     VALUES (@Titulo, @Subtitulo, @Id_Barco, @Puerto_Salida, @Puerto_Llegada, @Noches, @Codigo, @Descripcion, @Incluye, @No_Incluye,
-                            @Titulo_Seccion, @Activo, @usuario, @Peso, @Precio_Proveedor);
+                            @Titulo_Seccion, @Activo, @usuario, @Peso, @Precio_Proveedor, @Codigo_Interno, @Id_Moneda);
                     SELECT CAST(SCOPE_IDENTITY() AS int);", p, tx);
             }
 

@@ -5552,6 +5552,51 @@ SELECT id_moneda, COUNT(*) AS excursiones FROM Eurovip.servicio_excursion GROUP 
 GO
 
 
+/* ---------- CAMBIO 126: cruceros con su propio código interno ----------
+   crucero.codigo es el «Código / ID del proveedor» (ej. 2256635; hay cruceros repetidos a propósito por las copias),
+   así que el código interno va en una columna nueva: crucero.codigo_interno (único, letras y números).
+   La vista vCodigoInterno pasa a usar esa columna para CRUCERO. */
+IF COL_LENGTH('Eurovip.crucero', 'codigo_interno') IS NULL ALTER TABLE Eurovip.crucero ADD codigo_interno varchar(30) NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Eurovip_crucero_codigo_interno')
+    CREATE UNIQUE INDEX UX_Eurovip_crucero_codigo_interno ON Eurovip.crucero (codigo_interno) WHERE codigo_interno IS NOT NULL;
+GO
+CREATE OR ALTER VIEW Eurovip.vCodigoInterno
+AS
+    SELECT CASE WHEN i.tipo_servicio = 'HOTEL' THEN 'HOTEL' ELSE 'INICIO' END AS producto, CAST(i.id_servicio AS varchar(120)) AS clave,
+           i.codigo, CAST(i.id_destino AS nvarchar(200)) AS nombre
+      FROM Eurovip.inicio i WHERE i.codigo IS NOT NULL AND i.codigo <> ''
+    UNION ALL
+    SELECT s.id_tipo_servicio, CAST(s.codigo AS varchar(120)), s.codigo, CAST(MIN(ISNULL(s.nombre, s.codigo)) AS nvarchar(200))
+      FROM Eurovip.servicio s WHERE s.codigo IS NOT NULL AND s.codigo <> '' GROUP BY s.id_tipo_servicio, s.codigo
+    UNION ALL
+    SELECT 'CIRCUITO_CAT', CAST(c.nombre_circuito AS varchar(120)), c.id, CAST(c.nombre_circuito AS nvarchar(200))
+      FROM Eurovip.circuito c WHERE c.id IS NOT NULL AND c.id <> ''
+    UNION ALL
+    SELECT 'EXCURSION', CAST(e.id_Excursion AS varchar(120)), e.codigo, CAST(e.nombre AS nvarchar(200))
+      FROM Eurovip.servicio_excursion e WHERE e.codigo IS NOT NULL AND e.codigo <> ''
+    UNION ALL
+    SELECT 'TRASLADO', CAST(t.id_traslado AS varchar(120)), t.codigo, CAST(t.nombre AS nvarchar(200))
+      FROM Eurovip.traslado t WHERE t.codigo IS NOT NULL AND t.codigo <> ''
+    UNION ALL
+    SELECT 'CRUCERO', CAST(c.id_crucero AS varchar(120)), c.codigo_interno, CAST(c.titulo AS nvarchar(200))
+      FROM Eurovip.crucero c WHERE c.codigo_interno IS NOT NULL AND c.codigo_interno <> '';
+GO
+SELECT 'crucero.codigo_interno' AS revision, CASE WHEN COL_LENGTH('Eurovip.crucero','codigo_interno') > 0 THEN 'ok' ELSE 'FALTA' END AS estado;
+SELECT producto, COUNT(*) AS codigos FROM Eurovip.vCodigoInterno GROUP BY producto ORDER BY producto;
+GO
+
+/* ---------- CAMBIO 127: imagen por defecto (punto 2) ----------
+   Cuando un producto no tiene foto, el BackOffice le enlaza como portada una imagen que ya existe: la del destino o, si el destino
+   no tiene, esta imagen general (Eurovip.imagen.id 44 = portada de Punta Cana, 1600×900). No se copia ningún archivo. */
+IF NOT EXISTS (SELECT 1 FROM Eurovip.config_sistema WHERE clave = 'imagen_por_defecto')
+    INSERT INTO Eurovip.config_sistema (clave, valor, descripcion, fecha_modificacion, usuario_modificacion)
+    VALUES ('imagen_por_defecto', '44', 'Imagen (Eurovip.imagen.id) que se pone cuando un producto no tiene foto y su destino tampoco (punto 2)', GETDATE(), 'FASE 38');
+SELECT clave, valor FROM Eurovip.config_sistema WHERE clave = 'imagen_por_defecto';
+SELECT id, ruta_relativa, nombre_archivo, extension, ancho, alto FROM Eurovip.imagen WHERE id = 44;
+GO
+
+
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
@@ -6078,6 +6123,13 @@ GO
                servicio_excursion y traslado; id_moneda en servicio_excursion (las 52 quedaron en DOP); índices únicos de codigo;
                vista vCodigoInterno; tarjetas de la Home y web de excursiones/traslados con la moneda del producto. No cambió
                ningún dato existente. Probado: spPortalObtenerExcursion devuelve id_moneda de la excursión.
+   10/11/2026  FASE 38 (cont.) aplicada SOLO en el 93: CAMBIO 126 crucero.codigo_interno (el «codigo» de crucero es el ID del
+               proveedor) + índice único y vCodigoInterno con esa columna; CAMBIO 127 config_sistema «imagen_por_defecto» = 44 (portada
+               de Punta Cana). Pruebas con filas «ZZ Prueba Claude…» (excursiones, traslados, hoteles, carga de Solo Hotel 3398-3399):
+               creadas, editadas y borradas; se borraron también sus copias en registro_eliminado y el Log_Cargas 34. Una salida real
+               de circuito (3223) se guardó con los mismos valores para probar el editor (sin cambios). La «imagen por defecto» para lo
+               que ya existe NO se corrió desde el equipo de desarrollo (allí no están las fotos viejas): hay que hacerlo en el servidor
+               con Herramientas › «Imagen por defecto a lo que no tiene foto» después de «Pasar las fotos de antes».
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

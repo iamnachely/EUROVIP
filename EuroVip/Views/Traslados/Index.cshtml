@@ -230,6 +230,8 @@
                     <button type="button" data-v="VEHICULO"><i class="bi bi-bus-front"></i><span>Para todos los viajeros<small>un precio por el vehículo</small></span></button>
                     <button type="button" data-v="PERSONA"><i class="bi bi-person"></i><span>Por persona<small>se multiplica por los viajeros</small></span></button>
                 </div></div>
+            <div class="ui-f"><label for="edMoneda">Moneda *</label>
+                <select id="edMoneda"><option value="DOP">DOP · RD$</option></select><span class="msg"></span></div>
             <div class="ui-row">
                 <div class="ui-f"><label for="edPrecioIV">Precio ida y vuelta</label>
                     <div class="tr-money"><b class="sim">RD$</b><input id="edPrecioIV" type="number" min="0" step="0.01" placeholder="Ej. 22.72"></div><span class="msg"></span></div>
@@ -237,6 +239,12 @@
                     <div class="tr-money"><b class="sim">RD$</b><input id="edPrecioI" type="number" min="0" step="0.01" placeholder="Opcional"></div><span class="msg"></span></div>
             </div>
             <small style="color:var(--ev-muted);font-weight:600;display:block;margin:-4px 0 10px">Carga al menos uno. Si dejas uno vacío, esa opción no sale en la web.</small>
+            <div class="ui-row">
+                <div class="ui-f"><label for="edCodigo">Código <em>tu código interno · único en todo el sistema</em></label>
+                    <input id="edCodigo"><span class="msg"></span></div>
+                <div class="ui-f"><label for="edProveedor">Proveedor <em>de dónde sale el traslado</em></label>
+                    <select id="edProveedor"><option value="">— Sin proveedor —</option></select><span class="msg"></span></div>
+            </div>
         </section>
 
         <section class="tr-paso"><h3><span class="n">5</span> Condiciones y descripción</h3>
@@ -299,7 +307,7 @@
     try { plegadas = new Set(JSON.parse(localStorage.getItem('ev-traslados-plegadas') || '[]')); } catch { }
     const guardarPlegadas = () => { try { localStorage.setItem('ev-traslados-plegadas', JSON.stringify([...plegadas])); } catch { } };
 
-    const precio = v => v == null ? '—' : `${EV.simbolo()} ${EV.fmt(v, Number(v) % 1 ? 2 : 0)}`;
+    const precio = (v, m) => v == null ? '—' : `${EV.simbolo(m || 'DOP')} ${EV.fmt(v, Number(v) % 1 ? 2 : 0)}`;
     const menor = t => Math.min(t.precio_Ida_Vuelta ?? Infinity, t.precio_Ida ?? Infinity);
     const ICONO = { BUS: 'bi-bus-front', MINIBUS: 'bi-bus-front', VAN: 'bi-truck-front', COCHE: 'bi-car-front', LIMUSINA: 'bi-car-front-fill' };
 
@@ -370,13 +378,15 @@
                 <div class="tr-chips">
                     ${conAcciones ? (t.activo ? '<span class="tr-chip ok"><i class="bi bi-broadcast"></i> En la web</span>' : '<span class="tr-chip av"><i class="bi bi-pause-circle"></i> Desactivado</span>') : ''}
                     ${t.cancelable ? `<span class="tr-chip ok"><i class="bi bi-check2"></i> Cancelable${t.horas_Cancelacion != null ? ` hasta ${t.horas_Cancelacion} h antes` : ''}</span>` : '<span class="tr-chip no"><i class="bi bi-x"></i> No cancelable</span>'}
+                    ${t.codigo ? `<span class="tr-chip"><i class="bi bi-upc"></i> ${esc(t.codigo)}</span>` : ''}
+                    ${t.proveedor ? `<span class="tr-chip" title="Proveedor"><i class="bi bi-briefcase"></i> ${esc(t.proveedor)}</span>` : ''}
                     <span class="tr-chip"><i class="bi bi-building"></i> ${t.todos_Hoteles ? `Todos los hoteles de ${esc(t.id_Destino)}` : `${t.hoteles.length} hotel${t.hoteles.length === 1 ? '' : 'es'}`}</span>
                 </div>
             </div>
             <div class="tr-der">
-                ${pv != null ? `<div class="pr">${precio(pv)}</div><div class="nota">Precio ida y vuelta, ${para}.</div>` : `<div class="pr">${precio(pi)}</div><div class="nota">Precio solo ida, ${para}.</div>`}
+                ${pv != null ? `<div class="pr">${precio(pv, t.id_Moneda)}</div><div class="nota">Precio ida y vuelta, ${para}.</div>` : `<div class="pr">${precio(pi, t.id_Moneda)}</div><div class="nota">Precio solo ida, ${para}.</div>`}
                 ${t.precio_Proveedor ? `<div>${EVPrioridad.proveedor(pv ?? pi, t.precio_Proveedor)}</div>` : ''}
-                ${pv != null && pi != null ? `<div class="ida">Solo ida: ${precio(pi)}</div>` : ''}
+                ${pv != null && pi != null ? `<div class="ida">Solo ida: ${precio(pi, t.id_Moneda)}</div>` : ''}
                 <div class="acc">${conAcciones ? acciones(t) : '<span class="ev-btn sm" style="pointer-events:none">Seleccionar traslado</span>'}</div>
             </div>
         </article>`;
@@ -406,14 +416,14 @@
         l.forEach(t => { const k = t.id_Estacion_Origen + '|' + t.id_Destino; if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(t); });
         $('#trLista').innerHTML = [...grupos.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([k, lista]) => {
             const [o, d] = k.split('|'), plegada = plegadas.has(k) && !st.q && !st.filtro;
-            const min = Math.min(...lista.map(menor)), act = lista.filter(t => t.activo).length;
+            const min = Math.min(...lista.map(menor)), act = lista.filter(t => t.activo).length, monMin = lista.find(t => menor(t) === min)?.id_Moneda;
             return `<section class="tr-sec ${plegada ? 'plegada' : ''}" data-ruta="${esc(k)}">
                 <header class="tr-sec-h">
                     <div class="ruta">
                         <div class="punto"><small><i class="bi bi-airplane"></i> Desde</small><b>${esc(o)} · ${esc(lista[0].origen_Nombre || '')}</b></div>
                         <span class="flecha"><i class="bi bi-arrow-right"></i></span>
                         <div class="punto"><small><i class="bi bi-geo-alt"></i> A</small><b>${esc(d)}</b></div>
-                        <span class="res">${lista.length} opci${lista.length === 1 ? 'ón' : 'ones'} · ${act} activa${act === 1 ? '' : 's'}${isFinite(min) ? ` · desde <b>${precio(min)}</b>` : ''}</span>
+                        <span class="res">${lista.length} opci${lista.length === 1 ? 'ón' : 'ones'} · ${act} activa${act === 1 ? '' : 's'}${isFinite(min) ? ` · desde <b>${precio(min, monMin)}</b>` : ''}</span>
                     </div>
                     <button type="button" class="ev-btn sm" data-nuevo-en="${esc(k)}"><i class="bi bi-plus-lg"></i> Opción en esta ruta</button>
                     <button type="button" class="tr-pleg" data-plegar="${esc(k)}" aria-expanded="${!plegada}" title="Mostrar u ocultar"><i class="bi bi-chevron-down"></i></button>
@@ -448,7 +458,7 @@
             const ok = p >= t.pasajeros_Min && p <= t.pasajeros_Max;
             $('#simTotal').innerHTML = base == null ? `<b style="font-size:16px">No se vende ${iv ? 'ida y vuelta' : 'solo ida'}</b>`
                 : !ok ? `<b style="font-size:16px;color:#B42318">No sale: admite de ${t.pasajeros_Min} a ${t.pasajeros_Max} pasajeros</b>`
-                : `<b>${precio(t.cobro === 'PERSONA' ? base * p : base)}</b><small>${t.cobro === 'PERSONA' ? `${precio(base)} × ${p} viajeros` : `para los ${p} viajeros`}</small>`;
+                : `<b>${precio(t.cobro === 'PERSONA' ? base * p : base, t.id_Moneda)}</b><small>${t.cobro === 'PERSONA' ? `${precio(base, t.id_Moneda)} × ${p} viajeros` : `para los ${p} viajeros`}</small>`;
         };
         $('#simP').oninput = $('#simIV').onchange = sim; sim();
         visor.abrir();
@@ -483,6 +493,7 @@
             Id_Estacion_Origen: $('#edOrigen').value.trim().split(' ')[0].toUpperCase(), Id_Destino: $('#edDestino').value.trim(),
             Maletas: num('#edMaletas') ?? 0, Duracion_Min: num('#edDuracion'), Pasajeros_Min: num('#edPmin') ?? 1, Pasajeros_Max: num('#edPmax') ?? 1,
             Cobro: segVal('#edCobro'), Precio_Ida_Vuelta: num('#edPrecioIV'), Precio_Ida: num('#edPrecioI'),
+            Id_Moneda: $('#edMoneda').value || 'DOP', Codigo: $('#edCodigo').value.trim() || null, Id_Proveedor: $('#edProveedor').value || null,
             Cancelable: $('#edCancelable').checked, Horas_Cancelacion: $('#edCancelable').checked ? num('#edHoras') : null,
             Descripcion: $('#edDesc').value.trim() || null, Todos_Hoteles: $('#edTodos').checked, Hoteles: hoteles.map(h => +h.valor), Activo: $('#edActivo').checked,
             ...EVPrioridad.leer($('#trEditor'))
@@ -496,7 +507,7 @@
         const t = {
             id_Traslado: actual?.id_Traslado, nombre: d.Nombre, tipo: d.Tipo, categoria: d.Categoria, vehiculo: d.Vehiculo, id_Destino: d.Id_Destino || 'el destino',
             maletas: d.Maletas, duracion_Min: d.Duracion_Min, pasajeros_Min: d.Pasajeros_Min, pasajeros_Max: d.Pasajeros_Max, cobro: d.Cobro,
-            precio_Ida: d.Precio_Ida, precio_Ida_Vuelta: d.Precio_Ida_Vuelta, cancelable: d.Cancelable, horas_Cancelacion: d.Horas_Cancelacion,
+            precio_Ida: d.Precio_Ida, precio_Ida_Vuelta: d.Precio_Ida_Vuelta, id_Moneda: d.Id_Moneda, cancelable: d.Cancelable, horas_Cancelacion: d.Horas_Cancelacion,
             todos_Hoteles: d.Todos_Hoteles, hoteles, activo: true, imagen: $('#edPrev img')?.src
         };
         $('#edVista').innerHTML = tarjeta(t, false);
@@ -520,6 +531,13 @@
         seg('#edCobro', t?.cobro || 'VEHICULO');
         $('#edPrecioIV').value = t?.precio_Ida_Vuelta ?? '';
         $('#edPrecioI').value = t?.precio_Ida ?? '';
+        // FASE 38: moneda, código interno (se revisa mientras se escribe) y proveedor
+        const simbolos = () => { $$('#trEditor .sim').forEach(x => x.textContent = EV.simbolo($('#edMoneda').value)); };
+        EVCodigo.monedas($('#edMoneda'), t?.id_Moneda || 'DOP').then(() => { simbolos(); vistaPrevia(); }).catch(() => { });
+        $('#edMoneda').onchange = () => { simbolos(); vistaPrevia(); };
+        EVCodigo.proveedores($('#edProveedor'), t?.id_Proveedor || '').catch(() => { });
+        const cod = EVCodigo.campo($('#edCodigo'), { producto: 'TRASLADO', clave: () => actual?.id_Traslado ?? '', anterior: () => actual?.codigo ?? '' });
+        $('#edCodigo').value = t?.codigo || ''; cod.reiniciar();
         $('#edCancelable').checked = t ? t.cancelable : true;
         $('#edPrio').innerHTML = EVPrioridad.campos({ peso: t?.peso, proveedor: t?.precio_Proveedor, precio: t?.precio_Ida_Vuelta ?? t?.precio_Ida, ayuda: 'Compáralo con nuestro precio de ida y vuelta (o solo ida).', contexto: { que: 'traslado', id: t?.id_Traslado, destino: t?.id_Destino } });
         EVPrioridad.vivo($('#edPrio'), () => $('#edPrecioIV').value || $('#edPrecioI').value);
@@ -543,7 +561,7 @@
     function marcar(campo, msg) {
         const el = { Nombre: '#edNombre', Id_Estacion_Origen: '#edOrigen', Id_Destino: '#edDestino', Tipo: '#edTipo', Categoria: '#edCategoria', Vehiculo: '#edVehiculo',
                      Maletas: '#edMaletas', Duracion_Min: '#edDuracion', Pasajeros_Min: '#edPmin', Pasajeros_Max: '#edPmax', Precio_Ida_Vuelta: '#edPrecioIV',
-                     Precio_Ida: '#edPrecioI', Horas_Cancelacion: '#edHoras', Hoteles: '#edTodos' }[campo.replace(/^\$\./, '')];
+                     Precio_Ida: '#edPrecioI', Horas_Cancelacion: '#edHoras', Hoteles: '#edTodos', Id_Moneda: '#edMoneda', Codigo: '#edCodigo', Id_Proveedor: '#edProveedor' }[campo.replace(/^\$\./, '')];
         if (!el) return;
         const f = $(el).closest('.ui-f'); f.classList.add('err'); $('.msg', f).textContent = msg;
     }
@@ -570,6 +588,7 @@
         if (dto.Pasajeros_Max < dto.Pasajeros_Min) faltan.push(['Pasajeros_Max', 'No puede ser menor que el mínimo']);
         if (dto.Precio_Ida_Vuelta == null && dto.Precio_Ida == null) faltan.push(['Precio_Ida_Vuelta', 'Escribe al menos un precio']);
         if (!dto.Todos_Hoteles && !dto.Hoteles.length) faltan.push(['Hoteles', 'Elige al menos un hotel']);
+        if (dto.Codigo && !(await EVCodigo.validar($('#edCodigo')))) faltan.push(['Codigo', $('#edCodigo').nextElementSibling?.textContent?.trim() || 'Revisa el código']);
         if (faltan.length) { faltan.forEach(([c, m]) => marcar(c, m)); EV.toast('Revisa los campos marcados.', 'err'); return; }
 
         const b = $('#edGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';

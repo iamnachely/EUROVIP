@@ -471,7 +471,8 @@
     const CAT_CORTO = { INTERIOR: 'Interior', EXTERIOR: 'Exterior', BALCON: 'Balcón', SUITE: 'Suite' };
     const IMG_OK = /^image\/(jpeg|png|webp)$/;
 
-    const dinero = v => v == null ? '—' : `${EV.simbolo()} ${EV.fmt(v, Number(v) % 1 ? 2 : 0)}`;
+    // FASE 38: cada crucero tiene su moneda (en el editor, la del crucero abierto)
+    const dinero = (v, m) => v == null ? '—' : `${EV.simbolo(m || (typeof C !== 'undefined' && C?.id_Moneda) || 'DOP')} ${EV.fmt(v, Number(v) % 1 ? 2 : 0)}`;
     const nuevaClave = p => p + 'n' + (++sec);
     const fechaTxt = f => f ? new Date(f.slice(0, 10) + 'T00:00:00').toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
     const fechaCorta = f => new Date(f.slice(0, 10) + 'T00:00:00').toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -523,7 +524,7 @@
     }
 
     function tarjeta(c) {
-        const p = (cat, v) => `<div class="${v == null ? 'sin' : ''}"><small>${cat}</small><b>${v == null ? '—' : dinero(v)}</b></div>`;
+        const p = (cat, v) => `<div class="${v == null ? 'sin' : ''}"><small>${cat}</small><b>${v == null ? '—' : dinero(v, c.id_Moneda)}</b></div>`;
         const puertos = [c.puerto_Salida, c.puerto_Llegada !== c.puerto_Salida ? c.puerto_Llegada : null].filter(Boolean).map(esc).join(' / ');
         return `<article class="cz-card ${c.activo ? '' : 'off'} ${c.peso ? 'ev-con-prioridad' : ''}" data-id="${c.id_Crucero}">
             <div class="foto" data-accion="ver">${c.imagen ? `<img src="${esc(c.imagen)}" alt="" loading="lazy">` : '<span class="sin"><i class="bi bi-water"></i>Sin foto</span>'}</div>
@@ -544,6 +545,7 @@
                 <div class="chips">${c.activo ? '<span class="cz-chip ok"><i class="bi bi-broadcast"></i> En la web</span>' : '<span class="cz-chip av">Desactivado</span>'}
                     ${c.categorias ? `<span class="cz-chip"><i class="bi bi-tags"></i> ${esc(c.categorias)}</span>` : '<span class="cz-chip av">Sin categoría</span>'}
                     ${c.pdfs ? `<span class="cz-chip" title="Archivos PDF del crucero"><i class="bi bi-file-earmark-pdf" style="color:#B42318"></i> ${c.pdfs} PDF</span>` : ''}
+                    ${c.codigo_Interno ? `<span class="cz-chip" title="Código interno"><i class="bi bi-upc"></i> ${esc(c.codigo_Interno)}</span>` : ''}
                     <span class="cz-chip">n.º ${c.id_Crucero}${c.codigo ? ' · ' + esc(c.codigo) : ''}</span></div>
                 <div class="acc">
                     <button type="button" class="ui-ibtn" data-accion="ver" title="Ver como la web"><i class="bi bi-eye"></i></button>
@@ -648,7 +650,7 @@
     }
 
     // ===================== EDITOR =====================
-    const vacio = () => ({ id_Crucero: null, titulo: '', subtitulo: '', id_Barco: null, naviera_Nombre: '', barco_Nombre: '', puerto_Salida: '', puerto_Llegada: '', noches: null, codigo: '',
+    const vacio = () => ({ id_Crucero: null, titulo: '', subtitulo: '', id_Barco: null, naviera_Nombre: '', barco_Nombre: '', puerto_Salida: '', puerto_Llegada: '', noches: null, codigo: '', codigo_Interno: '', id_Moneda: 'DOP',
         descripcion: '', incluye: '', no_Incluye: '', titulo_Seccion: '', activo: true, categorias: D.categorias.length === 1 ? [D.categorias[0].id_Categoria] : [], categorias_Nuevas: [],
         itinerario: [], paradas: [], secciones: [], cubiertas: [], cabinas: [], salidas: [], tarifas: [], precios: [] });
 
@@ -702,6 +704,11 @@
     // ---------- 1. Datos ----------
     function pintarDatos() {
         if (C.id_Barco && !C.barco_Nombre) { const b = D.barcos.find(x => x.id_Barco === C.id_Barco); if (b) { C.barco_Nombre = b.nombre; C.naviera_Nombre = b.naviera; } }
+        setTimeout(() => {   // FASE 38: moneda y código interno (se revisa mientras se escribe)
+            const m = $('#czMoneda'); if (m) EVCodigo.monedas(m, C.id_Moneda || 'DOP').catch(() => { });
+            const k = $('#czCodigo'); if (k) EVCodigo.campo(k, { producto: 'CRUCERO', clave: () => C.id_Crucero ?? '', anterior: () => C._codigoAntes ?? '' });
+        });
+        if (C._codigoAntes === undefined) C._codigoAntes = C.codigo_Interno || '';
         $('#eDatos').innerHTML = `
             <div class="cz-blq"><h3><i class="bi bi-info-circle"></i> El crucero</h3>
                 <div class="ui-f"><label>Título * <em>el que sale en la tarjeta y la cabecera</em></label>${inp('titulo', 'maxlength="200" placeholder="Ej. Halloween en Alta Mar del Caribe Oriental"')}</div>
@@ -716,6 +723,10 @@
                     <div class="ui-f"><label>Noches ${opc}</label>${inp('noches', 'min="1" max="180" placeholder="Ej. 7"', 'num')}</div>
                     <div class="ui-f"><label>Puerto de salida ${opc}</label>${inp('puerto_Salida', 'maxlength="100" placeholder="Ej. Port Canaveral"')}</div>
                     <div class="ui-f"><label>Puerto de llegada ${opc}</label>${inp('puerto_Llegada', 'maxlength="100" placeholder="Si lo dejas vacío, el mismo de salida"')}</div>
+                </div>
+                <div class="ui-row">
+                    <div class="ui-f"><label>Moneda de los precios</label><select data-b="id_Moneda" id="czMoneda"><option value="DOP">DOP · RD$</option></select></div>
+                    <div class="ui-f"><label>Código interno ${opc} <em>único en todo el sistema</em></label>${inp('codigo_Interno', 'id="czCodigo"')}</div>
                 </div>
                 <div class="ui-f"><label class="ui-switch"><input type="checkbox" data-b="activo" data-t="bool" ${C.activo ? 'checked' : ''}><span class="tr"></span> Activo: sale en la web y en la Home</label></div>
             </div>
@@ -1117,7 +1128,7 @@
                         <button type="button" class="ev-btn ghost" data-pr="serie"><i class="bi bi-calendar-plus"></i> Agregar todas</button></div>
                 </div>
             </div>
-            <div class="cz-blq"><h3><i class="bi bi-currency-dollar"></i> Precios por persona en ${EV.simbolo()} <span class="sp"></span>
+            <div class="cz-blq"><h3><i class="bi bi-currency-dollar"></i> Precios por persona en ${EV.simbolo(C.id_Moneda || 'DOP')} <span class="sp"></span>
                 ${C.tarifas.length > 1 ? `<label class="cz-c" style="flex-direction:row;align-items:center;gap:6px"><span>Tarifa</span><select id="prTarifa">${C.tarifas.map(f => `<option value="${f.clave}" ${f.clave === tarSel ? 'selected' : ''}>${esc(f.codigo || f.nombre || '¿?')}</option>`).join('')}</select></label>` : ''}
                 ${C.salidas.length > 1 && tipos.length ? '<button type="button" class="ev-btn ghost sm" data-pr="copiar"><i class="bi bi-files"></i> Copiar la 1.ª fecha a todas</button>' : ''}</h3>
                 <div class="cz-barra" style="margin-bottom:10px"><span class="cz-c" style="flex-direction:row;align-items:center;gap:8px"><span>Agregar otra columna (tipo de cabina)</span>
@@ -1127,7 +1138,7 @@
                   : !tipos.length ? '<p class="ui-help" style="margin:0">Agrega tipos de cabina: aquí arriba («Agregar otra columna») o en el paso 6.</p>'
                   : `<div style="overflow-x:auto"><table class="cz-grid"><thead><tr><th>Salida</th>${tipos.map(t => `<th style="--c:${COLOR_CAT[t.categoria]}"><small><i class="bi ${ICONO_CAT[t.categoria]}"></i> ${CAT_CORTO[t.categoria]}</small>${(t.nombre || '').trim().toLowerCase() === CAT_CORTO[t.categoria].toLowerCase() ? '' : esc(t.nombre || '')}</th>`).join('')}<th></th></tr></thead><tbody>
                      ${C.salidas.map(s => `<tr class="${s.activo ? '' : 'off'}"><td class="f">${fechaCorta(s.fecha)}${n ? ` <small style="color:var(--ev-muted);font-weight:600">→ ${fechaCorta(masDias(s.fecha, n))}</small>` : ''}${s.fecha <= hoy ? ' <small style="color:#B54708">(pasada)</small>' : ''}</td>
-                        ${tipos.map(t => `<td><div class="cz-dinero"><b>${EV.simbolo()}</b><input type="number" min="0" step="0.01" data-precio="${s.clave}|${tar}|${t.clave}" value="${pr.get(`${s.clave}|${tarSel}|${t.clave}`) ?? ''}" placeholder="0"></div></td>`).join('')}
+                        ${tipos.map(t => `<td><div class="cz-dinero"><b>${EV.simbolo(C.id_Moneda || 'DOP')}</b><input type="number" min="0" step="0.01" data-precio="${s.clave}|${tar}|${t.clave}" value="${pr.get(`${s.clave}|${tarSel}|${t.clave}`) ?? ''}" placeholder="0"></div></td>`).join('')}
                         <td style="white-space:nowrap"><button type="button" class="ui-ibtn" data-pr="act" data-k="${s.clave}" title="${s.activo ? 'Desactivar esta fecha' : 'Activar esta fecha'}"><i class="bi ${s.activo ? 'bi-pause' : 'bi-play'}"></i></button>
                             <button type="button" class="ui-ibtn danger" data-pr="qsal" data-k="${s.clave}" title="Quitar fecha"><i class="bi bi-x-lg"></i></button></td></tr>`).join('')}
                      </tbody></table></div>`}
@@ -1194,6 +1205,7 @@
     async function guardar() {
         C.categorias = $$('[data-categoria]').filter(c => c.checked).map(c => +c.dataset.categoria);
         if (!C.titulo?.trim()) { EV.toast('Escribe el título del crucero (es lo único obligatorio).', 'err'); edTabs.ir('eDatos'); setTimeout(() => $('[data-b="titulo"]')?.focus(), 50); return; }
+        if (C.codigo_Interno?.trim() && $('#czCodigo') && !(await EVCodigo.validar($('#czCodigo')))) { EV.toast($('#czCodigo').nextElementSibling?.textContent?.trim() || 'Revisa el código interno.', 'err'); edTabs.ir('eDatos'); return; }
         if (paso !== 'eResumen') { edTabs.ir('eResumen'); return; }   // antes de guardar, siempre el resumen
         const usadas = new Set(C.precios.map(p => p.tarifa));
         const dto = { ...C, id_Barco: null, itinerario: C.itinerario.map((d, i) => ({ ...d, dia: i + 1 })), tarifas: C.tarifas.filter(f => usadas.has(f.clave) || f.codigo?.trim()) };
@@ -1367,6 +1379,7 @@
             if (t.dataset.b?.endsWith('en_Navegacion')) pintarItin();
             if (t.dataset.b?.startsWith('paradas.')) { if (t.dataset.b.endsWith('.tipo')) pintarListaParadas(); else refrescarMapa(); }
             if (t.dataset.b === 'noches') { pintarItin(); }
+            if (t.dataset.b === 'id_Moneda') pintarPrecios();   // FASE 38: el símbolo de los precios cambia con la moneda
             if (t.dataset.tipo && (t.dataset.campo === 'categoria' || t.dataset.campo === 'permite_Garantizada')) { pintarCabinas(); pintarPrecios(); }
             if (t.dataset.b?.startsWith('cubiertas.')) pintarCabinas();
             marcarPasos();

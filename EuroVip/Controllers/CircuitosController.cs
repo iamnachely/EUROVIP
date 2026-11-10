@@ -58,6 +58,10 @@ namespace EuroVip.Controllers
             var errores = new List<string>();
             var excepto = string.IsNullOrWhiteSpace(dto.CodigoOriginal) ? null : dto.CodigoOriginal.Trim();
             if (await _repo.CodigoExisteAsync(dto.Codigo, excepto)) errores.Add($"Ya existe un circuito con el código \"{dto.Codigo}\".");
+            // FASE 38: un código nuevo o cambiado sigue la regla del código interno (letras y números, único en todo el sistema).
+            // Los códigos de antes (muchos con espacios) se pueden dejar como están.
+            else using (var cn0 = _repo.Conexion())
+                if (await CodigoInterno.ErrorAsync(cn0, dto.Codigo, "CIRCUITO_CAT", null, excepto) is string malCod) errores.Add(malCod);
             if (await _repo.NombreExisteAsync(dto.Nombre, excepto)) errores.Add($"Ya existe un circuito llamado \"{dto.Nombre}\".");
             if (dto.Destinos.Count == 0) errores.Add("Agrega al menos un destino.");
             // Cada destino tiene que existir en Herramientas › Destinos y ser del país indicado (nada de "-pego", "65401"…).
@@ -73,6 +77,7 @@ namespace EuroVip.Controllers
                 // subidas desde la Home o desde «Fotos»): se vuelve a copiar la portada real en circuito.caratula.
                 if (dto.QuitarPortada) await _mm.QuitarUsoAsync("CIRCUITO", dto.Nombre.Trim(), "PORTADA");
                 else await _mm.ResincronizarAsync("CIRCUITO", dto.Nombre.Trim());
+                await PorDefectoAsync("CIRCUITO", dto.Nombre.Trim(), dto.Destinos.FirstOrDefault()?.Id_Destino, !dto.QuitarPortada && !string.IsNullOrWhiteSpace(dto.Caratula));
                 await Auditar(excepto is null ? "Circuito_Crear" : "Circuito_Editar", dto);
                 return Json(new { ok = true, codigo = dto.Codigo.Trim(), mensaje = excepto is null ? $"Circuito \"{dto.Nombre}\" creado." : "Cambios guardados." });
             }
@@ -108,6 +113,38 @@ namespace EuroVip.Controllers
             if (n == 0) return NotFound(new { mensaje = "No encontramos esa salida." });
             await Auditar("Circuito_SalidaEstado", new { id, activo }, id);
             return Json(new { ok = true, mensaje = activo ? "Salida activada." : "Salida desactivada." });
+        }
+
+        // ---- Punto 7: editar una salida (precio, fechas, campaña, moneda, proveedor, categoría, origen) ----
+        [HttpGet]
+        public async Task<IActionResult> Salida(int id) => await _repo.SalidaAsync(id) is { } s ? Json(s) : NotFound(new { mensaje = "No encontramos esa salida." });
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarSalida([FromBody] CircuitoSalidaEditar dto)
+        {
+            if (!ModelState.IsValid) return Errores();
+            var antes = await _repo.SalidaAsync(dto.Id_Servicio);
+            var error = await _repo.EditarSalidaAsync(dto);
+            if (error is not null) return BadRequest(new { mensaje = error });
+            await Auditar("Circuito_SalidaEditar", new { antes, despues = dto }, dto.Id_Servicio);
+            return Json(new { ok = true, mensaje = $"Salida #{dto.Id_Servicio} actualizada." });
+        }
+
+        // ---- Punto 6: información para el cliente de una carga (incluye, no incluye, condiciones, documentación…) ----
+        [HttpGet]
+        public async Task<IActionResult> Textos(string codigo) => string.IsNullOrWhiteSpace(codigo)
+            ? BadRequest(new { mensaje = "Falta el código de la carga." }) : Json(await _repo.TextosAsync(codigo.Trim()));
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GuardarTextos([FromBody] CargaTextosCircuito dto)
+        {
+            if (!ModelState.IsValid) return Errores();
+            var antes = await _repo.TextosAsync(dto.Codigo.Trim());
+            await _repo.GuardarTextosAsync(dto);
+            await Auditar("Circuito_TextosEditar", new { antes, despues = dto }, 0);
+            return Json(new { ok = true, mensaje = "Información de la carga guardada (vale para todas sus salidas)." });
         }
 
         [HttpPost]
@@ -250,5 +287,9 @@ namespace EuroVip.Controllers
         private Task Auditar(string tipo, object cambios, int? id = null) =>
             _repo.AuditarAsync(tipo, id is null ? Array.Empty<int>() : new[] { id.Value }, cambios,
                 User.Identity?.Name ?? "desconocido", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
+
+        /// <summary>Punto 2: si no tiene foto (ni nueva ni la de antes), se le pone la imagen por defecto (la de su destino o la general).</summary>
+        private Task PorDefectoAsync(string tipo, object clave, string? destino, bool yaTieneFoto) =>
+            HttpContext.RequestServices.GetRequiredService<IImagenesPorDefecto>().AsegurarAsync(tipo, clave.ToString()!, destino, yaTieneFoto);
     }
 }

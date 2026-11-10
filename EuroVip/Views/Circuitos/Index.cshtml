@@ -5,6 +5,15 @@
 @section Styles {
 <link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
 <style>
+    /* Punto 6 y 7: información de cada carga y ventana para editar una salida */
+    .cx-cargas { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; padding: 12px 14px; border-radius: 16px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    .cx-cargas small { color: var(--ev-muted); font-weight: 600; flex: 1 1 200px; }
+    .cx-modal-fondo { position: fixed; inset: 0; background: rgba(11,18,21,.55); z-index: 2500; display: flex; align-items: flex-start; justify-content: center; padding: 5vh 16px; overflow: auto; }
+    .cx-modal { background: var(--ev-surface); border-radius: 22px; width: min(760px, 100%); box-shadow: 0 30px 80px -30px rgba(11,18,21,.5); }
+    .cx-modal-h { display: flex; gap: 12px; align-items: flex-start; padding: 20px 22px 6px; }
+    .cx-modal-h h3 { margin: 0; font-size: 19px; font-weight: 800; } .cx-modal-h small { color: var(--ev-muted); font-weight: 600; }
+    .cx-modal-h .ui-ibtn { margin-left: auto; }
+    .cx-modal-b { padding: 12px 22px; } .cx-modal-p { display: flex; gap: 10px; justify-content: flex-end; padding: 10px 22px 20px; }
     /* Tarjetas de circuitos */
     .cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
     .cx-home { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; padding: 9px 11px; border-radius: 12px; font-size: 12.5px; font-weight: 600; line-height: 1.4; }
@@ -431,19 +440,44 @@ const CX = (() => {
             </div>`).join('');
     }
 
+    let cat = null;   // campañas y países para el editor de salidas
+    // ---- ventana (modal) para editar una salida o los textos de una carga ----
+    function ventana(titulo, sub, html, alGuardar) {
+        const f = document.createElement('div');
+        f.className = 'cx-modal-fondo';
+        f.innerHTML = `<div class="cx-modal" role="dialog" aria-modal="true" aria-label="${esc(titulo)}">
+            <div class="cx-modal-h"><div><h3>${esc(titulo)}</h3><small>${sub}</small></div><button type="button" class="ui-ibtn" data-x title="Cerrar"><i class="bi bi-x-lg"></i></button></div>
+            <div class="cx-modal-b">${html}</div>
+            <div class="cx-modal-p"><button type="button" class="ev-btn ghost" data-x>Cancelar</button><button type="button" class="ev-btn" data-ok><i class="bi bi-check2-circle"></i> Guardar</button></div></div>`;
+        document.body.appendChild(f);
+        const cerrar = () => { f.remove(); document.removeEventListener('keydown', tecla); };
+        const tecla = e => { if (e.key === 'Escape') cerrar(); };
+        document.addEventListener('keydown', tecla);
+        f.addEventListener('click', e => { if (e.target === f || e.target.closest('[data-x]')) cerrar(); });
+        f.querySelector('[data-ok]').onclick = async e => {
+            const b = e.currentTarget, h = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
+            try { await alGuardar(); cerrar(); } catch (err) { EV.toast(err.message, 'err'); b.disabled = false; b.innerHTML = h; }
+        };
+        setTimeout(() => f.querySelector('input, select, textarea')?.focus(), 50);
+    }
+
     // ---- salidas ----
     function pintarSalidas() {
         $('#nSal').textContent = estado.salidas.length;
         $('#edCargarExpress').href = '/CargaCircuitos/Express?circuito=' + encodeURIComponent(estado.codigoOriginal || '');
         $('#edCargarClasica').href = '/CargaCircuitos/Clasica?circuito=' + encodeURIComponent(estado.codigoOriginal || '');
         if (!estado.salidas.length) { $('#edSalidas').innerHTML = '<div class="ui-empty" style="padding:24px"><i class="bi bi-calendar-plus big"></i><h3>Sin salidas cargadas</h3><p>Carga fechas y precios con la Carga Express o con Cargar Excel.</p></div>'; return; }
-        $('#edSalidas').innerHTML = `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Salida</th><th>Regreso</th><th>Campaña</th><th>Categoría</th><th>Origen</th><th>Vuelo</th><th class="num">Precio web</th><th>Activa</th><th></th></tr></thead><tbody>
+        const cargas = [...new Set(estado.salidas.map(x => x.codigo).filter(Boolean))];
+        $('#edSalidas').innerHTML = `<div class="cx-cargas"><b><i class="bi bi-journal-text"></i> Información para el cliente</b> <small>incluye, no incluye, condiciones y documentación de cada carga</small>
+            ${cargas.map(c => `<button type="button" class="ev-btn ghost sm" onclick="CX.textos('${esc(c)}')"><i class="bi bi-pencil-square"></i> Carga ${esc(c)} <span class="ui-chip ghost">${estado.salidas.filter(x => x.codigo === c).length} salidas</span></button>`).join('')}</div>
+            <div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Salida</th><th>Regreso</th><th>Campaña</th><th>Categoría</th><th>Origen</th><th>Vuelo</th><th class="num">Precio web</th><th>Activa</th><th></th></tr></thead><tbody>
             ${estado.salidas.map(s => `<tr>
                 <td>${s.id_Servicio}</td><td><b>${EV.fecha(s.desde)}</b></td><td>${EV.fecha(s.hasta)}</td><td>${esc(s.campanya || '#' + s.id_Campanya)}</td>
                 <td>${esc(s.categoria || '')}</td><td>${esc(s.origen || '—')}</td><td>${s.vuelos ? `<span class="ui-chip dark">${s.vuelos} vuelos</span>` : '<span class="ui-chip ghost">Sin vuelo</span>'}</td>
                 <td class="num">${EV.dinero(s.precioWeb, s.id_Moneda)}</td>
                 <td><label class="ui-switch"><input type="checkbox" ${s.activo ? 'checked' : ''} onchange="CX.estadoSalida(${s.id_Servicio}, this)"><span class="tr"></span></label></td>
-                <td><button class="ui-ibtn danger" title="Eliminar salida" onclick="CX.eliminarSalida(${s.id_Servicio})"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
+                <td style="white-space:nowrap"><button class="ui-ibtn" title="Editar salida" onclick="CX.editarSalida(${s.id_Servicio})"><i class="bi bi-pencil"></i></button>
+                    <button class="ui-ibtn danger" title="Eliminar salida" onclick="CX.eliminarSalida(${s.id_Servicio})"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
             </tbody></table></div>`;
     }
 
@@ -637,6 +671,46 @@ const CX = (() => {
         estadoSalida: async (id, inp) => {
             try { const r = await EV.post(`/Circuitos/EstadoSalida?id=${id}&activo=${inp.checked}`); EV.toast(r.mensaje); cargar(); }
             catch (e) { inp.checked = !inp.checked; EV.toast(e.message, 'err'); }
+        },
+        // ---- Punto 7: editar una salida ----
+        editarSalida: async id => {
+            let x; try { x = await EV.api('/Circuitos/Salida?id=' + id); } catch (e) { EV.toast(e.message, 'err'); return; }
+            cat ??= { campanyas: await EV.api('/Circuitos/Campanyas'), paises: await EV.api('/Circuitos/Paises') };
+            const iso = d => String(d).slice(0, 10);
+            ventana(`Editar salida #${x.id_Servicio}`, `${esc(x.nombre_Circuito || '')} · carga ${esc(x.codigo || '—')}${x.vuelos ? ` · ${x.vuelos} vuelos (se mueven con la fecha)` : ''}`, `
+                <div class="ui-row"><div class="ui-f"><label>Salida</label><input type="date" id="vsDesde" value="${iso(x.desde)}"></div>
+                    <div class="ui-f"><label>Regreso</label><input type="date" id="vsHasta" value="${iso(x.hasta)}"></div></div>
+                <div class="ui-row r3"><div class="ui-f"><label>Moneda</label><select id="vsMoneda"></select></div>
+                    <div class="ui-f"><label>Precio total <em>con tasas (${EV.fmt(x.tasas)})</em></label><input type="number" id="vsPrecio" min="1" step="0.01" value="${x.precioTotal}"></div>
+                    <div class="ui-f"><label>Descuento %</label><input type="number" id="vsDesc" min="0" max="100" step="0.1" value="${x.descuento}"></div></div>
+                <div class="ui-row"><div class="ui-f"><label>Campaña</label><select id="vsCamp">${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)} (#${esc(c.valor)})</option>`).join('')}</select></div>
+                    <div class="ui-f"><label>Categoría</label><input id="vsCat" maxlength="50" value="${esc(x.categoria || '')}"></div></div>
+                <div class="ui-f"><label>Proveedor</label><select id="vsProv"></select></div>
+                <div class="ui-row"><div class="ui-f"><label>País de origen</label><select id="vsPais"><option value="">— Sin origen —</option>${cat.paises.map(q => `<option value="${esc(q.valor)}">${esc(q.texto)}</option>`).join('')}</select></div>
+                    <div class="ui-f"><label>Ciudad de origen</label><input id="vsOrigen" maxlength="50" value="${esc(x.origen || '')}"></div></div>
+                <label class="ui-switch"><input type="checkbox" id="vsActivo" ${x.activo ? 'checked' : ''}><span class="tr"></span> Activa (se vende)</label>`, async () => {
+                const dto = { Id_Servicio: x.id_Servicio, Desde: $('#vsDesde').value, Hasta: $('#vsHasta').value, PrecioTotal: +$('#vsPrecio').value || 0, Descuento: +$('#vsDesc').value || 0,
+                    Id_Campanya: +$('#vsCamp').value, Id_Moneda: $('#vsMoneda').value, Id_Proveedor: $('#vsProv').value || null, Categoria: $('#vsCat').value.trim() || null,
+                    Id_Pais_Origen: $('#vsPais').value || null, Origen: $('#vsOrigen').value.trim() || null, Activo: $('#vsActivo').checked };
+                const r = await EV.post('/Circuitos/EditarSalida', dto); EV.toast(r.mensaje);
+                const c = await EV.api('/Circuitos/Obtener?codigo=' + encodeURIComponent(estado.codigoOriginal)); estado.salidas = c.salidas; pintarSalidas(); cargar();
+            });
+            $('#vsCamp').value = String(x.id_Campanya); $('#vsPais').value = (x.id_Pais_Origen || '').trim().toUpperCase();
+            EVCodigo.monedas($('#vsMoneda'), x.id_Moneda || 'DOP').catch(() => { });
+            EVCodigo.proveedores($('#vsProv'), (x.id_Proveedor || '').trim(), { vacio: '— El del circuito —' }).catch(() => { });
+        },
+        // ---- Punto 6: información para el cliente de una carga ----
+        textos: async codigo => {
+            let t; try { t = await EV.api('/Circuitos/Textos?codigo=' + encodeURIComponent(codigo)); } catch (e) { EV.toast(e.message, 'err'); return; }
+            const area = (id, et, v) => `<div class="ui-f"><label for="${id}">${et}</label><textarea id="${id}" rows="4">${esc(v || '')}</textarea></div>`;
+            ventana('Información para el cliente', `Carga ${esc(codigo)} · vale para todas sus salidas`, `
+                <div class="ui-row">${area('vtInc', 'Incluye', t.incluye)}${area('vtNoInc', 'No incluye', t.no_Incluye)}</div>
+                <div class="ui-row">${area('vtCond', 'Nota / condiciones', t.condiciones)}${area('vtDocs', 'Documentación', t.documentacion)}</div>
+                <div class="ui-row">${area('vtImp', 'Importante', t.importante)}${area('vtOfe', 'Oferta especial', t.oferta)}</div>`, async () => {
+                const r = await EV.post('/Circuitos/GuardarTextos', { Codigo: codigo, Incluye: $('#vtInc').value, No_Incluye: $('#vtNoInc').value, Condiciones: $('#vtCond').value,
+                    Documentacion: $('#vtDocs').value, Importante: $('#vtImp').value, Oferta: $('#vtOfe').value });
+                EV.toast(r.mensaje);
+            });
         },
         eliminarSalida: async id => {
             if (!await EV.confirmar({ titulo: '¿Eliminar esta salida?', texto: `La salida #${id} se borra con sus vuelos, tasas y notas.`, peligro: true, si: 'Eliminar salida' })) return;

@@ -420,7 +420,7 @@ const HW = (() => {
                     <button type="button" class="edt" title="Editar tarjeta" aria-label="Editar tarjeta"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="ojo" data-ojo="${t.id}" title="${sin ? 'Sin sección: arrástrala a una sección para que salga en la web' : t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}" aria-label="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div></div>
             <div class="tx"><b>${esc(t.descripcion && ['CIRCUITO', 'EXCURSION', 'TRASLADO', 'CRUCERO'].includes(t.tipo_Servicio) ? t.descripcion : t.id_Destino)}</b><small>${esc(t.origen)} · ${esc(t.campanya || '#' + t.id_Campanya)}${t.noches ? ` · ${t.noches} noches` : ''}</small>
-                <div class="pr">${t.peso ? EVPrioridad.estrella(t.peso) + ' ' : ''}${t.precioWeb ? `desde <b>${EV.dinero(t.precioWeb)}</b>` : 'sin precio'}</div>${t.precio_Proveedor ? `<div>${EVPrioridad.proveedor(t.precioWeb, t.precio_Proveedor)}</div>` : ''}</div></div>`;
+                <div class="pr">${t.peso ? EVPrioridad.estrella(t.peso) + ' ' : ''}${t.precioWeb ? `desde <b>${EV.dinero(t.precioWeb, (t.id_Moneda || 'DOP').trim())}</b>` : 'sin precio'}</div>${t.precio_Proveedor ? `<div>${EVPrioridad.proveedor(t.precioWeb, t.precio_Proveedor)}</div>` : ''}</div></div>`;
     };
 
     function pintarSecciones() {
@@ -725,7 +725,11 @@ const HW = (() => {
             </div>
             <div class="ui-sec"><div class="ui-sec-t"><span>2</span> Precio y notas</div>
                 <div class="ui-row r3">
-                    <div class="ui-f"><label>Precio "desde"</label><div class="ui-money"><b>RD$</b><input id="tPre" type="number" min="0" step="1"></div></div>
+                    <div class="ui-f"><label>Moneda</label><select id="tMon"><option value="DOP">DOP · RD$</option></select></div>
+                    <div class="ui-f"><label>Precio "desde"</label><div class="ui-money"><b id="tSim">RD$</b><input id="tPre" type="number" min="0" step="1"></div></div>
+                    <div class="ui-f"><label>Código interno <em>opcional · único</em></label><input id="tCod"><span class="msg"></span></div>
+                </div>
+                <div class="ui-row r3">
                     <div class="ui-f"><label>Noches</label><input id="tNoc" type="number" min="0" max="60"></div>
                     <div class="ui-f"><label class="ui-switch" style="margin-top:28px"><input type="checkbox" id="tEstF"><span class="tr"></span> Visible en la web</label></div>
                 </div>
@@ -739,6 +743,11 @@ const HW = (() => {
         $('#tPre').value = v.precioWeb != null ? Math.round(v.precioWeb) : ''; $('#tNoc').value = v.noches ?? ''; $('#tNot').value = v.notas || ''; $('#tEstF').checked = v.estado !== false;
         $('#tPrio').innerHTML = EVPrioridad.campos({ peso: v.peso, proveedor: v.precio_Proveedor, precio: v.precioWeb, ayuda: 'Compáralo con el precio «desde».', contexto: { que: 'tarjeta', id: v.id, contenedor: v.id_Contenedor, tipo: v.tipo_Servicio } });
         EVPrioridad.vivo($('#tPrio'), () => $('#tPre').value);
+        // FASE 38: moneda y código interno (se revisa mientras se escribe)
+        EVCodigo.monedas($('#tMon'), (v.id_Moneda || 'DOP').trim()).then(() => $('#tSim').textContent = EV.simbolo($('#tMon').value)).catch(() => { });
+        $('#tMon').onchange = () => $('#tSim').textContent = EV.simbolo($('#tMon').value);
+        $('#tCod').value = v.codigo || '';
+        EVCodigo.campo($('#tCod'), { producto: v.tipo_Servicio === 'HOTEL' ? 'HOTEL' : 'INICIO', clave: () => v.id_Servicio ?? '', anterior: () => v.codigo || '' });
         // caratulaDestino se conserva tal cual (en hoteles es el destino, no una imagen). Las fotos se cambian arriba y se guardan al momento.
         if (t) EVFotos.montar($('#tdFotos'), { tipo: t.foto_Tipo, clave: t.foto_Clave, alCambiar: items => {
             // La foto propia de la tarjeta se copia en caratulaDestino: que al pulsar Guardar no se pise con la de antes
@@ -760,12 +769,14 @@ const HW = (() => {
             Id_PaisDestino: $('#tPD').value, Id_Destino: $('#tDes').value.trim(), CaratulaDestino: $('#tImg').value.trim() || null, Descripcion: $('#tDesc').value.trim(),
             PrecioWeb: $('#tPre').value === '' ? null : +$('#tPre').value, Id_Contenedor: $('#tSecF').value ? +$('#tSecF').value : null,
             Noches: $('#tNoc').value === '' ? null : +$('#tNoc').value, Notas: $('#tNot').value.trim() || null, Estado: $('#tEstF').checked,
+            Id_Moneda: $('#tMon').value || 'DOP', Codigo: $('#tCod').value.trim() || null,
             ...EVPrioridad.leer($('#tPrio'))
         };
         $$('#tdForm .ui-f.err').forEach(f => f.classList.remove('err'));
         const falta = (id, m) => { const f = $(id).closest('.ui-f'); f.classList.add('err'); f.querySelector('.msg').textContent = m; EV.toast(m, 'err'); };
         if (!dto.Origen) return falta('#tOri', 'Escribe el origen');
         if (!dto.Id_Destino) return falta('#tDes', 'Escribe el destino');
+        if (dto.Codigo && !(await EVCodigo.validar($('#tCod')))) return falta('#tCod', $('#tCod').nextElementSibling?.textContent?.trim() || 'Revisa el código');
         const b = $('#tdGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
         try {
             const r = await EV.post('/HomeWeb/GuardarTarjeta', dto); EV.toast(r.mensaje); dT.cerrar(true);
@@ -794,7 +805,7 @@ const HW = (() => {
               ${filas.map(t => `<tr data-tt="${t.id}" style="cursor:pointer"><td>${carat(t) ? `<img class="hw-mini" src="${esc(carat(t))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<span class="hw-mini"></span>'}</td>
                 <td><b>${esc(t.tipo_Servicio === 'CIRCUITO' ? t.descripcion : t.id_Destino)}</b>${t.vigente === false ? ' <span class="ui-chip" style="background:#FEE4E2;color:#B42318;padding:2px 8px;font-size:11px">ya no se vende</span>' : ''}<br><small style="color:var(--ev-muted)">${t.id_Servicio > 0 ? '#' + t.id_Servicio : 'manual'}</small></td>
                 <td>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</td><td>${esc(t.origen)}</td><td>${esc(t.campanya || t.id_Campanya)}</td>
-                <td class="num">${t.precioWeb ? EV.dinero(t.precioWeb) : '—'}</td><td>${esc(t.contenedor || '—')}</td><td>${t.posicion_Destino ?? '—'}</td>
+                <td class="num">${t.precioWeb ? EV.dinero(t.precioWeb, (t.id_Moneda || 'DOP').trim()) : '—'}</td><td>${esc(t.contenedor || '—')}</td><td>${t.posicion_Destino ?? '—'}</td>
                 <td><label class="ui-switch" onclick="event.stopPropagation()"><input type="checkbox" data-tvis="${t.id}" ${t.estado ? 'checked' : ''}><span class="tr"></span></label></td>
                 <td><button type="button" class="ui-ibtn" title="Editar"><i class="bi bi-pencil"></i></button></td></tr>`).join('')}
               </tbody></table></div>`;

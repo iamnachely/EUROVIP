@@ -177,8 +177,16 @@
             <div class="ui-f"><label for="edDestino">Destino *</label>
                 <input id="edDestino" maxlength="50" placeholder="Escribe para buscar… ej. Punta Cana" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="edDestBusc">
                 <div class="ex-busc" id="edDestBusc" hidden role="listbox"></div><span class="msg"></span></div>
+            <div class="ui-f"><label for="edMoneda">Moneda *</label>
+                <select id="edMoneda"><option value="DOP">DOP · RD$</option></select><span class="msg"></span></div>
             <div class="ui-f"><label for="edPrecio">Precio por persona *</label>
-                <div class="ex-money"><b class="sim">RD$</b><input id="edPrecio" type="number" min="0" step="0.01" placeholder="0"></div><span class="msg"></span></div>
+                <div class="ex-money"><b class="sim" id="edSim">RD$</b><input id="edPrecio" type="number" min="0" step="0.01" placeholder="0"></div><span class="msg"></span></div>
+        </div>
+        <div class="ui-row">
+            <div class="ui-f"><label for="edCodigo">Código <em>tu código interno · único en todo el sistema</em></label>
+                <input id="edCodigo"><span class="msg"></span></div>
+            <div class="ui-f"><label for="edProveedor">Proveedor <em>de dónde sale la excursión</em></label>
+                <select id="edProveedor"><option value="">— Sin proveedor —</option></select><span class="msg"></span></div>
         </div>
         <div class="ui-f"><label class="ui-switch"><input type="checkbox" id="edCancelable"><span class="tr"></span> Se puede cancelar</label></div>
         <div class="ui-f" id="edPrio"></div>
@@ -239,7 +247,7 @@ const EX = (() => {
     const st = { q: '', destino: '', filtro: '', orden: 'prioridad', vista: 'tarjetas' };
     try { st.vista = localStorage.getItem('ev-excursiones-vista') || 'tarjetas'; } catch { }
 
-    const precio = v => v == null ? '—' : `${EV.simbolo()} ${EV.fmt(v, Number(v) % 1 ? 2 : 0)}`;
+    const precio = (v, m) => v == null ? '—' : `${EV.simbolo(m || 'DOP')} ${EV.fmt(v, Number(v) % 1 ? 2 : 0)}`;
     const sinTexto = s => !s || !String(s).replace(/<[^>]*>/g, '').trim();
 
     // ---------------- descripción: solo etiquetas sencillas (lo demás se quita) ----------------
@@ -333,26 +341,29 @@ const EX = (() => {
         const info = infoDest[destino] || {};
         const portada = info.imagen || todasDest.find(x => x.imagen)?.imagen;
         const min = Math.min(...todasDest.map(x => x.precio ?? Infinity));
+        const monMin = todasDest.find(x => x.precio === min)?.id_Moneda;
         const sinFoto = todasDest.filter(x => !x.imagen).length, sinDesc = todasDest.filter(x => sinTexto(x.descripcion)).length;
         const plegada = plegadas.has(destino) && !st.q && !st.filtro;
         const cuerpo = st.vista === 'lista'
             ? `<div class="ui-table-wrap"><table class="ui-table ex-tabla"><thead><tr><th></th><th>Excursión</th><th class="num">Precio</th><th>Cancelable</th><th style="width:150px"></th></tr></thead><tbody>
                 ${lista.map(x => `<tr data-id="${x.id_Excursion}" data-accion="ver">
                     <td class="img">${x.imagen ? `<img src="${esc(x.imagen)}" alt="" loading="lazy">` : '<span></span>'}</td>
-                    <td>${EVPrioridad.estrella(x.peso)} <b>${esc(x.nombre)}</b>${!x.imagen ? ' <span class="ex-chip av">Sin foto</span>' : ''}${sinTexto(x.descripcion) ? ' <span class="ex-chip av">Sin descripción</span>' : ''}</td>
-                    <td class="num"><b>${precio(x.precio)}</b>${x.precio_Proveedor ? '<br>' + EVPrioridad.proveedor(x.precio, x.precio_Proveedor) : ''}</td>
+                    <td>${EVPrioridad.estrella(x.peso)} <b>${esc(x.nombre)}</b>${x.codigo ? ` <span class="ex-chip"><i class="bi bi-upc"></i> ${esc(x.codigo)}</span>` : ''}${x.proveedor ? ` <span class="ex-chip"><i class="bi bi-building"></i> ${esc(x.proveedor)}</span>` : ''}${!x.imagen ? ' <span class="ex-chip av">Sin foto</span>' : ''}${sinTexto(x.descripcion) ? ' <span class="ex-chip av">Sin descripción</span>' : ''}</td>
+                    <td class="num"><b>${precio(x.precio, x.id_Moneda)}</b>${x.precio_Proveedor ? '<br>' + EVPrioridad.proveedor(x.precio, x.precio_Proveedor) : ''}</td>
                     <td>${x.cancelable ? '<span class="ex-chip ok">Sí</span>' : '<span class="ex-chip no">No</span>'}</td>
                     <td style="text-align:right;white-space:nowrap">${acciones(x)}</td></tr>`).join('')}
                 </tbody></table></div>`
             : `<div class="ex-grid">${lista.map(x => `<article class="ex-card ${x.peso ? 'ev-con-prioridad' : ''}" style="--n:${Math.min(sig(), 20)}" data-id="${x.id_Excursion}">
                 <div class="ex-foto" data-accion="ver" data-soltar="${x.id_Excursion}" title="Ver · arrastra una foto aquí para cambiarla">
                     ${x.imagen ? `<img src="${esc(x.imagen)}" alt="Foto de ${esc(x.nombre)}" loading="lazy">` : '<span class="sin"><span><i class="bi bi-image"></i>Sin foto<br><small>Arrastra una aquí</small></span></span>'}
-                    <span class="ex-precio">${precio(x.precio)}</span>${x.peso ? `<span style="position:absolute;left:10px;top:10px;z-index:2">${EVPrioridad.estrella(x.peso, true)}</span>` : ''}</div>
+                    <span class="ex-precio">${precio(x.precio, x.id_Moneda)}</span>${x.peso ? `<span style="position:absolute;left:10px;top:10px;z-index:2">${EVPrioridad.estrella(x.peso, true)}</span>` : ''}</div>
                 <div class="ex-cuerpo">
                     <h3>${esc(x.nombre)}</h3>
                     ${x.precio_Proveedor ? `<div>${EVPrioridad.proveedor(x.precio, x.precio_Proveedor)}</div>` : ''}
                     <div class="ex-chips">
                         ${x.cancelable ? '<span class="ex-chip ok"><i class="bi bi-check2"></i> Cancelable</span>' : '<span class="ex-chip no"><i class="bi bi-x"></i> No cancelable</span>'}
+                        ${x.codigo ? `<span class="ex-chip"><i class="bi bi-upc"></i> ${esc(x.codigo)}</span>` : ''}
+                        ${x.proveedor ? `<span class="ex-chip" title="Proveedor"><i class="bi bi-building"></i> ${esc(x.proveedor)}</span>` : ''}
                         ${sinTexto(x.descripcion) ? '<span class="ex-chip av">Sin descripción</span>' : ''}</div>
                     ${sinTexto(x.descripcion) ? '' : `<div class="ex-desc">${esc(String(x.descripcion).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim())}</div>`}
                     <div class="ex-pie"><span class="n">n.º ${x.id_Excursion}</span><span class="sp"></span>${acciones(x)}</div>
@@ -363,7 +374,7 @@ const EX = (() => {
                 <div class="ex-sec-txt">
                     <span class="ex-sec-pais"><i class="bi bi-geo-alt-fill"></i> ${esc(info.pais || 'Destino')}</span>
                     <h2>${esc(destino)}</h2>
-                    <p><b>${EV.fmt(todasDest.length)}</b> excursion${todasDest.length === 1 ? '' : 'es'}${isFinite(min) ? ` · desde <b>${precio(min)}</b>` : ''}
+                    <p><b>${EV.fmt(todasDest.length)}</b> excursion${todasDest.length === 1 ? '' : 'es'}${isFinite(min) ? ` · desde <b>${precio(min, monMin)}</b>` : ''}
                        ${lista.length !== todasDest.length ? ` · mostrando ${EV.fmt(lista.length)}` : ''}</p>
                     <div class="ex-sec-avisos">${sinFoto ? `<span><i class="bi bi-image"></i> ${sinFoto} sin foto</span>` : ''}${sinDesc ? `<span><i class="bi bi-text-paragraph"></i> ${sinDesc} sin descripción</span>` : ''}${!sinFoto && !sinDesc ? '<span class="ok"><i class="bi bi-stars"></i> Todo completo</span>' : ''}</div>
                 </div>
@@ -405,7 +416,9 @@ const EX = (() => {
         $('#verSub').textContent = `n.º ${x.id_Excursion} · ${x.id_Destino || 'sin destino'}`;
         $('#verCuerpo').innerHTML = `${x.imagen ? `<img class="ex-ver-img" src="${esc(x.imagen)}" alt="Foto de ${esc(x.nombre)}">` : '<div class="ex-ver-img" style="display:grid;place-items:center;font-weight:800">Sin foto</div>'}
             <div class="ex-chips" style="margin-bottom:14px"><span class="ex-chip"><i class="bi bi-geo-alt"></i> ${esc(x.id_Destino || '—')}</span>
-                <span class="ex-chip" style="font-size:14px"><b>${precio(x.precio)}</b>&nbsp;por persona</span>
+                <span class="ex-chip" style="font-size:14px"><b>${precio(x.precio, x.id_Moneda)}</b>&nbsp;por persona</span>
+                ${x.codigo ? `<span class="ex-chip"><i class="bi bi-upc"></i> ${esc(x.codigo)}</span>` : ''}
+                ${x.proveedor ? `<span class="ex-chip"><i class="bi bi-building"></i> ${esc(x.proveedor)}</span>` : ''}
                 ${x.cancelable ? '<span class="ex-chip ok">Se puede cancelar</span>' : '<span class="ex-chip no">No se puede cancelar</span>'}</div>
             <div class="ex-prev-desc" style="max-height:none">${sinTexto(x.descripcion) ? '<span style="color:var(--ev-muted)">Esta excursión no tiene descripción todavía.</span>' : limpiarHtml(x.descripcion)}</div>`;
         visor.abrir();
@@ -427,6 +440,12 @@ const EX = (() => {
         $('#edDestino').value = x?.id_Destino || destinoInicial || st.destino || (todas[0]?.id_Destino ?? '');
         $('#edPrecio').value = x?.precio ?? '';
         $('#edCancelable').checked = !!x?.cancelable;
+        // FASE 38: moneda, código interno (se revisa mientras se escribe) y proveedor
+        EVCodigo.monedas($('#edMoneda'), x?.id_Moneda || 'DOP').then(() => $('#edSim').textContent = EV.simbolo($('#edMoneda').value)).catch(() => { });
+        $('#edMoneda').onchange = () => $('#edSim').textContent = EV.simbolo($('#edMoneda').value);
+        EVCodigo.proveedores($('#edProveedor'), x?.id_Proveedor || '').catch(() => { });
+        const cod = EVCodigo.campo($('#edCodigo'), { producto: 'EXCURSION', clave: () => actual?.id_Excursion ?? '', anterior: () => actual?.codigo ?? '' });
+        $('#edCodigo').value = x?.codigo || ''; cod.reiniciar();
         $('#edPrio').innerHTML = EVPrioridad.campos({ peso: x?.peso, proveedor: x?.precio_Proveedor, precio: x?.precio, contexto: { que: 'excursion', id: x?.id_Excursion, destino: $('#edDestino').value } });
         $('#edDestino').onchange = () => EVPrioridad.contexto($('#pPeso'), { que: 'excursion', id: x?.id_Excursion, destino: $('#edDestino').value });   // los puestos son por destino
         EVPrioridad.vivo($('#edPrio'), () => $('#edPrecio').value);
@@ -446,7 +465,7 @@ const EX = (() => {
     const vistaPrevia = () => $('#edVista').innerHTML = sinTexto($('#edDesc').value) ? '<span style="color:var(--ev-muted)">Sin descripción.</span>' : limpiarHtml($('#edDesc').value);
 
     function marcar(campo, msg) {
-        const el = { Nombre: '#edNombre', Id_Destino: '#edDestino', Precio: '#edPrecio' }[campo.replace(/^\$\./, '')];
+        const el = { Nombre: '#edNombre', Id_Destino: '#edDestino', Precio: '#edPrecio', Id_Moneda: '#edMoneda', Codigo: '#edCodigo', Id_Proveedor: '#edProveedor' }[campo.replace(/^\$\./, '')];
         if (!el) return;
         const f = $(el).closest('.ui-f'); f.classList.add('err'); $('.msg', f).textContent = msg;
     }
@@ -473,6 +492,7 @@ const EX = (() => {
             Nombre: $('#edNombre').value.trim(), Id_Destino: $('#edDestino').value.trim(),
             Precio: $('#edPrecio').value === '' ? null : Number($('#edPrecio').value),
             Cancelable: $('#edCancelable').checked,
+            Id_Moneda: $('#edMoneda').value || 'DOP', Codigo: $('#edCodigo').value.trim() || null, Id_Proveedor: $('#edProveedor').value || null,
             Descripcion: limpiarHtml($('#edDesc').value) || null,
             ...EVPrioridad.leer($('#exEditor'))
         };
@@ -480,6 +500,7 @@ const EX = (() => {
         if (!dto.Nombre) faltan.push(['Nombre', 'Escribe el nombre']);
         if (!dto.Id_Destino) faltan.push(['Id_Destino', 'Elige el destino']);
         if (dto.Precio == null || dto.Precio < 0) faltan.push(['Precio', 'Escribe un precio (0 o más)']);
+        if (dto.Codigo && !(await EVCodigo.validar($('#edCodigo')))) faltan.push(['Codigo', $('#edCodigo').nextElementSibling?.textContent?.trim() || 'Revisa el código']);
         if (faltan.length) { faltan.forEach(([c, m]) => marcar(c, m)); EV.toast('Revisa los campos marcados.', 'err'); return; }
 
         const b = $('#edGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';

@@ -15,7 +15,14 @@ namespace EuroVip.Services
     public static class ExcelTabla
     {
         /// <summary>Una hoja: nombre, encabezados, filas (string, número, bool o DateTime) y ancho de cada columna (opcional).</summary>
-        public record Hoja(string Nombre, IReadOnlyList<string> Encabezados, IReadOnlyList<object?[]> Filas, IReadOnlyList<double>? Anchos = null);
+        public record Hoja(string Nombre, IReadOnlyList<string> Encabezados, IReadOnlyList<object?[]> Filas, IReadOnlyList<double>? Anchos = null)
+        {
+            /// <summary>Listas desplegables por columna (encabezado → valores): en Excel la celda muestra la flecha y no deja escribir otra cosa.</summary>
+            public IReadOnlyDictionary<string, IReadOnlyList<string>>? Listas { get; init; }
+        }
+
+        /// <summary>Listas comunes de las plantillas.</summary>
+        public static readonly IReadOnlyList<string> SiNoLista = new[] { "Sí", "No" };
 
         /// <summary>Una fila leída: número de fila en Excel y sus valores por columna (clave normalizada).</summary>
         public sealed class Fila
@@ -125,6 +132,26 @@ namespace EuroVip.Services
                     ws.Worksheet = primera == 2
                         ? new Worksheet(new SheetViews(new SheetView(new Pane { VerticalSplit = 1, TopLeftCell = "A2", ActivePane = PaneValues.BottomLeft, State = PaneStateValues.Frozen }) { WorkbookViewId = 0 }), cols, data)
                         : new Worksheet(cols, data);
+                    // Listas desplegables (filas 2 a 2000 de cada columna con lista). Excel admite hasta 255 caracteres en la lista escrita.
+                    if (h.Listas is { Count: > 0 })
+                    {
+                        var dv = new DataValidations();
+                        foreach (var (col, vals) in h.Listas)
+                        {
+                            var i = h.Encabezados.ToList().FindIndex(e => Clave(e) == Clave(col));
+                            var lista = string.Join(",", vals.Select(v => v.Replace(",", " ").Replace("\"", "")));
+                            if (i < 0 || vals.Count == 0 || lista.Length > 250) continue;
+                            var letra = Ref(i, 1)[..^1];
+                            dv.Append(new DataValidation
+                            {
+                                Type = DataValidationValues.List, AllowBlank = true, ShowErrorMessage = true, ShowInputMessage = true,
+                                ErrorTitle = "Valor no válido", Error = "Elige un valor de la lista (o déjalo vacío).",
+                                SequenceOfReferences = new ListValue<StringValue> { InnerText = $"{letra}2:{letra}2000" },
+                                Formula1 = new Formula1("\"" + lista + "\"")
+                            });
+                        }
+                        if (dv.HasChildren) { dv.Count = (uint)dv.ChildElements.Count; ws.Worksheet.Append(dv); }
+                    }
                     sheets.Append(new Sheet { Id = wb.GetIdOfPart(ws), SheetId = n++, Name = h.Nombre.Length > 31 ? h.Nombre[..31] : h.Nombre });
                 }
                 wb.Workbook.Save();
@@ -176,7 +203,12 @@ namespace EuroVip.Services
             {
                 var valores = row.Elements<Cell>().Select(c => (Col: Columna(c.CellReference), Val: Valor(c)?.Trim())).Where(x => !string.IsNullOrEmpty(x.Val)).ToList();
                 if (valores.Count == 0) continue;
-                if (encabezados is null) { encabezados = valores.ToDictionary(x => x.Col, x => Clave(x.Val)); continue; }
+                if (encabezados is null)
+                {
+                    // Un título arriba («Hoteles de diciembre») tiene una sola celda: se salta y se busca la fila de los nombres de columna
+                    if (valores.Count < 2) continue;
+                    encabezados = valores.ToDictionary(x => x.Col, x => Clave(x.Val)); continue;
+                }
                 var f = new Fila { Numero = (int)(row.RowIndex?.Value ?? 0) };
                 foreach (var (col, val) in valores)
                     if (encabezados.TryGetValue(col, out var k) && k != "") f.Valores[k] = val!;

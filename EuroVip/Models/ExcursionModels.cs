@@ -20,6 +20,13 @@ namespace EuroVip.Models
         [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
         /// <summary>URL de la foto (wwwroot/imagenes/excursiones/{Nombre sin espacios}.webp) o null.</summary>
         public string? Imagen { get; set; }
+        /// <summary>Código interno (FASE 38): letras y números, único entre todos los productos.</summary>
+        public string? Codigo { get; set; }
+        /// <summary>Proveedor de donde sale la excursión (Eurovip.proveedor, FASE 38).</summary>
+        public string? Id_Proveedor { get; set; }
+        /// <summary>Moneda del precio (FASE 38), DOP por defecto.</summary>
+        public string Id_Moneda { get; set; } = "DOP";
+        public string? Proveedor { get; set; }
     }
 
     /// <summary>Un destino con excursiones: la cabecera de su sección en la pantalla.</summary>
@@ -57,5 +64,12 @@ namespace EuroVip.Models
         [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
         /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
         [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
+        [StringLength(30, ErrorMessage = "El código admite como máximo 30 caracteres")]
+        /// <summary>Código interno (FASE 38): letras y números, único entre todos los productos.</summary>
+        public string? Codigo { get; set; }
+        /// <summary>Proveedor de donde sale la excursión (Eurovip.proveedor, FASE 38).</summary>
+        public string? Id_Proveedor { get; set; }
+        /// <summary>Moneda del precio (FASE 38), DOP por defecto.</summary>
+        [Required(ErrorMessage = "Elige la moneda")] public string Id_Moneda { get; set; } = "DOP";
     }
 }

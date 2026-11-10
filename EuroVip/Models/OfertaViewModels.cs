@@ -192,6 +192,30 @@ namespace EuroVip.Models
         [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
         /// <summary>true = la prioridad y el precio del proveedor se ponen también en las demás fechas de este hotel (mismo tipo).</summary>
         public bool PrioridadTodas { get; set; }
+
+        // ---- Punto 7: ahora se edita todo (null = no se cambia, para que las pantallas viejas sigan funcionando) ----
+        [StringLength(100, ErrorMessage = "El nombre admite como máximo 100 caracteres")] public string? Nombre { get; set; }
+        public string? Id_Moneda { get; set; }
+        public string? Id_Proveedor { get; set; }
+        /// <summary>Origen de venta: país (2 letras) y ciudad. Vacío = sin origen (en Solo Hotel es opcional).</summary>
+        public string? Id_Pais_Origen { get; set; }
+        [StringLength(50)] public string? Origen { get; set; }
+        /// <summary>true = se guardan País/Origen (aunque vengan vacíos).</summary>
+        public bool CambiarOrigen { get; set; }
+        /// <summary>Código de la carga: se cambia en TODAS las fechas de esa carga (y en sus textos).</summary>
+        [StringLength(30, ErrorMessage = "El código admite como máximo 30 caracteres")] public string? Codigo { get; set; }
+        /// <summary>Textos de la carga (Incluye, No incluye, Condiciones, Oferta): son de toda la carga. null = no se cambian.</summary>
+        public CargaTextosDto? Textos { get; set; }
+    }
+
+    /// <summary>Los textos de una carga (Eurovip.servicio_descripcion, una fila por código de carga).</summary>
+    public class CargaTextosDto
+    {
+        public string? Incluye { get; set; }
+        public string? No_Incluye { get; set; }
+        /// <summary>Condiciones / notas (columna nota).</summary>
+        public string? Nota { get; set; }
+        public string? Oferta_Especial { get; set; }
     }
 
     public class OfertaLoteDto

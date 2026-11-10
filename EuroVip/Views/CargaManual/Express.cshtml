@@ -114,6 +114,7 @@
                 <div class="ui-row r3">
                     <div class="ui-f"><label>Proveedor <em>tour operador</em></label><input id="cProveedor" placeholder="Busca el proveedor…"><span class="msg"></span></div>
                     <div class="ui-f"><label>Nombre @(esPaq ? "del paquete" : "de la oferta") <em>opcional</em></label><input id="cNombre" maxlength="50" placeholder="Ej. Punta Cana verano"></div>
+                    <div class="ui-f"><label>Código <em>opcional · único en todo el sistema</em></label><input id="cCodigo" placeholder="Se genera solo si lo dejas vacío"></div>
                     <div class="ui-f"><label>Moneda</label><select id="cDivisa"></select></div>
                 </div>
             </div>
@@ -318,7 +319,7 @@ const XP = (() => {
     function armarDto() {
         return {
             Modo: 'express', Tipo: TIPO,
-            Id_Proveedor: $('#cProveedor').dataset.valor || '', Nombre: $('#cNombre').value.trim() || null,
+            Id_Proveedor: $('#cProveedor').dataset.valor || '', Nombre: $('#cNombre').value.trim() || null, CodigoServicio: $('#cCodigo').value.trim() || null,
             Noches: noches(), Divisa: moneda(), Origen: $('#cOrigen').dataset.valor || '', Id_Pais_Origen: $('#cOrigen').dataset.valor ? $('#cPaisOrigen').value : '',
             Hoteles: hoteles().map(h => ({ ...S.bloques.find(b => b.uid === h.uid).comp.datos(), Salidas: mx.salidas(h.uid) })),
             Campanyas: campanyas.datos().map(c => ({ Id_Campanya: parseInt(c.opcion, 10), Descuento: c.valor })),
@@ -401,6 +402,7 @@ const XP = (() => {
         $('#gNoches').addEventListener('input', () => { mx.pintar(); resumen(); });
         $('#cDivisa').addEventListener('change', () => { $$('.sim').forEach(x => x.textContent = EV.simbolo(moneda())); mx.pintar(); desglose(); resumen(); });
         $('#cPaisOrigen').addEventListener('change', () => { $('#cOrigen').value = ''; $('#cOrigen').dataset.valor = ''; resumen(); });
+        EVCodigo.campo($('#cCodigo'), { producto: '@tipo', clave: () => '' });   // FASE 38: se revisa mientras se escribe
         EV.picker($('#cProveedor'), {
             url: q => `/Circuitos/Proveedores?tipo=Tour%20Operador&q=${q}`, limpiar: false,
             map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-briefcase' }),

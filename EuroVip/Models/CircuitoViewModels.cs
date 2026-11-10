@@ -115,6 +115,42 @@ namespace EuroVip.Models
         public string? Usuario { get; set; }
     }
 
+    /// <summary>Una salida de circuito para editarla (punto 7: se edita todo).</summary>
+    public class CircuitoSalidaEditar
+    {
+        public int Id_Servicio { get; set; }
+        public string? Nombre_Circuito { get; set; }
+        public string? Codigo { get; set; }
+        public DateTime Desde { get; set; }
+        public DateTime Hasta { get; set; }
+        /// <summary>Precio total que paga el cliente (base + tasas), antes del descuento.</summary>
+        [Range(1, 9_999_999, ErrorMessage = "Escribe el precio")] public decimal PrecioTotal { get; set; }
+        public decimal Tasas { get; set; }
+        [Range(0, 100, ErrorMessage = "El descuento va de 0 a 100 %")] public decimal Descuento { get; set; }
+        public short Id_Campanya { get; set; }
+        public string? Campanya { get; set; }
+        public string Id_Moneda { get; set; } = "DOP";
+        public string? Id_Proveedor { get; set; }
+        public string? Proveedor { get; set; }
+        [StringLength(50)] public string? Categoria { get; set; }
+        public string? Id_Pais_Origen { get; set; }
+        [StringLength(50)] public string? Origen { get; set; }
+        public bool Activo { get; set; } = true;
+        public int Vuelos { get; set; }
+    }
+
+    /// <summary>Información para el cliente de una carga (Eurovip.servicio_descripcion por código de carga), para editarla (punto 6).</summary>
+    public class CargaTextosCircuito
+    {
+        [Required] public string Codigo { get; set; } = "";
+        public string? Incluye { get; set; }
+        public string? No_Incluye { get; set; }
+        public string? Condiciones { get; set; }
+        public string? Documentacion { get; set; }
+        public string? Importante { get; set; }
+        public string? Oferta { get; set; }
+    }
+
     public class CircuitoDetalle
     {
         public string Codigo { get; set; } = "";

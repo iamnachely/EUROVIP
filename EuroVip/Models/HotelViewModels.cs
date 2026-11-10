@@ -35,6 +35,10 @@ namespace EuroVip.Models
         public bool Estado { get; set; }
         public short? Peso { get; set; }
         public decimal? Precio_Proveedor { get; set; }
+        /// <summary>Código interno y proveedor (FASE 38).</summary>
+        public string? Codigo { get; set; }
+        public string? Id_Proveedor { get; set; }
+        public string? Proveedor { get; set; }
         /// <summary>URL de /imagenes/hoteles/{nombre}.webp si existe (la calcula el controlador).</summary>
         public string? Imagen { get; set; }
     }
@@ -122,6 +126,10 @@ namespace EuroVip.Models
         [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
         /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
         [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
+        /// <summary>Código interno (FASE 38): letras y números, único entre todos los productos.</summary>
+        [StringLength(30, ErrorMessage = "El código admite como máximo 30 caracteres")] public string? Codigo { get; set; }
+        /// <summary>Proveedor de donde sale el hotel (Eurovip.proveedor).</summary>
+        public string? Id_Proveedor { get; set; }
     }
 
     public class HotelesPaginaViewModel

@@ -456,13 +456,41 @@ const OF = (() => {
                 ${habsHotel.map(h => `<tr data-txt="${esc(`${h.nombre} ${h.id_Tipo_Habitacion || ''} ${h.id_Habitacion}`.toLowerCase())}"><td><input type="checkbox" class="of-check" data-hab="${h.id_Habitacion}" ${marcadas.has(h.id_Habitacion) ? 'checked' : ''}></td><td><b>${esc(h.nombre)}</b> <small style="color:var(--ev-muted)">#${h.id_Habitacion}</small></td>
                     <td>${esc(h.id_Tipo_Habitacion || '')}</td><td><div class="ui-money"><b>+</b><input type="number" min="0" step="1" data-sup="${h.id_Habitacion}" value="${marcadas.get(h.id_Habitacion) ?? 0}"></div></td></tr>`).join('')}</tbody></table></div>`;
             const vuelos = o.vuelosDetalle;
-            $('#eInfo').innerHTML = `<dl class="ui-row r3" style="margin:0">
-                ${[['Código de carga', o.codigo], ['Cargada por', o.usuario], ['Origen de venta', o.origen]].map(([t, v]) => `<div class="ui-f"><label>${t}</label><input value="${esc(v || '—')}" readonly tabindex="-1"></div>`).join('')}</dl>
+            // Punto 7: ahora se edita todo — nombre, código de la carga, moneda, proveedor, origen y los textos de la carga
+            const nota = t => o.notas.find(n => n.tipo === t)?.nota1 || '';
+            $('#eInfo').innerHTML = `
+                <div class="ui-row">
+                    <div class="ui-f"><label for="eNombre">Nombre de la oferta</label><input id="eNombre" maxlength="100" value="${esc(o.nombre || '')}"></div>
+                    <div class="ui-f"><label for="eCodigo">Código de la carga <em>se cambia en todas sus fechas</em></label><input id="eCodigo" value="${esc(o.codigo || '')}"></div>
+                </div>
+                <div class="ui-row">
+                    <div class="ui-f"><label for="eMoneda">Moneda</label><select id="eMoneda"><option value="DOP">DOP · RD$</option></select></div>
+                    <div class="ui-f"><label for="eProveedor">Proveedor <em>de dónde sale la oferta</em></label><select id="eProveedor"><option value="">— Sin proveedor —</option></select></div>
+                </div>
+                <div class="ui-row">
+                    <div class="ui-f"><label for="ePaisOrigen">País de origen <em>opcional en Solo Hotel</em></label><select id="ePaisOrigen"><option value="">— Sin origen —</option>${cat.paises.map(x => `<option value="${esc(x.valor)}">${esc(x.texto)}</option>`).join('')}</select></div>
+                    <div class="ui-f"><label for="eOrigen">Ciudad de origen</label><input id="eOrigen" maxlength="50" value="${esc(o.origen || '')}" placeholder="Ej. Madrid"></div>
+                </div>
+                <details class="ui-sec" style="margin:4px 0 12px" ${o.notas.length ? 'open' : ''}><summary style="cursor:pointer;font-weight:800"><i class="bi bi-journal-text"></i> Información para el cliente <em style="font-weight:600;color:var(--ev-muted)">· es de toda la carga</em></summary>
+                    <div class="ui-row" style="margin-top:10px">
+                        <div class="ui-f"><label for="eIncluye">Incluye</label><textarea id="eIncluye" rows="3">${esc(nota('Incluye'))}</textarea></div>
+                        <div class="ui-f"><label for="eNoIncluye">No incluye</label><textarea id="eNoIncluye" rows="3">${esc(nota('No incluye'))}</textarea></div>
+                    </div>
+                    <div class="ui-row">
+                        <div class="ui-f"><label for="eCondiciones">Condiciones / notas</label><textarea id="eCondiciones" rows="3">${esc(nota('Condiciones'))}</textarea></div>
+                        <div class="ui-f"><label for="eOfertaEsp">Oferta especial</label><textarea id="eOfertaEsp" rows="3">${esc(nota('Oferta'))}</textarea></div>
+                    </div>
+                </details>
+                <div class="ui-f"><label>Cargada por</label><input value="${esc(o.usuario || '—')}" readonly tabindex="-1"></div>
                 ${vuelos.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Vuelo</th><th>Ruta</th><th>Sale</th><th>Llega</th></tr></thead><tbody>
                     ${vuelos.map(v => `<tr><td>${v.segmento}</td><td>${esc(v.id_Proveedor)} ${esc(v.vuelo || '')}</td><td>${esc(v.id_Estacion_Origen)} → ${esc(v.id_Estacion_Destino)}</td>
                     <td>${EV.fecha(v.fecha_Salida.slice(0, 10))} ${esc(v.hora_Salida)}</td><td>${EV.fecha(v.fecha_Regreso.slice(0, 10))} ${esc(v.hora_Regreso)}</td></tr>`).join('')}</tbody></table></div>
                     <div class="ui-help" style="margin-top:8px">Si cambias la fecha de entrada, los vuelos se mueven los mismos días.</div>` : '<div class="ui-chip ghost"><i class="bi bi-bus-front"></i> ' + OF1M + ' sin vuelo</div>'}
-                ${o.notas.length ? `<div style="margin-top:12px">${o.notas.map(n => `<div class="ui-note info" style="margin-bottom:8px"><i class="bi bi-journal-text"></i><div><b>${esc(n.tipo)}</b><br>${esc(n.nota1)}</div></div>`).join('')}</div>` : ''}`;
+                `;
+            EVCodigo.monedas($('#eMoneda'), (o.id_Moneda || 'DOP').trim()).catch(() => { });
+            EVCodigo.proveedores($('#eProveedor'), (o.id_Proveedor || '').trim(), { vacio: '— Elige el proveedor —' }).catch(() => { });
+            $('#ePaisOrigen').value = (o.id_Pais_Origen || '').trim().toUpperCase();
+            EVCodigo.campo($('#eCodigo'), { producto: TIPO, clave: () => actual?.codigo ?? '', anterior: () => actual?.codigo ?? '' });
             $('#eEliminar').onclick = () => eliminarIds([o.id_Servicio]);
             hasta(); precioVivo();
             drawer.abrir();
@@ -487,8 +515,14 @@ const OF = (() => {
             Id_Servicio: actual.id_Servicio, PrecioTotal: parseFloat($('#eTotal').value) || 0, Descuento: parseFloat($('#eDescuento').value) || 0,
             Id_Campanya: parseInt($('#eCampanya').value, 10), Id_Regimen: $('#eRegimen').value, Desde: $('#eDesde').value, Noches: parseInt($('#eNoches').value, 10) || 0,
             Activo: $('#eActivo').checked, Habitaciones: habs, Suplementos: sups.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor })),
-            ...EVPrioridad.leer($('#ePrio')), PrioridadTodas: $('#ePrioTodas').checked
+            ...EVPrioridad.leer($('#ePrio')), PrioridadTodas: $('#ePrioTodas').checked,
+            // punto 7
+            Nombre: $('#eNombre').value.trim() || null, Codigo: $('#eCodigo').value.trim() || null, Id_Moneda: $('#eMoneda').value || null,
+            Id_Proveedor: $('#eProveedor').value || null, CambiarOrigen: true, Id_Pais_Origen: $('#ePaisOrigen').value || null, Origen: $('#eOrigen').value.trim() || null,
+            Textos: { Incluye: $('#eIncluye').value, No_Incluye: $('#eNoIncluye').value, Nota: $('#eCondiciones').value, Oferta_Especial: $('#eOfertaEsp').value }
         };
+        if (dto.Origen && !dto.Id_Pais_Origen) { EV.toast('Elige el país de origen (o borra la ciudad).', 'err'); return; }
+        if (dto.Codigo && dto.Codigo !== (actual.codigo || '') && !(await EVCodigo.validar($('#eCodigo')))) { EV.toast($('#eCodigo').nextElementSibling?.textContent?.trim() || 'Revisa el código.', 'err'); return; }
         if (dto.PrecioTotal - sups.total() < cat.minimo && !await EV.confirmar({ titulo: 'Precio base bajo', texto: `El precio base queda por debajo del mínimo (${EV.fmt(cat.minimo)}). ¿Guardar igual?`, si: 'Guardar igual' })) return;
         const b = $('#eGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
         try {

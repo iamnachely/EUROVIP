@@ -170,6 +170,8 @@ namespace EuroVip.Controllers
             if (!ModelState.IsValid) return Error();
             if (!string.IsNullOrWhiteSpace(dto.CaratulaDestino) && !dto.CaratulaDestino.StartsWith("http") && !dto.CaratulaDestino.StartsWith("/"))
                 return BadRequest(new { mensaje = "La imagen debe ser una URL (https://…) o una ruta que empiece por /" });
+            if (await _repo.RevisarTarjetaAsync(dto) is var (campo, mal))   // FASE 38: moneda y código interno
+                return BadRequest(new { mensaje = mal, errores = new Dictionary<string, string> { [campo] = mal } });
             var antes = dto.Id is int i ? await _repo.TarjetaAsync(i) : null;
             var id = await _repo.GuardarTarjetaAsync(dto);
             // El formulario trae la foto que tenía al abrirse: si mientras tanto se cambió (📷), se vuelve a poner la buena
