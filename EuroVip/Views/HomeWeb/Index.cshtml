@@ -107,7 +107,10 @@
     .hw-ordenando .hw-card { counter-increment: pos; }
     .hw-ordenando .hw-card::before { content: counter(pos); position: absolute; left: 10px; top: 42px; z-index: 6; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 99px; background: #0B1215; color: #74F2E6; font: 800 12px var(--ev-font); display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
     .hw-ordenando .hw-card:hover { transform: none; box-shadow: none; }
-    .hw-volando { opacity: .96 !important; transform: rotate(2deg) scale(1.03); box-shadow: 0 24px 50px rgba(11,18,21,.28) !important; cursor: grabbing !important; }
+    .hw-volando { opacity: .96 !important; box-shadow: 0 24px 50px rgba(11,18,21,.28) !important; cursor: grabbing !important; transition: none !important; }
+    /* Mientras se ordena, solo anima SortableJS: sin la transición de hover, la tarjeta sigue al ratón al instante */
+    .hw-ordenando .hw-card, .hw-ordenando .cr-card, .hw-ordenando .hw-sec { transition: none !important; }
+    .hw-ordenando, .hw-ordenando * { cursor: grabbing !important; user-select: none; }
     .hw-volando::before, .hw-volando::after { display: none !important; }
     .hw-elegida { cursor: grabbing; }
     .hw-sec.hw-sec-hueco { border: 2.5px dashed var(--ev-teal) !important; background: color-mix(in srgb, var(--ev-aqua) 14%, var(--ev-surface)); }
@@ -149,9 +152,11 @@
     /* ---------- carrusel ---------- */
     .cr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
     .cr-card { border-radius: 22px; overflow: hidden; background: var(--ev-surface); border: 1px solid var(--ev-line); transition: transform .25s var(--ev-ease), box-shadow .25s, opacity .2s; }
-    .cr-card[draggable="true"] { cursor: grab; }
+    .cr-card[data-mov] { cursor: grab; }
     .cr-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
     .cr-card.arrastrando { opacity: .35; }
+    .cr-card.hw-hueco { border: 2.5px dashed var(--ev-teal); background: color-mix(in srgb, var(--ev-aqua) 22%, var(--ev-surface)); }
+    .cr-card.hw-hueco > * { opacity: 0; }
     .cr-card.sobre { outline: 3px solid var(--ev-teal); }
     .cr-card.inactivo .cr-img { filter: grayscale(.9); opacity: .55; }
     .cr-img { position: relative; aspect-ratio: 16 / 7; background: var(--ev-grad-soft); }
@@ -455,7 +460,10 @@ const HW = (() => {
         guia.classList.add('on');
     }
     const finGuia = () => { document.body.classList.remove('hw-ordenando'); $$('.destino').forEach(s => s.classList.remove('destino')); setTimeout(() => guia.classList.remove('on'), 250); };
-    const ANIM = { animation: 230, easing: 'cubic-bezier(.2, .8, .2, 1)', forceFallback: true, fallbackOnBody: true, fallbackTolerance: 4,
+    // Sin retrasos: responde al primer movimiento (en táctil espera 120 ms para no confundir con desplazar la página)
+    const ANIM = { animation: 180, easing: 'cubic-bezier(.2, .8, .2, 1)', forceFallback: true, fallbackOnBody: true, fallbackTolerance: 3,
+                   emptyInsertThreshold: 24,
+                   delayOnTouchOnly: true, delay: 120, touchStartThreshold: 4,
                    scroll: true, scrollSensitivity: 120, scrollSpeed: 20, bubbleScroll: true };
     let ordenadores = [];
     function activarOrden() {
@@ -496,28 +504,24 @@ const HW = (() => {
         }));
     }
 
-    // Slides del carrusel (arrastre nativo)
-    let arrastre = null;
-    document.addEventListener('dragstart', e => {
-        const sl = e.target.closest?.('.cr-card[draggable="true"]'); if (!sl) return;
-        arrastre = { el: sl }; sl.classList.add('arrastrando');
-        e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', '');
-    });
-    document.addEventListener('dragover', e => {
-        if (!arrastre) return;
-        const cont = $('#crGrid'), sobre = e.target.closest('.cr-card[draggable="true"]'); if (!sobre || sobre === arrastre.el) { if (e.target.closest('#crGrid')) e.preventDefault(); return; }
-        e.preventDefault();
-        const r = sobre.getBoundingClientRect();
-        cont.insertBefore(arrastre.el, e.clientX < r.left + r.width / 2 ? sobre : sobre.nextSibling);
-    });
-    document.addEventListener('drop', e => { if (arrastre) e.preventDefault(); });
-    document.addEventListener('dragend', async () => {
-        if (!arrastre) return;
-        const a = arrastre; arrastre = null;
-        a.el.classList.remove('arrastrando'); $$('.sobre').forEach(x => x.classList.remove('sobre'));
-        try { await EV.post('/HomeWeb/OrdenSlides', $$('#crGrid .cr-card[draggable="true"]').map(s => +s.dataset.s)); EV.toast('Orden del carrusel guardado.'); await cargar(); }
-        catch (err) { EV.toast(err.message, 'err'); cargar(); }
-    });
+    // Slides del carrusel: también con SortableJS (solo los activos se ordenan)
+    let ordenSlides = null;
+    function activarOrdenSlides() {
+        if (!window.Sortable) return;
+        ordenSlides?.destroy();
+        ordenSlides = new Sortable($('#crGrid'), { ...ANIM,
+            draggable: '.cr-card[data-mov]', filter: 'button, a, input, select, textarea, label, .ui-ibtn', preventOnFilter: false,
+            ghostClass: 'hw-hueco', chosenClass: 'hw-elegida', dragClass: 'hw-volando',
+            onMove: e => !e.related?.classList.contains('cr-nuevo') && !!e.related?.hasAttribute('data-mov'),
+            onStart: () => document.body.classList.add('hw-ordenando'),
+            onEnd: async e => {
+                document.body.classList.remove('hw-ordenando');
+                if (e.oldDraggableIndex === e.newDraggableIndex) return;
+                try { await EV.post('/HomeWeb/OrdenSlides', $$('#crGrid .cr-card[data-mov]').map(s => +s.dataset.s)); EV.toast('Orden del carrusel guardado.'); await cargar(); }
+                catch (err) { EV.toast(err.message, 'err'); cargar(); }
+            }
+        });
+    }
 
     // ===================== CARRUSEL =====================
     function pintarCarrusel() {
@@ -526,7 +530,7 @@ const HW = (() => {
         $('#crGrid').innerHTML = `<button type="button" class="cr-nuevo" onclick="HW.nuevoSlide()"><span><i class="bi bi-plus-circle"></i>Nuevo slide</span></button>` + lista.map(s => {
             const pos = activosOrden.indexOf(s.id_Carrusel);
             const malos = s.destinos.filter(d => d.precio > 0 && d.precio < PRECIO_ALERTA).length;
-            return `<article class="cr-card ${s.activo ? '' : 'inactivo'}" data-s="${s.id_Carrusel}" ${s.activo ? 'draggable="true"' : ''}>
+            return `<article class="cr-card ${s.activo ? '' : 'inactivo'}" data-s="${s.id_Carrusel}" ${s.activo ? 'data-mov' : ''}>
                 <div class="cr-img"><img src="${esc(img(s.ruta, 'web'))}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ui-empty',style:'padding:30px 10px;margin:0',textContent:'Imagen no disponible'}))">
                     ${s.activo ? `<span class="ord">${s.orden}</span>` : ''}<span class="ori">${s.orientacion === 'V' ? '▯ Vertical' : '▭ Horizontal'}</span></div>
                 <div class="cr-body"><div class="nombre" title="${esc(s.ruta)}">${esc(s.ruta)}</div>
@@ -538,6 +542,7 @@ const HW = (() => {
                             <button type="button" data-smover="${s.id_Carrusel}" data-paso="-1" ${pos <= 0 ? 'disabled' : ''} title="Mover hacia atrás (antes)" aria-label="Mover hacia atrás"><i class="bi bi-chevron-left"></i></button>
                             <button type="button" data-smover="${s.id_Carrusel}" data-paso="1" ${pos >= activosOrden.length - 1 ? 'disabled' : ''} title="Mover hacia delante (después)" aria-label="Mover hacia delante"><i class="bi bi-chevron-right"></i></button></span>` : ''}<button type="button" class="ev-btn ghost sm" data-sed="${s.id_Carrusel}"><i class="bi bi-pencil"></i> Editar</button></div></div></article>`;
         }).join('');
+        activarOrdenSlides();
     }
 
     /** Flechas del carrusel: cambia el slide de lugar con el de al lado y guarda el orden (igual que arrastrar). */
