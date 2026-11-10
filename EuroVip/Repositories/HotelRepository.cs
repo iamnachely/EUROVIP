@@ -178,18 +178,29 @@ namespace EuroVip.Repositories
         public async Task<bool?> CambiarEstadoAsync(int id)
         {
             using var cn = Conexion();
+            // OUTPUT … INTO: Eurovip.inicio tiene triggers (FASE 33/37) y SQL Server no permite OUTPUT directo en tablas con triggers
             return await cn.QueryFirstOrDefaultAsync<bool?>(@"
+                DECLARE @r TABLE (estado bit);
                 UPDATE Eurovip.inicio SET estado = CASE WHEN ISNULL(estado, 1) = 1 THEN 0 ELSE 1 END
-                OUTPUT CAST(inserted.estado AS bit)
-                WHERE id_servicio = @id AND tipo_servicio = @tipo AND id_idioma = @idioma", new { id, tipo = TipoHotel, idioma = IdiomaHotel });
+                OUTPUT CAST(inserted.estado AS bit) INTO @r
+                WHERE id_servicio = @id AND tipo_servicio = @tipo AND id_idioma = @idioma;
+                SELECT estado FROM @r;", new { id, tipo = TipoHotel, idioma = IdiomaHotel });
         }
 
         public async Task<Inicio?> EliminarAsync(int id)
         {
             using var cn = Conexion();
-            return await cn.QueryFirstOrDefaultAsync<Inicio>(
-                "DELETE FROM Eurovip.inicio OUTPUT deleted.* WHERE id_servicio = @id AND tipo_servicio = @tipo AND id_idioma = @idioma",
-                new { id, tipo = TipoHotel, idioma = IdiomaHotel });
+            cn.Open();
+            using var tx = cn.BeginTransaction();
+            // Se lee la fila antes de borrarla (no se puede usar OUTPUT deleted.* porque la tabla tiene triggers)
+            var fila = await cn.QueryFirstOrDefaultAsync<Inicio>(
+                "SELECT * FROM Eurovip.inicio WITH (UPDLOCK) WHERE id_servicio = @id AND tipo_servicio = @tipo AND id_idioma = @idioma",
+                new { id, tipo = TipoHotel, idioma = IdiomaHotel }, tx);
+            if (fila is not null)
+                await cn.ExecuteAsync("DELETE FROM Eurovip.inicio WHERE id_servicio = @id AND tipo_servicio = @tipo AND id_idioma = @idioma",
+                    new { id, tipo = TipoHotel, idioma = IdiomaHotel }, tx);
+            tx.Commit();
+            return fila;
         }
 
         public async Task<IEnumerable<CodigoNombre>> IdiomasAsync()

@@ -122,7 +122,9 @@ namespace EuroVip.Repositories
         public async Task EstadoAsync(int id, bool activo)
         {
             using var cn = _db.Conexion();
-            var user = await cn.ExecuteScalarAsync<string>("UPDATE Eurovip.usuario SET activo = @activo OUTPUT inserted.userName WHERE codigoUsuario = @id", new { id, activo });
+            // OUTPUT … INTO: así no se rompe si la tabla recibe triggers (como pasó con FASE 33 en otras tablas)
+            var user = await cn.ExecuteScalarAsync<string>(@"DECLARE @r TABLE (u nvarchar(256));
+                UPDATE Eurovip.usuario SET activo = @activo OUTPUT inserted.userName INTO @r WHERE codigoUsuario = @id; SELECT u FROM @r;", new { id, activo });
             if (user is not null) _accesos.Olvidar(user);
         }
 

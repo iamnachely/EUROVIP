@@ -68,7 +68,9 @@ namespace EuroVip.Repositories
         public async Task<bool> EliminarAsync(int id)
         {
             using var cn = _db.Conexion();
-            var destino = await cn.ExecuteScalarAsync<string?>("DELETE FROM Eurovip.servicio_excursion OUTPUT deleted.id_destino WHERE id_Excursion = @id", new { id });
+            // OUTPUT … INTO: la tabla tiene triggers (FASE 33/37) y SQL Server no permite OUTPUT directo
+            var destino = await cn.ExecuteScalarAsync<string?>(@"DECLARE @r TABLE (d nvarchar(400));
+                DELETE FROM Eurovip.servicio_excursion OUTPUT deleted.id_destino INTO @r WHERE id_Excursion = @id; SELECT d FROM @r;", new { id });
             if (destino is null) return false;
             await ActualizarInicioAsync(cn, destino);
             return true;

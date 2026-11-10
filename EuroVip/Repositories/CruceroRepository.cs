@@ -313,9 +313,12 @@ namespace EuroVip.Repositories
         public async Task<CruceroPdf?> QuitarPdfAsync(int idPdf)
         {
             using var cn = _db.Conexion();
-            return await cn.QueryFirstOrDefaultAsync<CruceroPdf>(@"DELETE FROM Eurovip.crucero_pdf
-                OUTPUT deleted.id_pdf AS Id_Pdf, deleted.id_crucero AS Id_Crucero, deleted.titulo AS Titulo, deleted.ruta AS Ruta, deleted.bytes AS Bytes
-                WHERE id_pdf = @idPdf", new { idPdf });
+            // OUTPUT … INTO: así no se rompe si la tabla recibe triggers (como pasó con FASE 33 en otras tablas)
+            return await cn.QueryFirstOrDefaultAsync<CruceroPdf>(@"DECLARE @r TABLE (Id_Pdf int, Id_Crucero int, Titulo nvarchar(max), Ruta nvarchar(max), Bytes bigint);
+                DELETE FROM Eurovip.crucero_pdf
+                OUTPUT deleted.id_pdf, deleted.id_crucero, deleted.titulo, deleted.ruta, deleted.bytes INTO @r
+                WHERE id_pdf = @idPdf;
+                SELECT * FROM @r;", new { idPdf });
         }
 
         public async Task<bool> TituloPdfAsync(int idPdf, string titulo)

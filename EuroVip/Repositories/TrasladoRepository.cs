@@ -125,7 +125,9 @@ namespace EuroVip.Repositories
         public async Task<bool> EliminarAsync(int id)
         {
             using var cn = _db.Conexion();
-            var destino = await cn.ExecuteScalarAsync<string?>("DELETE FROM Eurovip.traslado OUTPUT deleted.id_destino WHERE id_traslado = @id", new { id });
+            // OUTPUT … INTO: la tabla tiene triggers (FASE 33/37) y SQL Server no permite OUTPUT directo
+            var destino = await cn.ExecuteScalarAsync<string?>(@"DECLARE @r TABLE (d nvarchar(400));
+                DELETE FROM Eurovip.traslado OUTPUT deleted.id_destino INTO @r WHERE id_traslado = @id; SELECT d FROM @r;", new { id });
             if (destino is null) return false;
             await ActualizarInicioAsync(cn, destino);
             return true;
@@ -134,8 +136,9 @@ namespace EuroVip.Repositories
         public async Task<bool> ActivarAsync(int id, bool activo)
         {
             using var cn = _db.Conexion();
-            var destino = await cn.ExecuteScalarAsync<string?>(@"UPDATE Eurovip.traslado SET activo = @activo, fecha_modificacion = SYSDATETIME()
-                                                                OUTPUT inserted.id_destino WHERE id_traslado = @id", new { id, activo });
+            var destino = await cn.ExecuteScalarAsync<string?>(@"DECLARE @r TABLE (d nvarchar(400));
+                UPDATE Eurovip.traslado SET activo = @activo, fecha_modificacion = SYSDATETIME()
+                OUTPUT inserted.id_destino INTO @r WHERE id_traslado = @id; SELECT d FROM @r;", new { id, activo });
             if (destino is null) return false;
             await ActualizarInicioAsync(cn, destino);
             return true;
