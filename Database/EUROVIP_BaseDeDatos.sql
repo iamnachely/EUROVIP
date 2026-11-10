@@ -5309,6 +5309,249 @@ CLOSE r; DEALLOCATE r;
 GO
 
 
+
+/* ##########################################################################################
+   FASE 38 — CÓDIGO INTERNO, PROVEEDOR Y MONEDA EN TODAS LAS CARGAS  (10/11/2026, SOLO en el 93)
+   ------------------------------------------------------------------------------------------
+   Para qué: pedidos de la usuaria:
+     1) «que se le pueda cambiar la divisa siempre en todas las cargas (manual y Excel), en especial
+        excursiones, traslados, cruceros…»
+     3) «un campo nuevo, Código: letras y números sin espacios ni símbolos ni acentos; que revise que no
+        exista uno igual mientras el usuario lo escribe, en hoteles, solo hotel, paquetes, circuitos,
+        excursiones, traslados y cruceros»
+     5) «el campo Proveedor (tom select de la tabla proveedor) en Hoteles, Excursiones y Traslados: el
+        usuario siempre quiere saber de dónde sacó la oferta»
+   Explicado fácil:
+     • Código interno: cada producto tiene un único lugar para su código:
+         - Hoteles y tarjetas de la Home ... inicio.codigo                (NUEVO)
+         - Excursiones ..................... servicio_excursion.codigo    (NUEVO)
+         - Traslados ....................... traslado.codigo              (NUEVO)
+         - Solo Hotel / Paquetes ........... servicio.codigo              (ya existía: el «código de la carga»)
+         - Circuitos ....................... circuito.id                  (ya existía: «Código» del circuito)
+         - Cruceros ........................ crucero.codigo               (ya existía)
+       La vista Eurovip.vCodigoInterno junta todos para revisar que un código nuevo no exista en
+       NINGÚN producto. La regla (solo letras y números) la revisa el BackOffice al escribirlo; los
+       códigos que ya existían no se tocan (hay circuitos con espacios y 2 cruceros repetidos).
+       En las tablas nuevas, un índice único impide repetirlo dentro de la misma tabla.
+     • Proveedor: inicio.id_proveedor, servicio_excursion.id_proveedor y traslado.id_proveedor (NUEVOS,
+       opcionales, apuntan a Eurovip.proveedor).
+     • Moneda: servicio_excursion.id_moneda (NUEVA, DOP por defecto: las 52 excursiones quedan en DOP como
+       hasta ahora). Traslados, cruceros, hoteles y Home ya tenían id_moneda.
+       Las tarjetas de excursiones y traslados de la Home y la web usan ahora la moneda del producto.
+   Cambios:
+     • CAMBIO 122: columnas codigo / id_proveedor (inicio, servicio_excursion, traslado) e id_moneda (servicio_excursion).
+     • CAMBIO 123: índices únicos de codigo (sin contar los vacíos) en las 3 tablas.
+     • CAMBIO 124: vista Eurovip.vCodigoInterno (producto, clave, codigo, nombre).
+     • CAMBIO 125: spActualizaInicioExcursion / spActualizaInicioTraslado / spPortalListarExcursiones /
+                   spPortalObtenerExcursion con la moneda del producto.
+   Para deshacer: DROP de la vista, índices y columnas nuevas, y volver a 'DOP' fijo en los 4 procedimientos
+   (sus versiones anteriores están más arriba en este archivo: CAMBIO 50 y 57 y los spPortal*).
+   ########################################################################################## */
+SET XACT_ABORT ON;
+GO
+/* ---------- CAMBIO 122: columnas nuevas ---------- */
+BEGIN TRAN;
+IF COL_LENGTH('Eurovip.inicio', 'codigo') IS NULL ALTER TABLE Eurovip.inicio ADD codigo varchar(30) NULL;
+IF COL_LENGTH('Eurovip.inicio', 'id_proveedor') IS NULL
+    ALTER TABLE Eurovip.inicio ADD id_proveedor varchar(10) NULL CONSTRAINT FK_Eurovip_inicio_proveedor REFERENCES Eurovip.proveedor (id_proveedor);
+IF COL_LENGTH('Eurovip.servicio_excursion', 'codigo') IS NULL ALTER TABLE Eurovip.servicio_excursion ADD codigo varchar(30) NULL;
+IF COL_LENGTH('Eurovip.servicio_excursion', 'id_proveedor') IS NULL
+    ALTER TABLE Eurovip.servicio_excursion ADD id_proveedor varchar(10) NULL CONSTRAINT FK_Eurovip_servicio_excursion_proveedor REFERENCES Eurovip.proveedor (id_proveedor);
+IF COL_LENGTH('Eurovip.servicio_excursion', 'id_moneda') IS NULL
+    ALTER TABLE Eurovip.servicio_excursion ADD id_moneda char(3) NOT NULL CONSTRAINT DF_Eurovip_servicio_excursion_moneda DEFAULT ('DOP')
+        CONSTRAINT FK_Eurovip_servicio_excursion_moneda REFERENCES Eurovip.moneda (id_moneda);
+IF COL_LENGTH('Eurovip.traslado', 'codigo') IS NULL ALTER TABLE Eurovip.traslado ADD codigo varchar(30) NULL;
+IF COL_LENGTH('Eurovip.traslado', 'id_proveedor') IS NULL
+    ALTER TABLE Eurovip.traslado ADD id_proveedor varchar(10) NULL CONSTRAINT FK_Eurovip_traslado_proveedor REFERENCES Eurovip.proveedor (id_proveedor);
+COMMIT;
+GO
+/* ---------- CAMBIO 123: el código no se repite dentro de la misma tabla (los vacíos no cuentan) ---------- */
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Eurovip_inicio_codigo')
+    CREATE UNIQUE INDEX UX_Eurovip_inicio_codigo ON Eurovip.inicio (codigo) WHERE codigo IS NOT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Eurovip_servicio_excursion_codigo')
+    CREATE UNIQUE INDEX UX_Eurovip_servicio_excursion_codigo ON Eurovip.servicio_excursion (codigo) WHERE codigo IS NOT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Eurovip_traslado_codigo')
+    CREATE UNIQUE INDEX UX_Eurovip_traslado_codigo ON Eurovip.traslado (codigo) WHERE codigo IS NOT NULL;
+GO
+/* ---------- CAMBIO 124: todos los códigos internos juntos (para revisar que uno nuevo no exista en ningún producto) ----------
+   producto: HOTEL / INICIO (tarjeta de la Home) / OFERTA / PAQUETES / CIRCUITO (salidas) / CIRCUITO_CAT (catálogo) /
+             EXCURSION / TRASLADO / CRUCERO.  clave: lo que identifica la fila en su pantalla (para no chocar consigo mismo). */
+CREATE OR ALTER VIEW Eurovip.vCodigoInterno
+AS
+    SELECT CASE WHEN i.tipo_servicio = 'HOTEL' THEN 'HOTEL' ELSE 'INICIO' END AS producto, CAST(i.id_servicio AS varchar(120)) AS clave,
+           i.codigo, CAST(i.id_destino AS nvarchar(200)) AS nombre
+      FROM Eurovip.inicio i WHERE i.codigo IS NOT NULL AND i.codigo <> ''
+    UNION ALL
+    SELECT s.id_tipo_servicio, CAST(s.codigo AS varchar(120)), s.codigo, CAST(MIN(ISNULL(s.nombre, s.codigo)) AS nvarchar(200))
+      FROM Eurovip.servicio s WHERE s.codigo IS NOT NULL AND s.codigo <> '' GROUP BY s.id_tipo_servicio, s.codigo
+    UNION ALL
+    SELECT 'CIRCUITO_CAT', CAST(c.nombre_circuito AS varchar(120)), c.id, CAST(c.nombre_circuito AS nvarchar(200))
+      FROM Eurovip.circuito c WHERE c.id IS NOT NULL AND c.id <> ''
+    UNION ALL
+    SELECT 'EXCURSION', CAST(e.id_Excursion AS varchar(120)), e.codigo, CAST(e.nombre AS nvarchar(200))
+      FROM Eurovip.servicio_excursion e WHERE e.codigo IS NOT NULL AND e.codigo <> ''
+    UNION ALL
+    SELECT 'TRASLADO', CAST(t.id_traslado AS varchar(120)), t.codigo, CAST(t.nombre AS nvarchar(200))
+      FROM Eurovip.traslado t WHERE t.codigo IS NOT NULL AND t.codigo <> ''
+    UNION ALL
+    SELECT 'CRUCERO', CAST(c.id_crucero AS varchar(120)), c.codigo, CAST(c.titulo AS nvarchar(200))
+      FROM Eurovip.crucero c WHERE c.codigo IS NOT NULL AND c.codigo <> '';
+GO
+/* ---------- CAMBIO 125: la moneda del producto en la Home y en la web ---------- */
+/* FASE 38 (CAMBIO 125): la tarjeta lleva la moneda de la excursión más barata (antes siempre DOP). */
+/* ---------- CAMBIO 50: spActualizaInicioExcursion — pone en la Home la tarjeta de excursiones de un destino ----------
+   Como spActualizaInicio hace con OFERTA / CIRCUITO, pero para servicio_excursion:
+     • Una sola tarjeta por destino en Eurovip.inicio (tipo_servicio = 'EXCURSION', id_destino = el destino).
+     • id_servicio = la excursión más barata del destino (id_Excursion) y precioWeb = su precio ("desde ...").
+     • Si el destino ya tenía tarjeta se ACTUALIZA (se conserva lo que el usuario ordenó: sección, posición, visible).
+     • Si el destino ya no tiene excursiones, la tarjeta se borra.
+   La pantalla de Excursiones lo llama cada vez que se guarda, duplica o elimina una excursión. */
+CREATE OR ALTER PROCEDURE Eurovip.spActualizaInicioExcursion
+    @destino varchar(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    SET @destino = LTRIM(RTRIM(@destino));
+    IF ISNULL(@destino, '') = '' RETURN;
+
+    BEGIN TRAN;
+    DECLARE @moneda char(3), @id int, @precio money, @pais char(2), @imagen varchar(300), @cont int;
+
+    SELECT TOP 1 @id = id_Excursion, @precio = NULLIF(precio, 0), @moneda = id_moneda
+    FROM Eurovip.servicio_excursion
+    WHERE LTRIM(RTRIM(id_destino)) = @destino
+    ORDER BY CASE WHEN ISNULL(precio, 0) > 0 THEN 0 ELSE 1 END, precio, id_Excursion;
+
+    IF @id IS NULL
+    BEGIN
+        DELETE FROM Eurovip.inicio WHERE tipo_servicio = 'EXCURSION' AND id_destino = @destino AND id_idioma = 'ES';
+        COMMIT;
+        RETURN;
+    END
+
+    SELECT TOP 1 @pais = id_pais, @imagen = caratula FROM Eurovip.destino WHERE id_destino = @destino AND id_idioma = 'ES';
+    SELECT TOP 1 @cont = id_contenedor FROM Eurovip.contenedores WHERE nombre = 'EXCURSIONES' AND UPPER(id_idioma) = 'ES';
+
+    IF EXISTS (SELECT 1 FROM Eurovip.inicio WHERE tipo_servicio = 'EXCURSION' AND id_destino = @destino AND id_idioma = 'ES')
+        UPDATE Eurovip.inicio
+           SET id_servicio = @id, precioWeb = @precio, id_moneda = ISNULL(@moneda, 'DOP'), id_paisDestino = ISNULL(@pais, id_paisDestino),
+               caratulaDestino = caratulaDestino, descripcion = 'Excursiones en ' + @destino
+         WHERE tipo_servicio = 'EXCURSION' AND id_destino = @destino AND id_idioma = 'ES';
+    ELSE
+        INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino,
+                                    id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor,
+                                    posicion_contenedor, posicion_destino, estado, notas, noches)
+        SELECT @id, 'ES', 'EXCURSION', 99, ISNULL(@moneda, 'DOP'), 'ES', 'Madrid', ISNULL(@pais, 'DO'),
+               @destino, NULL, 'Excursiones en ' + @destino, NULL, NULL, @precio, @cont, CASE WHEN @cont IS NULL THEN NULL ELSE 'EXCURSIONES' END,
+               (SELECT posicion FROM Eurovip.contenedores WHERE id_contenedor = @cont),
+               (SELECT ISNULL(MAX(posicion_destino), 0) + 1 FROM Eurovip.inicio WHERE id_contenedor = @cont), 1, NULL, NULL;
+    COMMIT;
+END
+GO
+/* FASE 38 (CAMBIO 125): la tarjeta lleva la moneda del traslado más barato (antes siempre DOP). */
+/* ---------- CAMBIO 57: spActualizaInicioTraslado — tarjeta de traslados de un destino en la Home ----------
+   Igual que spActualizaInicioExcursion, pero con Eurovip.traslado (que hace de tabla intermedia):
+     • Una sola tarjeta por destino en Eurovip.inicio (tipo_servicio = 'TRASLADO', id_destino = el destino).
+     • Solo cuentan los traslados ACTIVOS. id_servicio = el más barato (id_traslado) y precioWeb = su precio
+       más bajo (ida y vuelta o solo ida), para el "desde …".
+     • Si el destino ya tenía tarjeta se ACTUALIZA (se respeta sección, posición y visible del editor de la Home).
+     • Si el destino se queda sin traslados activos, la tarjeta se borra.
+   La pantalla de Traslados lo llama al guardar, duplicar, activar/desactivar y eliminar. */
+CREATE OR ALTER PROCEDURE Eurovip.spActualizaInicioTraslado
+    @destino varchar(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    SET @destino = LTRIM(RTRIM(@destino));
+    IF ISNULL(@destino, '') = '' RETURN;
+
+    BEGIN TRAN;
+    DECLARE @moneda char(3), @id int, @precio money, @pais char(2), @imagen varchar(300), @cont int;
+
+    SELECT TOP 1 @id = id_traslado, @moneda = id_moneda,
+                 @precio = CASE WHEN precio_ida_vuelta IS NULL THEN precio_ida
+                                WHEN precio_ida IS NULL OR precio_ida_vuelta <= precio_ida THEN precio_ida_vuelta ELSE precio_ida END
+    FROM Eurovip.traslado
+    WHERE activo = 1 AND id_destino = @destino
+    ORDER BY CASE WHEN precio_ida_vuelta IS NULL THEN precio_ida
+                  WHEN precio_ida IS NULL OR precio_ida_vuelta <= precio_ida THEN precio_ida_vuelta ELSE precio_ida END, id_traslado;
+
+    IF @id IS NULL
+    BEGIN
+        DELETE FROM Eurovip.inicio WHERE tipo_servicio = 'TRASLADO' AND id_destino = @destino AND id_idioma = 'ES';
+        COMMIT;
+        RETURN;
+    END
+
+    SELECT TOP 1 @pais = id_pais, @imagen = caratula FROM Eurovip.destino WHERE id_destino = @destino AND id_idioma = 'ES';
+    SELECT TOP 1 @cont = id_contenedor FROM Eurovip.contenedores WHERE nombre = 'TRASLADOS' AND UPPER(id_idioma) = 'ES';
+
+    IF EXISTS (SELECT 1 FROM Eurovip.inicio WHERE tipo_servicio = 'TRASLADO' AND id_destino = @destino AND id_idioma = 'ES')
+        UPDATE Eurovip.inicio
+           SET id_servicio = @id, precioWeb = @precio, id_moneda = ISNULL(@moneda, 'DOP'), id_paisDestino = ISNULL(@pais, id_paisDestino),
+               caratulaDestino = caratulaDestino, descripcion = 'Traslados en ' + @destino
+         WHERE tipo_servicio = 'TRASLADO' AND id_destino = @destino AND id_idioma = 'ES';
+    ELSE
+        INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino,
+                                    id_destino, caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor,
+                                    posicion_contenedor, posicion_destino, estado, notas, noches)
+        SELECT @id, 'ES', 'TRASLADO', 99, ISNULL(@moneda, 'DOP'), 'ES', 'Madrid', ISNULL(@pais, 'DO'),
+               @destino, NULL, 'Traslados en ' + @destino, NULL, NULL, @precio, @cont, CASE WHEN @cont IS NULL THEN NULL ELSE 'TRASLADOS' END,
+               (SELECT posicion FROM Eurovip.contenedores WHERE id_contenedor = @cont),
+               (SELECT ISNULL(MAX(posicion_destino), 0) + 1 FROM Eurovip.inicio WHERE id_contenedor = @cont), 1, NULL, NULL;
+    COMMIT;
+END
+GO
+/* FASE 38 (CAMBIO 125): devuelve la moneda de cada excursión (antes siempre DOP). */
+/* ---------- CAMBIO 66: consultas de la web con la foto nueva ----------
+   Las consultas de excursiones y traslados devuelven además imagen_ruta (portada en multimedia, ruta dentro de la
+   base de imágenes). Si el producto no tiene portada en multimedia, imagen_ruta es NULL y "imagen" sigue siendo la de antes. */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarExcursiones
+    @Destino varchar(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT e.id_Excursion AS id_excursion, LTRIM(RTRIM(e.id_destino)) AS destino, d.id_pais, e.nombre, e.descripcion,
+           e.cancelable, CAST(e.precio AS decimal(19,4)) AS precio, e.id_moneda AS id_moneda, e.peso, CAST(e.precio_proveedor AS decimal(19,4)) AS precio_proveedor,
+           '/imagenes/excursiones/' + Eurovip.fnNombreImagen(e.nombre) + '.webp' AS imagen,
+           (SELECT TOP 1 v.ruta FROM Eurovip.vMultimedia v WHERE v.tipo = 'EXCURSION' AND v.id_excursion = e.id_Excursion AND v.uso = 'PORTADA') AS imagen_ruta
+      FROM Eurovip.servicio_excursion e
+      OUTER APPLY (SELECT TOP 1 id_pais FROM Eurovip.destino x WHERE x.id_destino = LTRIM(RTRIM(e.id_destino)) AND x.id_idioma = 'ES') d
+     WHERE @Destino IS NULL OR LTRIM(RTRIM(e.id_destino)) = LTRIM(RTRIM(@Destino))
+     ORDER BY destino, CASE WHEN e.peso IS NULL THEN 1 ELSE 0 END, e.peso, CASE WHEN ISNULL(e.precio, 0) > 0 THEN 0 ELSE 1 END, e.precio, e.nombre;
+END
+GO
+/* FASE 38 (CAMBIO 125): devuelve la moneda de la excursión (antes siempre DOP). */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalObtenerExcursion
+    @IdExcursion int
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT e.id_Excursion AS id_excursion, LTRIM(RTRIM(e.id_destino)) AS destino, e.nombre, e.descripcion, e.cancelable,
+           CAST(e.precio AS decimal(19,4)) AS precio, e.id_moneda AS id_moneda,
+           '/imagenes/excursiones/' + Eurovip.fnNombreImagen(e.nombre) + '.webp' AS imagen,
+           (SELECT TOP 1 v.ruta FROM Eurovip.vMultimedia v WHERE v.tipo = 'EXCURSION' AND v.id_excursion = e.id_Excursion AND v.uso = 'PORTADA') AS imagen_ruta
+      FROM Eurovip.servicio_excursion e
+     WHERE e.id_Excursion = @IdExcursion;
+    -- Galería (portada primero, luego galería por orden)
+    SELECT v.uso, v.orden, v.ruta, v.texto_alternativo, v.ancho, v.alto
+      FROM Eurovip.vMultimedia v
+     WHERE v.tipo = 'EXCURSION' AND v.id_excursion = @IdExcursion
+     ORDER BY CASE v.uso WHEN 'PORTADA' THEN 0 ELSE 1 END, v.orden;
+END
+GO
+/* comprobación */
+SELECT 'columnas nuevas' AS revision,
+       CASE WHEN COL_LENGTH('Eurovip.inicio','codigo') > 0 AND COL_LENGTH('Eurovip.inicio','id_proveedor') > 0 AND COL_LENGTH('Eurovip.servicio_excursion','codigo') > 0
+             AND COL_LENGTH('Eurovip.servicio_excursion','id_proveedor') > 0 AND COL_LENGTH('Eurovip.servicio_excursion','id_moneda') > 0
+             AND COL_LENGTH('Eurovip.traslado','codigo') > 0 AND COL_LENGTH('Eurovip.traslado','id_proveedor') > 0 THEN 'ok' ELSE 'FALTA' END AS estado;
+SELECT producto, COUNT(*) AS codigos FROM Eurovip.vCodigoInterno GROUP BY producto ORDER BY producto;
+SELECT id_moneda, COUNT(*) AS excursiones FROM Eurovip.servicio_excursion GROUP BY id_moneda;
+GO
+
+
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
@@ -5830,6 +6073,11 @@ GO
                CRUCERO, EXCURSION y TRASLADO siguen vacías (no se tocaron). La visibilidad (estado) de las tarjetas no cambió.
                Para deshacer: UPDATE Eurovip.inicio SET noches = 7 WHERE id IN (1, 5, 26, 1147);
                               UPDATE Eurovip.inicio SET noches = NULL WHERE id IN (27, 28, 29, 30, 1170, 1165, 1166, 1167, 1168, 1169);
+   10/11/2026  FASE 38 aplicada SOLO en el 93 (CAMBIO 122-125), pedidos de la usuaria «divisa en todas las cargas»,
+               «Código interno único» y «Proveedor en Hoteles, Excursiones y Traslados»: columnas codigo e id_proveedor en inicio,
+               servicio_excursion y traslado; id_moneda en servicio_excursion (las 52 quedaron en DOP); índices únicos de codigo;
+               vista vCodigoInterno; tarjetas de la Home y web de excursiones/traslados con la moneda del producto. No cambió
+               ningún dato existente. Probado: spPortalObtenerExcursion devuelve id_moneda de la excursión.
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
