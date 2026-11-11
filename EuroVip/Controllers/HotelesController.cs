@@ -89,6 +89,7 @@ namespace EuroVip.Controllers
                 if (dto.Id_Servicio is null)
                 {
                     var id = await _repo.CrearAsync(dto);
+                    await InfoAsync(id, dto.Info);   // CAMBIO 130
                     await PorDefectoAsync(TipoMm, id, dto.CaratulaDestino, _img.Buscar(TipoImagen, dto.Id_Destino) is not null);
                     await Auditar("Hotel_Crear", id, dto);
                     _logger.LogInformation("Hotel {Id} creado por {Usuario}", id, User.Identity?.Name);
@@ -100,6 +101,7 @@ namespace EuroVip.Controllers
                     return NotFound(new { mensaje = "Ese hotel ya no existe. Recarga la página." });
 
                 await _repo.EditarAsync(dto);
+                await InfoAsync(dto.Id_Servicio.Value, dto.Info);   // CAMBIO 130
                 await PorDefectoAsync(TipoMm, dto.Id_Servicio.Value, dto.CaratulaDestino, _img.Buscar(TipoImagen, dto.Id_Destino) is not null || _img.Buscar(TipoImagen, antes.Id_Destino ?? "") is not null);
                 await Auditar("Hotel_Editar", dto.Id_Servicio.Value, new { antes, despues = dto });
 
@@ -144,11 +146,19 @@ namespace EuroVip.Controllers
         }
 
         // ================= CARGAR EXCEL (muchos hoteles de una vez) =================
-        private static readonly string[] Columnas =
+        private static readonly string[] Columnas = new[]
         {
             "Hotel", "Destino", "Régimen", "Código hotel", "Precio", "Noches", "Moneda", "Campaña", "País salida", "Ciudad salida",
             "País destino", "Latitud", "Longitud", "Sección de la web", "Visible", "Código interno", "Proveedor", "Notas", "Prioridad", "Precio proveedor"
-        };
+        }.Concat(CargaExcel.NombresInfo).ToArray();
+        /// <summary>Información para el cliente del hotel (CAMBIO 130): Incluye, No incluye, Condiciones… null = no se toca.</summary>
+        private async Task InfoAsync(int idServicio, InfoClienteDto? info)
+        {
+            if (info is null) return;
+            using var cn = HttpContext.RequestServices.GetRequiredService<ICircuitoRepository>().Conexion();
+            await InfoCliente.GuardarAsync(cn, "HOTEL", idServicio, info);
+        }
+
         private static readonly string[] Regimenes = { "Solo Habitación", "Alojamiento y Desayuno", "Media Pensión", "Pensión Completa", "Todo Incluido", "Room Only" };
 
         /// <summary>Columnas del Excel con sus listas (lo que hay en la base AHORA): para la plantilla, las coincidencias y el editor de filas.</summary>
@@ -165,12 +175,12 @@ namespace EuroVip.Controllers
                     "SELECT LTRIM(RTRIM(id_pais)), LTRIM(RTRIM(nombre)) FROM Eurovip.pais WHERE id_idioma = 'ES' AND LEN(LTRIM(RTRIM(id_pais))) = 2 ORDER BY nombre"))
                     .DistinctBy(p => p.Id).Select(p => new CargaExcelOpcion(p.Id, p.Nombre)).ToList();
             CargaExcelColumna Num(string n, string campo, params string[] alias) => new() { Nombre = n, Alias = alias, Campo = campo, Tipo = "numero" };
-            return new()
+            return new List<CargaExcelColumna>
             {
-                new() { Nombre = "Hotel", Alias = new[] { "Nombre", "Nombre del hotel" }, Campo = "Id_Destino" },
-                new() { Nombre = "Destino", Campo = "CaratulaDestino", Opciones = destinos.Select(d => new CargaExcelOpcion(d.Trim(), d.Trim())).ToList() },
-                new() { Nombre = "Régimen", Alias = new[] { "Regimen" }, Campo = "Descripcion", Opciones = Regimenes.Select(r => new CargaExcelOpcion(r, r)).ToList() },
-                new() { Nombre = "Código hotel", Alias = new[] { "Codigo hotel" }, Campo = "Descripcion" },
+                new() { Nombre = "Hotel", Alias = new[] { "Nombre", "Nombre del hotel" }, Campo = "Id_Destino", Obligatoria = true },
+                new() { Nombre = "Destino", Campo = "CaratulaDestino", Obligatoria = true, Opciones = destinos.Select(d => new CargaExcelOpcion(d.Trim(), d.Trim())).ToList() },
+                new() { Nombre = "Régimen", Alias = new[] { "Regimen" }, Campo = "Descripcion", Obligatoria = true, Opciones = Regimenes.Select(r => new CargaExcelOpcion(r, r)).ToList() },
+                new() { Nombre = "Código hotel", Alias = new[] { "Codigo hotel" }, Campo = "Descripcion", Obligatoria = true },
                 Num("Precio", "PrecioWeb", "Precio web", "Precio desde"), Num("Noches", "Noches"),
                 CargaExcel.ColumnaMoneda(monedas),
                 new() { Nombre = "Campaña", Alias = new[] { "Campanya" }, Campo = "Id_Campanya",
@@ -186,7 +196,7 @@ namespace EuroVip.Controllers
                 CargaExcel.ColumnaProveedor(proveedores),
                 new() { Nombre = "Notas", Campo = "Notas", Tipo = "largo" },
                 Num("Prioridad", "Peso", "Peso"), Num("Precio proveedor", "Precio_Proveedor", "Precio del proveedor"),
-            };
+            }.Concat(CargaExcel.ColumnasInfo()).ToList();   // + Incluye … Oferta especial (opcionales)
         }
 
         /// <summary>Plantilla: hoja «Hoteles» (una fila por hotel) y hoja «Instrucciones» con campañas, secciones, monedas y destinos.</summary>
@@ -228,6 +238,7 @@ namespace EuroVip.Controllers
                 new object?[] { "Proveedor", "Opcional. De dónde sale la oferta: nombre o código como en la hoja «Proveedores».", null },
                 new object?[] { "Prioridad", "Opcional. 1 sale primero en la web, 2 segundo… Vacío = se ordena por precio.", null },
                 new object?[] { "Precio proveedor", "Opcional. Precio del proveedor en su web (nuestro precio no cambia).", null },
+                CargaExcel.AyudaInfo(3),
                 new object?[] { "", "", null },
                 new object?[] { "Campañas", "Nombre", "Tipo" },
             };
@@ -252,11 +263,12 @@ namespace EuroVip.Controllers
         /// <summary>Cargar Excel: con guardar = false solo revisa; con guardar = true crea los hoteles de las filas correctas.</summary>
         [HttpPost, ValidateAntiForgeryToken]
         [RequestSizeLimit(CargaExcel.MaxBytes + 100_000)]
-        public async Task<IActionResult> CargarExcel(IFormFile? archivo, bool guardar, string? cambios, string? omitir, bool descargar = false, bool sinListas = false)
+        public async Task<IActionResult> CargarExcel(IFormFile? archivo, bool guardar, string? cambios, string? omitir, bool descargar = false, bool sinListas = false, string? mapa = null)
         {
             var (filas, error) = await CargaExcel.LeerAsync(archivo, cambios, omitir);
             if (error is not null) return BadRequest(new { mensaje = error });
             var columnas = await ColumnasExcelAsync();
+            var plantilla = CargaExcel.Encabezados(filas!, columnas, mapa);   // columnas con otro nombre o plantilla distinta: se pregunta, no falla
             var ayuda = CargaExcel.Ayudar(filas!, columnas);
             if (descargar) return File(CargaExcel.Corregido("Hoteles", filas!, columnas), CargaExcel.TipoXlsx, "Eurovip-hoteles-corregido.xlsx");
             var camps = (await _repo.CampanyasAsync(HotelRepository.IdiomaHotel)).ToList();
@@ -303,7 +315,8 @@ namespace EuroVip.Controllers
                     Latitud = f.Texto("Latitud"), Longitud = f.Texto("Longitud"), Id_Contenedor = cont?.Id_Contenedor,
                     Estado = f.SiNo(true, "Visible", "Activo"), Notas = f.Texto("Notas"),
                     Peso = f.Cifra("Prioridad", "Peso") is decimal pe ? (short)Math.Round(pe) : null, Precio_Proveedor = f.Cifra("Precio proveedor", "Precio del proveedor"),
-                    Codigo = f.Texto("Código interno", "Codigo interno"), Id_Proveedor = idProv
+                    Codigo = f.Texto("Código interno", "Codigo interno"), Id_Proveedor = idProv,
+                    Info = CargaExcel.InfoDeFila(f)
                 };
                 Preparar(dto);
                 mal ??= CargaExcel.ErrorModelo(dto);
@@ -318,13 +331,14 @@ namespace EuroVip.Controllers
                 try
                 {
                     fila.Id = await _repo.CrearAsync(dto);
+                    if (dto.Info is { Vacia: false }) await InfoAsync(fila.Id.Value, dto.Info);
                     await PorDefectoAsync(TipoMm, fila.Id.Value, dto.CaratulaDestino, _img.Buscar(TipoImagen, dto.Id_Destino) is not null);
                     r.Guardadas++;
                     await Auditar("Hotel_Crear", fila.Id.Value, new { dto, excel = archivo!.FileName, fila = f.Numero });
                 }
                 catch (Exception ex) { fila.Ok = false; fila.Mensaje = "No se pudo guardar: " + ex.Message; _logger.LogError(ex, "Cargar Excel: hotel fila {Fila}", f.Numero); }
             }
-            CargaExcel.Completar(r, filas!, columnas, ayuda, sinListas);
+            CargaExcel.Completar(r, filas!, columnas, ayuda, sinListas, plantilla);
             r.Mensaje = CargaExcel.Mensaje(r, "hotel", "hoteles");
             return Json(r);
         }

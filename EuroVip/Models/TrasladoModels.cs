@@ -42,6 +42,13 @@ namespace EuroVip.Models
         /// <summary>Proveedor de donde sale el traslado (Eurovip.proveedor, FASE 38) y su nombre.</summary>
         public string? Id_Proveedor { get; set; }
         public string? Proveedor { get; set; }
+        // Información para el cliente (CAMBIO 130), opcional
+        public string? Incluye { get; set; }
+        public string? No_Incluye { get; set; }
+        public string? Condiciones { get; set; }
+        public string? Documentacion { get; set; }
+        public string? Importante { get; set; }
+        public string? Oferta_Especial { get; set; }
         public bool Cancelable { get; set; }
         public short? Horas_Cancelacion { get; set; }
         public string? Descripcion { get; set; }
@@ -97,6 +104,8 @@ namespace EuroVip.Models
         [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
         /// <summary>Moneda de los precios (FASE 38), DOP por defecto.</summary>
         [Required(ErrorMessage = "Elige la moneda")] public string Id_Moneda { get; set; } = "DOP";
+        /// <summary>Información para el cliente (CAMBIO 130). null = no se toca.</summary>
+        public EuroVip.Services.InfoClienteDto? Info { get; set; }
         [StringLength(30, ErrorMessage = "El código admite como máximo 30 caracteres")] public string? Codigo { get; set; }
         public string? Id_Proveedor { get; set; }
     }

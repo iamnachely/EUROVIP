@@ -200,6 +200,7 @@
             <textarea id="edDesc" rows="7" placeholder="Cuenta qué incluye, horarios, qué llevar… Puedes escribir texto normal: cada línea en blanco separa un párrafo."></textarea>
         </div>
         <div class="ui-f"><label>Así se verá</label><div class="ex-prev-desc" id="edVista"><span style="color:var(--ev-muted)">Sin descripción.</span></div></div>
+        <div id="edInfo"></div>
     </div>
     <div class="ui-df">
         <button class="ev-btn ghost" type="button" id="edEliminar"><i class="bi bi-trash3"></i> Eliminar</button>
@@ -450,6 +451,7 @@ const EX = (() => {
         $('#edDestino').onchange = () => EVPrioridad.contexto($('#pPeso'), { que: 'excursion', id: x?.id_Excursion, destino: $('#edDestino').value });   // los puestos son por destino
         EVPrioridad.vivo($('#edPrio'), () => $('#edPrecio').value);
         $('#edDesc').value = x?.descripcion || '';
+        $('#edInfo').innerHTML = EVCodigo.info(x || {});   // CAMBIO 130: incluye, no incluye, condiciones…
         $('#edEliminar').hidden = !x;
         $$('#exEditor .ui-f').forEach(f => f.classList.remove('err'));
         $$('#exEditor .msg').forEach(m => m.textContent = '');
@@ -494,6 +496,7 @@ const EX = (() => {
             Cancelable: $('#edCancelable').checked,
             Id_Moneda: $('#edMoneda').value || 'DOP', Codigo: $('#edCodigo').value.trim() || null, Id_Proveedor: $('#edProveedor').value || null,
             Descripcion: limpiarHtml($('#edDesc').value) || null,
+            Info: EVCodigo.leerInfo($('#edInfo')),
             ...EVPrioridad.leer($('#exEditor'))
         };
         const faltan = [];

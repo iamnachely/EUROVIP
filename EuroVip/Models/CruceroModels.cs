@@ -133,6 +133,11 @@ namespace EuroVip.Models
         public string? Descripcion { get; set; }
         public string? Incluye { get; set; }
         public string? No_Incluye { get; set; }
+        // Información para el cliente (CAMBIO 130), opcional
+        public string? Condiciones { get; set; }
+        public string? Documentacion { get; set; }
+        public string? Importante { get; set; }
+        public string? Oferta_Especial { get; set; }
         [StringLength(150)] public string? Titulo_Seccion { get; set; }
         public bool Activo { get; set; } = true;
         /// <summary>Prioridad (FASE 29): 1 sale primero en la web, 2 segundo… null = sin prioridad (por precio).</summary>

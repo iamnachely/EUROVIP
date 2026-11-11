@@ -95,7 +95,7 @@ namespace EuroVip.Repositories
             var c = await cn.QueryFirstOrDefaultAsync<CruceroDto>(@"
                 SELECT c.id_crucero AS Id_Crucero, c.titulo AS Titulo, c.subtitulo AS Subtitulo, c.id_barco AS Id_Barco, b.nombre AS Barco_Nombre, n.nombre AS Naviera_Nombre,
                        c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.noches AS Noches, c.codigo AS Codigo, c.codigo_interno AS Codigo_Interno, c.id_proveedor AS Id_Proveedor, c.id_moneda AS Id_Moneda, c.descripcion AS Descripcion,
-                       c.incluye AS Incluye, c.no_incluye AS No_Incluye, c.titulo_seccion AS Titulo_Seccion, c.activo AS Activo, c.peso AS Peso, c.precio_proveedor AS Precio_Proveedor, c.usuario AS Usuario,
+                       c.incluye AS Incluye, c.no_incluye AS No_Incluye, c.condiciones AS Condiciones, c.documentacion AS Documentacion, c.importante AS Importante, c.oferta_especial AS Oferta_Especial, c.titulo_seccion AS Titulo_Seccion, c.activo AS Activo, c.peso AS Peso, c.precio_proveedor AS Precio_Proveedor, c.usuario AS Usuario,
                        c.fecha_alta AS Fecha_Alta, c.fecha_modificacion AS Fecha_Modificacion
                 FROM Eurovip.crucero c
                 LEFT JOIN Eurovip.crucero_barco b ON b.id_barco = c.id_barco
@@ -217,6 +217,8 @@ namespace EuroVip.Repositories
                             @Titulo_Seccion, @Activo, @usuario, @Peso, @Precio_Proveedor, @Codigo_Interno, @Id_Proveedor, @Id_Moneda);
                     SELECT CAST(SCOPE_IDENTITY() AS int);", p, tx);
             }
+            // CAMBIO 130: información para el cliente (incluye y no incluye ya van arriba; se escriben los 6 juntos)
+            await EuroVip.Services.InfoCliente.GuardarAsync(cn, "Eurovip.crucero", id, new EuroVip.Services.InfoClienteDto { Incluye = d.Incluye, No_Incluye = d.No_Incluye, Condiciones = d.Condiciones, Documentacion = d.Documentacion, Importante = d.Importante, Oferta_Especial = d.Oferta_Especial }, tx);
 
             foreach (var g in d.Categorias.Distinct())
                 await cn.ExecuteAsync("INSERT INTO Eurovip.crucero_categoria_crucero (id_categoria, id_crucero) VALUES (@g, @id)", new { g, id }, tx);

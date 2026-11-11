@@ -64,6 +64,8 @@ namespace EuroVip.Models
     public class HotelGuardarDto
     {
         public int? Id_Servicio { get; set; }   // null = nuevo
+        /// <summary>Información para el cliente (CAMBIO 130). null = no se toca.</summary>
+        public EuroVip.Services.InfoClienteDto? Info { get; set; }
 
         [Required(ErrorMessage = "Escribe el nombre del hotel")]
         [StringLength(150, ErrorMessage = "Máximo 150 caracteres")]

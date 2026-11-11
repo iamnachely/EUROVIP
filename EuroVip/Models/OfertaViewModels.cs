@@ -222,6 +222,9 @@ namespace EuroVip.Models
         /// <summary>Condiciones / notas (columna nota).</summary>
         public string? Nota { get; set; }
         public string? Oferta_Especial { get; set; }
+        /// <summary>CAMBIO 130: se guardan dentro de «nota» como «Documentación: …» e «Importante: …» (igual que Circuitos).</summary>
+        public string? Documentacion { get; set; }
+        public string? Importante { get; set; }
     }
 
     public class OfertaLoteDto

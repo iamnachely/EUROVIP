@@ -137,5 +137,42 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
         inp.evOrigen = { poner: v => { if (v && !ts.options[v]) ts.addOption({ valor: v, texto: v }); ts.setValue(v || '', true); inp.value = v || ''; inp.dataset.valor = v || ''; } };
     }
 
-    return { campo, validar, proveedores, monedas, simbolo, limpiar, nombreProveedor, origen, ORIGEN };
+    // ---------- Información para el cliente (CAMBIO 130) ----------
+    // Los mismos 6 textos opcionales en todos los productos. EVCodigo.info(valores) → HTML del bloque (se abre solo si tiene algo);
+    // EVCodigo.leerInfo(raiz) → { Incluye, No_Incluye, Condiciones, Documentacion, Importante, Oferta_Especial } para mandar al guardar.
+    const INFO = [
+        ['Incluye', 'Incluye', 'Una cosa por línea. Ej.: Traslado ida y vuelta · Almuerzo buffet'],
+        ['No_Incluye', 'No incluye', 'Una cosa por línea. Ej.: Propinas · Bebidas premium'],
+        ['Condiciones', 'Condiciones', 'Cancelación, cambios, edades, horarios…'],
+        ['Documentacion', 'Documentación', 'Pasaporte, visado, vacunas…'],
+        ['Importante', 'Importante', 'Lo que el cliente tiene que saber sí o sí (qué llevar, punto de encuentro…)'],
+        ['Oferta_Especial', 'Oferta especial', 'Promoción o ventaja de esta oferta']
+    ];
+    let cssInfo = false;
+    function info(v = {}, { titulo = 'Información para el cliente' } = {}) {
+        if (!cssInfo) {
+            cssInfo = true;
+            const s = document.createElement('style');
+            s.textContent = `.ev-info{border:1px solid var(--ev-line,#E2EFED);border-radius:16px;padding:0 14px;margin:12px 0;background:var(--ev-surface,#fff)}
+.ev-info>summary{cursor:pointer;padding:12px 0;font-weight:800;list-style:none;display:flex;gap:8px;align-items:center}
+.ev-info>summary::-webkit-details-marker{display:none}
+.ev-info>summary em{font-style:normal;font-weight:600;color:var(--ev-muted,#66807C);font-size:12.5px}
+.ev-info>summary .n{margin-left:auto;font-size:12px;font-weight:700;color:var(--ev-deep,#0E8F86)}
+.ev-info .g{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 14px;padding:0 0 14px}
+.ev-info label{display:block;font-size:12.5px;font-weight:800;margin-bottom:4px}
+.ev-info textarea{width:100%;min-height:74px;border:1px solid var(--ev-line,#E2EFED);border-radius:12px;padding:8px 10px;font:inherit;font-size:13.5px;background:var(--ev-surface,#fff);color:inherit;resize:vertical}`;
+            document.head.appendChild(s);
+        }
+        const val = k => v?.[k] ?? v?.[k[0].toLowerCase() + k.slice(1)] ?? '';
+        const llenos = INFO.filter(([k]) => String(val(k)).trim()).length;
+        return `<details class="ev-info" data-ev-info data-siempre ${llenos ? 'open' : ''}><summary><i class="bi bi-info-circle"></i> ${esc(titulo)} <em>opcional · se ve en la web</em><span class="n">${llenos ? llenos + ' con texto' : 'vacío'}</span></summary>
+            <div class="g">${INFO.map(([k, t, ph]) => `<div><label>${esc(t)}</label><textarea data-info="${k}" placeholder="${esc(ph)}">${esc(val(k))}</textarea></div>`).join('')}</div></details>`;
+    }
+    function leerInfo(raiz) {
+        const b = raiz?.matches?.('[data-ev-info]') ? raiz : raiz?.querySelector('[data-ev-info]');
+        if (!b) return null;
+        return Object.fromEntries(INFO.map(([k]) => [k, b.querySelector(`[data-info="${k}"]`)?.value.trim() || null]));
+    }
+
+    return { campo, validar, proveedores, monedas, simbolo, limpiar, nombreProveedor, origen, ORIGEN, info, leerInfo };
 })();

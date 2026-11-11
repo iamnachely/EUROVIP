@@ -5640,6 +5640,43 @@ GO
 SELECT 'crucero.id_proveedor' AS revision, CASE WHEN COL_LENGTH('Eurovip.crucero','id_proveedor') > 0 THEN 'ok' ELSE 'FALTA' END AS estado;
 GO
 
+/* ---------- CAMBIO 130: información para el cliente en todos los productos ----------
+   Explicación sencilla: pedido de la usuaria «Incluye, No incluye, Nota, Condiciones, Oferta… en Hoteles, Solo Hotel, Paquetes,
+   Circuitos, Excursiones, Traslados y Cruceros; siempre opcional, pero si se carga se puede editar siempre».
+   Los mismos 6 textos en todos los productos: Incluye · No incluye · Condiciones · Documentación · Importante · Oferta especial.
+     - Solo Hotel, Paquetes y Circuitos YA los tienen en servicio_descripcion (incluye, no_incluye, oferta_especial y, dentro de
+       «nota», las condiciones, «Documentación: …» e «Importante: …»). No cambia nada ahí.
+     - Excursiones (servicio_excursion), Traslados (traslado) y Hoteles de la vitrina (inicio): columnas nuevas.
+     - Cruceros (crucero): ya tenían incluye y no_incluye; se agregan las otras 4.
+   Todas opcionales (NULL). No cambia ningún dato existente. */
+IF COL_LENGTH('Eurovip.servicio_excursion', 'incluye') IS NULL ALTER TABLE Eurovip.servicio_excursion ADD incluye nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.servicio_excursion', 'no_incluye') IS NULL ALTER TABLE Eurovip.servicio_excursion ADD no_incluye nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.servicio_excursion', 'condiciones') IS NULL ALTER TABLE Eurovip.servicio_excursion ADD condiciones nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.servicio_excursion', 'documentacion') IS NULL ALTER TABLE Eurovip.servicio_excursion ADD documentacion nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.servicio_excursion', 'importante') IS NULL ALTER TABLE Eurovip.servicio_excursion ADD importante nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.servicio_excursion', 'oferta_especial') IS NULL ALTER TABLE Eurovip.servicio_excursion ADD oferta_especial nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.traslado', 'incluye') IS NULL ALTER TABLE Eurovip.traslado ADD incluye nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.traslado', 'no_incluye') IS NULL ALTER TABLE Eurovip.traslado ADD no_incluye nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.traslado', 'condiciones') IS NULL ALTER TABLE Eurovip.traslado ADD condiciones nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.traslado', 'documentacion') IS NULL ALTER TABLE Eurovip.traslado ADD documentacion nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.traslado', 'importante') IS NULL ALTER TABLE Eurovip.traslado ADD importante nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.traslado', 'oferta_especial') IS NULL ALTER TABLE Eurovip.traslado ADD oferta_especial nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.inicio', 'incluye') IS NULL ALTER TABLE Eurovip.inicio ADD incluye nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.inicio', 'no_incluye') IS NULL ALTER TABLE Eurovip.inicio ADD no_incluye nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.inicio', 'condiciones') IS NULL ALTER TABLE Eurovip.inicio ADD condiciones nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.inicio', 'documentacion') IS NULL ALTER TABLE Eurovip.inicio ADD documentacion nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.inicio', 'importante') IS NULL ALTER TABLE Eurovip.inicio ADD importante nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.inicio', 'oferta_especial') IS NULL ALTER TABLE Eurovip.inicio ADD oferta_especial nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.crucero', 'condiciones') IS NULL ALTER TABLE Eurovip.crucero ADD condiciones nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.crucero', 'documentacion') IS NULL ALTER TABLE Eurovip.crucero ADD documentacion nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.crucero', 'importante') IS NULL ALTER TABLE Eurovip.crucero ADD importante nvarchar(max) NULL;
+IF COL_LENGTH('Eurovip.crucero', 'oferta_especial') IS NULL ALTER TABLE Eurovip.crucero ADD oferta_especial nvarchar(max) NULL;
+GO
+SELECT TABLE_NAME AS tabla, STRING_AGG(COLUMN_NAME, ', ') AS columnas_info FROM INFORMATION_SCHEMA.COLUMNS
+ WHERE TABLE_SCHEMA = 'Eurovip' AND TABLE_NAME IN ('servicio_excursion', 'traslado', 'inicio', 'crucero')
+   AND COLUMN_NAME IN ('incluye', 'no_incluye', 'condiciones', 'documentacion', 'importante', 'oferta_especial') GROUP BY TABLE_NAME;
+GO
+
 
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
@@ -6187,6 +6224,11 @@ GO
                mira esa columna. 129: columna crucero.id_proveedor (proveedor en cruceros). Ningún dato existente cambió (columnas nuevas
                vacías). Para deshacer: ALTER TABLE ... DROP COLUMN y volver a crear la vista como en el CAMBIO 126.
                Pruebas del Excel con coincidencias (Excursiones, Hoteles, Traslados) solo con «revisar» (guardar = false): no se creó nada.
+   11/11/2026  CAMBIO 130 aplicado SOLO en el 93: columnas incluye, no_incluye, condiciones, documentacion, importante y
+               oferta_especial en servicio_excursion, traslado e inicio; condiciones, documentacion, importante y oferta_especial en
+               crucero. Todas vacías (ningún dato existente cambió). Prueba: excursión «ZZ Prueba Claude Info» (n.º 334) creada con los
+               6 textos, revisada y eliminada; se borró también su copia en registro_eliminado.
+               Para deshacer: ALTER TABLE ... DROP COLUMN de esas columnas (antes, quitar su uso en el BackOffice).
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

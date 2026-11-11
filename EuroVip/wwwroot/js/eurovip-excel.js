@@ -104,7 +104,7 @@ window.EVExcel = (() => {
         document.body.appendChild(fondo);
         const $ = s => fondo.querySelector(`[data-evx="${s}"]`);
         // cambios: { "fila": { "Columna": "valor" } } · omitir: filas que no se cargan · hechas: filas ya guardadas (no se repiten)
-        let archivo = null, guardadoAlguno = false, ultimo = null, filtro = 'todas', cambios = {}, omitir = new Set(), hechas = new Map(), abiertas = new Set(), pendientes = false;
+        let archivo = null, guardadoAlguno = false, ultimo = null, filtro = 'todas', cambios = {}, omitir = new Set(), hechas = new Map(), abiertas = new Set(), pendientes = false, mapa = {};   // mapa: columna del Excel → columna de la plantilla (la elige la usuaria)
         let opcionesHtml = {}, cols = null;   // cols: columnas con sus listas (el servidor las manda solo la primera vez: hay miles de destinos)
 
         const cerrar = () => { fondo.remove(); document.removeEventListener('keydown', tecla); if (guardadoAlguno) o.alTerminar?.(); };
@@ -112,7 +112,7 @@ window.EVExcel = (() => {
         document.addEventListener('keydown', tecla);
         fondo.addEventListener('click', e => { if (e.target === fondo || e.target.closest('[data-evx="cerrar"]')) cerrar(); });
 
-        const extra = guardar => ({ guardar: guardar ? 'true' : 'false', sinListas: cols ? 'true' : 'false', cambios, omitir: [...new Set([...omitir, ...hechas.keys()])] });
+        const extra = guardar => ({ guardar: guardar ? 'true' : 'false', sinListas: cols ? 'true' : 'false', cambios, mapa, omitir: [...new Set([...omitir, ...hechas.keys()])] });
 
         /** Opciones de una columna como HTML (se arma una vez: hay listas de miles). */
         function todas(col) {
@@ -155,6 +155,29 @@ window.EVExcel = (() => {
                     <button type="button" class="evx-btn sm ama" data-revisar><i class="bi bi-arrow-repeat"></i> Revisar de nuevo</button></div></td></tr>`;
         }
 
+        /** «Columnas de tu Excel»: si el Excel no es la plantilla o trae columnas con otro nombre, se pregunta qué es cada una. Nunca falla. */
+        function panelPlantilla(r) {
+            const p = r.plantilla;
+            if (!p || (!p.sinReconocer?.length && !p.faltan?.length)) return '';
+            const nombres = (cols || r.columnas).map(c => c.nombre);
+            const filas = p.sinReconocer.map(s => {
+                if (!s.asignada && mapa[s.clave] === undefined && s.sugerencias.length === 1) { mapa[s.clave] = s.sugerencias[0]; pendientes = true; }   // se propone y se aplica al revisar
+                const elegida = mapa[s.clave] ?? s.asignada ?? (s.sugerencias.length === 1 ? s.sugerencias[0] : null);
+                const sola = s.asignada && mapa[s.clave] === undefined;
+                return `<tr><td><b>«${esc(s.titulo)}»</b>${s.ejemplo ? `<span class="av" style="color:var(--ev-muted,#66807C)">Ej.: ${esc(String(s.ejemplo).slice(0, 60))}</span>` : ''}</td>
+                    <td><select data-mapa="${esc(s.clave)}"><option value="">— No usar esta columna —</option>
+                        ${s.sugerencias.length ? `<optgroup label="Se parece a">${s.sugerencias.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}</optgroup>` : ''}
+                        <optgroup label="Columnas de la plantilla">${nombres.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}</optgroup></select>
+                        ${sola ? '<span class="av"><i class="bi bi-magic"></i> La reconocí sola: cámbiala si no es.</span>' : !elegida ? '<span class="av">Elige qué dato es, o «No usar».</span>' : ''}</td></tr>`
+                    .replace(`<option value="${esc(elegida ?? '')}">`, `<option value="${esc(elegida ?? '')}" selected>`);
+            }).join('');
+            return `<div class="evx-nota ${p.distinta ? 'mal' : 'av'}" style="display:block"><div style="display:flex;gap:10px"><i class="bi ${p.distinta ? 'bi-file-earmark-x' : 'bi-columns-gap'}"></i><div>${esc(p.mensaje || 'Revisa las columnas de tu Excel.')}</div></div>
+                ${filas ? `<table class="evx-tabla" style="margin-top:10px;background:var(--ev-surface,#fff);border-radius:12px"><thead><tr><th>Columna de tu Excel</th><th style="width:55%">¿Qué dato es?</th></tr></thead><tbody>${filas}</tbody></table>` : ''}
+                ${p.faltan?.length ? `<div style="margin-top:10px">Faltan: ${p.faltan.map(n => `<span class="evx-btn sm" style="cursor:default;margin:2px">${esc(n)}</span>`).join('')}</div>` : ''}
+                <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="evx-btn sm ama" data-revisar><i class="bi bi-arrow-repeat"></i> Aplicar columnas y revisar de nuevo</button>
+                    <a class="evx-btn sm" href="${esc(o.plantilla)}"><i class="bi bi-download"></i> Descargar la plantilla correcta</a></div></div>`;
+        }
+
         function pintar(r) {
             if (!cols || r.columnas.some(c => c.opciones?.length)) { cols = r.columnas; opcionesHtml = {}; }
             r.columnas = cols;
@@ -164,7 +187,7 @@ window.EVExcel = (() => {
             const filas = visibles.filter(f => filtro === 'todas' || (filtro === 'mal' ? !f.ok && !omitir.has(f.fila) : filtro === 'av' ? f.avisos.length || f.dudas.length : f.ok));
             const clase = r.guardado ? (r.conError ? 'info' : 'ok') : r.conError ? (r.correctas ? 'info' : 'mal') : 'ok';
             const nAv = visibles.filter(f => f.avisos.length || f.dudas.length).length;
-            $('resultado').innerHTML = `<div class="evx-nota ${clase}"><i class="bi ${clase === 'mal' ? 'bi-x-circle-fill' : clase === 'ok' ? 'bi-check-circle-fill' : 'bi-info-circle-fill'}"></i><div>${esc(r.mensaje)}</div></div>
+            $('resultado').innerHTML = panelPlantilla(r) + `<div class="evx-nota ${clase}"><i class="bi ${clase === 'mal' ? 'bi-x-circle-fill' : clase === 'ok' ? 'bi-check-circle-fill' : 'bi-info-circle-fill'}"></i><div>${esc(r.mensaje)}</div></div>
                 ${pendientes ? '<div class="evx-nota av"><i class="bi bi-pencil-square"></i><div>Tienes cambios sin revisar: pulsa <b>«Revisar de nuevo»</b> para comprobarlos.</div></div>' : ''}
                 <div class="evx-filtro"><button type="button" data-f="todas" class="${filtro === 'todas' ? 'on' : ''}">Todas (${visibles.length})</button>
                     <button type="button" data-f="ok" class="${filtro === 'ok' ? 'on' : ''}">Correctas (${r.correctas})</button>
@@ -188,6 +211,10 @@ window.EVExcel = (() => {
             fondo.querySelectorAll('[data-editar]').forEach(b => b.onclick = () => { const n = +b.dataset.editar; abiertas.has(n) ? abiertas.delete(n) : abiertas.add(n); pintar(ultimo); });
             fondo.querySelectorAll('[data-omitir]').forEach(b => b.onclick = () => { const n = +b.dataset.omitir; omitir.has(n) ? omitir.delete(n) : omitir.add(n); pendientes = true; pintar(ultimo); });
             fondo.querySelectorAll('[data-revisar]').forEach(b => b.onclick = revisar);
+            fondo.querySelectorAll('[data-mapa]').forEach(s => s.addEventListener('change', () => {
+                mapa[s.dataset.mapa] = s.value;   // "" = no usar
+                pendientes = true; const g = $('guardar'); g.disabled = true; $('revisar').classList.add('ama');
+            }));
             fondo.querySelectorAll('.evx-ed [data-col]').forEach(el => el.addEventListener('change', () => cambiar(el)));
             const g = $('guardar'), quedan = r.filas.filter(f => f.ok && !hechas.has(f.fila) && !omitir.has(f.fila)).length;
             g.disabled = !quedan || pendientes;
@@ -237,7 +264,7 @@ window.EVExcel = (() => {
 
         async function leer(f) {
             if (!f) return;
-            archivo = f; filtro = 'todas'; cambios = {}; omitir = new Set(); hechas = new Map(); abiertas = new Set(); pendientes = false;
+            archivo = f; filtro = 'todas'; cambios = {}; omitir = new Set(); hechas = new Map(); abiertas = new Set(); pendientes = false; mapa = {};
             $('guardar').disabled = true;
             $('resultado').innerHTML = `<div class="evx-nota info"><span class="evx-spin"></span><div>Revisando <b>${esc(f.name)}</b> y buscando coincidencias… (todavía no se guarda nada)</div></div>`;
             try {

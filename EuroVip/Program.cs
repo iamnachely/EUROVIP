@@ -94,6 +94,7 @@ var mvc = builder.Services.AddControllersWithViews(o =>
 {
     o.Filters.Add(new AuthorizeFilter(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()));
     o.Filters.Add<EuroVip.Helpers.AccesoModuloFilter>();
+    o.Filters.Add<EuroVip.Helpers.SinErrorFilter>();   // nunca la página de error al guardar/cargar: mensaje claro para corregir
 });
 if (builder.Environment.IsDevelopment())
     mvc.AddRazorRuntimeCompilation();

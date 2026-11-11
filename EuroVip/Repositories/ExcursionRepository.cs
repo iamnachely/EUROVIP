@@ -29,7 +29,8 @@ namespace EuroVip.Repositories
         private readonly ICircuitoRepository _db;
         public ExcursionRepository(ICircuitoRepository db) => _db = db;
 
-        private const string Columnas = "e.id_Excursion, e.id_destino, e.id_tipo_servicio, e.nombre, e.descripcion, e.cancelable, e.precio, e.peso, e.precio_proveedor, e.codigo, e.id_proveedor, e.id_moneda, LTRIM(RTRIM(pr.nombre)) AS Proveedor";
+        private const string Columnas = "e.id_Excursion, e.id_destino, e.id_tipo_servicio, e.nombre, e.descripcion, e.cancelable, e.precio, e.peso, e.precio_proveedor, e.codigo, e.id_proveedor, e.id_moneda, LTRIM(RTRIM(pr.nombre)) AS Proveedor, "
+            + "e.incluye, e.no_incluye, e.condiciones, e.documentacion, e.importante, e.oferta_especial";
         private const string Desde = "Eurovip.servicio_excursion e LEFT JOIN Eurovip.proveedor pr ON pr.id_proveedor = e.id_proveedor";
 
         public async Task<List<Excursion>> ListarAsync()

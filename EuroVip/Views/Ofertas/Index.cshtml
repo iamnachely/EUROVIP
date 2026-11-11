@@ -458,6 +458,16 @@ const OF = (() => {
             const vuelos = o.vuelosDetalle;
             // Punto 7: ahora se edita todo — nombre, código de la carga, moneda, proveedor, origen y los textos de la carga
             const nota = t => o.notas.find(n => n.tipo === t)?.nota1 || '';
+            // CAMBIO 130: en «nota» van las condiciones y los bloques «Documentación: …» e «Importante: …» (como en Circuitos)
+            const np = (() => {
+                const r = { c: [], d: [], i: [] };
+                (nota('Condiciones') || '').replace(/\r\n/g, '\n').split(/\n\n+/).forEach(b => {
+                    if (/^Documentación:/i.test(b)) r.d.push(b.replace(/^Documentación:\s*/i, ''));
+                    else if (/^Importante:/i.test(b)) r.i.push(b.replace(/^Importante:\s*/i, ''));
+                    else if (b.trim()) r.c.push(b.replace(/^Condiciones:\s*/i, ''));
+                });
+                return { c: r.c.join('\n\n'), d: r.d.join('\n\n'), i: r.i.join('\n\n') };
+            })();
             $('#eInfo').innerHTML = `
                 <div class="ui-row">
                     <div class="ui-f"><label for="eNombre">Nombre de la oferta</label><input id="eNombre" maxlength="100" value="${esc(o.nombre || '')}"></div>
@@ -478,7 +488,11 @@ const OF = (() => {
                         <div class="ui-f"><label for="eNoIncluye">No incluye</label><textarea id="eNoIncluye" rows="3">${esc(nota('No incluye'))}</textarea></div>
                     </div>
                     <div class="ui-row">
-                        <div class="ui-f"><label for="eCondiciones">Condiciones / notas</label><textarea id="eCondiciones" rows="3">${esc(nota('Condiciones'))}</textarea></div>
+                        <div class="ui-f"><label for="eCondiciones">Condiciones</label><textarea id="eCondiciones" rows="3">${esc(np.c)}</textarea></div>
+                        <div class="ui-f"><label for="eDocs">Documentación</label><textarea id="eDocs" rows="3" placeholder="Pasaporte, visado, vacunas…">${esc(np.d)}</textarea></div>
+                    </div>
+                    <div class="ui-row">
+                        <div class="ui-f"><label for="eImportante">Importante</label><textarea id="eImportante" rows="3" placeholder="Lo que el cliente tiene que saber sí o sí">${esc(np.i)}</textarea></div>
                         <div class="ui-f"><label for="eOfertaEsp">Oferta especial</label><textarea id="eOfertaEsp" rows="3">${esc(nota('Oferta'))}</textarea></div>
                     </div>
                 </details>
@@ -521,7 +535,7 @@ const OF = (() => {
             // punto 7
             Nombre: $('#eNombre').value.trim() || null, Codigo: $('#eCodigo').value.trim() || null, CodigoInterno: $('#eCodigoInterno').value.trim() || null, Id_Moneda: $('#eMoneda').value || null,
             Id_Proveedor: $('#eProveedor').value || null, CambiarOrigen: true, Id_Pais_Origen: $('#ePaisOrigen').value || null, Origen: $('#eOrigen').value.trim() || null,
-            Textos: { Incluye: $('#eIncluye').value, No_Incluye: $('#eNoIncluye').value, Nota: $('#eCondiciones').value, Oferta_Especial: $('#eOfertaEsp').value }
+            Textos: { Incluye: $('#eIncluye').value, No_Incluye: $('#eNoIncluye').value, Nota: $('#eCondiciones').value, Documentacion: $('#eDocs').value, Importante: $('#eImportante').value, Oferta_Especial: $('#eOfertaEsp').value }
         };
         if (dto.Origen && !dto.Id_Pais_Origen) { EV.toast('Elige el país de origen (o borra la ciudad).', 'err'); return; }
         if (dto.CodigoInterno && dto.CodigoInterno !== (actual.codigo_Interno || '') && !(await EVCodigo.validar($('#eCodigoInterno')))) { EV.toast($('#eCodigoInterno').nextElementSibling?.textContent?.trim() || 'Revisa el código interno.', 'err'); return; }

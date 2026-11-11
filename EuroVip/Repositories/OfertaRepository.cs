@@ -310,7 +310,7 @@ namespace EuroVip.Repositories
                 ELSE IF COALESCE(@inc, @noinc, @nota, @ofe) IS NOT NULL
                     INSERT INTO Eurovip.servicio_descripcion (codigo, id_idioma, nota, incluye, no_incluye, oferta_especial)
                     VALUES (@codigo, 'ES', @nota, @inc, @noinc, @ofe);",
-                new { codigo, inc = N(t.Incluye), noinc = N(t.No_Incluye), nota = N(t.Nota), ofe = N(t.Oferta_Especial) }, tx);
+                new { codigo, inc = N(t.Incluye), noinc = N(t.No_Incluye), nota = EuroVip.Services.InfoCliente.Empacar(t.Nota, t.Documentacion, t.Importante), ofe = N(t.Oferta_Especial) }, tx);
         }
 
         public async Task<int> LoteAsync(OfertaLoteDto d)

@@ -127,8 +127,12 @@
                     <div class="ui-f"><label>No incluye</label><textarea id="nNoIncluye"></textarea></div>
                 </div>
                 <div class="ui-row">
-                    <div class="ui-f"><label>Nota / condiciones</label><textarea id="nNota"></textarea></div>
+                    <div class="ui-f"><label>Condiciones</label><textarea id="nNota"></textarea></div>
                     <div class="ui-f"><label>Oferta</label><textarea id="nOferta"></textarea></div>
+                </div>
+                <div class="ui-row">
+                    <div class="ui-f"><label>Documentación</label><textarea id="nDocs" placeholder="Pasaporte, visado, vacunas…"></textarea></div>
+                    <div class="ui-f"><label>Importante</label><textarea id="nImportante" placeholder="Lo que el cliente tiene que saber sí o sí"></textarea></div>
                 </div>
             </details>
         </div>
@@ -368,7 +372,7 @@ const CL = (() => {
 
     // ================= REVISAR / GUARDAR =================
     function armarDto() {
-        const notas = [['Incluye', '#nIncluye'], ['No incluye', '#nNoIncluye'], ['Condiciones', '#nNota'], ['Oferta', '#nOferta']]
+        const notas = [['Incluye', '#nIncluye'], ['No incluye', '#nNoIncluye'], ['Condiciones', '#nNota'], ['Documentación', '#nDocs'], ['Importante', '#nImportante'], ['Oferta', '#nOferta']]
             .map(([t, id]) => ({ Tipo: t, Texto: $(id).value.trim() })).filter(n => n.Texto);
         return {
             Modo: 'excel', Tipo: TIPO,

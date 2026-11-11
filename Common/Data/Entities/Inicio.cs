@@ -32,6 +32,13 @@ public class Inicio
     public decimal? Precio_Proveedor { get; set; }
     /// <summary>Código interno (FASE 38): letras y números, único entre todos los productos.</summary>
     public string? Codigo { get; set; }
+    // Información para el cliente (CAMBIO 130), opcional
+    public string? Incluye { get; set; }
+    public string? No_Incluye { get; set; }
+    public string? Condiciones { get; set; }
+    public string? Documentacion { get; set; }
+    public string? Importante { get; set; }
+    public string? Oferta_Especial { get; set; }
     /// <summary>Proveedor de donde sale (Eurovip.proveedor, FASE 38).</summary>
     public string? Id_Proveedor { get; set; }
 }

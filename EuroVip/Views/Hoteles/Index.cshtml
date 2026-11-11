@@ -669,6 +669,7 @@
                 <textarea id="Notas" name="Notas" maxlength="1000" placeholder="Solo para el equipo, no se publica."></textarea>
                 <span class="msg"></span>
             </div>
+            <div id="hInfo" style="margin-top:12px"></div>
         </div>
         </div>
     </form>
@@ -1173,6 +1174,7 @@ const HX = (() => {
         frm.reset();
         campo('Id_Servicio').value = '';
         valoresPorDefecto();
+        $('#hInfo').innerHTML = EVCodigo.info({});   // CAMBIO 130
         irPestana('principal');
         prioridad(null);
         limpiarErrores();
@@ -1203,6 +1205,7 @@ const HX = (() => {
             set('Id_Moneda', (h.id_Moneda || '').trim()); set('Noches', h.noches); set('Id_Pais_Origen', (h.id_Pais_Origen || '').trim());
             set('Origen', h.origen); campo('Origen').evOrigen?.poner(h.origen); set('Id_PaisDestino', (h.id_PaisDestino || '').trim()); set('Latitud', h.latitud); set('Longitud', h.longitud);
             set('Posicion_Destino', h.posicion_Destino); set('Notas', h.notas);
+            $('#hInfo').innerHTML = EVCodigo.info(h);   // CAMBIO 130: incluye, no incluye, condiciones…
             prioridad(h);
             codigoProveedor(h);
             campo('Estado').checked = h.estado !== false;
@@ -1246,6 +1249,7 @@ const HX = (() => {
             Latitud: v('Latitud') || null, Longitud: v('Longitud') || null,
             Id_Contenedor: num('Id_Contenedor'), Posicion_Destino: num('Posicion_Destino'),
             Estado: campo('Estado').checked, Notas: v('Notas') || null,
+            Info: EVCodigo.leerInfo($('#hInfo')),
             Codigo: v('Codigo') || null, Id_Proveedor: v('Id_Proveedor') || null,
             ...EVPrioridad.leer($('#edPrio'))
         };

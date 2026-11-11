@@ -738,11 +738,13 @@
                     <span style="display:inline-flex;gap:6px"><input id="edCatNueva" maxlength="100" placeholder="Nueva categoría…" style="width:190px"><button type="button" class="ev-btn ghost sm" data-cat-agregar><i class="bi bi-plus-lg"></i> Agregar</button></span>
                 </div>
             </div>
-            <details class="cz-blq cz-mas" ${C.descripcion || C.subtitulo || C.codigo || C.incluye || C.no_Incluye ? 'open' : ''}><summary><i class="bi bi-text-paragraph"></i> Más textos ${opc} <i class="bi bi-chevron-down"></i></summary><div>
+            <details class="cz-blq cz-mas" ${C.descripcion || C.subtitulo || C.codigo || C.incluye || C.no_Incluye || C.condiciones || C.documentacion || C.importante || C.oferta_Especial ? 'open' : ''}><summary><i class="bi bi-text-paragraph"></i> Más textos ${opc} <i class="bi bi-chevron-down"></i></summary><div>
                 <div class="ui-row"><div class="ui-f"><label>Subtítulo <em>si lo dejas vacío: «Saliendo el {fecha} para {noches} noches a bordo del {barco}»</em></label>${inp('subtitulo', 'maxlength="300"')}</div>
                     <div class="ui-f"><label>Código / ID del proveedor</label>${inp('codigo', 'maxlength="50" placeholder="Ej. 2256635"')}</div></div>
                 <div class="ui-f"><label>Descripción</label>${txt('descripcion', 'rows="4"')}</div>
                 <div class="ui-row"><div class="ui-f"><label>Incluye</label>${txt('incluye', 'rows="3"')}</div><div class="ui-f"><label>No incluye</label>${txt('no_Incluye', 'rows="3"')}</div></div>
+                <div class="ui-row"><div class="ui-f"><label>Condiciones</label>${txt('condiciones', 'rows="3" placeholder="Cancelación, cambios, edades…"')}</div><div class="ui-f"><label>Documentación</label>${txt('documentacion', 'rows="3" placeholder="Pasaporte, visado, vacunas…"')}</div></div>
+                <div class="ui-row"><div class="ui-f"><label>Importante</label>${txt('importante', 'rows="3" placeholder="Lo que el cliente tiene que saber sí o sí"')}</div><div class="ui-f"><label>Oferta especial</label>${txt('oferta_Especial', 'rows="3" placeholder="Promoción o ventaja"')}</div></div>
             </div></details>
             <div class="cz-blq"><h3><i class="bi bi-star-fill" style="color:#F5A623"></i> Prioridad y precio del proveedor <small>los dos opcionales</small></h3><div id="edPrio"></div></div>
             <div class="cz-blq" id="edPdfs"></div>`;

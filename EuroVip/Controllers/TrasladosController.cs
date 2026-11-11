@@ -78,6 +78,7 @@ namespace EuroVip.Controllers
                 var antes = dto.Id_Traslado is int idAntes ? await _repo.ObtenerAsync(idAntes) : null;
                 if (dto.Id_Traslado is not null && antes is null) return NotFound(new { mensaje = "Ese traslado ya no existe. Recarga la página." });
                 var id = await _repo.GuardarAsync(dto, User.Identity?.Name ?? "desconocido");
+                using (var cnInfo = _aud.Conexion()) await InfoCliente.GuardarAsync(cnInfo, "Eurovip.traslado", id, dto.Info);   // CAMBIO 130
                 await PorDefectoAsync(TipoMm, id, dto.Id_Destino, !string.IsNullOrWhiteSpace(antes?.Archivo) && _img.BuscarArchivo("traslados", antes!.Archivo!) is not null);
                 await Auditar(antes is null ? "Traslado_Crear" : "Traslado_Editar", id, new { antes, despues = dto });
                 return Json(new { ok = true, id, traslado = ConImagen((await _repo.ObtenerAsync(id))!, await _mm.PortadasAsync(TipoMm)), mensaje = antes is null ? $"¡Listo! Se creó «{dto.Nombre}»." : "Cambios guardados." });
@@ -135,11 +136,11 @@ namespace EuroVip.Controllers
         }
 
         // ================= CARGAR EXCEL (muchos traslados de una vez) =================
-        private static readonly string[] Columnas =
+        private static readonly string[] Columnas = new[]
         {
             "Nombre", "Tipo", "Categoría", "Vehículo", "Aeropuerto", "Destino", "Maletas", "Duración (min)", "Pasajeros mín", "Pasajeros máx",
             "Cobro", "Moneda", "Precio ida y vuelta", "Precio solo ida", "Cancelable", "Horas cancelación", "Código interno", "Proveedor", "Descripción", "Activo", "Prioridad", "Precio proveedor"
-        };
+        }.Concat(CargaExcel.NombresInfo).ToArray();
 
         /// <summary>Columnas del Excel con sus listas (lo que hay en la base AHORA): para la plantilla, las coincidencias y el editor de filas.</summary>
         private async Task<List<CargaExcelColumna>> ColumnasExcelAsync()
@@ -153,14 +154,14 @@ namespace EuroVip.Controllers
             var monedas = await CatalogoCargas.MonedasAsync(cn);
             var proveedores = await CatalogoCargas.ProveedoresAsync(cn);
             CargaExcelColumna Num(string n, string campo, params string[] alias) => new() { Nombre = n, Alias = alias, Campo = campo, Tipo = "numero" };
-            return new()
+            return new List<CargaExcelColumna>
             {
-                new() { Nombre = "Nombre", Alias = new[] { "Traslado" }, Campo = "Nombre" },
-                new() { Nombre = "Tipo", Campo = "Tipo", Opciones = CargaExcel.DeDiccionario(TrasladoValores.Tipos) },
+                new() { Nombre = "Nombre", Alias = new[] { "Traslado" }, Campo = "Nombre", Obligatoria = true },
+                new() { Nombre = "Tipo", Campo = "Tipo", Obligatoria = true, Opciones = CargaExcel.DeDiccionario(TrasladoValores.Tipos) },
                 new() { Nombre = "Categoría", Alias = new[] { "Categoria" }, Campo = "Categoria", Opciones = CargaExcel.DeDiccionario(TrasladoValores.Categorias) },
                 new() { Nombre = "Vehículo", Alias = new[] { "Vehiculo" }, Campo = "Vehiculo", Opciones = CargaExcel.DeDiccionario(TrasladoValores.Vehiculos) },
-                new() { Nombre = "Aeropuerto", Alias = new[] { "Aeropuerto de salida", "Desde" }, Campo = "Id_Estacion_Origen", Opciones = aeropuertos },
-                new() { Nombre = "Destino", Alias = new[] { "Hasta" }, Campo = "Id_Destino", Opciones = destinos },
+                new() { Nombre = "Aeropuerto", Alias = new[] { "Aeropuerto de salida", "Desde" }, Campo = "Id_Estacion_Origen", Opciones = aeropuertos, Obligatoria = true },
+                new() { Nombre = "Destino", Alias = new[] { "Hasta" }, Campo = "Id_Destino", Opciones = destinos, Obligatoria = true },
                 Num("Maletas", "Maletas"), Num("Duración (min)", "Duracion_Min", "Duración", "Minutos"),
                 Num("Pasajeros mín", "Pasajeros_Min", "Pasajeros minimo"), Num("Pasajeros máx", "Pasajeros_Max", "Pasajeros maximo"),
                 new() { Nombre = "Cobro", Campo = "Cobro", Opciones = CargaExcel.DeDiccionario(TrasladoValores.Cobros) },
@@ -172,7 +173,7 @@ namespace EuroVip.Controllers
                 new() { Nombre = "Descripción", Alias = new[] { "Descripcion" }, Campo = "Descripcion", Tipo = "largo" },
                 CargaExcel.ColumnaSiNo("Activo"),
                 Num("Prioridad", "Peso", "Peso"), Num("Precio proveedor", "Precio_Proveedor", "Precio del proveedor"),
-            };
+            }.Concat(CargaExcel.ColumnasInfo()).ToList();   // + Incluye … Oferta especial (opcionales)
         }
 
         /// <summary>Plantilla: hoja «Traslados» (una fila por traslado) y hoja «Instrucciones» con los valores válidos.</summary>
@@ -217,6 +218,7 @@ namespace EuroVip.Controllers
                 new object?[] { "Horas cancelación", "Hasta cuántas horas antes se puede cancelar (opcional).", null },
                 new object?[] { "Prioridad", "Opcional. 1 sale primero en la web, 2 segundo… Vacío = se ordena por precio.", null },
                 new object?[] { "Precio proveedor", "Opcional. Precio del proveedor en su web (nuestro precio no cambia).", null },
+                CargaExcel.AyudaInfo(3),
                 new object?[] { "", "", null },
                 new object?[] { "Aeropuertos válidos", "Nombre", "Destino" },
             }.Concat(aeropuertos.Select(a => new object?[] { a.Codigo, a.Nombre, a.Destino }))
@@ -228,11 +230,12 @@ namespace EuroVip.Controllers
         /// <summary>Cargar Excel: con guardar = false solo revisa; con guardar = true crea los traslados de las filas correctas.</summary>
         [HttpPost, ValidateAntiForgeryToken]
         [RequestSizeLimit(CargaExcel.MaxBytes + 100_000)]
-        public async Task<IActionResult> CargarExcel(IFormFile? archivo, bool guardar, string? cambios, string? omitir, bool descargar = false, bool sinListas = false)
+        public async Task<IActionResult> CargarExcel(IFormFile? archivo, bool guardar, string? cambios, string? omitir, bool descargar = false, bool sinListas = false, string? mapa = null)
         {
             var (filas, error) = await CargaExcel.LeerAsync(archivo, cambios, omitir);
             if (error is not null) return BadRequest(new { mensaje = error });
             var columnas = await ColumnasExcelAsync();
+            var plantilla = CargaExcel.Encabezados(filas!, columnas, mapa);   // columnas con otro nombre o plantilla distinta: se pregunta, no falla
             var ayuda = CargaExcel.Ayudar(filas!, columnas);
             if (descargar) return File(CargaExcel.Corregido("Traslados", filas!, columnas), CargaExcel.TipoXlsx, "Eurovip-traslados-corregido.xlsx");
             var r = new CargaExcelResultado { Guardado = guardar };
@@ -257,7 +260,8 @@ namespace EuroVip.Controllers
                     Precio_Ida_Vuelta = f.Cifra("Precio ida y vuelta"), Precio_Ida = f.Cifra("Precio solo ida", "Precio ida"),
                     Cancelable = f.SiNo(true, "Cancelable"), Horas_Cancelacion = f.Cifra("Horas cancelación", "Horas cancelacion") is decimal h ? (short)Math.Round(h) : null,
                     Descripcion = f.Texto("Descripción", "Descripcion"), Activo = f.SiNo(true, "Activo"), Todos_Hoteles = true,
-                    Peso = f.Cifra("Prioridad", "Peso") is decimal pe ? (short)Math.Round(pe) : null, Precio_Proveedor = f.Cifra("Precio proveedor", "Precio del proveedor")
+                    Peso = f.Cifra("Prioridad", "Peso") is decimal pe ? (short)Math.Round(pe) : null, Precio_Proveedor = f.Cifra("Precio proveedor", "Precio del proveedor"),
+                    Info = CargaExcel.InfoDeFila(f)
                 };
                 var fila = new CargaExcelFila { Fila = f.Numero, Nombre = dto.Nombre, Detalle = $"{dto.Id_Estacion_Origen} → {dto.Id_Destino} · {f.Texto("Tipo")} · {f.Texto("Vehículo")}" };
                 r.Filas.Add(fila);
@@ -273,13 +277,14 @@ namespace EuroVip.Controllers
                 try
                 {
                     fila.Id = await _repo.GuardarAsync(dto, User.Identity?.Name ?? "desconocido");
+                    if (dto.Info is { Vacia: false }) using (var cnInfo = _aud.Conexion()) await InfoCliente.GuardarAsync(cnInfo, "Eurovip.traslado", fila.Id.Value, dto.Info);
                     await PorDefectoAsync(TipoMm, fila.Id.Value, dto.Id_Destino, false);
                     r.Guardadas++;
                     await Auditar("Traslado_Crear", fila.Id.Value, new { dto, excel = archivo!.FileName, fila = f.Numero });
                 }
                 catch (Exception ex) { fila.Ok = false; fila.Mensaje = "No se pudo guardar: " + ex.Message; _logger.LogError(ex, "Cargar Excel: traslado fila {Fila}", f.Numero); }
             }
-            CargaExcel.Completar(r, filas!, columnas, ayuda, sinListas);
+            CargaExcel.Completar(r, filas!, columnas, ayuda, sinListas, plantilla);
             r.Mensaje = CargaExcel.Mensaje(r, "traslado", "traslados");
             return Json(r);
         }
@@ -296,10 +301,12 @@ namespace EuroVip.Controllers
                 Cobro = t.Cobro, Precio_Ida = t.Precio_Ida, Precio_Ida_Vuelta = t.Precio_Ida_Vuelta, Cancelable = t.Cancelable, Horas_Cancelacion = t.Horas_Cancelacion,
                 Descripcion = t.Descripcion, Todos_Hoteles = t.Todos_Hoteles, Hoteles = t.Hoteles.Select(h => int.Parse(h.Valor)).ToList(),
                 Id_Moneda = t.Id_Moneda, Id_Proveedor = t.Id_Proveedor, Precio_Proveedor = t.Precio_Proveedor,   // el código no se copia: es único
+                Info = new InfoClienteDto { Incluye = t.Incluye, No_Incluye = t.No_Incluye, Condiciones = t.Condiciones, Documentacion = t.Documentacion, Importante = t.Importante, Oferta_Especial = t.Oferta_Especial },
                 Activo = false // la copia empieza desactivada para que no salga dos veces en la web
             };
             for (var i = 2; await _repo.RepetidoAsync(dto) is not null; i++) dto.Nombre = $"{t.Nombre} (copia {i})";
             var nuevo = await _repo.GuardarAsync(dto, User.Identity?.Name ?? "desconocido");
+            using (var cnInfo = _aud.Conexion()) await InfoCliente.GuardarAsync(cnInfo, "Eurovip.traslado", nuevo, dto.Info);
             await PorDefectoAsync(TipoMm, nuevo, dto.Id_Destino, false);
             await Auditar("Traslado_Duplicar", nuevo, new { de = id, dto.Nombre });
             return Json(new { ok = true, id = nuevo, mensaje = $"Se duplicó como «{dto.Nombre}» (desactivado). Cámbiale lo que haga falta y actívalo." });

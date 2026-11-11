@@ -29,6 +29,8 @@ namespace EuroVip.Services
         {
             public int Numero { get; init; }
             public Dictionary<string, string> Valores { get; } = new();
+            /// <summary>Títulos de las columnas tal como están en el Excel (clave normalizada → texto original). El mismo para todas las filas.</summary>
+            public IReadOnlyDictionary<string, string> Encabezados { get; init; } = new Dictionary<string, string>();
             /// <summary>Valor de la primera columna que exista de las dadas (por si escriben «Aeropuerto» o «Aeropuerto de salida»); null si está vacío.</summary>
             public string? Texto(params string[] columnas)
             {
@@ -221,6 +223,7 @@ namespace EuroVip.Services
 
             var filas = new List<Fila>();
             Dictionary<int, string>? encabezados = null;
+            var titulos = new Dictionary<string, string>();
             foreach (var row in ws.Worksheet.Descendants<Row>())
             {
                 var valores = row.Elements<Cell>().Select(c => (Col: Columna(c.CellReference), Val: Valor(c)?.Trim())).Where(x => !string.IsNullOrEmpty(x.Val)).ToList();
@@ -229,9 +232,11 @@ namespace EuroVip.Services
                 {
                     // Un título arriba («Hoteles de diciembre») tiene una sola celda: se salta y se busca la fila de los nombres de columna
                     if (valores.Count < 2) continue;
-                    encabezados = valores.ToDictionary(x => x.Col, x => Clave(x.Val)); continue;
+                    encabezados = valores.ToDictionary(x => x.Col, x => Clave(x.Val));
+                    foreach (var (_, val) in valores) if (Clave(val) is { Length: > 0 } k) titulos.TryAdd(k, val!);
+                    continue;
                 }
-                var f = new Fila { Numero = (int)(row.RowIndex?.Value ?? 0) };
+                var f = new Fila { Numero = (int)(row.RowIndex?.Value ?? 0), Encabezados = titulos };
                 foreach (var (col, val) in valores)
                     if (encabezados.TryGetValue(col, out var k) && k != "") f.Valores[k] = val!;
                 if (f.Valores.Count > 0) filas.Add(f);

@@ -65,7 +65,8 @@ namespace EuroVip.Services
             var iguales = opciones.Where(o => Igual(escrito, o)).ToList();
             if (iguales.Count >= 1 && iguales.Select(o => o.Valor).Distinct().Count() == 1) return (iguales[0], new());
             if (iguales.Count > 1) return (null, iguales.Take(12).ToList());
-            var lista = Buscar(escrito, opciones);
+            // Varias opciones con el mismo valor (p. ej. una columna y sus otros nombres) cuentan como una sola: la de más puntos
+            var lista = Buscar(escrito, opciones, 40).GroupBy(x => x.Opcion.Valor).Select(g => g.First()).Take(12).ToList();
             if (lista.Count == 0) return (null, new());
             // Un solo parecido, o uno muy claro por encima del resto → se elige solo (y se avisa para que lo revise)
             var segundo = lista.Count > 1 ? lista[1].Puntos : 0;

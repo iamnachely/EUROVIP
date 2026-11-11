@@ -255,6 +255,7 @@
             </div>
             <div class="ui-f"><label for="edDesc">Descripción <em>se ve en la web: punto de encuentro, qué incluye…</em></label>
                 <textarea id="edDesc" rows="4" placeholder="Ej. Un representante le espera a la salida de la terminal con un cartel. Incluye asistencia en español."></textarea></div>
+                <div id="edInfo"></div>
             <div class="ui-f"><label class="ui-switch"><input type="checkbox" id="edActivo" checked><span class="tr"></span> Activo (sale en la web)</label></div>
         </section>
 
@@ -495,7 +496,7 @@
             Cobro: segVal('#edCobro'), Precio_Ida_Vuelta: num('#edPrecioIV'), Precio_Ida: num('#edPrecioI'),
             Id_Moneda: $('#edMoneda').value || 'DOP', Codigo: $('#edCodigo').value.trim() || null, Id_Proveedor: $('#edProveedor').value || null,
             Cancelable: $('#edCancelable').checked, Horas_Cancelacion: $('#edCancelable').checked ? num('#edHoras') : null,
-            Descripcion: $('#edDesc').value.trim() || null, Todos_Hoteles: $('#edTodos').checked, Hoteles: hoteles.map(h => +h.valor), Activo: $('#edActivo').checked,
+            Descripcion: $('#edDesc').value.trim() || null, Info: EVCodigo.leerInfo($('#edInfo')), Todos_Hoteles: $('#edTodos').checked, Hoteles: hoteles.map(h => +h.valor), Activo: $('#edActivo').checked,
             ...EVPrioridad.leer($('#trEditor'))
         };
     }
@@ -543,6 +544,7 @@
         EVPrioridad.vivo($('#edPrio'), () => $('#edPrecioIV').value || $('#edPrecioI').value);
         $('#edHoras').value = t?.horas_Cancelacion ?? '';
         $('#edDesc').value = t?.descripcion || '';
+        $('#edInfo').innerHTML = EVCodigo.info(t || {});   // CAMBIO 130
         $('#edActivo').checked = t ? t.activo : true;
         $('#edTodos').checked = t ? t.todos_Hoteles : true;
         hoteles = (t?.hoteles || []).map(h => ({ valor: h.valor, texto: h.texto }));

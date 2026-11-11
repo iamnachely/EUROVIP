@@ -39,7 +39,8 @@ namespace EuroVip.Repositories
             t.precio_ida AS Precio_Ida, t.precio_ida_vuelta AS Precio_Ida_Vuelta, t.id_moneda AS Id_Moneda, t.codigo AS Codigo, t.id_proveedor AS Id_Proveedor,
             (SELECT LTRIM(RTRIM(pr.nombre)) FROM Eurovip.proveedor pr WHERE pr.id_proveedor = t.id_proveedor) AS Proveedor,
             t.cancelable AS Cancelable, t.horas_cancelacion AS Horas_Cancelacion, t.descripcion AS Descripcion, t.imagen AS Archivo,
-            t.todos_hoteles AS Todos_Hoteles, t.activo AS Activo, t.peso AS Peso, t.precio_proveedor AS Precio_Proveedor, t.usuario AS Usuario, t.fecha_alta AS Fecha_Alta, t.fecha_modificacion AS Fecha_Modificacion";
+            t.todos_hoteles AS Todos_Hoteles, t.activo AS Activo, t.peso AS Peso, t.precio_proveedor AS Precio_Proveedor, t.usuario AS Usuario, t.fecha_alta AS Fecha_Alta, t.fecha_modificacion AS Fecha_Modificacion,
+            t.incluye AS Incluye, t.no_incluye AS No_Incluye, t.condiciones AS Condiciones, t.documentacion AS Documentacion, t.importante AS Importante, t.oferta_especial AS Oferta_Especial";
 
         private const string SelHoteles = @"
             SELECT ta.id_traslado AS Id, CAST(ta.id_alojamiento AS varchar(20)) AS Valor, ISNULL(LTRIM(RTRIM(a.nombre)), 'Hotel ' + CAST(ta.id_alojamiento AS varchar(20))) AS Texto,

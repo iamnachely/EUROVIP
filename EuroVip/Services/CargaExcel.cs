@@ -36,6 +36,8 @@ namespace EuroVip.Services
         [System.Text.Json.Serialization.JsonIgnore] public string? Campo { get; init; }
         /// <summary>Tipo de dato para el editor: texto, numero, largo.</summary>
         public string Tipo { get; init; } = "texto";
+        /// <summary>La plantilla la necesita (si el Excel no trae esa columna se avisa y se puede asignar o escribir fila por fila).</summary>
+        public bool Obligatoria { get; init; }
         /// <summary>Atajos que se entienden antes de buscar (RD$ → DOP, x → Sí). Devuelve el texto tal cual si no es un atajo.</summary>
         [System.Text.Json.Serialization.JsonIgnore] public Func<string, string>? Traducir { get; init; }
         [System.Text.Json.Serialization.JsonIgnore] public string[] Nombres => new[] { Nombre }.Concat(Alias).ToArray();
@@ -55,6 +57,26 @@ namespace EuroVip.Services
         /// <summary>Datos que se reconocieron por parecido (para avisar que se revisen).</summary>
         public int Arreglados => Filas.Sum(f => f.Avisos.Count);
         public int Dudas => Filas.Sum(f => f.Dudas.Count);
+        /// <summary>Cómo se entendieron las columnas del Excel (plantilla distinta, columnas con otro nombre, columnas que faltan).</summary>
+        public CargaExcelPlantilla? Plantilla { get; set; }
+    }
+
+    /// <summary>Una columna del Excel que no es de la plantilla: su título y a qué columna de la plantilla se parece.</summary>
+    public sealed record CargaExcelEncabezado(string Clave, string Titulo, string? Asignada, List<string> Sugerencias, string? Ejemplo);
+
+    /// <summary>
+    /// Pedido de la usuaria: «si se carga una plantilla diferente, habla con el usuario, indícale; nunca dar error».
+    /// Columnas del Excel que no se reconocieron (para que la usuaria diga cuál es cuál), las que se reconocieron por
+    /// parecido y las de la plantilla que faltan.
+    /// </summary>
+    public sealed class CargaExcelPlantilla
+    {
+        public List<CargaExcelEncabezado> SinReconocer { get; set; } = new();
+        public List<string> Reconocidas { get; set; } = new();
+        public List<string> Faltan { get; set; } = new();
+        /// <summary>Ninguna columna se parece a la plantilla: probablemente es otro Excel.</summary>
+        public bool Distinta { get; set; }
+        public string? Mensaje { get; set; }
     }
 
     /// <summary>
@@ -114,6 +136,68 @@ namespace EuroVip.Services
         }
 
         /// <summary>
+        /// Paso 0: entender las columnas del Excel aunque no sea la plantilla.
+        ///   • «mapa» (de la pantalla): { claveColumnaExcel: "Nombre de la plantilla" | "" (no usar) } → se renombran.
+        ///   • Columnas con otro nombre («Precio x persona», «Hotel Nombre») → se busca a qué columna de la plantilla se parece;
+        ///     si es clara, se usa sola y se avisa; si no, queda en SinReconocer con sugerencias para que la usuaria elija.
+        ///   • Columnas obligatorias que no están → Faltan (se puede asignar otra columna o escribir el dato fila por fila).
+        /// Nunca falla: si el Excel es otro, lo dice y deja asignar las columnas.
+        /// </summary>
+        public static CargaExcelPlantilla Encabezados(List<ExcelTabla.Fila> filas, IReadOnlyList<CargaExcelColumna> columnas, string? mapaJson)
+        {
+            var p = new CargaExcelPlantilla();
+            var titulos = filas.FirstOrDefault()?.Encabezados ?? new Dictionary<string, string>();
+            var conocidas = columnas.SelectMany(c => c.Nombres.Select(n => (Clave: ExcelTabla.Clave(n), Col: c))).GroupBy(x => x.Clave).ToDictionary(g => g.Key, g => g.First().Col);
+            Dictionary<string, string>? mapa = null;
+            try { if (!string.IsNullOrWhiteSpace(mapaJson)) mapa = JsonSerializer.Deserialize<Dictionary<string, string>>(mapaJson); } catch (JsonException) { }
+
+            void Renombrar(string de, string? a)
+            {
+                foreach (var f in filas)
+                {
+                    if (!f.Valores.Remove(de, out var v)) continue;
+                    if (a is not null && ExcelTabla.Clave(a) is { Length: > 0 } k && !f.Valores.ContainsKey(k)) f.Valores[k] = v;
+                }
+            }
+
+            // Opciones para comparar títulos: el nombre de cada columna y sus otros nombres
+            var opciones = columnas.SelectMany(c => c.Nombres.Select(n => new CargaExcelOpcion(c.Nombre, n))).ToList();
+            var usadas = new HashSet<string>(titulos.Keys.Where(conocidas.ContainsKey).Select(k => conocidas[k].Nombre));
+            foreach (var (clave, titulo) in titulos)
+            {
+                if (conocidas.ContainsKey(clave)) continue;
+                var ejemplo = filas.Select(f => f.Valores.GetValueOrDefault(clave)).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+                if (mapa is not null && mapa.TryGetValue(clave, out var elegida))
+                {
+                    var col = columnas.FirstOrDefault(c => c.Nombre == elegida);
+                    Renombrar(clave, col?.Nombre);
+                    if (col is not null) { usadas.Add(col.Nombre); p.Reconocidas.Add($"«{titulo}» → {col.Nombre}"); }
+                    p.SinReconocer.Add(new CargaExcelEncabezado(clave, titulo, col?.Nombre ?? "", new(), ejemplo));
+                    continue;
+                }
+                var (sola, sug) = Coincidencias.Elegir(titulo, opciones.Where(o => !usadas.Contains(o.Valor)).ToList());
+                if (sola is not null)
+                {
+                    Renombrar(clave, sola.Valor); usadas.Add(sola.Valor);
+                    p.Reconocidas.Add($"«{titulo}» → {sola.Valor}");
+                    p.SinReconocer.Add(new CargaExcelEncabezado(clave, titulo, sola.Valor, new(), ejemplo));
+                }
+                else p.SinReconocer.Add(new CargaExcelEncabezado(clave, titulo, null, sug.Select(s => s.Valor).Distinct().ToList(), ejemplo));
+            }
+            p.Faltan = columnas.Where(c => c.Obligatoria && !usadas.Contains(c.Nombre)).Select(c => c.Nombre).ToList();
+            var obligatorias = columnas.Count(c => c.Obligatoria);
+            p.Distinta = usadas.Count == 0 || (obligatorias > 0 && p.Faltan.Count == obligatorias);
+            var porAsignar = p.SinReconocer.Count(s => s.Asignada is null);
+            p.Mensaje = p.Distinta
+                ? $"Este Excel no parece la plantilla: sus columnas ({string.Join(", ", titulos.Values.Take(8))}{(titulos.Count > 8 ? "…" : "")}) no son las que espero. Dime abajo qué es cada columna, o descarga la plantilla y copia ahí tus datos."
+                : porAsignar > 0 || p.Faltan.Count > 0
+                    ? (porAsignar > 0 ? $"Hay {porAsignar} columna(s) que no reconozco: dime abajo qué es cada una (o «No usar»). " : "")
+                      + (p.Faltan.Count > 0 ? $"Faltan columnas de la plantilla: {string.Join(", ", p.Faltan)}. Si están con otro nombre, asígnalas abajo; si no, escribe ese dato en cada fila con «Corregir»." : "")
+                    : null;
+            return p;
+        }
+
+        /// <summary>
         /// Paso 1 de la ayuda: para cada fila y cada columna de lista, deja el valor tal cual está en Eurovip si lo reconoce
         /// (igual o un solo parecido claro) y si no, apunta la duda con las coincidencias. Devuelve la info por número de fila.
         /// </summary>
@@ -159,8 +243,9 @@ namespace EuroVip.Services
         /// Paso final: pasa a cada fila del resultado sus valores (para verlos y editarlos), sus dudas y avisos, y la columna
         /// del error. Si una fila tiene dudas, el mensaje dice qué elegir en vez del error técnico.
         /// </summary>
-        public static void Completar(CargaExcelResultado r, List<ExcelTabla.Fila> filas, IReadOnlyList<CargaExcelColumna> columnas, Dictionary<int, CargaExcelFila> ayuda, bool sinListas = false)
+        public static void Completar(CargaExcelResultado r, List<ExcelTabla.Fila> filas, IReadOnlyList<CargaExcelColumna> columnas, Dictionary<int, CargaExcelFila> ayuda, bool sinListas = false, CargaExcelPlantilla? plantilla = null)
         {
+            r.Plantilla = plantilla;
             // Las listas (miles de destinos) se mandan solo la primera vez: la pantalla las guarda
             r.Columnas = sinListas ? columnas.Select(c => new CargaExcelColumna { Nombre = c.Nombre, Tipo = c.Tipo }).ToList() : columnas.ToList();
             var porNumero = filas.ToDictionary(f => f.Numero);
@@ -201,6 +286,28 @@ namespace EuroVip.Services
         /// <summary>Listas desplegables de la plantilla a partir de las columnas de lista (con lo que hay en la base al descargarla).</summary>
         public static Dictionary<string, IReadOnlyList<string>> Listas(IEnumerable<CargaExcelColumna> columnas) =>
             columnas.Where(c => c.Opciones is { Count: > 0 }).ToDictionary(c => c.Nombre, c => (IReadOnlyList<string>)c.Opciones!.Select(o => o.Valor).Distinct().ToList());
+
+        /// <summary>Las 6 columnas opcionales de información para el cliente (CAMBIO 130), al final de las plantillas.</summary>
+        public static readonly string[] NombresInfo = { "Incluye", "No incluye", "Condiciones", "Documentación", "Importante", "Oferta especial" };
+
+        public static IEnumerable<CargaExcelColumna> ColumnasInfo() => new CargaExcelColumna[]
+        {
+            new() { Nombre = "Incluye", Tipo = "largo" }, new() { Nombre = "No incluye", Tipo = "largo" },
+            new() { Nombre = "Condiciones", Tipo = "largo" }, new() { Nombre = "Documentación", Alias = new[] { "Documentacion" }, Tipo = "largo" },
+            new() { Nombre = "Importante", Tipo = "largo" }, new() { Nombre = "Oferta especial", Alias = new[] { "Oferta" }, Tipo = "largo" },
+        };
+
+        /// <summary>La información para el cliente de una fila del Excel (columnas vacías = sin texto).</summary>
+        public static InfoClienteDto InfoDeFila(ExcelTabla.Fila f) => new()
+        {
+            Incluye = f.Texto("Incluye"), No_Incluye = f.Texto("No incluye"), Condiciones = f.Texto("Condiciones"),
+            Documentacion = f.Texto("Documentación", "Documentacion"), Importante = f.Texto("Importante"), Oferta_Especial = f.Texto("Oferta especial", "Oferta")
+        };
+
+        /// <summary>Fila de la hoja Instrucciones que explica las columnas de información.</summary>
+        public static object?[] AyudaInfo(int columnas) =>
+            new object?[] { "Incluye … Oferta especial", "Opcionales. Información para el cliente que se ve en la web (Incluye y No incluye: una cosa por línea)." }
+                .Concat(Enumerable.Repeat<object?>(null, Math.Max(0, columnas - 2))).ToArray();
 
         /// <summary>Opciones Sí / No.</summary>
         public static List<CargaExcelOpcion> SiNo() => new() { new("Sí", "Sí"), new("No", "No") };

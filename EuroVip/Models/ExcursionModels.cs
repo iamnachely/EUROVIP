@@ -27,6 +27,13 @@ namespace EuroVip.Models
         /// <summary>Moneda del precio (FASE 38), DOP por defecto.</summary>
         public string Id_Moneda { get; set; } = "DOP";
         public string? Proveedor { get; set; }
+        // Información para el cliente (CAMBIO 130), opcional
+        public string? Incluye { get; set; }
+        public string? No_Incluye { get; set; }
+        public string? Condiciones { get; set; }
+        public string? Documentacion { get; set; }
+        public string? Importante { get; set; }
+        public string? Oferta_Especial { get; set; }
     }
 
     /// <summary>Un destino con excursiones: la cabecera de su sección en la pantalla.</summary>
@@ -71,5 +78,7 @@ namespace EuroVip.Models
         public string? Id_Proveedor { get; set; }
         /// <summary>Moneda del precio (FASE 38), DOP por defecto.</summary>
         [Required(ErrorMessage = "Elige la moneda")] public string Id_Moneda { get; set; } = "DOP";
+        /// <summary>Información para el cliente (CAMBIO 130): Incluye, No incluye, Condiciones, Documentación, Importante, Oferta. null = no se toca.</summary>
+        public EuroVip.Services.InfoClienteDto? Info { get; set; }
     }
 }
