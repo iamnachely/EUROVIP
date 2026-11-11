@@ -204,8 +204,8 @@ namespace EuroVip.Controllers
             var seccion = conts.FirstOrDefault(c => ExcelTabla.Clave(c.Nombre).Contains("hotel"))?.Nombre ?? conts.FirstOrDefault()?.Nombre;
             var datos = new ExcelTabla.Hoja("Hoteles", Columnas, new List<object?[]>
             {
-                new object?[] { "Riu Palace Bavaro", Dest("Punta Cana", 0), "Todo Incluido", "603258", 1290m, 7, "DOP", camp, "ES", "Madrid", "DO", "18.7357", "-68.4447", seccion, "Sí", "HOTRIUPB1", proveedores.FirstOrDefault()?.Nombre, null, 1, 1450m },
-                new object?[] { "Iberostar Selection Hacienda Dominicus", Dest("La Romana", 1), "Todo Incluido", "702115", 1450m, 7, "DOP", camp, "ES", "Madrid", "DO", null, null, seccion, "Sí", "", "", "Ejemplo: borra estas filas y pon tus hoteles.", null, null },
+                new object?[] { "Riu Palace Bavaro", Dest("Punta Cana", 0), "Todo Incluido", "603258", 1290m, 7, "DOP", camp, "DO", "Santo Domingo", "DO", "18.7357", "-68.4447", seccion, "Sí", "HOTRIUPB1", proveedores.FirstOrDefault()?.Nombre, null, 1, 1450m },
+                new object?[] { "Iberostar Selection Hacienda Dominicus", Dest("La Romana", 1), "Todo Incluido", "702115", 1450m, 7, "DOP", camp, "DO", "Santo Domingo", "DO", null, null, seccion, "Sí", "", "", "Ejemplo: borra estas filas y pon tus hoteles.", null, null },
             }, new double[] { 38, 18, 20, 13, 11, 9, 9, 11, 11, 14, 12, 11, 11, 22, 9, 16, 30, 40, 11, 16 })
             {
                 Listas = CargaExcel.Listas(await ColumnasExcelAsync())
@@ -219,7 +219,7 @@ namespace EuroVip.Controllers
                 new object?[] { "Precio / Noches", "Precio «desde» y noches (opcionales).", null },
                 new object?[] { "Moneda", "Código (lista abajo). Vacío = DOP.", null },
                 new object?[] { "Campaña", "Número o nombre (lista abajo)." + (camp is null ? "" : $" Vacío = {camp}."), null },
-                new object?[] { "País salida / Ciudad salida", "Obligatorios. País en 2 letras (ES, DO…) y ciudad (Madrid…).", null },
+                new object?[] { "País salida / Ciudad salida", "País en 2 letras (DO, ES…) y ciudad. Vacío = DO · Santo Domingo (lo más común).", null },
                 new object?[] { "País destino", "2 letras. Vacío = DO.", null },
                 new object?[] { "Latitud / Longitud", "Opcionales (para el mapa).", null },
                 new object?[] { "Sección de la web", "Nombre de la sección (lista abajo). Sin sección el hotel queda oculto.", null },
@@ -297,8 +297,8 @@ namespace EuroVip.Controllers
                     Id_Destino = fila.Nombre, CaratulaDestino = f.Texto("Destino"), Descripcion = $"{regimen} -{codigo}", Id_Idioma = HotelRepository.IdiomaHotel,
                     Id_Campanya = camp?.Id_Campanya, Id_Moneda = moneda, PrecioWeb = f.Cifra("Precio", "Precio web", "Precio desde"),
                     Noches = f.Cifra("Noches") is decimal n ? (int)Math.Round(n) : null,
-                    Id_Pais_Origen = (f.Texto("País salida", "Pais salida", "País de salida", "País origen") ?? "").ToUpperInvariant(),
-                    Origen = f.Texto("Ciudad salida", "Ciudad de salida", "Origen") ?? "",
+                    Id_Pais_Origen = (f.Texto("País salida", "Pais salida", "País de salida", "País origen") ?? "DO").ToUpperInvariant(),   // vacío = DO (lo más común)
+                    Origen = f.Texto("Ciudad salida", "Ciudad de salida", "Origen") ?? "Santo Domingo",
                     Id_PaisDestino = (f.Texto("País destino", "Pais destino") ?? "DO").ToUpperInvariant(),
                     Latitud = f.Texto("Latitud"), Longitud = f.Texto("Longitud"), Id_Contenedor = cont?.Id_Contenedor,
                     Estado = f.SiNo(true, "Visible", "Activo"), Notas = f.Texto("Notas"),

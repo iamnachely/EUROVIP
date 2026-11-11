@@ -698,7 +698,7 @@ const HW = (() => {
     async function abrirTarjeta(t, idSeccion, irAFoto) {
         cat ??= await EVC.catalogos();
         tarjetaActual = t;
-        const v = t || { tipo_Servicio: 'OFERTA', id_Pais_Origen: 'ES', origen: '', id_PaisDestino: 'DO', id_Destino: '', estado: true, id_Contenedor: idSeccion ?? null };
+        const v = t || { tipo_Servicio: 'OFERTA', id_Pais_Origen: 'DO', origen: 'Santo Domingo', id_PaisDestino: 'DO', id_Destino: '', estado: true, id_Contenedor: idSeccion ?? null };
         $('#tdTitulo').textContent = t ? (t.tipo_Servicio === 'CIRCUITO' ? t.descripcion : t.id_Destino) : 'Nueva tarjeta';
         $('#tdSub').textContent = t ? `${tipoChip[t.tipo_Servicio] || t.tipo_Servicio}${t.id_Servicio > 0 ? ' · servicio #' + t.id_Servicio : ' · tarjeta manual'}` : 'Se agrega a la Home';
         $('#tdEliminar').hidden = !t;
@@ -740,7 +740,7 @@ const HW = (() => {
             <div class="ui-sec"><div class="ui-sec-t"><span>3</span> Prioridad y precio del proveedor</div><div id="tPrio"></div>
                 <div class="ui-help" style="margin-top:8px"><i class="bi bi-info-circle"></i> La prioridad ordena la tarjeta dentro de su sección cuando la sección tiene marcado «★ Prioridad».</div></div>`;
         $('#tTipoF').value = v.tipo_Servicio; $('#tCam').value = String(v.id_Campanya || cat.campanyas.find(c => c.texto === 'DTGeneral')?.valor || cat.campanyas[0].valor);
-        $('#tSecF').value = v.id_Contenedor ?? ''; $('#tPO').value = (v.id_Pais_Origen || 'ES').toUpperCase(); $('#tPD').value = (v.id_PaisDestino || 'DO').toUpperCase();
+        $('#tSecF').value = v.id_Contenedor ?? ''; $('#tPO').value = (v.id_Pais_Origen || 'DO').toUpperCase(); $('#tPD').value = (v.id_PaisDestino || 'DO').toUpperCase();
         $('#tOri').value = v.origen || ''; $('#tDes').value = v.id_Destino || ''; $('#tImg').value = v.caratulaDestino || ''; $('#tDesc').value = v.descripcion || '';
         $('#tPre').value = v.precioWeb != null ? Math.round(v.precioWeb) : ''; $('#tNoc').value = v.noches ?? ''; $('#tNot').value = v.notas || ''; $('#tEstF').checked = v.estado !== false;
         $('#tPrio').innerHTML = EVPrioridad.campos({ peso: v.peso, proveedor: v.precio_Proveedor, precio: v.precioWeb, ayuda: 'Compáralo con el precio «desde».', contexto: { que: 'tarjeta', id: v.id, contenedor: v.id_Contenedor, tipo: v.tipo_Servicio } });
@@ -758,6 +758,8 @@ const HW = (() => {
             cargar();
         } });
         EV.picker($('#tOri'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#tPO').value)}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo' }), onSelect: m => $('#tOri').value = m.valor });
+        // Origen: Tom Select (Santo Domingo, DO por defecto en tarjetas nuevas); la tarjeta que se edita conserva el suyo
+        EVCodigo.origen($('#tPO'), $('#tOri')); $('#tPO').value = (v.id_Pais_Origen || 'DO').trim().toUpperCase(); $('#tOri').evOrigen?.poner(v.origen || '');
         EV.picker($('#tDes'), { url: q => `/Circuitos/Destinos?pais=${encodeURIComponent($('#tPD').value)}&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, icono: 'bi-geo-alt' }), onSelect: m => $('#tDes').value = m.valor });
         dT.abrir();
         if (irAFoto) setTimeout(() => $('#tdSecFoto')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);

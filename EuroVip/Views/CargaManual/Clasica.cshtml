@@ -107,8 +107,8 @@
                 <div class="ui-f"><label>Noches <em>se usa para calcular la fecha hasta</em></label><input id="iNoches" type="number" min="1" max="60" value="7"><span class="msg"></span></div>
             </div>
             <div class="ui-row">
-                <div class="ui-f"><label>País de origen</label><select id="iPaisOrigen"></select></div>
-                <div class="ui-f"><label>Selecciona origen</label><input id="iOrigen" placeholder="Ciudad de salida…"><span class="msg"></span></div>
+                <div class="ui-f" data-siempre><label>País de origen</label><select id="iPaisOrigen"></select></div>
+                <div class="ui-f" data-siempre><label>Selecciona origen</label><input id="iOrigen" placeholder="Ciudad de salida…"><span class="msg"></span></div>
             </div>
         </div>
         <div class="ui-sec">
@@ -466,7 +466,7 @@ const CL = (() => {
         cat = await EVC.catalogos();
         $('#iDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)}</option>`).join('');
         $('#iPaisOrigen').innerHTML = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
-        $('#iPaisOrigen').value = 'ES';
+        $('#iPaisOrigen').value = EVCodigo.ORIGEN.pais;
         $('#gRegimen').innerHTML = cat.regimenes.map(r => `<option value="${esc(r.valor)}">${esc(r.valor)} · ${esc(r.texto)}</option>`).join('');
         if (cat.regimenes.some(r => r.valor === 'TI')) $('#gRegimen').value = 'TI';
         $$('.sim').forEach(x => x.textContent = EV.simbolo(moneda()));
@@ -489,6 +489,7 @@ const CL = (() => {
         });
         $('#iOrigen').addEventListener('input', () => $('#iOrigen').dataset.valor = '');
         $('#iPaisOrigen').addEventListener('change', () => { $('#iOrigen').value = ''; $('#iOrigen').dataset.valor = ''; limpiarRevision(); });
+        EVCodigo.origen($('#iPaisOrigen'), $('#iOrigen'), { opcional: '@tipo' !== 'PAQUETES' });   // Santo Domingo (DO) por defecto, se puede cambiar
         $('#iNoches').addEventListener('input', () => { if (H.length) pintarHotel(); limpiarRevision(); });
         $('#iDivisa').addEventListener('change', () => { $$('.sim').forEach(x => x.textContent = EV.simbolo(moneda())); if (H.length) pintarHotel(); });
         $('#vSin').addEventListener('change', () => {

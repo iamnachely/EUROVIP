@@ -153,8 +153,8 @@
             <div class="ui-sec">
                 <div class="ui-sec-t"><span>B</span> Origen de venta, moneda, proveedor y código interno</div>
                 <div class="ui-row r3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
-                    <div class="ui-f"><label>País de origen</label><select id="cPaisOrigen"></select></div>
-                    <div class="ui-f"><label>Ciudad de origen</label><input id="cOrigen" placeholder="Ej. Madrid"><span class="msg"></span></div>
+                    <div class="ui-f" data-siempre><label>País de origen</label><select id="cPaisOrigen"></select></div>
+                    <div class="ui-f" data-siempre><label>Ciudad de origen</label><input id="cOrigen" placeholder="Ej. Madrid"><span class="msg"></span></div>
                     <div class="ui-f"><label>Moneda</label><select id="cDivisa"></select></div>
                     <div class="ui-f" data-siempre><label>Proveedor <em>de dónde sale · vacío = el del circuito</em></label><select id="cProveedorCarga"><option value="">— El del circuito —</option></select></div>                    <div class="ui-f" data-siempre><label>Código interno <em>opcional · letras y números, único en todo el sistema</em></label><input id="cCodigoCarga" maxlength="30" placeholder="Ej. CIRCEUROPA26"></div>
                 </div>
@@ -452,7 +452,7 @@ const XP = (() => {
         // selects
         $('#cDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)} · ${esc(m.texto)}</option>`).join('');
         const paisesHtml = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
-        $('#nPais').innerHTML = paisesHtml; $('#cPaisOrigen').innerHTML = paisesHtml; $('#cPaisOrigen').value = 'ES';
+        $('#nPais').innerHTML = paisesHtml; $('#cPaisOrigen').innerHTML = paisesHtml; $('#cPaisOrigen').value = EVCodigo.ORIGEN.pais;
         $('#nCatHotel').innerHTML = cat.categorias.map(c => `<option>${esc(c.categoria)}</option>`).join('');
         $$('.sim').forEach(x => x.textContent = EV.simbolo($('#cDivisa').value));
 
@@ -529,6 +529,7 @@ const XP = (() => {
             onSelect: m => { $('#cOrigen').dataset.valor = m.valor; $('#cOrigen').closest('.ui-f').classList.remove('err'); resumen(); }
         });
         $('#cOrigen').addEventListener('input', () => { $('#cOrigen').dataset.valor = ''; resumen(); });
+        EVCodigo.origen($('#cPaisOrigen'), $('#cOrigen'));   // Santo Domingo (DO) por defecto, se puede cambiar
 
         // eventos paso 4
         $$('[data-vuelo]').forEach(b => b.addEventListener('click', () => {

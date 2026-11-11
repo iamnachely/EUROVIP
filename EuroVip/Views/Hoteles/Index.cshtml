@@ -8,7 +8,7 @@
         ("AR", "Argentina"), ("DE", "Alemania"), ("GB", "Reino Unido"), ("CH", "Suiza")
     };
     var regimenes = new[] { "Solo Habitación", "Alojamiento y Desayuno", "Media Pensión", "Pensión Completa", "Todo Incluido", "Room Only" };
-    var ciudades = new[] { "Madrid", "Barcelona", "Málaga", "Valencia", "Bilbao", "Lisboa", "Oporto", "Roma", "Milán", "París", "Bucarest", "Santo Domingo", "Punta Cana" };
+    var ciudades = new[] { "Santo Domingo", "Punta Cana", "Santiago de los Caballeros", "Madrid", "Barcelona", "Málaga", "Valencia", "Bilbao", "Lisboa", "Oporto", "Roma", "Milán", "París", "Bucarest" };
 }
 
 @section Styles {
@@ -548,7 +548,7 @@
         </div>
 
         <div class="hx-pane" data-pane="mas">
-        <div class="hx-mas-nota"><i class="bi bi-magic"></i><span>Todo esto ya viene relleno con lo habitual (campaña General-DT, salida desde Madrid, sección HOTELES BOOKINGMOTOR…). Cámbialo solo si este hotel es distinto.</span></div>
+        <div class="hx-mas-nota"><i class="bi bi-magic"></i><span>Todo esto ya viene relleno con lo habitual (campaña General-DT, salida desde Santo Domingo (República Dominicana), sección HOTELES BOOKINGMOTOR…). Cámbialo solo si este hotel es distinto.</span></div>
         <!-- 2. Precio y campaña -->
         <div class="hx-sec">
             <div class="hx-sec-t"><span>2</span> Campaña, moneda y noches</div>
@@ -604,14 +604,14 @@
                     <select id="Id_Pais_Origen" name="Id_Pais_Origen">
                         @foreach (var p in paises)
                         {
-                            <option value="@p.Codigo" selected="@(p.Codigo == "ES")">@p.Codigo · @p.Nombre</option>
+                            <option value="@p.Codigo" selected="@(p.Codigo == "DO")">@p.Codigo · @p.Nombre</option>
                         }
                     </select>
                     <span class="msg"></span>
                 </div>
                 <div class="hx-f">
                     <label for="Origen">Ciudad de salida</label>
-                    <input id="Origen" name="Origen" maxlength="30" list="dlCiudades" placeholder="Ej. Madrid" />
+                    <input id="Origen" name="Origen" maxlength="30" list="dlCiudades" value="Santo Domingo" placeholder="Ej. Santo Domingo" />
                     <datalist id="dlCiudades">
                         @foreach (var c in ciudades)
                         {
@@ -1107,7 +1107,7 @@ const HX = (() => {
     function valoresPorDefecto() {
         codigoProveedor(null);
         const poner = (n, v) => { const el = campo(n); if (el && [...(el.options || [{ value: v }])].some(o => o.value === v)) el.value = v; };
-        poner('Id_Pais_Origen', 'ES'); campo('Origen').value = 'Madrid'; poner('Id_PaisDestino', 'DO');
+        poner('Id_Pais_Origen', 'DO'); campo('Origen').value = 'Santo Domingo'; campo('Origen').evOrigen?.poner('Santo Domingo'); poner('Id_PaisDestino', 'DO');   // origen más común: Santo Domingo (pedido de la usuaria)
         poner('Id_Moneda', 'DOP'); campo('Noches').value = 1; campo('Posicion_Destino').value = 1; campo('Estado').checked = true;
     }
 
@@ -1201,7 +1201,7 @@ const HX = (() => {
             const pd = partirDesc(h.descripcion); set('Regimen', pd.reg); set('CodigoHotel', pd.cod);
             set('CaratulaDestino', esUrl(h.caratulaDestino) ? '' : (h.caratulaDestino || '').trim()); set('PrecioWeb', h.precioWeb != null ? Math.round(h.precioWeb) : '');
             set('Id_Moneda', (h.id_Moneda || '').trim()); set('Noches', h.noches); set('Id_Pais_Origen', (h.id_Pais_Origen || '').trim());
-            set('Origen', h.origen); set('Id_PaisDestino', (h.id_PaisDestino || '').trim()); set('Latitud', h.latitud); set('Longitud', h.longitud);
+            set('Origen', h.origen); campo('Origen').evOrigen?.poner(h.origen); set('Id_PaisDestino', (h.id_PaisDestino || '').trim()); set('Latitud', h.latitud); set('Longitud', h.longitud);
             set('Posicion_Destino', h.posicion_Destino); set('Notas', h.notas);
             prioridad(h);
             codigoProveedor(h);
@@ -1395,6 +1395,7 @@ const HX = (() => {
 
     // ---------------- INICIO ----------------
     function iniciar() {
+        EVCodigo.origen(campo('Id_Pais_Origen'), campo('Origen'));   // ciudad de salida: Tom Select, Santo Domingo (DO) por defecto
         let deb;
         const q = $('#fQ');
         q.addEventListener('input', () => {

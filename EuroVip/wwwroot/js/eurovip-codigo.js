@@ -94,5 +94,48 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
     }
     const nombreProveedor = async id => { if (!id) return ''; cacheProv ??= json('/Codigos/Proveedores'); return (await cacheProv).find(p => p.valor === id)?.texto || id; };
 
-    return { campo, validar, proveedores, monedas, simbolo, limpiar, nombreProveedor };
+    // ---------- Origen de venta por defecto (pedido de la usuaria) ----------
+    // «Origen = Santo Domingo, País origen = República Dominicana en todas las cargas: es lo más común. Que ya venga elegido,
+    // pero que se pueda cambiar en el Tom Select.» EVCodigo.origen(selectPais, inputCiudad, { opcional }) :
+    //   • pone DO en el país y Santo Domingo en la ciudad;
+    //   • convierte la ciudad en un Tom Select que busca en Eurovip.destino del país elegido (/Circuitos/Destinos);
+    //   • el <input> de siempre sigue siendo el que manda (value y dataset.valor), así la pantalla no cambia nada más.
+    const ORIGEN = { pais: 'DO', ciudad: 'Santo Domingo' };
+    function origen(selPais, inp, { opcional = false } = {}) {
+        if (!selPais || !inp) return;
+        if ([...selPais.options].some(o => o.value === ORIGEN.pais)) selPais.value = ORIGEN.pais;
+        const poner = v => {
+            inp.value = v || '';
+            inp.dispatchEvent(new Event('input', { bubbles: true }));   // la pantalla limpia dataset.valor y recalcula
+            inp.dataset.valor = v || '';
+            inp.dispatchEvent(new Event('change', { bubbles: true }));
+            if (v) inp.closest('.ui-f')?.classList.remove('err');
+        };
+        inp.value = ORIGEN.ciudad; inp.dataset.valor = ORIGEN.ciudad;
+        if (!window.TomSelect || inp.dataset.evOrigen) return;
+        inp.dataset.evOrigen = '1';
+        const caja = inp.closest('.ui-picker-wrap') || inp;
+        caja.hidden = true; caja.style.display = 'none';
+        const sel = document.createElement('select');
+        sel.setAttribute('data-no-buscar', '');   // este Tom Select lo maneja esta función (no eurovip-select)
+        sel.innerHTML = `${opcional ? '<option value="">— Sin origen —</option>' : ''}<option value="${esc(ORIGEN.ciudad)}" selected>${esc(ORIGEN.ciudad)}</option>`;
+        caja.after(sel);
+        const ts = new TomSelect(sel, {
+            valueField: 'valor', labelField: 'texto', searchField: ['texto'], maxOptions: 60, preload: 'focus', allowEmptyOption: opcional,
+            placeholder: 'Busca la ciudad de origen…',
+            load: (q, cb) => fetch(`/Circuitos/Destinos?pais=${encodeURIComponent(selPais.value)}&q=${encodeURIComponent(q)}`, { headers: { Accept: 'application/json' } })
+                .then(r => r.json()).then(l => cb(l.map(x => ({ valor: x.valor, texto: x.texto })))).catch(() => cb()),
+            render: { no_results: () => '<div class="no-results">No encontré esa ciudad en el país elegido.</div>' },
+            onChange: v => poner(v)
+        });
+        // Otro país → se vacía la ciudad y se busca en el nuevo país
+        selPais.addEventListener('change', () => {
+            ts.clear(true); ts.clearOptions(); ts.loadedSearches = {}; ts.lastQuery = null;
+            if (opcional) ts.addOption({ valor: '', texto: '— Sin origen —' });
+            inp.value = ''; inp.dataset.valor = '';
+        });
+        inp.evOrigen = { poner: v => { if (v && !ts.options[v]) ts.addOption({ valor: v, texto: v }); ts.setValue(v || '', true); inp.value = v || ''; inp.dataset.valor = v || ''; } };
+    }
+
+    return { campo, validar, proveedores, monedas, simbolo, limpiar, nombreProveedor, origen, ORIGEN };
 })();

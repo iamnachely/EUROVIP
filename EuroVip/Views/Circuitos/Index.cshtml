@@ -701,6 +701,7 @@ const CX = (() => {
                 const c = await EV.api('/Circuitos/Obtener?codigo=' + encodeURIComponent(estado.codigoOriginal)); estado.salidas = c.salidas; pintarSalidas(); cargar();
             });
             $('#vsCamp').value = String(x.id_Campanya); $('#vsPais').value = (x.id_Pais_Origen || '').trim().toUpperCase();
+            EVCodigo.origen($('#vsPais'), $('#vsOrigen'), { opcional: true }); $('#vsPais').value = (x.id_Pais_Origen || '').trim().toUpperCase(); $('#vsOrigen').evOrigen?.poner(x.origen || '');   // ciudad: Tom Select
             EVCodigo.monedas($('#vsMoneda'), x.id_Moneda || 'DOP').catch(() => { });
             EVCodigo.proveedores($('#vsProv'), (x.id_Proveedor || '').trim(), { vacio: '— El del circuito —' }).catch(() => { });
             EVCodigo.campo($('#vsInterno'), { producto: 'CIRCUITO', clave: () => x.codigo || '', anterior: () => x.codigo_Interno || '' });

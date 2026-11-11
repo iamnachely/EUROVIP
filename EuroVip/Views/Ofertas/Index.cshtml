@@ -491,6 +491,7 @@ const OF = (() => {
             EVCodigo.monedas($('#eMoneda'), (o.id_Moneda || 'DOP').trim()).catch(() => { });
             EVCodigo.proveedores($('#eProveedor'), (o.id_Proveedor || '').trim(), { vacio: '— Elige el proveedor —' }).catch(() => { });
             $('#ePaisOrigen').value = (o.id_Pais_Origen || '').trim().toUpperCase();
+            EVCodigo.origen($('#ePaisOrigen'), $('#eOrigen'), { opcional: true }); $('#ePaisOrigen').value = (o.id_Pais_Origen || '').trim().toUpperCase(); $('#eOrigen').evOrigen?.poner(o.origen || '');   // ciudad: Tom Select
             EVCodigo.campo($('#eCodigoInterno'), { producto: TIPO, clave: () => actual?.codigo ?? '', anterior: () => actual?.codigo_Interno ?? '' });   // CAMBIO 128
             $('#eEliminar').onclick = () => eliminarIds([o.id_Servicio]);
             hasta(); precioVivo();

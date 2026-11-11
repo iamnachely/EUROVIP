@@ -121,8 +121,8 @@
             <div class="ui-sec">
                 <div class="ui-sec-t"><span>B</span> Origen de venta @if (!esPaq) {<small>opcional · déjalo vacío si se vende desde cualquier origen</small>}</div>
                 <div class="ui-row">
-                    <div class="ui-f"><label>País de origen</label><select id="cPaisOrigen"></select></div>
-                    <div class="ui-f"><label>Ciudad de origen @if (!esPaq) {<em>opcional</em>}</label><input id="cOrigen" placeholder="@(esPaq ? "Ej. Madrid" : "Ej. Madrid · o déjalo vacío")"><span class="msg"></span></div>
+                    <div class="ui-f" data-siempre><label>País de origen</label><select id="cPaisOrigen"></select></div>
+                    <div class="ui-f" data-siempre><label>Ciudad de origen @if (!esPaq) {<em>opcional</em>}</label><input id="cOrigen" placeholder="@(esPaq ? "Ej. Madrid" : "Ej. Madrid · o déjalo vacío")"><span class="msg"></span></div>
                 </div>
             </div>
             <div class="ui-sec">
@@ -375,7 +375,7 @@ const XP = (() => {
         cat = await EVC.catalogos();
         $('#cDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)} · ${esc(m.texto)}</option>`).join('');
         $('#cPaisOrigen').innerHTML = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
-        $('#cPaisOrigen').value = 'ES';
+        $('#cPaisOrigen').value = EVCodigo.ORIGEN.pais;
         $$('.sim').forEach(x => x.textContent = EV.simbolo(moneda()));
 
         mx = EVC.matriz($('#xpMatriz'), { hoteles, noches, moneda, tasas: () => suplementos ? suplementos.total() : 0, minimo: cat.minimo, onChange: () => { cal.pintar(); resumen(); } });
@@ -415,6 +415,7 @@ const XP = (() => {
             onSelect: m => { $('#cOrigen').dataset.valor = m.valor; $('#cOrigen').closest('.ui-f').classList.remove('err'); resumen(); }
         });
         $('#cOrigen').addEventListener('input', () => { $('#cOrigen').dataset.valor = ''; resumen(); });
+        EVCodigo.origen($('#cPaisOrigen'), $('#cOrigen'), { opcional: !ES_PAQ });   // Santo Domingo (DO) por defecto, se puede cambiar
 
         $$('[data-vuelo]').forEach(b => b.addEventListener('click', () => {
             S.conVuelo = b.dataset.vuelo === 'si';

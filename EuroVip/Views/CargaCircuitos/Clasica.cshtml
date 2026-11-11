@@ -86,8 +86,8 @@
             </div>
             <div id="iDetalle"></div>
             <div class="ui-row r3">
-                <div class="ui-f"><label>País de origen</label><select id="iPaisOrigen"></select></div>
-                <div class="ui-f"><label>Selecciona origen</label><input id="iOrigen" placeholder="Ciudad de salida…"><span class="msg"></span></div>
+                <div class="ui-f" data-siempre><label>País de origen</label><select id="iPaisOrigen"></select></div>
+                <div class="ui-f" data-siempre><label>Selecciona origen</label><input id="iOrigen" placeholder="Ciudad de salida…"><span class="msg"></span></div>
                 <div class="ui-f"><label>Categoría de alojamientos</label><select id="iCategoria"></select><span class="msg"></span></div>
             </div>
         </div>
@@ -447,7 +447,7 @@ const CL = (() => {
         cat = await EVC.catalogos();
         $('#iDivisa').innerHTML = cat.monedas.map(m => `<option value="${esc(m.valor)}">${esc(m.valor)}</option>`).join('');
         $('#iPaisOrigen').innerHTML = cat.paises.map(p => `<option value="${esc(p.valor)}">${esc(p.texto)}</option>`).join('');
-        $('#iPaisOrigen').value = 'ES';
+        $('#iPaisOrigen').value = EVCodigo.ORIGEN.pais;
         $('#iCategoria').innerHTML = cat.categorias.map(c => `<option>${esc(c.categoria)}</option>`).join('');
 
         campanyas = EVC.filas($('#iCampanyas'), { opciones: cat.campanyas.map(c => ({ ...c, extra: '#' + c.valor })), etiqueta: 'Campaña', valorEtiqueta: 'Porcentaje %', sufijo: '%', onChange: invalidar, placeholder: 'Elige la campaña…' });
@@ -474,6 +474,7 @@ const CL = (() => {
         });
         $('#iOrigen').addEventListener('input', () => $('#iOrigen').dataset.valor = '');
         $('#iPaisOrigen').addEventListener('change', () => { $('#iOrigen').value = ''; $('#iOrigen').dataset.valor = ''; invalidar(); });
+        EVCodigo.origen($('#iPaisOrigen'), $('#iOrigen'));   // Santo Domingo (DO) por defecto, se puede cambiar
 
         // eventos
         $('#iNoches').addEventListener('input', recalcular);
