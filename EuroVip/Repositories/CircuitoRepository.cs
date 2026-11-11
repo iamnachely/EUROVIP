@@ -291,7 +291,7 @@ namespace EuroVip.Repositories
 
         // ------------------------------------------------------------ editar una salida (punto 7)
         private const string SelSalida = @"
-            SELECT s.id_servicio AS Id_Servicio, sc.nombre_circuito AS Nombre_Circuito, s.codigo AS Codigo, sc.desde AS Desde, sc.hasta AS Hasta,
+            SELECT s.id_servicio AS Id_Servicio, sc.nombre_circuito AS Nombre_Circuito, s.codigo AS Codigo, s.codigo_interno AS Codigo_Interno, sc.desde AS Desde, sc.hasta AS Hasta,
                    s.precio_base + Eurovip.fnTotalTasa(s.id_servicio) AS PrecioTotal, Eurovip.fnTotalTasa(s.id_servicio) AS Tasas, s.descuento AS Descuento,
                    s.id_campanya AS Id_Campanya, ca.nombre AS Campanya, LTRIM(RTRIM(s.id_moneda)) AS Id_Moneda, s.id_Proveedor AS Id_Proveedor, p.nombre AS Proveedor,
                    s.categoria_circuito AS Categoria, sc.id_pais_origen AS Id_Pais_Origen, sc.origen AS Origen, s.activo AS Activo,
@@ -323,6 +323,10 @@ namespace EuroVip.Repositories
             if (await cn.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM Eurovip.campanya WHERE id_campanya = @c AND id_idioma = @Idioma", new { c = d.Id_Campanya, Idioma }) == 0) return "Esa campaña no existe.";
             var prov = string.IsNullOrWhiteSpace(d.Id_Proveedor) ? antes.Id_Proveedor : d.Id_Proveedor.Trim();
             if (await EuroVip.Services.CatalogoCargas.ErrorProveedorAsync(cn, prov) is string malProv) return malProv;
+            // CAMBIO 128: código interno de toda la carga (no es el código servicio)
+            var interno = EuroVip.Services.CodigoInterno.Limpiar(d.Codigo_Interno);
+            if (!string.Equals(interno, antes.Codigo_Interno?.Trim(), StringComparison.OrdinalIgnoreCase) && interno is not null
+                && await EuroVip.Services.CodigoInterno.ErrorAsync(cn, interno, "CIRCUITO", antes.Codigo ?? "", antes.Codigo_Interno) is string malInt) return malInt;
             var pais = (d.Id_Pais_Origen ?? "").Trim().ToUpperInvariant(); var origen = (d.Origen ?? "").Trim();
             if (origen != "" && pais.Length != 2) return "Elige el país de origen.";
             var precioBase = d.PrecioTotal - antes.Tasas;
@@ -335,11 +339,14 @@ namespace EuroVip.Repositories
                            categoria_circuito = @cat, activo = @activo, noches = @noches
                      WHERE id_servicio = @id AND id_tipo_servicio = 'CIRCUITO';
                     UPDATE Eurovip.servicio_circuito SET desde = @desde, hasta = @hasta, id_pais_origen = @pais, origen = @origen WHERE id_servicio = @id;
+                    IF ISNULL(@interno, '') <> ISNULL(@internoAntes, '')
+                        UPDATE Eurovip.servicio SET codigo_interno = @interno WHERE id_tipo_servicio = 'CIRCUITO' AND (id_servicio = @id OR (@codCarga <> '' AND codigo = @codCarga));
                     DECLARE @dif int = DATEDIFF(DAY, @desdeAntes, @desde);
                     IF @dif <> 0
                         UPDATE Eurovip.servicio_itinerario SET fecha_salida = DATEADD(DAY, @dif, fecha_salida), fecha_regreso = DATEADD(DAY, @dif, fecha_regreso) WHERE id_servicio = @id;",
                     new { id = d.Id_Servicio, pb = precioBase, desc = d.Descuento, camp = d.Id_Campanya, moneda, prov, cat = string.IsNullOrWhiteSpace(d.Categoria) ? null : d.Categoria.Trim(),
-                          activo = d.Activo, noches, desde = d.Desde.Date, hasta = d.Hasta.Date, pais = pais == "" ? null : pais, origen = origen == "" ? null : origen, desdeAntes = antes.Desde.Date }, tx);
+                          activo = d.Activo, noches, desde = d.Desde.Date, hasta = d.Hasta.Date, pais = pais == "" ? null : pais, origen = origen == "" ? null : origen, desdeAntes = antes.Desde.Date,
+                          interno, internoAntes = antes.Codigo_Interno, codCarga = antes.Codigo ?? "" }, tx);
                 tx.Commit();
             }
 

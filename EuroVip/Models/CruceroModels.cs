@@ -54,6 +54,8 @@ namespace EuroVip.Models
         public string? Codigo { get; set; }
         /// <summary>Código interno (FASE 38) y moneda de los precios.</summary>
         public string? Codigo_Interno { get; set; }
+        public string? Id_Proveedor { get; set; }
+        public string? Proveedor { get; set; }
         public string Id_Moneda { get; set; } = "DOP";
         public int? Id_Barco { get; set; }
         public string? Barco { get; set; }
@@ -124,6 +126,8 @@ namespace EuroVip.Models
         [StringLength(50)] public string? Codigo { get; set; }
         /// <summary>Código interno (FASE 38): letras y números, único entre todos los productos. «Codigo» es el ID del proveedor.</summary>
         [StringLength(30, ErrorMessage = "El código interno admite como máximo 30 caracteres")] public string? Codigo_Interno { get; set; }
+        /// <summary>Proveedor de donde sale el crucero (CAMBIO 129, Eurovip.proveedor). Opcional.</summary>
+        [StringLength(10)] public string? Id_Proveedor { get; set; }
         /// <summary>Moneda de todos los precios del crucero (FASE 38), DOP por defecto.</summary>
         public string Id_Moneda { get; set; } = "DOP";
         public string? Descripcion { get; set; }

@@ -76,9 +76,12 @@
                 <div class="ui-f"><label>Idioma</label><input value="ES · Español" readonly tabindex="-1" style="font-weight:800"></div>
                 <div class="ui-f"><label>Divisa</label><select id="iDivisa"></select></div>
             </div>
+            <div class="ui-row r4">
+                <div class="ui-f" data-siempre style="grid-column:span 2"><label>Código interno <em>opcional · tu código: letras y números, sin espacios; único en todo el sistema</em></label><input id="iCodigoInterno" maxlength="30" placeholder="Ej. CIRCEUROPA26"></div>
+            </div>
             <div class="ui-row r3">
                 <div class="ui-f"><label>ID del circuito</label><input id="iCircuito" placeholder="Busca el circuito…"><span class="msg"></span></div>
-                <div class="ui-f"><label>Selecciona proveedor <em>por defecto el del circuito</em></label><input id="iProveedor" placeholder="Tour operador…"></div>
+                <div class="ui-f" data-siempre><label>Selecciona proveedor <em>por defecto el del circuito</em></label><input id="iProveedor" placeholder="Tour operador…"></div>
                 <div class="ui-f"><label>Noches</label><input id="iNoches" type="number" min="1" max="60" value="7"><span class="msg"></span></div>
             </div>
             <div id="iDetalle"></div>
@@ -298,18 +301,19 @@ const CL = (() => {
         $('#xHotelesCount').textContent = `${hotelesExcel.filter(h => h.elegido).length} de ${hotelesExcel.length} elegidos · solo se cargan los elegidos`;
         $('#xHoteles').innerHTML = hotelesExcel.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th style="width:35%">Nombre en el Excel</th><th>Hotel en Eurovip</th><th style="width:140px">Estado</th></tr></thead><tbody>
             ${hotelesExcel.map((h, i) => `<tr><td>${esc(h.texto)}</td><td>
-                ${h.elegido ? `<b>${esc(h.elegido.nombre)}</b> <small style="color:var(--ev-muted)">#${h.elegido.id}</small> <button type="button" class="ui-ibtn" data-cambiar="${i}" title="Cambiar"><i class="bi bi-pencil"></i></button>`
-                : h.estado === 'multiple' ? `<select data-h="${i}"><option value="">— Selecciona un hotel —</option>${h.candidatos.map(c => `<option value="${esc(c.valor)}" data-n="${esc(c.texto)}">${esc(c.texto)} · ${esc(c.extra || '')}</option>`).join('')}</select>`
-                : `<input data-hb="${i}" placeholder="Busca y elige el hotel…">`}</td>
-                <td><span class="cl-est ${h.elegido ? 'found' : h.estado}">${h.elegido ? (h.estado === 'found' ? 'Encontrado' : 'Elegido') : estado[h.estado]}</span></td></tr>`).join('')}
+                ${h.elegido ? `<b>${esc(h.elegido.nombre)}</b> <small style="color:var(--ev-muted)">#${h.elegido.id}</small> <button type="button" class="ui-ibtn" data-cambiar="${i}" title="Cambiar"><i class="bi bi-pencil"></i></button>
+                    ${h.aproximado && h.candidatos?.length ? `<div style="margin-top:6px"><select data-h="${i}"><option value="">Otras coincidencias…</option>${h.candidatos.map(c => `<option value="${esc(c.valor)}" data-n="${esc(c.texto)}">${esc(c.texto)} · ${esc(c.extra || '')}</option>`).join('')}</select></div>` : ''}`
+                : h.estado === 'multiple' ? `<small style="display:block;color:#92400E;font-weight:700;margin-bottom:4px">Se parece a ${h.candidatos.length}: elige el correcto</small><select data-h="${i}"><option value="">— Selecciona un hotel —</option>${h.candidatos.map(c => `<option value="${esc(c.valor)}" data-n="${esc(c.texto)}">${esc(c.texto)} · ${esc(c.extra || '')}</option>`).join('')}</select>`
+                : `<input data-hb="${i}" placeholder="No encontré nada parecido: búscalo…">`}</td>
+                <td><span class="cl-est ${h.elegido ? (h.aproximado ? 'multiple' : 'found') : h.estado}" ${h.aproximado ? 'title="Reconocido por parecido: revisa que sea este"' : ''}>${h.elegido ? (h.aproximado ? 'Parecido: revisa' : h.estado === 'found' ? 'Encontrado' : 'Elegido') : estado[h.estado]}</span></td></tr>`).join('')}
             </tbody></table></div>` : '<div class="ui-note warn"><i class="bi bi-exclamation-triangle"></i><div>El Excel no trae hoteles. Se cargarán las salidas con los hoteles que ya tenga el circuito.</div></div>';
-        $$('#xHoteles [data-h]').forEach(s => s.addEventListener('change', () => { const o = s.selectedOptions[0]; hotelesExcel[+s.dataset.h].elegido = s.value ? { id: +s.value, nombre: o.dataset.n } : null; pintarHoteles(); invalidar(); }));
+        $$('#xHoteles [data-h]').forEach(s => s.addEventListener('change', () => { const o = s.selectedOptions[0], h = hotelesExcel[+s.dataset.h]; if (!s.value && h.elegido) return; h.elegido = s.value ? { id: +s.value, nombre: o.dataset.n } : null; h.aproximado = false; if (h.elegido) h.estado = 'elegido'; pintarHoteles(); invalidar(); }));
         $$('#xHoteles [data-hb]').forEach(inp => EV.picker(inp, {
             url: q => `/Circuitos/Hoteles?q=${q}`, limpiar: false,
             map: x => ({ valor: x.id_Alojamiento, texto: x.nombre, sub: `${x.destino} · #${x.id_Alojamiento}`, icono: 'bi-building' }),
-            onSelect: (m, raw) => { hotelesExcel[+inp.dataset.hb].elegido = { id: raw.id_Alojamiento, nombre: raw.nombre }; pintarHoteles(); invalidar(); }
+            onSelect: (m, raw) => { const h = hotelesExcel[+inp.dataset.hb]; h.elegido = { id: raw.id_Alojamiento, nombre: raw.nombre }; h.aproximado = false; h.estado = 'elegido'; pintarHoteles(); invalidar(); }
         }));
-        $$('#xHoteles [data-cambiar]').forEach(b => b.onclick = () => { const h = hotelesExcel[+b.dataset.cambiar]; h.elegido = null; if (h.estado === 'found') h.estado = 'not_found'; pintarHoteles(); invalidar(); });
+        $$('#xHoteles [data-cambiar]').forEach(b => b.onclick = () => { const h = hotelesExcel[+b.dataset.cambiar]; h.elegido = null; h.aproximado = false; if (h.estado === 'found' || h.estado === 'elegido') h.estado = h.candidatos?.length ? 'multiple' : 'not_found'; pintarHoteles(); invalidar(); });
     }
 
     // Tasa del Excel → todas las filas + suplemento "Tasas de Origen"
@@ -345,7 +349,7 @@ const CL = (() => {
             .map(([t, id]) => ({ Tipo: t, Texto: $(id).value.trim() })).filter(n => n.Texto);
         const conVuelo = !$('#vSin').checked;
         return {
-            Modo: excelLeido ? 'excel' : 'clasica', CodigoCircuito: circuito?.codigo || null, CodigoServicio: $('#iCodigo').value.trim() || null,
+            Modo: excelLeido ? 'excel' : 'clasica', CodigoCircuito: circuito?.codigo || null, CodigoServicio: $('#iCodigo').value.trim() || null, CodigoInterno: $('#iCodigoInterno').value.trim() || null,
             Id_Proveedor: $('#iProveedor').dataset.valor || null, Noches: noches() || null,
             Categoria: $('#iCategoria').value, Divisa: moneda(), Origen: $('#iOrigen').dataset.valor || '', Id_Pais_Origen: $('#iPaisOrigen').value,
             Campanyas: campanyas.datos().map(c => ({ Id_Campanya: parseInt(c.opcion, 10), Descuento: c.valor })),
@@ -475,7 +479,8 @@ const CL = (() => {
         $('#iNoches').addEventListener('input', recalcular);
         $('#iDivisa').addEventListener('change', () => { $$('.sim').forEach(x => x.textContent = EV.simbolo(moneda())); invalidar(); });
         ['#iCategoria', '#iCodigo'].forEach(id => $(id).addEventListener('change', invalidar));
-        EVCodigo.campo($('#iCodigo'), { producto: 'CIRCUITO', clave: () => '' });   // FASE 38: se revisa mientras se escribe
+        EVCodigo.campo($('#iCodigoInterno'), { producto: 'CIRCUITO', clave: () => '' });   // CAMBIO 128: el código interno (no el código servicio) se revisa mientras se escribe
+        $('#iCodigoInterno').addEventListener('change', invalidar);
         tb.addEventListener('input', recalcular);
         tb.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.k === 'total') { e.preventDefault(); const u = filas().pop(); fila(u?.desde ? EV.sumarDias(u.desde, 7) : '', u?.tasas || '', ''); $$('[data-k=desde]', tb).pop()?.focus(); } });
         $('#vSin').addEventListener('change', () => {
@@ -508,7 +513,7 @@ const CL = (() => {
     return {
         ir: id => tabs.ir(id),
         fila: () => { const u = filas().pop(); fila(u?.desde ? EV.sumarDias(u.desde, 7) : '', u ? u.tasas : ($('#xTasa').value || ''), ''); $$('[data-k=desde]', tb).pop()?.focus(); },
-        generarCodigo: async () => { try { const r = await EV.api('/CargaCircuitos/CodigoServicio'); $('#iCodigo').value = EVCodigo.limpiar(r.codigo); $('#iCodigo').dispatchEvent(new Event('input')); } catch { } },
+        generarCodigo: async () => { try { const r = await EV.api('/CargaCircuitos/CodigoServicio'); $('#iCodigo').value = r.codigo; } catch { } },
         aplicarDatos,
         guardarTodo: async () => { if (await revisar()) guardar(); },
         tasasTodas: () => { const fs = filas(); if (!fs.length) return; const t = $('[data-k=tasas]', fs[0].tr).value; fs.forEach(f => $('[data-k=tasas]', f.tr).value = t); recalcular(); },

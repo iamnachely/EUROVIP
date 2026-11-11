@@ -48,7 +48,7 @@ namespace EuroVip.Repositories
 
         private const string SelTarjeta = @"
             SELECT i.id AS Id, i.id_servicio AS Id_Servicio, i.tipo_servicio AS Tipo_Servicio, i.id_campanya AS Id_Campanya, c.nombre AS Campanya,
-                   i.id_moneda AS Id_Moneda, i.codigo AS Codigo, i.id_pais_origen AS Id_Pais_Origen, i.origen AS Origen, i.id_paisDestino AS Id_PaisDestino,
+                   i.id_moneda AS Id_Moneda, i.codigo AS Codigo, i.id_proveedor AS Id_Proveedor, (SELECT TOP 1 LTRIM(RTRIM(pv.nombre)) FROM Eurovip.proveedor pv WHERE pv.id_proveedor = i.id_proveedor) AS Proveedor, i.id_pais_origen AS Id_Pais_Origen, i.origen AS Origen, i.id_paisDestino AS Id_PaisDestino,
                    i.id_destino AS Id_Destino, i.caratulaDestino AS CaratulaDestino, i.descripcion AS Descripcion, i.precioWeb AS PrecioWeb,
                    i.id_contenedor AS Id_Contenedor, i.contenedor AS Contenedor, i.posicion_destino AS Posicion_Destino,
                    CAST(ISNULL(i.estado, 1) AS bit) AS Estado, i.noches AS Noches, i.notas AS Notas, i.peso AS Peso, i.precio_proveedor AS Precio_Proveedor,
@@ -200,6 +200,8 @@ namespace EuroVip.Repositories
                 "SELECT id_servicio, tipo_servicio, codigo FROM Eurovip.inicio WHERE id = @id", new { id }) : null;
             var producto = yo?.Tipo == "HOTEL" ? "HOTEL" : "INICIO";
             if (await EuroVip.Services.CodigoInterno.ErrorAsync(cn, d.Codigo, producto, yo?.Sid.ToString(), yo?.Codigo) is string mal) return ("Codigo", mal);
+            d.Id_Proveedor = string.IsNullOrWhiteSpace(d.Id_Proveedor) ? null : d.Id_Proveedor.Trim();
+            if (await EuroVip.Services.CatalogoCargas.ErrorProveedorAsync(cn, d.Id_Proveedor) is string malProv) return ("Id_Proveedor", malProv);
             return null;
         }
 
@@ -216,7 +218,8 @@ namespace EuroVip.Repositories
                 tipo = d.Tipo_Servicio.Trim().ToUpperInvariant(), d.Id_Campanya, ps = d.Id_Pais_Origen.Trim().ToUpperInvariant(), origen = d.Origen.Trim(),
                 pd = d.Id_PaisDestino.Trim().ToUpperInvariant(), destino = d.Id_Destino.Trim(), car = Vacio(d.CaratulaDestino), desc = d.Descripcion?.Trim() ?? "",
                 d.PrecioWeb, ic = cont?.Id, nom = cont?.Nombre, pc = cont?.Posicion, d.Noches, notas = Vacio(d.Notas), d.Estado, Idioma, d.Peso, d.Precio_Proveedor,
-                mon = string.IsNullOrWhiteSpace(d.Id_Moneda) ? "DOP" : d.Id_Moneda.Trim().ToUpperInvariant(), cod = EuroVip.Services.CodigoInterno.Limpiar(d.Codigo)
+                mon = string.IsNullOrWhiteSpace(d.Id_Moneda) ? "DOP" : d.Id_Moneda.Trim().ToUpperInvariant(), cod = EuroVip.Services.CodigoInterno.Limpiar(d.Codigo),
+                prov = string.IsNullOrWhiteSpace(d.Id_Proveedor) ? null : d.Id_Proveedor.Trim()
             });
             int id;
             if (d.Id is int existente)
@@ -225,7 +228,7 @@ namespace EuroVip.Repositories
                 await cn.ExecuteAsync(@"
                     UPDATE Eurovip.inicio SET tipo_servicio = @tipo, id_campanya = @Id_Campanya, id_pais_origen = @ps, origen = @origen, id_paisDestino = @pd,
                            id_destino = @destino, caratulaDestino = @car, descripcion = @desc, precioWeb = @PrecioWeb, noches = @Noches, notas = @notas, estado = @Estado,
-                           peso = @Peso, precio_proveedor = @Precio_Proveedor, id_moneda = @mon, codigo = @cod,
+                           peso = @Peso, precio_proveedor = @Precio_Proveedor, id_moneda = @mon, codigo = @cod, id_proveedor = @prov,
                            posicion_destino = CASE WHEN ISNULL(id_contenedor, -1) = ISNULL(@ic, -1) THEN posicion_destino
                                                    ELSE (SELECT ISNULL(MAX(posicion_destino), 0) + 1 FROM Eurovip.inicio WHERE id_contenedor = @ic) END,
                            id_contenedor = @ic, contenedor = @nom, posicion_contenedor = @pc
@@ -239,9 +242,9 @@ namespace EuroVip.Repositories
                     DECLARE @sid int = (SELECT ISNULL(MIN(CASE WHEN id_servicio < 0 THEN id_servicio END), 0) - 1 FROM Eurovip.inicio WITH (UPDLOCK, HOLDLOCK));
                     INSERT INTO Eurovip.inicio (id_servicio, id_idioma, tipo_servicio, id_campanya, id_moneda, id_pais_origen, origen, id_paisDestino, id_destino,
                            caratulaDestino, descripcion, latitud, longitud, precioWeb, id_contenedor, contenedor, posicion_contenedor, posicion_destino, estado, notas, noches,
-                           peso, precio_proveedor, codigo)
+                           peso, precio_proveedor, codigo, id_proveedor)
                     SELECT @sid, @Idioma, @tipo, @Id_Campanya, @mon, @ps, @origen, @pd, @destino, @car, @desc, d.latitud, d.longitud, @PrecioWeb, @ic, @nom, @pc,
-                           (SELECT ISNULL(MAX(posicion_destino), 0) + 1 FROM Eurovip.inicio WHERE id_contenedor = @ic), @Estado, @notas, @Noches, @Peso, @Precio_Proveedor, @cod
+                           (SELECT ISNULL(MAX(posicion_destino), 0) + 1 FROM Eurovip.inicio WHERE id_contenedor = @ic), @Estado, @notas, @Noches, @Peso, @Precio_Proveedor, @cod, @prov
                     FROM (SELECT 1 x) uno LEFT JOIN Eurovip.destino d ON d.id_destino = @destino AND d.id_pais = @pd AND d.id_idioma = @Idioma;
                     SELECT CAST(SCOPE_IDENTITY() AS int);", p, tx);
             }

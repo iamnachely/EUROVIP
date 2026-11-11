@@ -47,8 +47,8 @@ namespace EuroVip.Repositories
 
             if (!await Existe("SELECT COUNT(1) FROM Eurovip.proveedor WHERE id_proveedor = @p", new { p = dto.Id_Proveedor })) e.Add($"El proveedor \"{dto.Id_Proveedor}\" no existe.");
             if (!await Existe("SELECT COUNT(1) FROM Eurovip.moneda WHERE id_moneda = @m", new { m = dto.Divisa })) e.Add($"La moneda \"{dto.Divisa}\" no existe.");
-            // FASE 38: el código de la carga (si se escribe) es el código interno: letras y números y único en todo el sistema
-            if (EuroVip.Services.CodigoInterno.Limpiar(dto.CodigoServicio) is string cod
+            // FASE 38 / CAMBIO 128: el código interno (NO el código servicio): letras y números y único en todo el sistema
+            if (EuroVip.Services.CodigoInterno.Limpiar(dto.CodigoInterno) is string cod
                 && await EuroVip.Services.CodigoInterno.ErrorAsync(cn, cod, OfertaRepository.TipoDe(dto.Tipo), null) is string malCod) e.Add(malCod);
             // origen de venta: opcional en Solo Hotel (sin origen = no se guarda servicio_origen); obligatorio en Paquetes
             if (string.IsNullOrEmpty(dto.Origen))
@@ -251,6 +251,8 @@ namespace EuroVip.Repositories
                     // Incluye / No incluye / notas: una vez por carga (código), no por oferta/fecha
                     Avance(89, "Guardando incluye / no incluye y notas…");
                     await CargaCircuitoService.GuardarDescripcionAsync(cn, tx, codigo, dto.Notas);
+                    if (EuroVip.Services.CodigoInterno.Limpiar(dto.CodigoInterno) is string ci && r.Ids.Count > 0)
+                        await cn.ExecuteAsync("UPDATE Eurovip.servicio SET codigo_interno = @ci WHERE id_servicio IN @ids", new { ci, ids = r.Ids }, tx);
                     Avance(91, "Confirmando la carga…");
                     tx.Commit();
                 }

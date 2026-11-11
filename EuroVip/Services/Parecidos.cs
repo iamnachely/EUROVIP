@@ -68,7 +68,7 @@ namespace EuroVip.Services
             return 2.0 * comunes / (a.Length - 1 + b.Length - 1);
         }
 
-        private static int Distancia(string a, string b)
+        public static int Distancia(string a, string b)
         {
             var d = new int[b.Length + 1];
             for (var j = 0; j <= b.Length; j++) d[j] = j;

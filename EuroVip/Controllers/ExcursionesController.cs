@@ -154,7 +154,29 @@ namespace EuroVip.Controllers
         }
 
         // ================= CARGAR EXCEL (muchas excursiones de una vez) =================
-        private static readonly string[] Columnas = { "Nombre", "Destino", "Moneda", "Precio", "Cancelable", "Código", "Proveedor", "Descripción", "Prioridad", "Precio proveedor" };
+        private static readonly string[] Columnas = { "Nombre", "Destino", "Moneda", "Precio", "Cancelable", "Código interno", "Proveedor", "Descripción", "Prioridad", "Precio proveedor" };
+
+        /// <summary>Columnas del Excel con sus listas (lo que hay en la base AHORA): para la plantilla, las coincidencias y el editor de filas.</summary>
+        private async Task<List<CargaExcelColumna>> ColumnasExcelAsync()
+        {
+            using var cn = _aud.Conexion();
+            var destinos = await CatalogoCargas.DestinosAsync(cn);
+            var monedas = await CatalogoCargas.MonedasAsync(cn);
+            var proveedores = await CatalogoCargas.ProveedoresAsync(cn);
+            return new()
+            {
+                new() { Nombre = "Nombre", Alias = new[] { "Excursión", "Excursion" }, Campo = "Nombre" },
+                new() { Nombre = "Destino", Campo = "Id_Destino", Opciones = destinos },
+                CargaExcel.ColumnaMoneda(monedas),
+                new() { Nombre = "Precio", Alias = new[] { "Precio por persona" }, Campo = "Precio", Tipo = "numero" },
+                CargaExcel.ColumnaSiNo("Cancelable"),
+                new() { Nombre = "Código interno", Alias = new[] { "Código", "Codigo", "Codigo interno" }, Campo = "Codigo" },
+                CargaExcel.ColumnaProveedor(proveedores),
+                new() { Nombre = "Descripción", Alias = new[] { "Descripcion" }, Campo = "Descripcion", Tipo = "largo" },
+                new() { Nombre = "Prioridad", Alias = new[] { "Peso" }, Campo = "Peso", Tipo = "numero" },
+                new() { Nombre = "Precio proveedor", Alias = new[] { "Precio del proveedor" }, Campo = "Precio_Proveedor", Tipo = "numero" },
+            };
+        }
 
         /// <summary>Plantilla: hoja «Excursiones» (una fila por excursión) y hoja «Instrucciones» con los destinos que existen.</summary>
         [HttpGet]
@@ -171,14 +193,14 @@ namespace EuroVip.Controllers
             {
                 new object?[] { "Isla Saona en catamarán", ej[0], "DOP", 4500m, "Sí", "EXCSAONA1", proveedores.FirstOrDefault()?.Nombre, "Día completo en Isla Saona: catamarán, almuerzo buffet, bebidas y piscina natural.", 1, 5200m },
                 new object?[] { "Cascada El Limón a caballo", ej[^1], "USD", 55m, "No", "", "", "Paseo a caballo hasta la cascada El Limón con almuerzo típico." },
-            }, new double[] { 42, 22, 10, 12, 12, 16, 30, 80, 11, 16 }) { Listas = new Dictionary<string, IReadOnlyList<string>> { ["Moneda"] = monedas, ["Cancelable"] = ExcelTabla.SiNoLista } };
+            }, new double[] { 42, 22, 10, 12, 12, 16, 30, 80, 11, 16 }) { Listas = CargaExcel.Listas(await ColumnasExcelAsync()) };
             var ayuda = new ExcelTabla.Hoja("Instrucciones", new[] { "Columna", "Qué poner" }, new List<object?[]>
             {
                 new object?[] { "Nombre", "Obligatorio. Nombre de la excursión (no se puede repetir en el mismo destino)." },
                 new object?[] { "Destino", "Obligatorio. Tal cual está en Eurovip (lista abajo)." },
                 new object?[] { "Moneda", $"Moneda del precio: {string.Join(", ", monedas)}. Vacío = DOP." },
                 new object?[] { "Precio", "Obligatorio. Precio por persona (número, sin símbolo)." },
-                new object?[] { "Código", "Opcional. Tu código interno: letras y números, sin espacios, tildes ni símbolos. No se puede repetir en ningún producto." },
+                new object?[] { "Código interno", "Opcional. Tu código interno: letras y números, sin espacios, tildes ni símbolos. No se puede repetir en ningún producto." },
                 new object?[] { "Proveedor", "Opcional. De dónde sale la excursión: nombre o código como en la hoja «Proveedores»." },
                 new object?[] { "Cancelable", "Sí o No. Vacío = No." },
                 new object?[] { "Descripción", "Opcional." },
@@ -196,10 +218,13 @@ namespace EuroVip.Controllers
         /// </summary>
         [HttpPost, ValidateAntiForgeryToken]
         [RequestSizeLimit(CargaExcel.MaxBytes + 100_000)]
-        public async Task<IActionResult> CargarExcel(IFormFile? archivo, bool guardar)
+        public async Task<IActionResult> CargarExcel(IFormFile? archivo, bool guardar, string? cambios, string? omitir, bool descargar = false, bool sinListas = false)
         {
-            var (filas, error) = await CargaExcel.LeerAsync(archivo);
+            var (filas, error) = await CargaExcel.LeerAsync(archivo, cambios, omitir);
             if (error is not null) return BadRequest(new { mensaje = error });
+            var columnas = await ColumnasExcelAsync();
+            var ayuda = CargaExcel.Ayudar(filas!, columnas);
+            if (descargar) return File(CargaExcel.Corregido("Excursiones", filas!, columnas), CargaExcel.TipoXlsx, "Eurovip-excursiones-corregido.xlsx");
             var r = new CargaExcelResultado { Guardado = guardar };
             var vistas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var codigos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -210,7 +235,7 @@ namespace EuroVip.Controllers
                 var (idProv, malProv) = CatalogoCargas.BuscarProveedor(f.Texto("Proveedor"), proveedores);
                 var dto = new ExcursionGuardarDto
                 {
-                    Id_Moneda = f.Texto("Moneda", "Divisa") ?? "DOP", Codigo = f.Texto("Código", "Codigo", "Código interno"), Id_Proveedor = idProv,
+                    Id_Moneda = f.Texto("Moneda", "Divisa") ?? "DOP", Codigo = f.Texto("Código interno", "Codigo interno", "Código", "Codigo"), Id_Proveedor = idProv,
                     Nombre = f.Texto("Nombre", "Excursión", "Excursion") ?? "", Id_Destino = f.Texto("Destino") ?? "",
                     Precio = f.Cifra("Precio", "Precio por persona"), Cancelable = f.SiNo(false, "Cancelable"), Descripcion = f.Texto("Descripción", "Descripcion"),
                     Peso = f.Cifra("Prioridad", "Peso") is decimal pe ? (short)Math.Round(pe) : null, Precio_Proveedor = f.Cifra("Precio proveedor", "Precio del proveedor")
@@ -219,7 +244,8 @@ namespace EuroVip.Controllers
                 r.Filas.Add(fila);
                 fila.Mensaje = malProv ?? CargaExcel.ErrorModelo(dto);
                 if (fila.Mensaje is null && f.Texto("Precio", "Precio por persona") is string tp && dto.Precio is null) fila.Mensaje = $"El precio «{tp}» no es un número.";
-                if (fila.Mensaje is null && await RevisarAsync(dto, monedas) is var (_, mal)) fila.Mensaje = mal;
+                if (fila.Mensaje is null && await RevisarAsync(dto, monedas) is var (campo, mal)) { fila.Mensaje = mal; CargaExcel.Marcar(fila, campo, columnas); }
+                if (malProv is not null) CargaExcel.Marcar(fila, "Id_Proveedor", columnas);
                 if (fila.Mensaje is null && !vistas.Add($"{dto.Id_Destino}|{dto.Nombre}")) fila.Mensaje = "Está repetida en el Excel (mismo nombre y destino).";
                 if (fila.Mensaje is null && dto.Codigo is not null && !codigos.Add(dto.Codigo)) fila.Mensaje = $"El código «{dto.Codigo}» está repetido en el Excel.";
                 fila.Detalle = $"{dto.Id_Destino} · {(dto.Precio is decimal pr ? $"{dto.Id_Moneda} {pr:N2}" : "sin precio")}" + (dto.Codigo is null ? "" : $" · {dto.Codigo}");
@@ -234,6 +260,7 @@ namespace EuroVip.Controllers
                 }
                 catch (Exception ex) { fila.Ok = false; fila.Mensaje = "No se pudo guardar: " + ex.Message; _logger.LogError(ex, "Cargar Excel: excursión fila {Fila}", f.Numero); }
             }
+            CargaExcel.Completar(r, filas!, columnas, ayuda, sinListas);
             r.Mensaje = CargaExcel.Mensaje(r, "excursión", "excursiones");
             return Json(r);
         }

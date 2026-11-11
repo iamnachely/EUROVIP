@@ -240,7 +240,7 @@
             </div>
             <small style="color:var(--ev-muted);font-weight:600;display:block;margin:-4px 0 10px">Carga al menos uno. Si dejas uno vacío, esa opción no sale en la web.</small>
             <div class="ui-row">
-                <div class="ui-f"><label for="edCodigo">Código <em>tu código interno · único en todo el sistema</em></label>
+                <div class="ui-f"><label for="edCodigo">Código interno <em>letras y números · único en todo el sistema</em></label>
                     <input id="edCodigo"><span class="msg"></span></div>
                 <div class="ui-f"><label for="edProveedor">Proveedor <em>de dónde sale el traslado</em></label>
                     <select id="edProveedor"><option value="">— Sin proveedor —</option></select><span class="msg"></span></div>
@@ -378,7 +378,7 @@
                 <div class="tr-chips">
                     ${conAcciones ? (t.activo ? '<span class="tr-chip ok"><i class="bi bi-broadcast"></i> En la web</span>' : '<span class="tr-chip av"><i class="bi bi-pause-circle"></i> Desactivado</span>') : ''}
                     ${t.cancelable ? `<span class="tr-chip ok"><i class="bi bi-check2"></i> Cancelable${t.horas_Cancelacion != null ? ` hasta ${t.horas_Cancelacion} h antes` : ''}</span>` : '<span class="tr-chip no"><i class="bi bi-x"></i> No cancelable</span>'}
-                    ${t.codigo ? `<span class="tr-chip"><i class="bi bi-upc"></i> ${esc(t.codigo)}</span>` : ''}
+                    ${t.codigo ? `<span class="tr-chip" title="Código interno"><i class="bi bi-upc"></i> ${esc(t.codigo)}</span>` : ''}
                     ${t.proveedor ? `<span class="tr-chip" title="Proveedor"><i class="bi bi-briefcase"></i> ${esc(t.proveedor)}</span>` : ''}
                     <span class="tr-chip"><i class="bi bi-building"></i> ${t.todos_Hoteles ? `Todos los hoteles de ${esc(t.id_Destino)}` : `${t.hoteles.length} hotel${t.hoteles.length === 1 ? '' : 'es'}`}</span>
                 </div>

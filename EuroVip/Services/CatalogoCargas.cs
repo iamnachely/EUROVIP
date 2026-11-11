@@ -21,6 +21,13 @@ namespace EuroVip.Services
                 FROM Eurovip.proveedor WHERE id_proveedor <> '0' AND LTRIM(nombre) NOT LIKE 'Elegir%'
                 ORDER BY CASE WHEN id_tipo_proveedor = 'Tour Operador' THEN 0 ELSE 1 END, nombre")).ToList();
 
+        /// <summary>Destinos en español (Valor = id_destino tal cual, Extra = país) para las listas y coincidencias del Excel.</summary>
+        public static async Task<List<CargaExcelOpcion>> DestinosAsync(IDbConnection cn) =>
+            (await cn.QueryAsync<(string Destino, string? Pais)>(@"SELECT LTRIM(RTRIM(d.id_destino)), ISNULL(p.nombre, d.id_pais) FROM Eurovip.destino d
+                LEFT JOIN Eurovip.pais p ON p.id_pais = d.id_pais AND p.id_idioma = 'ES' WHERE d.id_idioma = 'ES' ORDER BY d.id_destino"))
+            .Where(d => !string.IsNullOrWhiteSpace(d.Destino)).GroupBy(d => d.Destino, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new CargaExcelOpcion(g.Key, g.Key, g.First().Pais)).ToList();
+
         /// <summary>Moneda en mayúsculas (vacía = DOP) y el error si no existe.</summary>
         public static (string Moneda, string? Error) Moneda(string? texto, ISet<string> monedas)
         {

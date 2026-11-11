@@ -45,8 +45,8 @@ namespace EuroVip.Repositories
             var errores = new List<string>();
             using var cn = _circuitos.Conexion();
             await cn.OpenAsync();
-            // FASE 38: el código de la carga (si se escribe) es el código interno: letras y números y único en todo el sistema
-            if (EuroVip.Services.CodigoInterno.Limpiar(dto.CodigoServicio) is string cod
+            // FASE 38 / CAMBIO 128: el código interno (NO el código servicio): letras y números y único en todo el sistema
+            if (EuroVip.Services.CodigoInterno.Limpiar(dto.CodigoInterno) is string cod
                 && await EuroVip.Services.CodigoInterno.ErrorAsync(cn, cod, "CIRCUITO", null) is string malCod) errores.Add(malCod);
 
             // --- circuito ---
@@ -290,6 +290,8 @@ namespace EuroVip.Repositories
                     // 4) Incluye / No incluye / notas: una vez por carga (código), no por salida
                     Avance(89, "Guardando incluye / no incluye y notas…");
                     await GuardarDescripcionAsync(cn, tx, codigoServicio, dto.Notas);
+                    if (EuroVip.Services.CodigoInterno.Limpiar(dto.CodigoInterno) is string ci && resultado.Ids.Count > 0)
+                        await cn.ExecuteAsync("UPDATE Eurovip.servicio SET codigo_interno = @ci WHERE id_servicio IN @ids", new { ci, ids = resultado.Ids }, tx);
 
                     Avance(91, "Confirmando la carga…");
                     tx.Commit();

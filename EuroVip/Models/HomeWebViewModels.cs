@@ -15,6 +15,8 @@ namespace EuroVip.Models
         public string Id_Moneda { get; set; } = "";
         /// <summary>Código interno (FASE 38).</summary>
         public string? Codigo { get; set; }
+        public string? Id_Proveedor { get; set; }
+        public string? Proveedor { get; set; }
         public string Id_Pais_Origen { get; set; } = "";
         public string Origen { get; set; } = "";
         public string Id_PaisDestino { get; set; } = "";
@@ -153,6 +155,8 @@ namespace EuroVip.Models
         public string Id_Moneda { get; set; } = "DOP";
         /// <summary>Código interno (FASE 38): letras y números, único entre todos los productos.</summary>
         [StringLength(30, ErrorMessage = "El código admite como máximo 30 caracteres")] public string? Codigo { get; set; }
+        /// <summary>Proveedor de donde sale la oferta (inicio.id_proveedor). Opcional.</summary>
+        [StringLength(10)] public string? Id_Proveedor { get; set; }
     }
 
     public class HwActualizarDto

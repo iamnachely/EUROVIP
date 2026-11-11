@@ -5596,6 +5596,50 @@ SELECT clave, valor FROM Eurovip.config_sistema WHERE clave = 'imagen_por_defect
 SELECT id, ruta_relativa, nombre_archivo, extension, ancho, alto FROM Eurovip.imagen WHERE id = 44;
 GO
 
+/* ---------- CAMBIO 128: código interno de Solo Hotel, Paquetes y salidas de circuito ----------
+   Explicación sencilla: el «Código servicio» (servicio.codigo, ej. ARodriguez20261111134905) es el código de la CARGA: agrupa
+   todas las fechas que se cargaron juntas y sus textos. El «Código interno» es OTRA cosa (pedido de la usuaria: «falta el código
+   interno, el código servicio es otra cosa»): el código propio de la empresa, letras y números, único en todos los productos.
+   Por eso va en una columna nueva, servicio.codigo_interno (igual en todas las fechas de una carga), y la vista vCodigoInterno
+   pasa a mirar esa columna en vez de servicio.codigo. No hay índice único porque una carga tiene muchas filas con el mismo código;
+   la unicidad la revisa el BackOffice con la vista. No cambia ningún dato existente. */
+IF COL_LENGTH('Eurovip.servicio', 'codigo_interno') IS NULL ALTER TABLE Eurovip.servicio ADD codigo_interno varchar(30) NULL;
+GO
+CREATE OR ALTER VIEW Eurovip.vCodigoInterno
+AS
+    SELECT CASE WHEN i.tipo_servicio = 'HOTEL' THEN 'HOTEL' ELSE 'INICIO' END AS producto, CAST(i.id_servicio AS varchar(120)) AS clave,
+           i.codigo, CAST(i.id_destino AS nvarchar(200)) AS nombre
+      FROM Eurovip.inicio i WHERE i.codigo IS NOT NULL AND i.codigo <> ''
+    UNION ALL
+    -- clave = el código de la carga (servicio.codigo): así al editar una carga no choca con su propio código interno
+    SELECT s.id_tipo_servicio, CAST(MIN(ISNULL(s.codigo, '')) AS varchar(120)), s.codigo_interno, CAST(MIN(ISNULL(s.nombre, s.codigo)) AS nvarchar(200))
+      FROM Eurovip.servicio s WHERE s.codigo_interno IS NOT NULL AND s.codigo_interno <> '' GROUP BY s.id_tipo_servicio, s.codigo_interno
+    UNION ALL
+    SELECT 'CIRCUITO_CAT', CAST(c.nombre_circuito AS varchar(120)), c.id, CAST(c.nombre_circuito AS nvarchar(200))
+      FROM Eurovip.circuito c WHERE c.id IS NOT NULL AND c.id <> ''
+    UNION ALL
+    SELECT 'EXCURSION', CAST(e.id_Excursion AS varchar(120)), e.codigo, CAST(e.nombre AS nvarchar(200))
+      FROM Eurovip.servicio_excursion e WHERE e.codigo IS NOT NULL AND e.codigo <> ''
+    UNION ALL
+    SELECT 'TRASLADO', CAST(t.id_traslado AS varchar(120)), t.codigo, CAST(t.nombre AS nvarchar(200))
+      FROM Eurovip.traslado t WHERE t.codigo IS NOT NULL AND t.codigo <> ''
+    UNION ALL
+    SELECT 'CRUCERO', CAST(c.id_crucero AS varchar(120)), c.codigo_interno, CAST(c.titulo AS nvarchar(200))
+      FROM Eurovip.crucero c WHERE c.codigo_interno IS NOT NULL AND c.codigo_interno <> '';
+GO
+SELECT 'servicio.codigo_interno' AS revision, CASE WHEN COL_LENGTH('Eurovip.servicio','codigo_interno') > 0 THEN 'ok' ELSE 'FALTA' END AS estado;
+SELECT producto, COUNT(*) AS codigos FROM Eurovip.vCodigoInterno GROUP BY producto ORDER BY producto;
+GO
+
+/* ---------- CAMBIO 129: proveedor en cruceros ----------
+   Explicación sencilla: pedido de la usuaria «agregar proveedor en todas partes». Hoteles, Solo Hotel, Paquetes, Circuitos,
+   Excursiones y Traslados ya guardan de qué proveedor sale la oferta; los cruceros solo tenían la naviera. Columna nueva
+   crucero.id_proveedor (opcional, código de Eurovip.proveedor). No cambia ningún dato existente. */
+IF COL_LENGTH('Eurovip.crucero', 'id_proveedor') IS NULL ALTER TABLE Eurovip.crucero ADD id_proveedor varchar(10) NULL;
+GO
+SELECT 'crucero.id_proveedor' AS revision, CASE WHEN COL_LENGTH('Eurovip.crucero','id_proveedor') > 0 THEN 'ok' ELSE 'FALTA' END AS estado;
+GO
+
 
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
@@ -6138,6 +6182,11 @@ GO
                tenían foto vieja). Traslados, circuitos, cruceros, tarjetas y días de itinerario ya tenían foto. Filas marcadas con
                multimedia.texto_alternativo = «Imagen por defecto». Para deshacer: DELETE FROM Eurovip.multimedia WHERE texto_alternativo =
                «Imagen por defecto» (y vaciar alojamiento.caratula de esos 106 si se quiere volver a dejarlos sin foto).
+   11/11/2026  CAMBIO 128 y 129 aplicados SOLO en el 93. 128: columna servicio.codigo_interno (el «Código interno» de Solo Hotel,
+               Paquetes y salidas de circuito; NO es el código servicio/servicio.codigo, que es el código de la carga) y vCodigoInterno
+               mira esa columna. 129: columna crucero.id_proveedor (proveedor en cruceros). Ningún dato existente cambió (columnas nuevas
+               vacías). Para deshacer: ALTER TABLE ... DROP COLUMN y volver a crear la vista como en el CAMBIO 126.
+               Pruebas del Excel con coincidencias (Excursiones, Hoteles, Traslados) solo con «revisar» (guardar = false): no se creó nada.
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

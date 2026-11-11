@@ -183,7 +183,7 @@
                 <div class="ex-money"><b class="sim" id="edSim">RD$</b><input id="edPrecio" type="number" min="0" step="0.01" placeholder="0"></div><span class="msg"></span></div>
         </div>
         <div class="ui-row">
-            <div class="ui-f"><label for="edCodigo">Código <em>tu código interno · único en todo el sistema</em></label>
+            <div class="ui-f"><label for="edCodigo">Código interno <em>letras y números · único en todo el sistema</em></label>
                 <input id="edCodigo"><span class="msg"></span></div>
             <div class="ui-f"><label for="edProveedor">Proveedor <em>de dónde sale la excursión</em></label>
                 <select id="edProveedor"><option value="">— Sin proveedor —</option></select><span class="msg"></span></div>
@@ -348,7 +348,7 @@ const EX = (() => {
             ? `<div class="ui-table-wrap"><table class="ui-table ex-tabla"><thead><tr><th></th><th>Excursión</th><th class="num">Precio</th><th>Cancelable</th><th style="width:150px"></th></tr></thead><tbody>
                 ${lista.map(x => `<tr data-id="${x.id_Excursion}" data-accion="ver">
                     <td class="img">${x.imagen ? `<img src="${esc(x.imagen)}" alt="" loading="lazy">` : '<span></span>'}</td>
-                    <td>${EVPrioridad.estrella(x.peso)} <b>${esc(x.nombre)}</b>${x.codigo ? ` <span class="ex-chip"><i class="bi bi-upc"></i> ${esc(x.codigo)}</span>` : ''}${x.proveedor ? ` <span class="ex-chip"><i class="bi bi-building"></i> ${esc(x.proveedor)}</span>` : ''}${!x.imagen ? ' <span class="ex-chip av">Sin foto</span>' : ''}${sinTexto(x.descripcion) ? ' <span class="ex-chip av">Sin descripción</span>' : ''}</td>
+                    <td>${EVPrioridad.estrella(x.peso)} <b>${esc(x.nombre)}</b>${x.codigo ? ` <span class="ex-chip" title="Código interno"><i class="bi bi-upc"></i> ${esc(x.codigo)}</span>` : ''}${x.proveedor ? ` <span class="ex-chip"><i class="bi bi-building"></i> ${esc(x.proveedor)}</span>` : ''}${!x.imagen ? ' <span class="ex-chip av">Sin foto</span>' : ''}${sinTexto(x.descripcion) ? ' <span class="ex-chip av">Sin descripción</span>' : ''}</td>
                     <td class="num"><b>${precio(x.precio, x.id_Moneda)}</b>${x.precio_Proveedor ? '<br>' + EVPrioridad.proveedor(x.precio, x.precio_Proveedor) : ''}</td>
                     <td>${x.cancelable ? '<span class="ex-chip ok">Sí</span>' : '<span class="ex-chip no">No</span>'}</td>
                     <td style="text-align:right;white-space:nowrap">${acciones(x)}</td></tr>`).join('')}
@@ -362,7 +362,7 @@ const EX = (() => {
                     ${x.precio_Proveedor ? `<div>${EVPrioridad.proveedor(x.precio, x.precio_Proveedor)}</div>` : ''}
                     <div class="ex-chips">
                         ${x.cancelable ? '<span class="ex-chip ok"><i class="bi bi-check2"></i> Cancelable</span>' : '<span class="ex-chip no"><i class="bi bi-x"></i> No cancelable</span>'}
-                        ${x.codigo ? `<span class="ex-chip"><i class="bi bi-upc"></i> ${esc(x.codigo)}</span>` : ''}
+                        ${x.codigo ? `<span class="ex-chip" title="Código interno"><i class="bi bi-upc"></i> ${esc(x.codigo)}</span>` : ''}
                         ${x.proveedor ? `<span class="ex-chip" title="Proveedor"><i class="bi bi-building"></i> ${esc(x.proveedor)}</span>` : ''}
                         ${sinTexto(x.descripcion) ? '<span class="ex-chip av">Sin descripción</span>' : ''}</div>
                     ${sinTexto(x.descripcion) ? '' : `<div class="ex-desc">${esc(String(x.descripcion).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim())}</div>`}
@@ -417,7 +417,7 @@ const EX = (() => {
         $('#verCuerpo').innerHTML = `${x.imagen ? `<img class="ex-ver-img" src="${esc(x.imagen)}" alt="Foto de ${esc(x.nombre)}">` : '<div class="ex-ver-img" style="display:grid;place-items:center;font-weight:800">Sin foto</div>'}
             <div class="ex-chips" style="margin-bottom:14px"><span class="ex-chip"><i class="bi bi-geo-alt"></i> ${esc(x.id_Destino || '—')}</span>
                 <span class="ex-chip" style="font-size:14px"><b>${precio(x.precio, x.id_Moneda)}</b>&nbsp;por persona</span>
-                ${x.codigo ? `<span class="ex-chip"><i class="bi bi-upc"></i> ${esc(x.codigo)}</span>` : ''}
+                ${x.codigo ? `<span class="ex-chip" title="Código interno"><i class="bi bi-upc"></i> ${esc(x.codigo)}</span>` : ''}
                 ${x.proveedor ? `<span class="ex-chip"><i class="bi bi-building"></i> ${esc(x.proveedor)}</span>` : ''}
                 ${x.cancelable ? '<span class="ex-chip ok">Se puede cancelar</span>' : '<span class="ex-chip no">No se puede cancelar</span>'}</div>
             <div class="ex-prev-desc" style="max-height:none">${sinTexto(x.descripcion) ? '<span style="color:var(--ev-muted)">Esta excursión no tiene descripción todavía.</span>' : limpiarHtml(x.descripcion)}</div>`;

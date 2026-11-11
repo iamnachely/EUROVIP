@@ -89,6 +89,7 @@ namespace EuroVip.Services
                         new CellFormat { FontId = 2, ApplyFont = true },                                                     // 3 negrita
                         new CellFormat(new Alignment { WrapText = true, Vertical = VerticalAlignmentValues.Top }) { ApplyAlignment = true })); // 4 texto largo
                 var sheets = wb.Workbook.AppendChild(new Sheets());
+                var listas = new List<List<string>>();
                 uint n = 1;
                 foreach (var h in hojas)
                 {
@@ -132,27 +133,48 @@ namespace EuroVip.Services
                     ws.Worksheet = primera == 2
                         ? new Worksheet(new SheetViews(new SheetView(new Pane { VerticalSplit = 1, TopLeftCell = "A2", ActivePane = PaneValues.BottomLeft, State = PaneStateValues.Frozen }) { WorkbookViewId = 0 }), cols, data)
                         : new Worksheet(cols, data);
-                    // Listas desplegables (filas 2 a 2000 de cada columna con lista). Excel admite hasta 255 caracteres en la lista escrita.
+                    // Listas desplegables (filas 2 a 2000 de cada columna con lista). Los valores van en la hoja oculta «Listas» (sin límite
+                    // de largo: destinos, proveedores, aeropuertos…), con lo que hay en la base AL DESCARGAR. Si se escribe algo que no está
+                    // (porque se creó después o se escribe parecido), Excel solo AVISA y deja seguir: al subirlo se busca la coincidencia.
                     if (h.Listas is { Count: > 0 })
                     {
                         var dv = new DataValidations();
                         foreach (var (col, vals) in h.Listas)
                         {
                             var i = h.Encabezados.ToList().FindIndex(e => Clave(e) == Clave(col));
-                            var lista = string.Join(",", vals.Select(v => v.Replace(",", " ").Replace("\"", "")));
-                            if (i < 0 || vals.Count == 0 || lista.Length > 250) continue;
+                            var limpios = vals.Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v.Trim()).Distinct().ToList();
+                            if (i < 0 || limpios.Count == 0) continue;
+                            var letraLista = Ref(listas.Count, 1)[..^1];
+                            listas.Add(limpios);
                             var letra = Ref(i, 1)[..^1];
                             dv.Append(new DataValidation
                             {
                                 Type = DataValidationValues.List, AllowBlank = true, ShowErrorMessage = true, ShowInputMessage = true,
-                                ErrorTitle = "Valor no válido", Error = "Elige un valor de la lista (o déjalo vacío).",
+                                ErrorStyle = DataValidationErrorStyleValues.Warning,
+                                ErrorTitle = "No está en la lista", Error = "Ese valor no está en la lista. Si sigues, al subir el Excel te muestro las coincidencias para elegir.",
+                                PromptTitle = col.Length > 32 ? col[..32] : col, Prompt = "Elige de la lista (flecha) o escribe: al subirlo se busca el parecido.",
                                 SequenceOfReferences = new ListValue<StringValue> { InnerText = $"{letra}2:{letra}2000" },
-                                Formula1 = new Formula1("\"" + lista + "\"")
+                                Formula1 = new Formula1($"Listas!${letraLista}$1:${letraLista}${limpios.Count}")
                             });
                         }
                         if (dv.HasChildren) { dv.Count = (uint)dv.ChildElements.Count; ws.Worksheet.Append(dv); }
                     }
                     sheets.Append(new Sheet { Id = wb.GetIdOfPart(ws), SheetId = n++, Name = h.Nombre.Length > 31 ? h.Nombre[..31] : h.Nombre });
+                }
+                if (listas.Count > 0)
+                {
+                    // Hoja oculta con los valores de las listas desplegables (una columna por lista)
+                    var ws = wb.AddNewPart<WorksheetPart>();
+                    var data = new SheetData();
+                    for (var f = 0; f < listas.Max(l => l.Count); f++)
+                    {
+                        var row = new Row { RowIndex = (uint)(f + 1) };
+                        for (var c = 0; c < listas.Count; c++)
+                            if (f < listas[c].Count) row.Append(Texto(Ref(c, f + 1), listas[c][f], 0));
+                        data.Append(row);
+                    }
+                    ws.Worksheet = new Worksheet(data);
+                    sheets.Append(new Sheet { Id = wb.GetIdOfPart(ws), SheetId = n++, Name = "Listas", State = SheetStateValues.Hidden });
                 }
                 wb.Workbook.Save();
             }

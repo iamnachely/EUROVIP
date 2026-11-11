@@ -49,7 +49,7 @@ namespace EuroVip.Repositories
         {
             using var cn = _db.Conexion();
             return (await cn.QueryAsync<CruceroLista>(@"
-                SELECT c.id_crucero AS Id_Crucero, c.titulo AS Titulo, c.codigo AS Codigo, c.codigo_interno AS Codigo_Interno, c.id_moneda AS Id_Moneda, c.id_barco AS Id_Barco, b.nombre AS Barco,
+                SELECT c.id_crucero AS Id_Crucero, c.titulo AS Titulo, c.codigo AS Codigo, c.codigo_interno AS Codigo_Interno, c.id_proveedor AS Id_Proveedor, (SELECT TOP 1 LTRIM(RTRIM(pv.nombre)) FROM Eurovip.proveedor pv WHERE pv.id_proveedor = c.id_proveedor) AS Proveedor, c.id_moneda AS Id_Moneda, c.id_barco AS Id_Barco, b.nombre AS Barco,
                        n.id_naviera AS Id_Naviera, n.nombre AS Naviera, n.logo AS Naviera_Logo, c.noches AS Noches,
                        c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.activo AS Activo, c.peso AS Peso, c.precio_proveedor AS Precio_Proveedor,
                        (SELECT COUNT(*) FROM Eurovip.crucero_pdf p WHERE p.id_crucero = c.id_crucero) AS Pdfs,
@@ -84,6 +84,8 @@ namespace EuroVip.Repositories
             d.Codigo_Interno = EuroVip.Services.CodigoInterno.Limpiar(d.Codigo_Interno);
             var anterior = d.Id_Crucero is int id ? await cn.ExecuteScalarAsync<string?>("SELECT codigo_interno FROM Eurovip.crucero WHERE id_crucero = @id", new { id }) : null;
             if (await EuroVip.Services.CodigoInterno.ErrorAsync(cn, d.Codigo_Interno, "CRUCERO", d.Id_Crucero?.ToString(), anterior) is string mal) return ("Codigo_Interno", mal);
+            d.Id_Proveedor = string.IsNullOrWhiteSpace(d.Id_Proveedor) ? null : d.Id_Proveedor.Trim();
+            if (await EuroVip.Services.CatalogoCargas.ErrorProveedorAsync(cn, d.Id_Proveedor) is string malProv) return ("Id_Proveedor", malProv);   // CAMBIO 129
             return null;
         }
 
@@ -92,7 +94,7 @@ namespace EuroVip.Repositories
             using var cn = _db.Conexion();
             var c = await cn.QueryFirstOrDefaultAsync<CruceroDto>(@"
                 SELECT c.id_crucero AS Id_Crucero, c.titulo AS Titulo, c.subtitulo AS Subtitulo, c.id_barco AS Id_Barco, b.nombre AS Barco_Nombre, n.nombre AS Naviera_Nombre,
-                       c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.noches AS Noches, c.codigo AS Codigo, c.codigo_interno AS Codigo_Interno, c.id_moneda AS Id_Moneda, c.descripcion AS Descripcion,
+                       c.puerto_salida AS Puerto_Salida, c.puerto_llegada AS Puerto_Llegada, c.noches AS Noches, c.codigo AS Codigo, c.codigo_interno AS Codigo_Interno, c.id_proveedor AS Id_Proveedor, c.id_moneda AS Id_Moneda, c.descripcion AS Descripcion,
                        c.incluye AS Incluye, c.no_incluye AS No_Incluye, c.titulo_seccion AS Titulo_Seccion, c.activo AS Activo, c.peso AS Peso, c.precio_proveedor AS Precio_Proveedor, c.usuario AS Usuario,
                        c.fecha_alta AS Fecha_Alta, c.fecha_modificacion AS Fecha_Modificacion
                 FROM Eurovip.crucero c
@@ -177,7 +179,7 @@ namespace EuroVip.Repositories
                 id = d.Id_Crucero, Titulo = d.Titulo.Trim(), Subtitulo = Nulo(d.Subtitulo), Id_Barco = idBarco, Puerto_Salida = Nulo(d.Puerto_Salida), Puerto_Llegada = Nulo(d.Puerto_Llegada),
                 d.Noches, Codigo = Nulo(d.Codigo), Descripcion = Nulo(d.Descripcion), Incluye = Nulo(d.Incluye), No_Incluye = Nulo(d.No_Incluye),
                 Titulo_Seccion = Nulo(d.Titulo_Seccion), d.Activo, usuario, d.Peso, d.Precio_Proveedor,
-                Codigo_Interno = EuroVip.Services.CodigoInterno.Limpiar(d.Codigo_Interno), Id_Moneda = string.IsNullOrWhiteSpace(d.Id_Moneda) ? "DOP" : d.Id_Moneda.Trim().ToUpperInvariant()
+                Codigo_Interno = EuroVip.Services.CodigoInterno.Limpiar(d.Codigo_Interno), Id_Proveedor = string.IsNullOrWhiteSpace(d.Id_Proveedor) ? null : d.Id_Proveedor.Trim(), Id_Moneda = string.IsNullOrWhiteSpace(d.Id_Moneda) ? "DOP" : d.Id_Moneda.Trim().ToUpperInvariant()
             };
             int id;
             var antes = new List<int>();
@@ -188,7 +190,7 @@ namespace EuroVip.Repositories
                     UPDATE Eurovip.crucero SET titulo = @Titulo, subtitulo = @Subtitulo, id_barco = @Id_Barco, puerto_salida = @Puerto_Salida,
                            puerto_llegada = @Puerto_Llegada, noches = @Noches, codigo = @Codigo, descripcion = @Descripcion, incluye = @Incluye,
                            no_incluye = @No_Incluye, titulo_seccion = @Titulo_Seccion, activo = @Activo, peso = @Peso, precio_proveedor = @Precio_Proveedor,
-                           codigo_interno = @Codigo_Interno, id_moneda = @Id_Moneda, usuario = @usuario, fecha_modificacion = SYSDATETIME()
+                           codigo_interno = @Codigo_Interno, id_proveedor = @Id_Proveedor, id_moneda = @Id_Moneda, usuario = @usuario, fecha_modificacion = SYSDATETIME()
                     WHERE id_crucero = @id", p, tx);
                 if (n == 0) throw new InvalidOperationException("Ese crucero ya no existe. Recarga la página.");
                 id = existente;
@@ -210,9 +212,9 @@ namespace EuroVip.Repositories
             {
                 id = await cn.ExecuteScalarAsync<int>(@"
                     INSERT INTO Eurovip.crucero (titulo, subtitulo, id_barco, puerto_salida, puerto_llegada, noches, codigo, descripcion, incluye, no_incluye,
-                                                 titulo_seccion, activo, usuario, peso, precio_proveedor, codigo_interno, id_moneda)
+                                                 titulo_seccion, activo, usuario, peso, precio_proveedor, codigo_interno, id_proveedor, id_moneda)
                     VALUES (@Titulo, @Subtitulo, @Id_Barco, @Puerto_Salida, @Puerto_Llegada, @Noches, @Codigo, @Descripcion, @Incluye, @No_Incluye,
-                            @Titulo_Seccion, @Activo, @usuario, @Peso, @Precio_Proveedor, @Codigo_Interno, @Id_Moneda);
+                            @Titulo_Seccion, @Activo, @usuario, @Peso, @Precio_Proveedor, @Codigo_Interno, @Id_Proveedor, @Id_Moneda);
                     SELECT CAST(SCOPE_IDENTITY() AS int);", p, tx);
             }
 

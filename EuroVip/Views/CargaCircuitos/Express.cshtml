@@ -84,7 +84,7 @@
             <div id="xpNuevo" hidden>
                 <div class="ui-row">
                     <div class="ui-f"><label>Nombre del circuito <em>máx. 50</em></label><input id="nNombre" maxlength="50" placeholder="Ej. Joyas de Quisqueya"><span class="msg"></span></div>
-                    <div class="ui-f"><label>Código único</label><input id="nCodigo" maxlength="30" placeholder="Se llena solo"><span class="msg"></span></div>
+                    <div class="ui-f" data-siempre><label>Código interno <em>del circuito</em></label><input id="nCodigo" maxlength="30" placeholder="Se llena solo"><span class="msg"></span></div>
                 </div>
                 <div class="ui-row r3">
                     <div class="ui-f"><label>Tour operador</label><input id="nProveedor" placeholder="Busca el tour operador…"><span class="msg"></span></div>
@@ -151,12 +151,12 @@
                 <div class="ui-chips" id="cCategorias"></div>
             </div>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>B</span> Origen de venta y moneda</div>
-                <div class="ui-row r3">
+                <div class="ui-sec-t"><span>B</span> Origen de venta, moneda, proveedor y código interno</div>
+                <div class="ui-row r3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
                     <div class="ui-f"><label>País de origen</label><select id="cPaisOrigen"></select></div>
                     <div class="ui-f"><label>Ciudad de origen</label><input id="cOrigen" placeholder="Ej. Madrid"><span class="msg"></span></div>
                     <div class="ui-f"><label>Moneda</label><select id="cDivisa"></select></div>
-                    <div class="ui-f"><label>Código de la carga <em>opcional · único</em></label><input id="cCodigoCarga" placeholder="Se genera solo si lo dejas vacío"></div>
+                    <div class="ui-f" data-siempre><label>Proveedor <em>de dónde sale · vacío = el del circuito</em></label><select id="cProveedorCarga"><option value="">— El del circuito —</option></select></div>                    <div class="ui-f" data-siempre><label>Código interno <em>opcional · letras y números, único en todo el sistema</em></label><input id="cCodigoCarga" maxlength="30" placeholder="Ej. CIRCEUROPA26"></div>
                 </div>
             </div>
             <div class="ui-sec">
@@ -386,14 +386,14 @@ const XP = (() => {
         const camps = campanyas.datos();
         const dto = {
             Modo: 'express',
-            CodigoCircuito: S.modo === 'existente' ? S.circuito?.codigo : null, CodigoServicio: $('#cCodigoCarga').value.trim() || null,
+            CodigoCircuito: S.modo === 'existente' ? S.circuito?.codigo : null, CodigoInterno: $('#cCodigoCarga').value.trim() || null,
             NuevoCircuito: S.modo === 'nuevo' ? {
                 Codigo: $('#nCodigo').value.trim(), Nombre: $('#nNombre').value.trim(), Id_Proveedor: $('#nProveedor').dataset.valor || '',
                 Noches: noches(), Caratula: $('#nCaratula').value.trim() || null,
                 Destinos: S.nuevo.destinos.map(d => ({ Id_Destino: d.id_Destino, Id_Pais: d.id_Pais })),
                 Hoteles: S.nuevo.hoteles.map(h => ({ Id_Alojamiento: h.id_Alojamiento, Categoria: h.categoria })), Dias: []
             } : null,
-            Categoria: S.categoria, Divisa: $('#cDivisa').value, Origen: $('#cOrigen').dataset.valor || '', Id_Pais_Origen: $('#cPaisOrigen').value,
+            Categoria: S.categoria, Divisa: $('#cDivisa').value, Id_Proveedor: $('#cProveedorCarga').value || null, Origen: $('#cOrigen').dataset.valor || '', Id_Pais_Origen: $('#cPaisOrigen').value,
             Noches: noches() || null,
             Campanyas: camps.map(c => ({ Id_Campanya: parseInt(c.opcion, 10), Descuento: c.valor })),
             Suplementos: suplementos.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor })),
@@ -496,6 +496,7 @@ const XP = (() => {
         $('#nNombre').addEventListener('input', () => { if (!$('#nCodigo').dataset.tocado) { $('#nCodigo').value = EVCodigo.limpiar($('#nNombre').value); $('#nCodigo').evCodigo?.revisar(); } resumen(); });
         EVCodigo.campo($('#nCodigo'), { producto: 'CIRCUITO_CAT', clave: () => '' });   // FASE 38: letras y números, único en todo el sistema
         EVCodigo.campo($('#cCodigoCarga'), { producto: 'CIRCUITO', clave: () => '' });
+        EVCodigo.proveedores($('#cProveedorCarga'), '', { vacio: '— El del circuito —' }).catch(() => { });
         $('#nCodigo').addEventListener('input', () => $('#nCodigo').dataset.tocado = '1');
         $('#nNoches').addEventListener('input', () => { pintarSalidas(); });
         EV.picker($('#nProveedor'), { url: q => `/Circuitos/Proveedores?tipo=Tour%20Operador&q=${q}`, limpiar: false, map: x => ({ valor: x.valor, texto: x.texto, sub: '#' + x.valor, icono: 'bi-briefcase' }), onSelect: m => $('#nProveedor').dataset.valor = m.valor });

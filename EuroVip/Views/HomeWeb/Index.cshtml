@@ -420,6 +420,7 @@ const HW = (() => {
                     <button type="button" class="edt" title="Editar tarjeta" aria-label="Editar tarjeta"><i class="bi bi-pencil"></i></button>
                     <button type="button" class="ojo" data-ojo="${t.id}" title="${sin ? 'Sin sección: arrástrala a una sección para que salga en la web' : t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}" aria-label="${t.estado ? 'Ocultar en la web' : 'Mostrar en la web'}"><i class="bi ${t.estado ? 'bi-eye-slash' : 'bi-eye'}"></i></button></div></div>
             <div class="tx"><b>${esc(t.descripcion && ['CIRCUITO', 'EXCURSION', 'TRASLADO', 'CRUCERO'].includes(t.tipo_Servicio) ? t.descripcion : t.id_Destino)}</b><small>${esc(t.origen)} · ${esc(t.campanya || '#' + t.id_Campanya)}${t.noches ? ` · ${t.noches} noches` : ''}</small>
+                ${t.codigo || t.proveedor ? `<small>${t.codigo ? `<span title="Código interno"><i class="bi bi-upc"></i> ${esc(t.codigo)}</span>` : ''}${t.codigo && t.proveedor ? ' · ' : ''}${t.proveedor ? `<span title="Proveedor"><i class="bi bi-briefcase"></i> ${esc(t.proveedor)}</span>` : ''}</small>` : ''}
                 <div class="pr">${t.peso ? EVPrioridad.estrella(t.peso) + ' ' : ''}${t.precioWeb ? `desde <b>${EV.dinero(t.precioWeb, (t.id_Moneda || 'DOP').trim())}</b>` : 'sin precio'}</div>${t.precio_Proveedor ? `<div>${EVPrioridad.proveedor(t.precioWeb, t.precio_Proveedor)}</div>` : ''}</div></div>`;
     };
 
@@ -724,10 +725,11 @@ const HW = (() => {
                 <div class="ui-f"><label>Descripción <em>en circuitos es el nombre que se ve</em></label><textarea id="tDesc" rows="2"></textarea></div>
             </div>
             <div class="ui-sec"><div class="ui-sec-t"><span>2</span> Precio y notas</div>
-                <div class="ui-row r3">
+                <div class="ui-row r4">
                     <div class="ui-f"><label>Moneda</label><select id="tMon"><option value="DOP">DOP · RD$</option></select></div>
                     <div class="ui-f"><label>Precio "desde"</label><div class="ui-money"><b id="tSim">RD$</b><input id="tPre" type="number" min="0" step="1"></div></div>
                     <div class="ui-f"><label>Código interno <em>opcional · único</em></label><input id="tCod"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Proveedor <em>opcional · de dónde sale</em></label><select id="tProv"><option value="">— Sin proveedor —</option></select></div>
                 </div>
                 <div class="ui-row r3">
                     <div class="ui-f"><label>Noches</label><input id="tNoc" type="number" min="0" max="60"></div>
@@ -747,6 +749,7 @@ const HW = (() => {
         EVCodigo.monedas($('#tMon'), (v.id_Moneda || 'DOP').trim()).then(() => $('#tSim').textContent = EV.simbolo($('#tMon').value)).catch(() => { });
         $('#tMon').onchange = () => $('#tSim').textContent = EV.simbolo($('#tMon').value);
         $('#tCod').value = v.codigo || '';
+        EVCodigo.proveedores($('#tProv'), (v.id_Proveedor || '').trim()).catch(() => { });
         EVCodigo.campo($('#tCod'), { producto: v.tipo_Servicio === 'HOTEL' ? 'HOTEL' : 'INICIO', clave: () => v.id_Servicio ?? '', anterior: () => v.codigo || '' });
         // caratulaDestino se conserva tal cual (en hoteles es el destino, no una imagen). Las fotos se cambian arriba y se guardan al momento.
         if (t) EVFotos.montar($('#tdFotos'), { tipo: t.foto_Tipo, clave: t.foto_Clave, alCambiar: items => {
@@ -769,7 +772,7 @@ const HW = (() => {
             Id_PaisDestino: $('#tPD').value, Id_Destino: $('#tDes').value.trim(), CaratulaDestino: $('#tImg').value.trim() || null, Descripcion: $('#tDesc').value.trim(),
             PrecioWeb: $('#tPre').value === '' ? null : +$('#tPre').value, Id_Contenedor: $('#tSecF').value ? +$('#tSecF').value : null,
             Noches: $('#tNoc').value === '' ? null : +$('#tNoc').value, Notas: $('#tNot').value.trim() || null, Estado: $('#tEstF').checked,
-            Id_Moneda: $('#tMon').value || 'DOP', Codigo: $('#tCod').value.trim() || null,
+            Id_Moneda: $('#tMon').value || 'DOP', Codigo: $('#tCod').value.trim() || null, Id_Proveedor: $('#tProv').value || null,
             ...EVPrioridad.leer($('#tPrio'))
         };
         $$('#tdForm .ui-f.err').forEach(f => f.classList.remove('err'));

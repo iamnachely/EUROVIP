@@ -37,6 +37,8 @@ namespace EuroVip.Models
         /// <summary>OFERTA (Solo Hotel, por defecto) o PAQUETES (Paquetes): se guarda en servicio.id_tipo_servicio.</summary>
         public string? Tipo { get; set; }
         [StringLength(30)] public string? CodigoServicio { get; set; }
+        /// <summary>Código interno de la empresa (servicio.codigo_interno): letras y números, único en todos los productos. NO es el código servicio.</summary>
+        [StringLength(30)] public string? CodigoInterno { get; set; }
         [Required(ErrorMessage = "Elige el proveedor")] [StringLength(10)] public string Id_Proveedor { get; set; } = "";
         [StringLength(50)] public string? Nombre { get; set; }
         [Range(1, 60, ErrorMessage = "Entre 1 y 60 noches")] public short Noches { get; set; } = 7;
@@ -123,6 +125,8 @@ namespace EuroVip.Models
         public int Habitaciones { get; set; }
         public bool Activo { get; set; }
         public string? Codigo { get; set; }
+        /// <summary>Código interno de la empresa (servicio.codigo_interno, CAMBIO 128).</summary>
+        public string? Codigo_Interno { get; set; }
         public string? Usuario { get; set; }
         public string? Proveedor { get; set; }
         public short? Peso { get; set; }
@@ -204,6 +208,8 @@ namespace EuroVip.Models
         public bool CambiarOrigen { get; set; }
         /// <summary>Código de la carga: se cambia en TODAS las fechas de esa carga (y en sus textos).</summary>
         [StringLength(30, ErrorMessage = "El código admite como máximo 30 caracteres")] public string? Codigo { get; set; }
+        /// <summary>Código interno (servicio.codigo_interno): de toda la carga, letras y números, único en todos los productos. Vacío = se quita.</summary>
+        [StringLength(30)] public string? CodigoInterno { get; set; }
         /// <summary>Textos de la carga (Incluye, No incluye, Condiciones, Oferta): son de toda la carga. null = no se cambian.</summary>
         public CargaTextosDto? Textos { get; set; }
     }
@@ -235,6 +241,8 @@ namespace EuroVip.Models
         public int? Id_Alojamiento { get; set; }
         public string? Nombre { get; set; }
         public string? Destino { get; set; }
+        /// <summary>true = se reconoció por parecido (no igual): la pantalla pide revisarlo y muestra otras coincidencias.</summary>
+        public bool Aproximado { get; set; }
         public List<Opcion> Candidatos { get; set; } = new();
         public List<ExcelFecha> Precios { get; set; } = new();
     }

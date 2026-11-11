@@ -68,7 +68,7 @@ namespace EuroVip.Repositories
             Eurovip.fnPrecioWeb(s.id_servicio) AS PrecioWeb, COALESCE(v.origen, so.origen) AS Origen,
             (SELECT COUNT(*) FROM Eurovip.servicio_itinerario x WHERE x.id_servicio = s.id_servicio) AS Vuelos,
             (SELECT COUNT(*) FROM Eurovip.servicio_habitacion h WHERE h.id_servicio = s.id_servicio) AS Habitaciones,
-            s.activo AS Activo, s.codigo AS Codigo, s.usuario AS Usuario, p.nombre AS Proveedor, s.peso AS Peso, s.precio_proveedor AS Precio_Proveedor";
+            s.activo AS Activo, s.codigo AS Codigo, s.codigo_interno AS Codigo_Interno, s.usuario AS Usuario, p.nombre AS Proveedor, s.peso AS Peso, s.precio_proveedor AS Precio_Proveedor";
 
         public async Task<(IEnumerable<OfertaItem> Items, int Total)> ListarAsync(OfertaFiltro f)
         {
@@ -139,7 +139,7 @@ namespace EuroVip.Repositories
             var where = new List<string>();
             if (!string.IsNullOrWhiteSpace(f.Q))
             {
-                where.Add("(a.nombre LIKE @q OR COALESCE(sdx.destino, a.id_destino) LIKE @q OR s.codigo LIKE @q OR s.nombre LIKE @q OR ca.nombre LIKE @q OR CAST(s.id_servicio AS varchar(12)) = @qx OR CAST(a.id_alojamiento AS varchar(12)) = @qx)");
+                where.Add("(a.nombre LIKE @q OR COALESCE(sdx.destino, a.id_destino) LIKE @q OR s.codigo LIKE @q OR s.codigo_interno LIKE @q OR p.nombre LIKE @q OR s.nombre LIKE @q OR ca.nombre LIKE @q OR CAST(s.id_servicio AS varchar(12)) = @qx OR CAST(a.id_alojamiento AS varchar(12)) = @qx)");
                 p.Add("q", $"%{f.Q.Trim()}%"); p.Add("qx", f.Q.Trim());
             }
             if (!string.IsNullOrWhiteSpace(f.Destino)) { where.Add("COALESCE(sdx.destino, a.id_destino) = @destino"); p.Add("destino", f.Destino); }
@@ -235,17 +235,34 @@ namespace EuroVip.Repositories
                 }
             }
             var codigo = cab.Codigo;
-            var nuevoCodigo = CodigoInterno.Limpiar(d.Codigo);
+            // Código de la carga (código servicio): se puede renombrar si ninguna otra carga lo usa. NO es el código interno.
+            var nuevoCodigo = string.IsNullOrWhiteSpace(d.Codigo) ? null : d.Codigo.Trim();
             if (nuevoCodigo is not null && !string.Equals(nuevoCodigo, cab.Codigo?.Trim(), StringComparison.OrdinalIgnoreCase))
             {
-                if (CodigoInterno.ErrorFormato(nuevoCodigo) is string malF) return malF;
-                if (await CodigoInterno.UsadoPorAsync(cn, nuevoCodigo, cab.Tipo, cab.Codigo, tx) is var (prod, nom))
-                    return $"El código «{nuevoCodigo}» ya lo usa «{nom}» en {(CodigoInterno.Productos.TryGetValue(prod, out var t) ? t : prod)}.";
+                if (await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.servicio WHERE codigo = @nuevoCodigo", new { nuevoCodigo }, tx) > 0)
+                    return $"El código de carga «{nuevoCodigo}» ya lo usa otra carga.";
                 // el código es de TODA la carga: todas sus fechas y sus textos pasan al nuevo
                 await cn.ExecuteAsync(@"UPDATE Eurovip.servicio SET codigo = @nuevo WHERE codigo = @viejo AND id_tipo_servicio = @tipo;
                                         UPDATE Eurovip.servicio_descripcion SET codigo = @nuevo WHERE codigo = @viejo;",
                     new { nuevo = nuevoCodigo, viejo = cab.Codigo, tipo = cab.Tipo }, tx);
                 codigo = nuevoCodigo;
+            }
+            // CAMBIO 128: código interno (servicio.codigo_interno) de toda la carga: letras y números, único en todos los productos
+            var interno = CodigoInterno.Limpiar(d.CodigoInterno);
+            var internoAntes = await cn.ExecuteScalarAsync<string?>("SELECT codigo_interno FROM Eurovip.servicio WHERE id_servicio = @id", new { id = d.Id_Servicio }, tx);
+            if (!string.Equals(interno, internoAntes?.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                if (interno is not null)
+                {
+                    if (CodigoInterno.ErrorFormato(interno) is string malF) return malF;
+                    if (await CodigoInterno.UsadoPorAsync(cn, interno, cab.Tipo, codigo, tx) is var (prod, nom))
+                        return $"El código interno «{interno}» ya lo usa «{nom}» en {(CodigoInterno.Productos.TryGetValue(prod, out var t) ? t : prod)}.";
+                }
+                if (!string.IsNullOrWhiteSpace(codigo))
+                    await cn.ExecuteAsync("UPDATE Eurovip.servicio SET codigo_interno = @interno WHERE codigo = @codigo AND id_tipo_servicio = @tipo",
+                        new { interno, codigo, tipo = cab.Tipo }, tx);
+                else
+                    await cn.ExecuteAsync("UPDATE Eurovip.servicio SET codigo_interno = @interno WHERE id_servicio = @id", new { interno, id = d.Id_Servicio }, tx);
             }
             if (d.Textos is not null && !string.IsNullOrWhiteSpace(codigo))
                 await GuardarTextosAsync(cn, tx, codigo, d.Textos);

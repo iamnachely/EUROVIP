@@ -121,6 +121,8 @@ namespace EuroVip.Models
         public int Id_Servicio { get; set; }
         public string? Nombre_Circuito { get; set; }
         public string? Codigo { get; set; }
+        /// <summary>Código interno (servicio.codigo_interno) de toda la carga. CAMBIO 128.</summary>
+        [StringLength(30)] public string? Codigo_Interno { get; set; }
         public DateTime Desde { get; set; }
         public DateTime Hasta { get; set; }
         /// <summary>Precio total que paga el cliente (base + tasas), antes del descuento.</summary>
@@ -238,6 +240,8 @@ namespace EuroVip.Models
         public CircuitoGuardarDto? NuevoCircuito { get; set; }
 
         [StringLength(30)] public string? CodigoServicio { get; set; }
+        /// <summary>Código interno de la empresa (servicio.codigo_interno): letras y números, único en todos los productos. NO es el código servicio.</summary>
+        [StringLength(30)] public string? CodigoInterno { get; set; }
         [StringLength(10)] public string? Id_Proveedor { get; set; }
         [Range(1, 60)] public short? Noches { get; set; }
         [Required(ErrorMessage = "Elige la categoría de hoteles")] public string Categoria { get; set; } = "";
@@ -279,6 +283,9 @@ namespace EuroVip.Models
         public string Estado { get; set; } = "not_found";   // found | multiple | not_found
         public int? Id_Alojamiento { get; set; }
         public string? Nombre { get; set; }
+        /// <summary>true = se reconoció por parecido (no igual): la pantalla pide revisarlo.</summary>
+        public bool Aproximado { get; set; }
+        public string? Destino { get; set; }
         public List<Opcion> Candidatos { get; set; } = new();
     }
 

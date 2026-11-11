@@ -546,6 +546,7 @@
                     ${c.categorias ? `<span class="cz-chip"><i class="bi bi-tags"></i> ${esc(c.categorias)}</span>` : '<span class="cz-chip av">Sin categoría</span>'}
                     ${c.pdfs ? `<span class="cz-chip" title="Archivos PDF del crucero"><i class="bi bi-file-earmark-pdf" style="color:#B42318"></i> ${c.pdfs} PDF</span>` : ''}
                     ${c.codigo_Interno ? `<span class="cz-chip" title="Código interno"><i class="bi bi-upc"></i> ${esc(c.codigo_Interno)}</span>` : ''}
+                    ${c.proveedor ? `<span class="cz-chip" title="Proveedor"><i class="bi bi-shop"></i> ${esc(c.proveedor)}</span>` : ''}
                     <span class="cz-chip">n.º ${c.id_Crucero}${c.codigo ? ' · ' + esc(c.codigo) : ''}</span></div>
                 <div class="acc">
                     <button type="button" class="ui-ibtn" data-accion="ver" title="Ver como la web"><i class="bi bi-eye"></i></button>
@@ -650,7 +651,7 @@
     }
 
     // ===================== EDITOR =====================
-    const vacio = () => ({ id_Crucero: null, titulo: '', subtitulo: '', id_Barco: null, naviera_Nombre: '', barco_Nombre: '', puerto_Salida: '', puerto_Llegada: '', noches: null, codigo: '', codigo_Interno: '', id_Moneda: 'DOP',
+    const vacio = () => ({ id_Crucero: null, titulo: '', subtitulo: '', id_Barco: null, naviera_Nombre: '', barco_Nombre: '', puerto_Salida: '', puerto_Llegada: '', noches: null, codigo: '', codigo_Interno: '', id_Proveedor: '', id_Moneda: 'DOP',
         descripcion: '', incluye: '', no_Incluye: '', titulo_Seccion: '', activo: true, categorias: D.categorias.length === 1 ? [D.categorias[0].id_Categoria] : [], categorias_Nuevas: [],
         itinerario: [], paradas: [], secciones: [], cubiertas: [], cabinas: [], salidas: [], tarifas: [], precios: [] });
 
@@ -706,6 +707,7 @@
         if (C.id_Barco && !C.barco_Nombre) { const b = D.barcos.find(x => x.id_Barco === C.id_Barco); if (b) { C.barco_Nombre = b.nombre; C.naviera_Nombre = b.naviera; } }
         setTimeout(() => {   // FASE 38: moneda y código interno (se revisa mientras se escribe)
             const m = $('#czMoneda'); if (m) EVCodigo.monedas(m, C.id_Moneda || 'DOP').catch(() => { });
+            const pv = $('#czProveedor'); if (pv) EVCodigo.proveedores(pv, (C.id_Proveedor || '').trim(), { vacio: '— Sin proveedor —' }).catch(() => { });   // CAMBIO 129
             const k = $('#czCodigo'); if (k) EVCodigo.campo(k, { producto: 'CRUCERO', clave: () => C.id_Crucero ?? '', anterior: () => C._codigoAntes ?? '' });
         });
         if (C._codigoAntes === undefined) C._codigoAntes = C.codigo_Interno || '';
@@ -724,9 +726,9 @@
                     <div class="ui-f"><label>Puerto de salida ${opc}</label>${inp('puerto_Salida', 'maxlength="100" placeholder="Ej. Port Canaveral"')}</div>
                     <div class="ui-f"><label>Puerto de llegada ${opc}</label>${inp('puerto_Llegada', 'maxlength="100" placeholder="Si lo dejas vacío, el mismo de salida"')}</div>
                 </div>
-                <div class="ui-row">
+                <div class="ui-row r3">
                     <div class="ui-f"><label>Moneda de los precios</label><select data-b="id_Moneda" id="czMoneda"><option value="DOP">DOP · RD$</option></select></div>
-                    <div class="ui-f"><label>Código interno ${opc} <em>único en todo el sistema</em></label>${inp('codigo_Interno', 'id="czCodigo"')}</div>
+                    <div class="ui-f"><label>Código interno ${opc} <em>único en todo el sistema</em></label>${inp('codigo_Interno', 'id="czCodigo"')}</div>                    <div class="ui-f"><label>Proveedor ${opc} <em>de dónde sale el crucero</em></label><select data-b="id_Proveedor" id="czProveedor"><option value="">— Sin proveedor —</option></select></div>
                 </div>
                 <div class="ui-f"><label class="ui-switch"><input type="checkbox" data-b="activo" data-t="bool" ${C.activo ? 'checked' : ''}><span class="tr"></span> Activo: sale en la web y en la Home</label></div>
             </div>

@@ -131,7 +131,7 @@
         <!-- DATOS -->
         <section class="ui-pane on" id="tDatos">
             <div class="ui-row">
-                <div class="ui-f"><label for="edCodigo">Código único <em>letras y números, sin espacios · único en todo el sistema</em></label><input id="edCodigo" maxlength="100" placeholder="Ej. CostaRicaEsencial"><span class="msg"></span></div>
+                <div class="ui-f"><label for="edCodigo">Código interno <em>letras y números, sin espacios · único en todo el sistema</em></label><input id="edCodigo" maxlength="100" placeholder="Ej. CostaRicaEsencial"><span class="msg"></span></div>
                 <div class="ui-f"><label for="edNombre">Nombre del circuito <em>máx. 50</em></label><input id="edNombre" maxlength="50" placeholder="Ej. Costa Rica Esencial"><span class="msg"></span></div>
             </div>
             <div class="ui-row">
@@ -294,7 +294,7 @@ const CX = (() => {
                 </div>
                 <div class="cx-body">
                     <h3>${esc(c.nombre)}</h3>
-                    <span class="cod"><i class="bi bi-upc"></i> ${esc(c.codigo)} · ${esc(c.proveedor || c.id_Proveedor)}</span>
+                    <span class="cod"><span title="Código interno"><i class="bi bi-upc"></i> ${esc(c.codigo)}</span> · <span title="Proveedor"><i class="bi bi-briefcase"></i> ${esc(c.proveedor || c.id_Proveedor)}</span></span>
                     <span class="cx-dest"><i class="bi bi-geo-alt"></i> ${esc(c.destinos || 'Sin destinos')}</span>
                     ${c.precio_Proveedor ? `<span>${EVPrioridad.proveedor(c.precioDesde, c.precio_Proveedor)}</span>` : ''}
                     <div class="cx-stats">
@@ -689,12 +689,13 @@ const CX = (() => {
                     <div class="ui-f"><label>Descuento %</label><input type="number" id="vsDesc" min="0" max="100" step="0.1" value="${x.descuento}"></div></div>
                 <div class="ui-row"><div class="ui-f"><label>Campaña</label><select id="vsCamp">${cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)} (#${esc(c.valor)})</option>`).join('')}</select></div>
                     <div class="ui-f"><label>Categoría</label><input id="vsCat" maxlength="50" value="${esc(x.categoria || '')}"></div></div>
-                <div class="ui-f"><label>Proveedor</label><select id="vsProv"></select></div>
+                <div class="ui-row"><div class="ui-f"><label>Proveedor</label><select id="vsProv"></select></div>
+                    <div class="ui-f"><label>Código interno <em>de toda la carga · letras y números, único</em></label><input id="vsInterno" maxlength="30" value="${esc(x.codigo_Interno || '')}" placeholder="Ej. CIRCEUROPA26"></div></div>
                 <div class="ui-row"><div class="ui-f"><label>País de origen</label><select id="vsPais"><option value="">— Sin origen —</option>${cat.paises.map(q => `<option value="${esc(q.valor)}">${esc(q.texto)}</option>`).join('')}</select></div>
                     <div class="ui-f"><label>Ciudad de origen</label><input id="vsOrigen" maxlength="50" value="${esc(x.origen || '')}"></div></div>
                 <label class="ui-switch"><input type="checkbox" id="vsActivo" ${x.activo ? 'checked' : ''}><span class="tr"></span> Activa (se vende)</label>`, async () => {
                 const dto = { Id_Servicio: x.id_Servicio, Desde: $('#vsDesde').value, Hasta: $('#vsHasta').value, PrecioTotal: +$('#vsPrecio').value || 0, Descuento: +$('#vsDesc').value || 0,
-                    Id_Campanya: +$('#vsCamp').value, Id_Moneda: $('#vsMoneda').value, Id_Proveedor: $('#vsProv').value || null, Categoria: $('#vsCat').value.trim() || null,
+                    Id_Campanya: +$('#vsCamp').value, Id_Moneda: $('#vsMoneda').value, Id_Proveedor: $('#vsProv').value || null, Codigo_Interno: $('#vsInterno').value.trim() || null, Categoria: $('#vsCat').value.trim() || null,
                     Id_Pais_Origen: $('#vsPais').value || null, Origen: $('#vsOrigen').value.trim() || null, Activo: $('#vsActivo').checked };
                 const r = await EV.post('/Circuitos/EditarSalida', dto); EV.toast(r.mensaje);
                 const c = await EV.api('/Circuitos/Obtener?codigo=' + encodeURIComponent(estado.codigoOriginal)); estado.salidas = c.salidas; pintarSalidas(); cargar();
@@ -702,6 +703,7 @@ const CX = (() => {
             $('#vsCamp').value = String(x.id_Campanya); $('#vsPais').value = (x.id_Pais_Origen || '').trim().toUpperCase();
             EVCodigo.monedas($('#vsMoneda'), x.id_Moneda || 'DOP').catch(() => { });
             EVCodigo.proveedores($('#vsProv'), (x.id_Proveedor || '').trim(), { vacio: '— El del circuito —' }).catch(() => { });
+            EVCodigo.campo($('#vsInterno'), { producto: 'CIRCUITO', clave: () => x.codigo || '', anterior: () => x.codigo_Interno || '' });
         },
         // ---- Punto 6: información para el cliente de una carga ----
         textos: async codigo => {

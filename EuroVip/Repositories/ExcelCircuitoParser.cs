@@ -85,27 +85,21 @@ namespace EuroVip.Repositories
                 using var cn = _repo.Conexion();
                 var hoteles = (await cn.QueryAsync<(int Id, string Nombre, string Destino)>(
                     "SELECT id_alojamiento, nombre, id_destino FROM Eurovip.alojamiento WHERE id_idioma = 'ES' AND activo = 1")).ToList();
-                var indice = hoteles.Select(h => (h.Id, h.Nombre, h.Destino, N: Normalizar(h.Nombre))).ToList();
+                var opciones = hoteles.Select(h => new EuroVip.Services.CargaExcelOpcion(h.Id.ToString(), h.Nombre, h.Destino)).ToList();
+                var porId = hoteles.GroupBy(h => h.Id).ToDictionary(g => g.Key, g => g.First());
 
                 foreach (var texto in textosHotel)
                 {
-                    var n = Normalizar(texto);
-                    var exactos = indice.Where(h => h.N == n).ToList();
-                    var candidatos = exactos.Count > 0 ? exactos
-                        : indice.Where(h => h.N.Contains(n) || (n.Length >= 6 && n.Contains(h.N) && h.N.Length >= 6)).Take(15).ToList();
-
+                    // Pedido de la usuaria: «si no reconoces el hotel, busca coincidencias; si son varias, muéstralas todas»
                     var item = new ExcelHotel { Texto = texto };
-                    if (candidatos.Count == 1)
+                    var (elegida, aproximado, cand) = EuroVip.Services.Coincidencias.Clasificar(texto, opciones);
+                    if (elegida is not null)
                     {
-                        item.Estado = "found";
-                        item.Id_Alojamiento = candidatos[0].Id;
-                        item.Nombre = candidatos[0].Nombre;
+                        var h = porId[int.Parse(elegida.Valor)];
+                        item.Estado = "found"; item.Aproximado = aproximado; item.Id_Alojamiento = h.Id; item.Nombre = h.Nombre; item.Destino = h.Destino;
                     }
-                    else if (candidatos.Count > 1)
-                    {
-                        item.Estado = "multiple";
-                        item.Candidatos = candidatos.Select(h => new Opcion { Valor = h.Id.ToString(), Texto = h.Nombre, Extra = h.Destino }).ToList();
-                    }
+                    else if (cand.Count > 0) item.Estado = "multiple";
+                    item.Candidatos = cand.Select(c => new Opcion { Valor = c.Valor, Texto = c.Texto, Extra = c.Extra }).ToList();
                     r.Hoteles.Add(item);
                 }
             }
@@ -116,11 +110,17 @@ namespace EuroVip.Repositories
                 using var cn = _repo.Conexion();
                 var aerolineas = (await cn.QueryAsync<(string Id, string Nombre)>(
                     "SELECT id_proveedor, nombre FROM Eurovip.proveedor WHERE id_tipo_proveedor = 'Aerolinea'")).ToList();
-                var a = Normalizar(r.Aerolinea);
-                var match = aerolineas.FirstOrDefault(x => Normalizar(x.Nombre) == a || x.Id.Equals(r.Aerolinea.Trim(), StringComparison.OrdinalIgnoreCase));
-                if (match.Id is null) match = aerolineas.FirstOrDefault(x => Normalizar(x.Nombre).Contains(a) || a.Contains(Normalizar(x.Nombre)));
-                if (match.Id is not null) r.AerolineaId = match.Id;
-                else r.Avisos.Add($"No encontré la aerolínea \"{r.Aerolinea}\"; elígela a mano.");
+                var porCodigo = aerolineas.FirstOrDefault(x => x.Id.Trim().Equals(r.Aerolinea.Trim(), StringComparison.OrdinalIgnoreCase));
+                var (elegida, aproximado, cand) = porCodigo.Id is not null ? (new EuroVip.Services.CargaExcelOpcion(porCodigo.Id, porCodigo.Nombre), false, new())
+                    : EuroVip.Services.Coincidencias.Clasificar(r.Aerolinea, aerolineas.Select(x => new EuroVip.Services.CargaExcelOpcion(x.Id, x.Nombre)).ToList());
+                if (elegida is not null)
+                {
+                    r.AerolineaId = elegida.Valor;
+                    if (aproximado) r.Avisos.Add($"La aerolínea «{r.Aerolinea}» la reconocí como «{elegida.Texto}». Revísala.");
+                }
+                else r.Avisos.Add(cand.Count > 0
+                    ? $"La aerolínea «{r.Aerolinea}» se parece a: {string.Join(", ", cand.Take(6).Select(c => c.Texto))}. Elígela en la lista."
+                    : $"No encontré la aerolínea «{r.Aerolinea}»; búscala y elígela a mano.");
             }
 
             if (r.Fechas.Count == 0) r.Avisos.Add("No encontré fechas con precio. Revisa que las fechas tengan formato fecha y el precio esté justo debajo.");

@@ -50,7 +50,8 @@ namespace EuroVip.Repositories
             using var cn = _db.Conexion();
             var hoteles = (await cn.QueryAsync<(int Id, string Nombre, string Destino)>(
                 "SELECT id_alojamiento, nombre, id_destino FROM Eurovip.alojamiento WHERE id_idioma = 'ES' AND activo = 1")).ToList();
-            var indice = hoteles.Select(h => (h.Id, h.Nombre, h.Destino, N: ExcelCircuitoParser.Normalizar(h.Nombre))).ToList();
+            var opciones = hoteles.Select(h => new EuroVip.Services.CargaExcelOpcion(h.Id.ToString(), h.Nombre, h.Destino)).ToList();
+            var porId = hoteles.GroupBy(h => h.Id).ToDictionary(g => g.Key, g => g.First());
 
             foreach (var fila in filas)
             {
@@ -66,12 +67,16 @@ namespace EuroVip.Repositories
                 if (precios.Count == 0) continue;   // fila sin precios (rótulos, notas…)
 
                 var texto = fila.Texto!.Trim();
-                var n = ExcelCircuitoParser.Normalizar(texto);
-                var exactos = indice.Where(h => h.N == n).ToList();
-                var cand = exactos.Count > 0 ? exactos : indice.Where(h => h.N.Contains(n) || (n.Length >= 6 && h.N.Length >= 6 && n.Contains(h.N))).Take(15).ToList();
                 var item = new ExcelOfertaHotel { Texto = texto, Precios = precios.OrderBy(x => x.Fecha).ToList() };
-                if (cand.Count == 1) { item.Estado = "found"; item.Id_Alojamiento = cand[0].Id; item.Nombre = cand[0].Nombre; item.Destino = cand[0].Destino; }
-                else if (cand.Count > 1) { item.Estado = "multiple"; item.Candidatos = cand.Select(h => new Opcion { Valor = h.Id.ToString(), Texto = h.Nombre, Extra = h.Destino }).ToList(); }
+                // Pedido de la usuaria: «si no reconoces el hotel, busca coincidencias; si son varias, muéstralas todas»
+                var (elegida, aproximado, cand) = EuroVip.Services.Coincidencias.Clasificar(texto, opciones);
+                if (elegida is not null)
+                {
+                    var h = porId[int.Parse(elegida.Valor)];
+                    item.Estado = "found"; item.Aproximado = aproximado; item.Id_Alojamiento = h.Id; item.Nombre = h.Nombre; item.Destino = h.Destino;
+                }
+                else if (cand.Count > 0) item.Estado = "multiple";
+                item.Candidatos = cand.Select(c => new Opcion { Valor = c.Valor, Texto = c.Texto, Extra = c.Extra }).ToList();
                 r.Hoteles.Add(item);
             }
             if (r.Hoteles.Count == 0) r.Avisos.Add("No encontré filas de hoteles con precios debajo de la fila de fechas.");
