@@ -1,5 +1,6 @@
 using EuroVip.Models;
 using EuroVip.Repositories;
+using EuroVip.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
 
@@ -33,6 +34,19 @@ namespace EuroVip.Controllers
 
         /// <summary>Vista «Por hotel»: un resumen por hotel con los mismos filtros de Listar.</summary>
         [HttpGet] public async Task<IActionResult> Hoteles([FromQuery] OfertaFiltro f) => Json(await _repo.HotelesAsync(f));
+
+        public sealed record EstadoHotelDto(int Aloj, string? Tipo, int? Id_Estado);
+
+        /// <summary>CAMBIO 131: el mismo estado (Confirmada, Bajo petición…) en todas las fechas de un hotel; null = quitar el estado.</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> EstadoHotel([FromBody] EstadoHotelDto dto)
+        {
+            using (var cn = _aud.Conexion())
+                if (await EstadosOferta.ErrorAsync(cn, dto.Id_Estado) is string mal) return BadRequest(new { mensaje = mal });
+            var n = await _repo.EstadoHotelAsync(dto.Aloj, dto.Tipo, dto.Id_Estado);
+            await Auditar("Oferta_EstadoHotel", Array.Empty<int>(), dto);
+            return Json(new { ok = true, cambiadas = n, mensaje = n == 0 ? "Ese hotel no tiene fechas cargadas." : $"Estado puesto en {n} fecha(s) del hotel." });
+        }
         /// <summary>Calendario de un hotel: todas sus ofertas (con los filtros de Listar) por fecha de entrada.</summary>
         [HttpGet] public async Task<IActionResult> Calendario(int hotel, [FromQuery] OfertaFiltro f) => Json(await _repo.CalendarioAsync(hotel, f));
 
@@ -55,6 +69,8 @@ namespace EuroVip.Controllers
             // Si se cambia la fecha de entrada, tiene que ser desde mañana (las de hoy o pasadas no se venden ni salen en la web).
             if (antes is not null && dto.Desde.Date != antes.Desde.Date && dto.Desde.Date <= DateTime.Today)
                 return BadRequest(new { mensaje = $"La fecha de entrada tiene que ser desde mañana ({DateTime.Today.AddDays(1):dd/MM/yyyy}). Con una fecha de hoy o pasada la oferta no se vende ni sale en la web." });
+            using (var cnE = _aud.Conexion())   // CAMBIO 131: el estado tiene que existir
+                if (await EstadosOferta.ErrorAsync(cnE, dto.Id_Estado) is string malEstado) return BadRequest(new { mensaje = malEstado });
             var error = await _repo.EditarAsync(dto);
             if (error is not null) return BadRequest(new { mensaje = error });
             await Auditar("Oferta_Editar", new[] { dto.Id_Servicio }, new { antes, despues = dto });

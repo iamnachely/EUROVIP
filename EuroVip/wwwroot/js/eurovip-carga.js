@@ -215,9 +215,11 @@
             <div class="ui-f"><label><i class="bi bi-star-fill" style="color:#F5A623"></i> Prioridad en la web <em>opcional · elige el puesto</em></label><input data-k="peso" data-prio type="number" min="1" max="999" step="1"></div>
             <div class="ui-row">
                 <div class="ui-f"><label><i class="bi bi-shop"></i> Precio del proveedor <em>opcional · solo informativo</em></label><input data-k="proveedor" type="number" min="0" step="1" placeholder="Precio en su web"></div>
+                <div class="ui-f" data-siempre><label><i class="bi bi-flag"></i> Estado <em>Confirmada, Bajo petición… · opcional</em></label><select data-k="estado"></select></div>
             </div>
             <div data-habs></div>`;
         cont.appendChild(caja);
+        EVCodigo.estados(caja.querySelector('[data-k=estado]'), cfg.estado ?? '').catch(() => { });   // CAMBIO 131: estado del hotel, con «Nuevo estado»
         const $ = s => caja.querySelector(s);
         let hotel = null, habitaciones = [];
         if (cfg.regimen) $('[data-k=regimen]').value = cfg.regimen; else { const ti = cfg.regimenes.find(r => r.valor === 'TI'); if (ti) $('[data-k=regimen]').value = 'TI'; }
@@ -291,6 +293,7 @@
             datos: () => !hotel ? null : {
                 Id_Alojamiento: hotel.id, Nombre: hotel.nombre, Id_Regimen: $('[data-k=regimen]').value,
                 Peso: $('[data-k=peso]').value === '' ? null : Math.round(+$('[data-k=peso]').value), Precio_Proveedor: $('[data-k=proveedor]').value === '' ? null : +$('[data-k=proveedor]').value,
+                Id_Estado: $('[data-k=estado]').value ? +$('[data-k=estado]').value : null,   // CAMBIO 131
                 Habitaciones: [...caja.querySelectorAll('[data-hab]:checked')].map(c => ({ Id_Habitacion: +c.dataset.hab, Precio: parseFloat(caja.querySelector(`[data-sup="${c.dataset.hab}"]`).value) || 0 }))
             },
             validar() {

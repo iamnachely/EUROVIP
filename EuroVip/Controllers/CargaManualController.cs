@@ -93,8 +93,10 @@ namespace EuroVip.Controllers
 
         /// <summary>Plantilla de ejemplo: fila 1 = fechas (B en adelante), filas siguientes = hotel + precio total por fecha.</summary>
         [HttpGet]
-        public IActionResult Plantilla()
+        public async Task<IActionResult> Plantilla()
         {
+            List<EuroVip.Services.EstadosOferta.Estado> estados;   // CAMBIO 131: columna opcional «Estado» con su lista
+            using (var cnE = _aud.Conexion()) estados = await EuroVip.Services.EstadosOferta.ListarAsync(cnE);
             using var ms = new MemoryStream();
             using (var doc = SpreadsheetDocument.Create(ms, SpreadsheetDocumentType.Workbook))
             {
@@ -108,7 +110,7 @@ namespace EuroVip.Controllers
                     new CellFormats(new CellFormat(), new CellFormat { NumberFormatId = 14, ApplyNumberFormat = true, FontId = 1, ApplyFont = true }, new CellFormat { FontId = 1, ApplyFont = true }));
                 var ws = wb.AddNewPart<WorksheetPart>();
                 var data = new SheetData();
-                ws.Worksheet = new Worksheet(new Columns(new Column { Min = 1, Max = 1, Width = 34, CustomWidth = true }, new Column { Min = 2, Max = 9, Width = 13, CustomWidth = true }), data);
+                ws.Worksheet = new Worksheet(new Columns(new Column { Min = 1, Max = 1, Width = 34, CustomWidth = true }, new Column { Min = 2, Max = 2, Width = 16, CustomWidth = true }, new Column { Min = 3, Max = 10, Width = 13, CustomWidth = true }), data);
                 wb.Workbook.AppendChild(new Sheets(new Sheet { Id = wb.GetIdOfPart(ws), SheetId = 1, Name = "Ofertas" }));
 
                 string Ref(int col, int fila) => $"{(char)('A' + col - 1)}{fila}";
@@ -117,8 +119,9 @@ namespace EuroVip.Controllers
 
                 var enc = new Row { RowIndex = 1 };
                 enc.Append(new Cell { CellReference = "A1", DataType = CellValues.String, CellValue = new CellValue("Hotel (nombre como en Eurovip)"), StyleIndex = 2 });
+                enc.Append(new Cell { CellReference = "B1", DataType = CellValues.String, CellValue = new CellValue("Estado"), StyleIndex = 2 });
                 for (var i = 0; i < fechas.Count; i++)
-                    enc.Append(new Cell { CellReference = Ref(i + 2, 1), StyleIndex = 1, CellValue = new CellValue(fechas[i].ToOADate().ToString(CultureInfo.InvariantCulture)) });
+                    enc.Append(new Cell { CellReference = Ref(i + 3, 1), StyleIndex = 1, CellValue = new CellValue(fechas[i].ToOADate().ToString(CultureInfo.InvariantCulture)) });
                 data.Append(enc);
 
                 var ejemplos = new[] { ("Riu Palace Bavaro", 1290m), ("Barcelo Bavaro Palace - All Inclusive", 1150m) };
@@ -126,15 +129,26 @@ namespace EuroVip.Controllers
                 {
                     var row = new Row { RowIndex = (uint)(h + 2) };
                     row.Append(new Cell { CellReference = Ref(1, h + 2), DataType = CellValues.String, CellValue = new CellValue(ejemplos[h].Item1) });
+                    if (estados.ElementAtOrDefault(h) is { } ej) row.Append(new Cell { CellReference = Ref(2, h + 2), DataType = CellValues.String, CellValue = new CellValue(ej.Nombre) });
                     for (var i = 0; i < fechas.Count; i++)
                         row.Append(i == 3
-                            ? new Cell { CellReference = Ref(i + 2, h + 2), DataType = CellValues.String, CellValue = new CellValue("//") }
-                            : new Cell { CellReference = Ref(i + 2, h + 2), CellValue = new CellValue((ejemplos[h].Item2 + i * 20).ToString(CultureInfo.InvariantCulture)) });
+                            ? new Cell { CellReference = Ref(i + 3, h + 2), DataType = CellValues.String, CellValue = new CellValue("//") }
+                            : new Cell { CellReference = Ref(i + 3, h + 2), CellValue = new CellValue((ejemplos[h].Item2 + i * 20).ToString(CultureInfo.InvariantCulture)) });
                     data.Append(row);
                 }
                 var nota = new Row { RowIndex = 5 };
-                nota.Append(new Cell { CellReference = "A5", DataType = CellValues.String, CellValue = new CellValue("Nota: el precio es el TOTAL que paga el cliente. Escribe // o deja vacío si esa fecha no se vende.") });
+                nota.Append(new Cell { CellReference = "A5", DataType = CellValues.String, CellValue = new CellValue("Nota: el precio es el TOTAL que paga el cliente. Escribe // o deja vacío si esa fecha no se vende. Estado (opcional): Confirmada, Bajo petición… (lista en la columna B).") });
                 data.Append(nota);
+                // Lista desplegable del Estado (B2:B500): solo avisa si se escribe otro (al subirlo se busca el parecido)
+                var lista = string.Join(",", estados.Select(e => e.Nombre.Replace(",", " ").Replace("\"", "")));
+                if (estados.Count > 0 && lista.Length <= 250)
+                    ws.Worksheet.Append(new DataValidations(new DataValidation
+                    {
+                        Type = DataValidationValues.List, AllowBlank = true, ShowErrorMessage = true, ShowInputMessage = true, ErrorStyle = DataValidationErrorStyleValues.Warning,
+                        ErrorTitle = "No está en la lista", Error = "Ese estado no existe todavía. Si sigues, al subir el Excel te aviso para elegirlo o crearlo.",
+                        PromptTitle = "Estado (opcional)", Prompt = "Confirmada, Bajo petición… o déjalo vacío.",
+                        SequenceOfReferences = new ListValue<StringValue> { InnerText = "B2:B500" }, Formula1 = new Formula1("\"" + lista + "\"")
+                    }) { Count = 1 });
                 wb.Workbook.Save();
             }
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Eurovip-plantilla-carga-manual.xlsx");

@@ -144,6 +144,7 @@
     <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar hotel, destino, campaña, código o nº de @of1…" /></label>
     <select class="ui-select" id="fDestino"><option value="">Todos los destinos</option></select>
     <select class="ui-select" id="fCampanya"><option value="">Todas las campañas</option></select>
+    <select class="ui-select" id="fEstadoOferta" title="Estado: Confirmada, Bajo petición…"><option value="">Todos los estados</option><option value="-1">Sin estado</option></select>
     <select class="ui-select" id="fOrden"><option value="fecha">Por fecha</option><option value="prioridad">Prioridad (como en la web)</option><option value="precio">Precio más bajo</option><option value="hotel">Hotel A–Z</option><option value="recientes">Recién cargadas</option></select>
     <div class="of-filtros2">
         <div class="ui-chips" id="fEstado">
@@ -249,12 +250,12 @@ const OF = (() => {
     const $ = (s, el = document) => el.querySelector(s);
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
     const esc = EV.esc;
-    const st = { vista: 'lista', q: '', destino: '', campanya: '', estado: '', vuelo: '', desde: '', hasta: '', pasadas: false, orden: 'fecha', pagina: 1 };
+    const st = { vista: 'lista', q: '', destino: '', campanya: '', estado: '', estadoOferta: '', vuelo: '', desde: '', hasta: '', pasadas: false, orden: 'fecha', pagina: 1 };
     const DEF = { ...st };   // valores por defecto: lo que no es igual a esto se guarda en la dirección (?destino=…)
 
     /** Pone en pantalla los filtros de st (al volver a la página o al limpiar). */
     function filtrosAPantalla() {
-        $('#fQ').value = st.q; $('#fDestino').value = st.destino; $('#fCampanya').value = st.campanya; $('#fOrden').value = st.orden;
+        $('#fQ').value = st.q; $('#fDestino').value = st.destino; $('#fCampanya').value = st.campanya; $('#fEstadoOferta').value = st.estadoOferta ?? ''; $('#fOrden').value = st.orden;
         $('#fDesde').value = st.desde; $('#fHasta').value = st.hasta; $('#fPasadas').checked = st.pasadas;
         [['#fEstado', 'estado'], ['#fVuelo', 'vuelo'], ['#fVista', 'vista']].forEach(([id, k]) => $$(id + ' .ui-pick').forEach(x => x.classList.toggle('on', (x.dataset.v ?? '') === String(st[k]))));
     }
@@ -265,7 +266,9 @@ const OF = (() => {
     const calDrawer = EV.drawer($('#ofCal'));
     let cal = null, volverCal = null;   // calendario abierto { hotel, ofertas, mes, dia } y a dónde volver tras editar
 
-    const params = () => new URLSearchParams({ tipo: TIPO, q: st.q, destino: st.destino, campanya: st.campanya, estado: st.estado, vuelo: st.vuelo, desde: st.desde, hasta: st.hasta, pasadas: st.pasadas, orden: st.orden, pagina: st.pagina, tam: 25 });
+    // CAMBIO 131: etiqueta del estado (Confirmada en verde, Bajo petición en naranja, los demás en gris)
+    const chipEstado = n => !n ? '' : `<span class="of-est" style="display:inline-block;margin-left:6px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:800;${/confirm/i.test(n) ? 'background:#DCFCE7;color:#166534' : /petici/i.test(n) ? 'background:#FFEDD5;color:#9A3412' : 'background:#EEF2F6;color:#475467'}">${esc(n)}</span>`;
+    const params = () => new URLSearchParams({ tipo: TIPO, q: st.q, destino: st.destino, campanya: st.campanya, estado: st.estado, estadoOferta: st.estadoOferta, vuelo: st.vuelo, desde: st.desde, hasta: st.hasta, pasadas: st.pasadas, orden: st.orden, pagina: st.pagina, tam: 25 });
     const thumb = o => EV.esUrl(o.caratula) ? `<img src="${esc(o.caratula)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${esc(EV.iniciales(o.hotel)).replace(/'/g, '')}'">` : esc(EV.iniciales(o.hotel));
 
     /** Destinos con ofertas que NO salen en la Home de la web, y por qué. */
@@ -305,7 +308,7 @@ const OF = (() => {
             <th style="width:40px"><input type="checkbox" class="of-check" id="selTodo" title="Seleccionar todo"></th><th>Hotel</th><th>Régimen</th><th>Fechas</th><th>Campaña</th><th class="num">Precio web</th><th>Vuelo</th><th>Origen</th><th>Destino</th><th>Activa</th><th></th></tr></thead><tbody>
             ${d.items.map(o => `<tr class="${o.activo ? '' : 'off'} ${sel.has(o.id_Servicio) ? 'sel' : ''}" data-id="${o.id_Servicio}">
                 <td><input type="checkbox" class="of-check" data-sel="${o.id_Servicio}" ${sel.has(o.id_Servicio) ? 'checked' : ''}></td>
-                <td><div class="of-hotel"><span class="of-th">${thumb(o)}</span><div><b>${EVPrioridad.estrella(o.peso)} ${esc(o.hotel)}</b><span class="of-sub">#${o.id_Servicio}${o.codigo_Interno ? ' · <b title="Código interno">' + esc(o.codigo_Interno) + '</b>' : ''}${o.proveedor ? ' · <i class="bi bi-shop" title="Proveedor"></i> ' + esc(o.proveedor) : ''}</span></div></div></td>
+                <td><div class="of-hotel"><span class="of-th">${thumb(o)}</span><div><b>${EVPrioridad.estrella(o.peso)} ${esc(o.hotel)}</b><span class="of-sub">#${o.id_Servicio}${chipEstado(o.estado_Oferta)}${o.codigo_Interno ? ' · <b title="Código interno">' + esc(o.codigo_Interno) + '</b>' : ''}${o.proveedor ? ' · <i class="bi bi-shop" title="Proveedor"></i> ' + esc(o.proveedor) : ''}</span></div></div></td>
                 <td><span class="of-reg" title="${esc(o.regimen || '')}">${esc(o.id_Regimen)}</span></td>
                 <td class="of-fecha"><b>${EV.fechaCorta(o.desde.slice(0, 10))}</b><span class="of-sub">${o.noches} noches · hasta ${EV.fecha(o.hasta.slice(0, 10))}</span>${o.desde.slice(0, 10) <= EV.hoy() ? '<span class="of-nov" title="Las fechas de hoy o pasadas no se venden ni salen en la web"><i class="bi bi-calendar-x"></i> No se vende: es de hoy o pasada</span>' : ''}</td>
                 <td>${esc(o.campanya || '#' + o.id_Campanya)}${o.descuento ? ` <span class="ui-chip" style="padding:2px 8px;font-size:11px">-${EV.fmt(o.descuento, 1)}%</span>` : ''}</td>
@@ -347,7 +350,7 @@ const OF = (() => {
                     ${h.peso ? `<span class="es">${EVPrioridad.estrella(h.peso, true)}</span>` : ''}
                     <span class="pr"><small>desde</small>${EV.dinero(h.precioDesde, h.id_Moneda)}</span></div>
                 <div class="bd"><h3>${esc(h.hotel)}</h3>
-                    <div class="meta"><span><i class="bi bi-geo-alt-fill"></i> ${esc(h.destino || '—')}</span><span>${h.ofertas} ${OF1}${h.ofertas === 1 ? '' : 's'}</span>
+                    <div class="meta">${h.estados > 1 ? chipEstado('Varios estados') : chipEstado(h.estado_Oferta)}<span><i class="bi bi-geo-alt-fill"></i> ${esc(h.destino || '—')}</span><span>${h.ofertas} ${OF1}${h.ofertas === 1 ? '' : 's'}</span>
                         ${h.activas < h.ofertas ? `<span>${h.ofertas - h.activas} inactiva${h.ofertas - h.activas === 1 ? '' : 's'}</span>` : ''}${h.conVuelo ? '<span><i class="bi bi-airplane"></i> con vuelo</span>' : ''}${h.regimenes ? `<span>${esc(h.regimenes)}</span>` : ''}</div>
                     <div class="of-meses" aria-label="Meses con salidas">${meses(h)}</div>
                     <div class="ver"><span>${EV.fecha(dia(h.primera))} → ${EV.fecha(dia(h.ultima))}</span><span><i class="bi bi-calendar3"></i> Ver calendario</span></div></div></button>`).join('')}</div>`;
@@ -369,6 +372,18 @@ const OF = (() => {
                 <div style="min-width:0"><h2 style="margin:0;font-size:21px;font-weight:800;letter-spacing:-.5px">${esc(o.hotel)}</h2>
                 <small style="color:var(--ev-muted);font-weight:600">${esc(o.destino || '')} · ${ofs.length} ${OF1}${ofs.length === 1 ? '' : 's'} en ${porDia.size} fecha${porDia.size === 1 ? '' : 's'} · ${cal.min != null ? `desde ${EV.dinero(cal.min, o.id_Moneda)}` : 'sin precio activo'}</small></div>`;
             pintarCal();
+            // CAMBIO 131: estado de TODAS las fechas del hotel (Confirmada, Bajo petición…), con «Nuevo estado»
+            const idsEst = [...new Set(ofs.map(x => x.id_Estado ?? ''))];
+            const cajaEst = document.createElement('div'); cajaEst.className = 'ui-f'; cajaEst.style.cssText = 'min-width:240px;margin:0 0 0 auto;align-self:center';
+            cajaEst.innerHTML = '<label>Estado del hotel <em>todas sus fechas</em></label><select id="cEstado"></select>';
+            $('#cCab').appendChild(cajaEst);
+            await EVCodigo.estados($('#cEstado'), idsEst.length === 1 ? idsEst[0] : '', { vacio: idsEst.length > 1 ? '— Varios estados —' : '— Sin estado —' });
+            $('#cEstado').addEventListener('change', async e => {
+                const v = e.target.value, nombre = e.target.selectedOptions[0]?.textContent || '';
+                if (!await EV.confirmar({ titulo: 'Estado del hotel', texto: v ? `¿Poner «${nombre}» en TODAS las fechas de este hotel?` : '¿Quitar el estado de TODAS las fechas de este hotel?', si: 'Sí, aplicar' })) { e.target.value = idsEst.length === 1 ? idsEst[0] : ''; return; }
+                try { const r = await EV.post('/Ofertas/EstadoHotel', { Aloj: hotel, Tipo: TIPO, Id_Estado: v ? +v : null }); EV.toast(r.mensaje, 'ok'); abrirCal(hotel, cal?.dia); cargar(); }
+                catch (err) { EV.toast(err.message, 'err'); }
+            });
             if (!calDrawer.abierto()) calDrawer.abrir();
         } catch (e) { EV.toast(e.message, 'err'); }
     }
@@ -477,6 +492,8 @@ const OF = (() => {
                 <div class="ui-row">
                     <div class="ui-f"><label for="eMoneda">Moneda</label><select id="eMoneda"><option value="DOP">DOP · RD$</option></select></div>
                     <div class="ui-f"><label for="eProveedor">Proveedor <em>de dónde sale la oferta</em></label><select id="eProveedor"><option value="">— Sin proveedor —</option></select></div>
+                    <div class="ui-f"><label for="eEstado">Estado <em>Confirmada, Bajo petición… · opcional</em></label><select id="eEstado"></select>
+                        <label class="ui-switch" style="margin-top:6px"><input type="checkbox" id="eEstadoTodas"><span class="tr"></span> El mismo en todas las fechas de este hotel</label></div>
                 </div>
                 <div class="ui-row">
                     <div class="ui-f"><label for="ePaisOrigen">País de origen <em>opcional en Solo Hotel</em></label><select id="ePaisOrigen"><option value="">— Sin origen —</option>${cat.paises.map(x => `<option value="${esc(x.valor)}">${esc(x.texto)}</option>`).join('')}</select></div>
@@ -504,6 +521,7 @@ const OF = (() => {
                 `;
             EVCodigo.monedas($('#eMoneda'), (o.id_Moneda || 'DOP').trim()).catch(() => { });
             EVCodigo.proveedores($('#eProveedor'), (o.id_Proveedor || '').trim(), { vacio: '— Elige el proveedor —' }).catch(() => { });
+            EVCodigo.estados($('#eEstado'), o.id_Estado ?? '').catch(() => { });   // CAMBIO 131
             $('#ePaisOrigen').value = (o.id_Pais_Origen || '').trim().toUpperCase();
             EVCodigo.origen($('#ePaisOrigen'), $('#eOrigen'), { opcional: true }); $('#ePaisOrigen').value = (o.id_Pais_Origen || '').trim().toUpperCase(); $('#eOrigen').evOrigen?.poner(o.origen || '');   // ciudad: Tom Select
             EVCodigo.campo($('#eCodigoInterno'), { producto: TIPO, clave: () => actual?.codigo ?? '', anterior: () => actual?.codigo_Interno ?? '' });   // CAMBIO 128
@@ -534,7 +552,7 @@ const OF = (() => {
             ...EVPrioridad.leer($('#ePrio')), PrioridadTodas: $('#ePrioTodas').checked,
             // punto 7
             Nombre: $('#eNombre').value.trim() || null, Codigo: $('#eCodigo').value.trim() || null, CodigoInterno: $('#eCodigoInterno').value.trim() || null, Id_Moneda: $('#eMoneda').value || null,
-            Id_Proveedor: $('#eProveedor').value || null, CambiarOrigen: true, Id_Pais_Origen: $('#ePaisOrigen').value || null, Origen: $('#eOrigen').value.trim() || null,
+            Id_Proveedor: $('#eProveedor').value || null, Id_Estado: $('#eEstado').value ? +$('#eEstado').value : null, EstadoTodas: $('#eEstadoTodas').checked, CambiarOrigen: true, Id_Pais_Origen: $('#ePaisOrigen').value || null, Origen: $('#eOrigen').value.trim() || null,
             Textos: { Incluye: $('#eIncluye').value, No_Incluye: $('#eNoIncluye').value, Nota: $('#eCondiciones').value, Documentacion: $('#eDocs').value, Importante: $('#eImportante').value, Oferta_Especial: $('#eOfertaEsp').value }
         };
         if (dto.Origen && !dto.Id_Pais_Origen) { EV.toast('Elige el país de origen (o borra la ciudad).', 'err'); return; }
@@ -566,11 +584,12 @@ const OF = (() => {
         const destinos = await EV.api('/Ofertas/Destinos?tipo=' + TIPO);
         $('#fDestino').innerHTML += destinos.map(d => `<option value="${esc(d.valor)}">${esc(d.texto)} (${esc(d.extra)})</option>`).join('');
         $('#fCampanya').innerHTML += cat.campanyas.map(c => `<option value="${esc(c.valor)}">${esc(c.texto)} (#${esc(c.valor)})</option>`).join('');
+        try { $('#fEstadoOferta').innerHTML += (await EVCodigo.estadosLista()).map(e => `<option value="${e.id}">${esc(e.nombre)}</option>`).join(''); } catch { }   // CAMBIO 131
         Object.assign(st, EV.filtrosURL.leer(DEF)); filtrosAPantalla();   // filtros guardados en la dirección
         $('#ofLimpiar').addEventListener('click', limpiarFiltros);
 
         $('#fQ').addEventListener('input', EV.debounce(e => { st.q = e.target.value.trim(); st.pagina = 1; cargar(); }, 300));
-        [['#fDestino', 'destino'], ['#fCampanya', 'campanya'], ['#fOrden', 'orden'], ['#fDesde', 'desde'], ['#fHasta', 'hasta']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; st.pagina = 1; cargar(); }));
+        [['#fDestino', 'destino'], ['#fCampanya', 'campanya'], ['#fEstadoOferta', 'estadoOferta'], ['#fOrden', 'orden'], ['#fDesde', 'desde'], ['#fHasta', 'hasta']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; st.pagina = 1; cargar(); }));
         $('#fPasadas').addEventListener('change', e => { st.pasadas = e.target.checked; st.pagina = 1; cargar(); });
         [['#fEstado', 'estado'], ['#fVuelo', 'vuelo'], ['#fVista', 'vista']].forEach(([id, k]) => $$(id + ' [data-v]').forEach(b => b.addEventListener('click', () => { $$(id + ' .ui-pick').forEach(x => x.classList.toggle('on', x === b)); st[k] = b.dataset.v; st.pagina = 1; cargar(); })));
         $('#ofExportar').addEventListener('click', e => { e.preventDefault(); location.href = '/Ofertas/Exportar?' + params(); });

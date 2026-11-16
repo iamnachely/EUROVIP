@@ -52,6 +52,9 @@ namespace EuroVip.Repositories
                 "SELECT id_alojamiento, nombre, id_destino FROM Eurovip.alojamiento WHERE id_idioma = 'ES' AND activo = 1")).ToList();
             var opciones = hoteles.Select(h => new EuroVip.Services.CargaExcelOpcion(h.Id.ToString(), h.Nombre, h.Destino)).ToList();
             var porId = hoteles.GroupBy(h => h.Id).ToDictionary(g => g.Key, g => g.First());
+            // CAMBIO 131: columna opcional «Estado» (Confirmada, Bajo petición…) en la fila de las fechas; se reconoce por parecido
+            var colEstado = celdas.FirstOrDefault(c => c.Fila == filaEnc && c.Texto is not null && EuroVip.Services.Parecidos.Compacto(c.Texto) is "estado" or "estados" or "disponibilidad")?.Col;
+            var estados = (await EuroVip.Services.EstadosOferta.ListarAsync(cn)).Select(e => new EuroVip.Services.CargaExcelOpcion(e.Id.ToString(), e.Nombre)).ToList();
 
             foreach (var fila in filas)
             {
@@ -77,6 +80,14 @@ namespace EuroVip.Repositories
                 }
                 else if (cand.Count > 0) item.Estado = "multiple";
                 item.Candidatos = cand.Select(c => new Opcion { Valor = c.Valor, Texto = c.Texto, Extra = c.Extra }).ToList();
+                if (colEstado is int ce && porPos.TryGetValue((fila.Fila, ce), out var celEst) && (celEst.Texto ?? celEst.Numero?.ToString())?.Trim() is { Length: > 0 } est)
+                {
+                    item.EstadoTexto = est;
+                    var (eo, sugEst) = EuroVip.Services.Coincidencias.Elegir(est, estados);
+                    if (eo is not null) item.Id_Estado = int.Parse(eo.Valor);
+                    else r.Avisos.Add($"«{texto}»: el estado «{est}» no existe" + (sugEst.Count > 0 ? $" (¿{string.Join(" o ", sugEst.Take(3).Select(s => s.Texto))}?)" : "")
+                                      + ". Elígelo en el hotel o créalo con «Nuevo estado».");
+                }
                 r.Hoteles.Add(item);
             }
             if (r.Hoteles.Count == 0) r.Avisos.Add("No encontré filas de hoteles con precios debajo de la fila de fechas.");

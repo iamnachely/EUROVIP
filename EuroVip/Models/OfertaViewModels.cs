@@ -25,6 +25,8 @@ namespace EuroVip.Models
         [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
         /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
         [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
+        /// <summary>Estado de las ofertas de este hotel (CAMBIO 131): Confirmada, Bajo petición… Opcional (null = sin estado).</summary>
+        public int? Id_Estado { get; set; }
     }
 
     /// <summary>
@@ -70,6 +72,8 @@ namespace EuroVip.Models
         public short? Campanya { get; set; }
         public int? Estado { get; set; }        // 1 activas, 0 inactivas
         public int? Vuelo { get; set; }         // 1 con vuelo, 0 sin vuelo
+        /// <summary>Estado de la oferta (CAMBIO 131): id del catálogo; -1 = sin estado; null = todos.</summary>
+        public int? EstadoOferta { get; set; }
         public DateTime? Desde { get; set; }
         public DateTime? Hasta { get; set; }
         public bool Pasadas { get; set; }
@@ -81,6 +85,11 @@ namespace EuroVip.Models
     /// <summary>Vista «Por hotel» de /Ofertas: resumen de las ofertas de un hotel (con los filtros de la lista).</summary>
     public class OfertaHotel
     {
+        // Estado (CAMBIO 131): si todas las fechas tienen el mismo, Id_Estado/Estado_Oferta; Estados = cuántos distintos
+        public int Estados { get; set; }
+        public int? Id_Estado { get; set; }
+        public string? Estado_Oferta { get; set; }
+        public int SinEstado { get; set; }
         public int Id_Alojamiento { get; set; }
         public string Hotel { get; set; } = "";
         public string? Caratula { get; set; }
@@ -101,6 +110,9 @@ namespace EuroVip.Models
 
     public class OfertaItem
     {
+        /// <summary>Estado de la oferta (CAMBIO 131): Confirmada, Bajo petición… null = sin estado.</summary>
+        public int? Id_Estado { get; set; }
+        public string? Estado_Oferta { get; set; }
         public int Id_Servicio { get; set; }
         public string? Nombre { get; set; }
         public int Id_Alojamiento { get; set; }
@@ -180,6 +192,9 @@ namespace EuroVip.Models
     /// <summary>Edición de una salida de oferta (lo que se puede cambiar sin recrearla).</summary>
     public class OfertaEditarDto
     {
+        /// <summary>Estado (CAMBIO 131), opcional; EstadoTodas = el mismo en todas las fechas de este hotel.</summary>
+        public int? Id_Estado { get; set; }
+        public bool EstadoTodas { get; set; }
         public int Id_Servicio { get; set; }
         [Range(1, 999999, ErrorMessage = "Precio inválido")] public decimal PrecioTotal { get; set; }
         [Range(0, 100, ErrorMessage = "Descuento de 0 a 100")] public decimal Descuento { get; set; }
@@ -246,6 +261,9 @@ namespace EuroVip.Models
         public string? Destino { get; set; }
         /// <summary>true = se reconoció por parecido (no igual): la pantalla pide revisarlo y muestra otras coincidencias.</summary>
         public bool Aproximado { get; set; }
+        /// <summary>Columna «Estado» del Excel (CAMBIO 131): lo escrito y el estado reconocido (null si no se reconoce o está vacío).</summary>
+        public string? EstadoTexto { get; set; }
+        public int? Id_Estado { get; set; }
         public List<Opcion> Candidatos { get; set; } = new();
         public List<ExcelFecha> Precios { get; set; } = new();
     }

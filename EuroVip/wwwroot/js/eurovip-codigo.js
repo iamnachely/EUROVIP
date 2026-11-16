@@ -174,5 +174,55 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
         return Object.fromEntries(INFO.map(([k]) => [k, b.querySelector(`[data-info="${k}"]`)?.value.trim() || null]));
     }
 
-    return { campo, validar, proveedores, monedas, simbolo, limpiar, nombreProveedor, origen, ORIGEN, info, leerInfo };
+    // ---------- Estado de las ofertas de hotel (CAMBIO 131) ----------
+    // EVCodigo.estados(select, valor, { vacio }) llena el <select> (Tom Select) con Confirmada, Bajo petición… y le pone al lado
+    // el botón «＋ Nuevo estado»: se escribe el nombre, se crea en la base y queda elegido (y aparece en todos los selects de estado).
+    let cacheEstados = null;
+    const estadosLista = (refrescar = false) => { if (refrescar || !cacheEstados) cacheEstados = json('/Codigos/EstadosOferta').catch(e => { cacheEstados = null; throw e; }); return cacheEstados; };
+    function opcionesEstado(sel, lista, valor, vacio) {
+        const v = valor == null ? '' : String(valor);
+        sel.innerHTML = `<option value="">${esc(vacio)}</option>` + lista.map(e => `<option value="${e.id}" ${String(e.id) === v ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('');
+        sel.value = v; sel.dispatchEvent(new Event('ev:opciones'));
+    }
+    async function estados(sel, valor, { vacio = '— Sin estado —' } = {}) {
+        if (!sel) return;
+        sel.dataset.evEstado = '1'; sel.dataset.evVacio = vacio;
+        opcionesEstado(sel, await estadosLista(), valor, vacio);
+        const f = sel.closest('.ui-f') || sel.parentElement;
+        if (f.querySelector('[data-ev-estado-nuevo]')) return;
+        const caja = document.createElement('div');
+        caja.dataset.evEstadoNuevo = '1';
+        caja.style.cssText = 'display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap';
+        caja.innerHTML = `<button type="button" class="ev-btn ghost sm" data-a="abrir" style="padding:4px 10px;font-size:12.5px"><i class="bi bi-plus-lg"></i> Nuevo estado</button>
+            <span data-a="form" hidden style="display:flex;gap:6px;align-items:center;flex:1"><input data-a="nombre" maxlength="60" placeholder="Ej. Lista de espera" style="flex:1;min-width:140px">
+            <button type="button" class="ev-btn sm" data-a="crear">Agregar</button><button type="button" class="ev-btn ghost sm" data-a="cancelar">Cancelar</button></span>
+            <small data-a="msg" style="font-weight:600"></small>`;
+        f.appendChild(caja);
+        const q = a => caja.querySelector(`[data-a="${a}"]`);
+        const abrir = si => { q('form').hidden = !si; q('form').style.display = si ? 'flex' : 'none'; q('abrir').hidden = si; if (si) q('nombre').focus(); };
+        abrir(false);
+        q('abrir').onclick = () => abrir(true);
+        q('cancelar').onclick = () => { q('nombre').value = ''; q('msg').textContent = ''; abrir(false); };
+        const crear = async () => {
+            const nombre = q('nombre').value.trim();
+            if (nombre.length < 3) { q('msg').textContent = 'Escribe el nombre (al menos 3 letras).'; q('msg').style.color = '#B42318'; return; }
+            q('crear').disabled = true;
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+                const r = await fetch('/Codigos/CrearEstadoOferta', { method: 'POST', headers: { 'Content-Type': 'application/json', RequestVerificationToken: token }, body: JSON.stringify({ Nombre: nombre }) });
+                const d = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(d.mensaje || 'No se pudo agregar el estado.');
+                const lista = await estadosLista(true);
+                // todos los selects de estado de la página reciben el nuevo; este queda elegido
+                document.querySelectorAll('select[data-ev-estado]').forEach(s => opcionesEstado(s, lista, s === sel ? d.estado.id : s.value, s.dataset.evVacio || vacio));
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                q('msg').textContent = d.mensaje; q('msg').style.color = 'var(--ev-deep,#0E8F86)'; q('nombre').value = ''; abrir(false);
+            } catch (e) { q('msg').textContent = e.message; q('msg').style.color = '#B42318'; }
+            finally { q('crear').disabled = false; }
+        };
+        q('crear').onclick = crear;
+        q('nombre').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); crear(); } });
+    }
+
+    return { campo, validar, proveedores, monedas, simbolo, limpiar, nombreProveedor, origen, ORIGEN, info, leerInfo, estados, estadosLista };
 })();

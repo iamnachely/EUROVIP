@@ -47,5 +47,27 @@ namespace EuroVip.Controllers
 
         [HttpGet]
         public async Task<IActionResult> Monedas() => Json(await _db.MonedasAsync());
+
+        // ---- Estado de las ofertas de hotel (CAMBIO 131): Confirmada, Bajo petición… y los que agregue la usuaria ----
+        public sealed record EstadoNuevoDto(string? Nombre);
+
+        [HttpGet]
+        public async Task<IActionResult> EstadosOferta()
+        {
+            using var cn = _db.Conexion();
+            return Json(await Services.EstadosOferta.ListarAsync(cn));
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearEstadoOferta([FromBody] EstadoNuevoDto dto)
+        {
+            using var cn = _db.Conexion();
+            var (estado, nuevo, error) = await Services.EstadosOferta.CrearAsync(cn, dto?.Nombre, User.Identity?.Name ?? "desconocido");
+            if (error is not null) return BadRequest(new { mensaje = error });
+            if (nuevo)
+                await _db.AuditarAsync("EstadoOferta_Crear", new[] { estado!.Id }, estado, User.Identity?.Name ?? "desconocido",
+                    HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
+            return Json(new { ok = true, estado, nuevo, mensaje = nuevo ? $"Estado «{estado!.Nombre}» agregado." : $"Ya existía «{estado!.Nombre}»: se eligió ese." });
+        }
     }
 }

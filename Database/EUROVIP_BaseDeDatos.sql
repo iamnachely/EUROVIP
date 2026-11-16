@@ -5677,6 +5677,33 @@ SELECT TABLE_NAME AS tabla, STRING_AGG(COLUMN_NAME, ', ') AS columnas_info FROM 
    AND COLUMN_NAME IN ('incluye', 'no_incluye', 'condiciones', 'documentacion', 'importante', 'oferta_especial') GROUP BY TABLE_NAME;
 GO
 
+/* ---------- CAMBIO 131: estado de las ofertas de hotel (Confirmada, Bajo petición…) ----------
+   Explicación sencilla: pedido de la usuaria «que en hoteles (Solo Hotel y Paquetes) se pueda poner el estado Confirmada o
+   Bajo petición, con un botón para agregar otros estados; también en el Excel; siempre opcional y editable».
+     - Catálogo nuevo Eurovip.estado_oferta: Confirmada y Bajo petición de inicio; la pantalla deja agregar más.
+     - Columna nueva servicio.id_estado_oferta (opcional): el estado de cada oferta/fecha. Vacío = sin estado.
+   No cambia ningún dato existente. */
+IF OBJECT_ID('Eurovip.estado_oferta') IS NULL
+    CREATE TABLE Eurovip.estado_oferta (
+        id_estado_oferta int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Eurovip_estado_oferta PRIMARY KEY,
+        nombre nvarchar(60) NOT NULL CONSTRAINT UX_Eurovip_estado_oferta_nombre UNIQUE,
+        orden smallint NOT NULL CONSTRAINT DF_Eurovip_estado_oferta_orden DEFAULT (100),
+        activo bit NOT NULL CONSTRAINT DF_Eurovip_estado_oferta_activo DEFAULT (1),
+        usuario varchar(50) NULL,
+        fecha_alta datetime2(0) NOT NULL CONSTRAINT DF_Eurovip_estado_oferta_fecha DEFAULT (SYSDATETIME()));
+GO
+IF NOT EXISTS (SELECT 1 FROM Eurovip.estado_oferta WHERE nombre = N'Confirmada')
+    INSERT INTO Eurovip.estado_oferta (nombre, orden, usuario) VALUES (N'Confirmada', 1, 'CAMBIO 131');
+IF NOT EXISTS (SELECT 1 FROM Eurovip.estado_oferta WHERE id_estado_oferta = 2 OR nombre LIKE N'Bajo petici%')   -- la ó con NCHAR(243): no depende de cómo se guarde el archivo
+    INSERT INTO Eurovip.estado_oferta (nombre, orden, usuario) VALUES (N'Bajo petici' + NCHAR(243) + N'n', 2, 'CAMBIO 131');
+IF COL_LENGTH('Eurovip.servicio', 'id_estado_oferta') IS NULL
+    ALTER TABLE Eurovip.servicio ADD id_estado_oferta int NULL
+        CONSTRAINT FK_Eurovip_servicio_estado_oferta REFERENCES Eurovip.estado_oferta (id_estado_oferta);
+GO
+SELECT id_estado_oferta, nombre, orden FROM Eurovip.estado_oferta ORDER BY orden;
+SELECT 'servicio.id_estado_oferta' AS revision, CASE WHEN COL_LENGTH('Eurovip.servicio','id_estado_oferta') > 0 THEN 'ok' ELSE 'FALTA' END AS estado;
+GO
+
 
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
@@ -6229,6 +6256,13 @@ GO
                crucero. Todas vacías (ningún dato existente cambió). Prueba: excursión «ZZ Prueba Claude Info» (n.º 334) creada con los
                6 textos, revisada y eliminada; se borró también su copia en registro_eliminado.
                Para deshacer: ALTER TABLE ... DROP COLUMN de esas columnas (antes, quitar su uso en el BackOffice).
+   16/11/2026  CAMBIO 131 aplicado SOLO en el 93: catálogo Eurovip.estado_oferta (1 Confirmada, 2 Bajo petición) y columna
+               servicio.id_estado_oferta (vacía: ninguna oferta existente cambió). Al aplicarlo desde un archivo sin BOM la «ó» quedó mal
+               («peticiÃ³n»); se corrigió con UPDATE ... N'Bajo petici' + NCHAR(243) + N'n' y el script del repo ya usa NCHAR.
+               Prueba del botón «Nuevo estado»: se creó «ZZ Prueba Claude» (id 3) y se borró, con RESEED a 2 (queda en auditoría
+               como EstadoOferta_Crear). No se cambió el estado de ninguna oferta real.
+               Para deshacer: ALTER TABLE Eurovip.servicio DROP CONSTRAINT FK_Eurovip_servicio_estado_oferta; DROP COLUMN
+               id_estado_oferta; DROP TABLE Eurovip.estado_oferta.
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

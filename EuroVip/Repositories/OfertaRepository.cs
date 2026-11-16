@@ -10,6 +10,8 @@ namespace EuroVip.Repositories
     {
         Task<(IEnumerable<OfertaItem> Items, int Total)> ListarAsync(OfertaFiltro f);
         Task<IEnumerable<OfertaHotel>> HotelesAsync(OfertaFiltro f);
+        /// <summary>CAMBIO 131: pone el mismo estado (o ninguno) a todas las ofertas/paquetes de un hotel. Devuelve cuántas cambió.</summary>
+        Task<int> EstadoHotelAsync(int aloj, string? tipo, int? idEstado);
         Task<IEnumerable<OfertaItem>> CalendarioAsync(int hotel, OfertaFiltro f);
         Task<OfertaEstadisticas> EstadisticasAsync(string? tipo = null);
         Task<OfertaDetalle?> ObtenerAsync(int id);
@@ -58,6 +60,7 @@ namespace EuroVip.Repositories
             LEFT JOIN Eurovip.servicio_itinerario v ON v.id_servicio = s.id_servicio AND v.segmento = 1
             LEFT JOIN Eurovip.servicio_origen so    ON so.id_servicio = s.id_servicio
             LEFT JOIN Eurovip.servicio_destino sdx  ON sdx.id_servicio = s.id_servicio   -- destino de la oferta (FASE 11)
+            LEFT JOIN Eurovip.estado_oferta eo      ON eo.id_estado_oferta = s.id_estado_oferta   -- estado: Confirmada, Bajo petición… (CAMBIO 131)
             WHERE s.id_tipo_servicio IN @tipos AND s.id_idioma = 'ES'";
 
         private const string Columnas = @"
@@ -68,7 +71,8 @@ namespace EuroVip.Repositories
             Eurovip.fnPrecioWeb(s.id_servicio) AS PrecioWeb, COALESCE(v.origen, so.origen) AS Origen,
             (SELECT COUNT(*) FROM Eurovip.servicio_itinerario x WHERE x.id_servicio = s.id_servicio) AS Vuelos,
             (SELECT COUNT(*) FROM Eurovip.servicio_habitacion h WHERE h.id_servicio = s.id_servicio) AS Habitaciones,
-            s.activo AS Activo, s.codigo AS Codigo, s.codigo_interno AS Codigo_Interno, s.usuario AS Usuario, p.nombre AS Proveedor, s.peso AS Peso, s.precio_proveedor AS Precio_Proveedor";
+            s.activo AS Activo, s.codigo AS Codigo, s.codigo_interno AS Codigo_Interno, s.usuario AS Usuario, p.nombre AS Proveedor, s.peso AS Peso, s.precio_proveedor AS Precio_Proveedor,
+            s.id_estado_oferta AS Id_Estado, eo.nombre AS Estado_Oferta";
 
         public async Task<(IEnumerable<OfertaItem> Items, int Total)> ListarAsync(OfertaFiltro f)
         {
@@ -96,6 +100,15 @@ namespace EuroVip.Repositories
         }
 
         /// <summary>Vista «Por hotel»: un resumen por hotel con los mismos filtros de la lista (máx. 500 hoteles).</summary>
+        public async Task<int> EstadoHotelAsync(int aloj, string? tipo, int? idEstado)
+        {
+            using var cn = _db.Conexion();
+            return await cn.ExecuteAsync(@"
+                UPDATE s SET id_estado_oferta = @idEstado
+                  FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
+                 WHERE sd.id_alojamiento = @aloj AND s.id_idioma = 'ES' AND s.id_tipo_servicio = @tipo", new { aloj, tipo = TipoDe(tipo), idEstado });
+        }
+
         public async Task<IEnumerable<OfertaHotel>> HotelesAsync(OfertaFiltro f)
         {
             var p = new DynamicParameters();
@@ -117,6 +130,8 @@ namespace EuroVip.Repositories
                        MIN(sd.desde) AS Primera, MAX(sd.desde) AS Ultima,
                        MIN(Eurovip.fnPrecioWeb(s.id_servicio)) AS PrecioDesde, MAX(Eurovip.fnPrecioWeb(s.id_servicio)) AS PrecioHasta,
                        MAX(s.id_moneda) AS Id_Moneda, MIN(s.peso) AS Peso,
+                       COUNT(DISTINCT ISNULL(s.id_estado_oferta, 0)) AS Estados, MAX(s.id_estado_oferta) AS Id_Estado, MAX(eo.nombre) AS Estado_Oferta,
+                       SUM(CASE WHEN s.id_estado_oferta IS NULL THEN 1 ELSE 0 END) AS SinEstado,
                        STRING_AGG(CAST(sd.id_regimen AS varchar(max)), ',') AS Regimenes
                 {Base} {filtro}
                 GROUP BY a.id_alojamiento ORDER BY {orden}", p);
@@ -145,6 +160,8 @@ namespace EuroVip.Repositories
             if (!string.IsNullOrWhiteSpace(f.Destino)) { where.Add("COALESCE(sdx.destino, a.id_destino) = @destino"); p.Add("destino", f.Destino); }
             if (f.Campanya is > 0) { where.Add("s.id_campanya = @campanya"); p.Add("campanya", f.Campanya); }
             if (f.Estado is 0 or 1) { where.Add("s.activo = @estado"); p.Add("estado", f.Estado == 1); }
+            if (f.EstadoOferta == -1) where.Add("s.id_estado_oferta IS NULL");
+            else if (f.EstadoOferta is > 0) { where.Add("s.id_estado_oferta = @estadoOferta"); p.Add("estadoOferta", f.EstadoOferta); }
             if (f.Vuelo == 1) where.Add("v.id_servicio IS NOT NULL");
             if (f.Vuelo == 0) where.Add("v.id_servicio IS NULL");
             if (f.Desde is not null) { where.Add("sd.desde >= @desde"); p.Add("desde", f.Desde.Value.Date); }
@@ -268,7 +285,13 @@ namespace EuroVip.Repositories
                 await GuardarTextosAsync(cn, tx, codigo, d.Textos);
             await cn.ExecuteAsync(@"
                 UPDATE Eurovip.servicio SET precio_base = @pb, descuento = @desc, id_campanya = @camp, activo = @activo, noches = @noches,
-                       peso = @peso, precio_proveedor = @prov WHERE id_servicio = @id;
+                       peso = @peso, precio_proveedor = @prov, id_estado_oferta = @est WHERE id_servicio = @id;
+                -- CAMBIO 131: «el mismo estado en todas las fechas de este hotel»
+                IF @estTodas = 1
+                    UPDATE s SET id_estado_oferta = @est
+                      FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
+                     WHERE sd.id_alojamiento = @aloj AND s.id_idioma = 'ES' AND s.id_servicio <> @id
+                       AND s.id_tipo_servicio = (SELECT id_tipo_servicio FROM Eurovip.servicio WHERE id_servicio = @id);
                 -- «Aplicar a todas las fechas de este hotel»: las demás ofertas/paquetes del mismo hotel y tipo
                 IF @todas = 1
                     UPDATE s SET peso = @peso, precio_proveedor = @prov
@@ -280,7 +303,7 @@ namespace EuroVip.Repositories
                 DELETE FROM Eurovip.servicio_habitacion WHERE id_servicio = @id;
                 DELETE FROM Eurovip.servicio_tasa WHERE id_Servicio = @id;",
                 new { id = d.Id_Servicio, pb = d.PrecioTotal - tasas, desc = d.Descuento, camp = d.Id_Campanya, activo = d.Activo, noches = d.Noches, reg = d.Id_Regimen, desde = d.Desde.Date,
-                      peso = d.Peso, prov = d.Precio_Proveedor, todas = d.PrioridadTodas, aloj = actual.Aloj }, tx);
+                      peso = d.Peso, prov = d.Precio_Proveedor, todas = d.PrioridadTodas, aloj = actual.Aloj, est = d.Id_Estado, estTodas = d.EstadoTodas }, tx);
             foreach (var h in d.Habitaciones.DistinctBy(x => x.Id_Habitacion))
                 await cn.ExecuteAsync("Eurovip.InsertarServicioHabitacion",
                     new { Id_Servicio = d.Id_Servicio, Secuencia = 1, Id_Alojamiento = actual.Aloj, Id_Idioma = Idioma, h.Id_Habitacion, h.Precio }, tx, commandType: CommandType.StoredProcedure);
