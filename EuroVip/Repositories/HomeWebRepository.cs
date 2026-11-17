@@ -167,6 +167,33 @@ namespace EuroVip.Repositories
                         INSERT INTO Eurovip.home_contenido (id_idioma, id_contenedor, id_campanya, id_moneda, id_pais_origen, origen, id_destino, posicion, oferta_especial)
                         SELECT i.id_idioma, @ic, i.id_campanya, i.id_moneda, i.id_pais_origen, i.origen, i.id_destino, @pos, 0 FROM Eurovip.inicio i WHERE i.id = @id;", p, tx);
             }
+
+            // Sección con ★ prioridad: se muestra (aquí y en la web) por prioridad y después por precio, NO por posicion_destino.
+            // Para que la tarjeta quede donde se soltó, las tarjetas hasta la soltada (y hasta la última que ya tenía ★)
+            // reciben la prioridad 1, 2, 3… en el orden nuevo. Las de detrás sin ★ siguen ordenadas por precio (como ya se veían).
+            // Un solo UPDATE: el trigger trEurovip_inicio_peso ve varias filas y solo deja el ámbito en 1, 2, 3… (sin intercambios).
+            if (dto.Id_Contenedor is int icp && dto.Ids.Count > 0
+                && await cn.ExecuteScalarAsync<bool>("SELECT CAST(ISNULL(prioridad, 0) AS bit) FROM Eurovip.contenedores WHERE id_contenedor = @icp", new { icp }, tx))
+            {
+                var pesos = (await cn.QueryAsync<(int Id, short? Peso)>(
+                    "SELECT id, peso FROM Eurovip.inicio WHERE id IN @Ids AND id_idioma = @Idioma", new { dto.Ids, Idioma }, tx))
+                    .ToDictionary(x => x.Id, x => x.Peso);
+                var k = -1;
+                for (var i = 0; i < dto.Ids.Count; i++)
+                    if (dto.Ids[i] == dto.Movida || (pesos.TryGetValue(dto.Ids[i], out var pz) && pz is not null)) k = i;
+                if (k >= 0)
+                {
+                    var prm = new DynamicParameters(new { Idioma });
+                    var casos = new System.Text.StringBuilder();
+                    for (var i = 0; i <= k; i++)
+                    {
+                        prm.Add($"i{i}", dto.Ids[i]); prm.Add($"p{i}", (short)(i + 1));
+                        casos.Append($" WHEN @i{i} THEN @p{i}");
+                    }
+                    var ids = string.Join(", ", Enumerable.Range(0, k + 1).Select(i => $"@i{i}"));
+                    await cn.ExecuteAsync($"UPDATE Eurovip.inicio SET peso = CASE id{casos} END WHERE id IN ({ids}) AND id_idioma = @Idioma", prm, tx);
+                }
+            }
             tx.Commit();
         }
 

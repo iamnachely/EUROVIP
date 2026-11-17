@@ -113,6 +113,8 @@
     .hw-ordenando, .hw-ordenando * { cursor: grabbing !important; user-select: none; }
     .hw-volando::before, .hw-volando::after { display: none !important; }
     .hw-elegida { cursor: grabbing; }
+    /* Recién soltada mientras se guarda: queda en su sitio nuevo, con borde punteado hasta que el servidor confirma */
+    .hw-card.hw-guardando { outline: 2.5px dashed var(--ev-teal); outline-offset: 2px; }
     .hw-sec.hw-sec-hueco { border: 2.5px dashed var(--ev-teal) !important; background: color-mix(in srgb, var(--ev-aqua) 14%, var(--ev-surface)); }
     .hw-sec.hw-sec-hueco > * { opacity: .35; }
     #hwSin.destino { outline: 3px solid var(--ev-teal); outline-offset: 6px; border-radius: 18px; }
@@ -330,7 +332,7 @@ const HW = (() => {
     const tipoChip = { OFERTA: 'Solo Hotel', PAQUETES: 'Paquetes', CIRCUITO: 'Circuito', HOTEL: 'Hotel', EXCURSION: 'Excursiones', TRASLADO: 'Traslados', CRUCERO: 'Cruceros', COMBINADO: 'Combinado', CIRCUITO_MUNDO: 'Circuitos por destino' };
 
     async function cargar() {
-        D = await EV.api('/HomeWeb/Datos');
+        D = await EV.api('/HomeWeb/Datos', { cache: 'no-store' });   // siempre lo último guardado (nunca la copia del navegador)
         pintarTodo();
     }
 
@@ -468,6 +470,16 @@ const HW = (() => {
                    emptyInsertThreshold: 24,
                    delayOnTouchOnly: true, delay: 120, touchStartThreshold: 4,
                    scroll: true, scrollSensitivity: 120, scrollSpeed: 20, bubbleScroll: true };
+    // Al soltar una tarjeta/sección/slide que SÍ cambió de lugar, el navegador manda un clic sobre ella (SortableJS solo
+    // se come ese clic si no cambió de lugar) y se abría el editor. trasArrastre() marca la hora y el clic de justo
+    // después se descarta (escucha en captura, antes que el de abrir). Un clic normal, sin arrastrar, sigue abriendo.
+    let finArrastre = 0;
+    const trasArrastre = () => { finArrastre = Date.now(); };
+    document.addEventListener("click", e => {
+        if (Date.now() - finArrastre > 450) return;
+        if (!e.target.closest(".hw-card, .hw-sec, #hwSin, .cr-card")) return;
+        finArrastre = 0; e.preventDefault(); e.stopImmediatePropagation();
+    }, true);
     let ordenadores = [];
     function activarOrden() {
         if (!window.Sortable) return;
@@ -482,15 +494,23 @@ const HW = (() => {
             onEnd: async e => {
                 const el = e.item, cont = e.to; moviendo = null; finGuia();
                 const add = $('.hw-add', cont); if (add) cont.appendChild(add);
-                if (e.from === e.to && e.oldDraggableIndex === e.newDraggableIndex) return;   // no se movió
+                if (e.from === e.to && e.oldDraggableIndex === e.newDraggableIndex) return;   // no se movió (SortableJS ya se come ese clic)
+                trasArrastre();   // se movió: el clic que llega al soltar NO abre el editor
                 const ids = $$('.hw-card', cont).map(c => +c.dataset.t), id = +el.dataset.t, pos = ids.indexOf(id) + 1, sec = cont.dataset.cards;
+                const prio = D.contenedores.find(c => String(c.id_Contenedor) === sec)?.prioridad;
+                el.classList.add('hw-guardando');
                 try {
-                    await EV.post('/HomeWeb/OrdenTarjetas', { Id_Contenedor: sec === '' ? null : +sec, Ids: ids });
-                    EV.toast(`«${tituloCard(el)}» quedó en la posición ${pos} de ${ids.length} en ${nombreSec(cont)}.`);
+                    // Movida: en secciones con ★ prioridad el servidor le pone el puesto donde se soltó (si no, volvería a su lugar)
+                    await EV.post('/HomeWeb/OrdenTarjetas', { Id_Contenedor: sec === '' ? null : +sec, Ids: ids, Movida: id });
+                    EV.toast(`Posición guardada: «${tituloCard(el)}» quedó en la posición ${pos} de ${ids.length} en ${nombreSec(cont)}.${prio ? ' La sección ordena por ★ prioridad: se le puso el puesto donde la soltaste.' : ''}`);
                     await cargar();
                     const nueva = document.querySelector(`.hw-card[data-t="${id}"]`);
                     nueva?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); EV.resaltar(nueva);
-                } catch (err) { EV.toast(err.message, 'err'); cargar(); }
+                } catch (err) {
+                    // vuelve a su lugar (se repinta con lo que tiene el servidor) y se dice por qué
+                    EV.toast(`No se pudo guardar la posición: ${err.message || 'error del servidor'}. La tarjeta volvió a su lugar.`, 'err');
+                    try { await cargar(); } catch { }
+                }
             }
         })));
         const secs = $('#hwSecciones');
@@ -501,6 +521,7 @@ const HW = (() => {
             onEnd: async e => {
                 finGuia();
                 if (e.oldIndex === e.newIndex) return;
+                trasArrastre();
                 try { await EV.post('/HomeWeb/OrdenSecciones', $$('#hwSecciones .hw-sec').map(s => +s.dataset.sec)); EV.toast('Orden de secciones guardado.'); await cargar(); }
                 catch (err) { EV.toast(err.message, 'err'); cargar(); }
             }
@@ -520,6 +541,7 @@ const HW = (() => {
             onEnd: async e => {
                 document.body.classList.remove('hw-ordenando');
                 if (e.oldDraggableIndex === e.newDraggableIndex) return;
+                trasArrastre();
                 try { await EV.post('/HomeWeb/OrdenSlides', $$('#crGrid .cr-card[data-mov]').map(s => +s.dataset.s)); EV.toast('Orden del carrusel guardado.'); await cargar(); }
                 catch (err) { EV.toast(err.message, 'err'); cargar(); }
             }

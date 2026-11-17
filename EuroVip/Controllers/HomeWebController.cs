@@ -47,7 +47,7 @@ namespace EuroVip.Controllers
 
         public IActionResult Index() => View();
 
-        [HttpGet]
+        [HttpGet, ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]   // tras mover una tarjeta se ve lo guardado
         public async Task<IActionResult> Datos()
         {
             var d = await _repo.DatosAsync();

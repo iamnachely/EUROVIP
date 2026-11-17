@@ -119,6 +119,8 @@ namespace EuroVip.Models
     {
         public int? Id_Contenedor { get; set; }
         public List<int> Ids { get; set; } = new();
+        /// <summary>La tarjeta que se arrastró (en secciones con ★ prioridad se le pone el puesto donde se soltó).</summary>
+        public int? Movida { get; set; }
     }
 
     public class HwContenedorDto
