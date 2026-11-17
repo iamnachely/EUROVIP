@@ -55,6 +55,8 @@ namespace EuroVip.Repositories
             // CAMBIO 131: columna opcional «Estado» (Confirmada, Bajo petición…) en la fila de las fechas; se reconoce por parecido
             var colEstado = celdas.FirstOrDefault(c => c.Fila == filaEnc && c.Texto is not null && EuroVip.Services.Parecidos.Compacto(c.Texto) is "estado" or "estados" or "disponibilidad")?.Col;
             var estados = (await EuroVip.Services.EstadosOferta.ListarAsync(cn)).Select(e => new EuroVip.Services.CargaExcelOpcion(e.Id.ToString(), e.Nombre)).ToList();
+            // CAMBIO 132: columna opcional «Cupo» (bloques de hoteles: habitaciones para vender en cada fecha)
+            var colCupo = celdas.FirstOrDefault(c => c.Fila == filaEnc && c.Texto is not null && EuroVip.Services.Parecidos.Compacto(c.Texto) is "cupo" or "cupos" or "bloque" or "bloques" or "inventario" or "habitaciones" or "habitacionesdisponibles" or "disponibles")?.Col;
 
             foreach (var fila in filas)
             {
@@ -87,6 +89,12 @@ namespace EuroVip.Repositories
                     if (eo is not null) item.Id_Estado = int.Parse(eo.Valor);
                     else r.Avisos.Add($"«{texto}»: el estado «{est}» no existe" + (sugEst.Count > 0 ? $" (¿{string.Join(" o ", sugEst.Take(3).Select(s => s.Texto))}?)" : "")
                                       + ". Elígelo en el hotel o créalo con «Nuevo estado».");
+                }
+                if (colCupo is int cc && porPos.TryGetValue((fila.Fila, cc), out var celCupo) && (celCupo.Texto ?? celCupo.Numero?.ToString())?.Trim() is { Length: > 0 } cupoTxt)
+                {
+                    if (celCupo.Numero is double nc && nc >= 0 && nc <= 100000) item.Cupo = (int)Math.Round(nc);
+                    else if (int.TryParse(cupoTxt, out var ic) && ic >= 0) item.Cupo = ic;
+                    else r.Avisos.Add($"«{texto}»: el cupo «{cupoTxt}» no es un número de habitaciones. Escríbelo en el hotel (o déjalo vacío = sin límite).");
                 }
                 r.Hoteles.Add(item);
             }

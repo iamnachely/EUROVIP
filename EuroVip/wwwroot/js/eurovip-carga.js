@@ -228,16 +228,17 @@
             if (!hotel) { $('[data-habs]').innerHTML = ''; return; }
             if (!habitaciones.length) { $('[data-habs]').innerHTML = '<div class="ui-note warn"><i class="bi bi-exclamation-triangle"></i><div>Este hotel no tiene habitaciones cargadas en Eurovip.</div></div>'; return; }
             const muchas = habitaciones.length > 8;
-            $('[data-habs]').innerHTML = `<div class="ui-f" style="margin:0"><label>Habitaciones <em>marca las que se venden · suplemento sobre el precio (0 = habitación base)</em></label></div>
+            $('[data-habs]').innerHTML = `<div class="ui-f" style="margin:0"><label>Habitaciones <em>marca las que se venden · suplemento sobre el precio (0 = habitación base) · cupo = cuántas hay para vender en cada fecha (vacío = sin límite)</em></label></div>
                 ${muchas ? `<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
                     <label class="ui-search" style="flex:1;min-width:200px"><i class="bi bi-search"></i><input type="search" data-filtro placeholder="Filtrar ${habitaciones.length} habitaciones (doble, suite, vista mar…)"></label>
                     <label class="ui-switch"><input type="checkbox" data-solo><span class="tr"></span> Solo marcadas</label>
                     <b data-cuenta style="font-size:13px;color:var(--ev-muted)"></b></div>` : ''}
-                <div class="ui-table-wrap" style="max-height:260px;overflow:auto"><table class="ui-table"><thead><tr><th style="width:44px"></th><th>Habitación</th><th>Tipo</th><th style="width:160px">Suplemento</th></tr></thead><tbody>
+                <div class="ui-table-wrap" style="max-height:260px;overflow:auto"><table class="ui-table"><thead><tr><th style="width:44px"></th><th>Habitación</th><th>Tipo</th><th style="width:160px">Suplemento</th><th style="width:150px" title="Bloques de hoteles: cuántas habitaciones de este tipo tiene la empresa para vender en cada fecha. Vacío = sin límite">Cupo <em style="font-weight:600;text-transform:none">opcional</em></th></tr></thead><tbody>
                 ${habitaciones.map((h, i) => { const m = marcadas?.find(x => x.id_Habitacion === h.id_Habitacion || x.Id_Habitacion === h.id_Habitacion); const on = marcadas ? !!m : i === 0;
                     return `<tr data-txt="${EV.esc(`${h.nombre} ${h.id_Tipo_Habitacion || ''} ${h.id_Habitacion}`.toLowerCase())}"><td><input type="checkbox" data-hab="${h.id_Habitacion}" ${on ? 'checked' : ''} style="width:18px;height:18px;min-width:0;accent-color:var(--ev-ink)"></td>
                     <td><b>${EV.esc(h.nombre)}</b> <small style="color:var(--ev-muted)">#${h.id_Habitacion}</small></td><td>${EV.esc(h.id_Tipo_Habitacion || '')}</td>
-                    <td><div class="ui-money"><b>+</b><input type="number" min="0" step="1" data-sup="${h.id_Habitacion}" value="${m ? (m.precio ?? m.Precio ?? 0) : 0}"></div></td></tr>`; }).join('')}
+                    <td><div class="ui-money"><b>+</b><input type="number" min="0" step="1" data-sup="${h.id_Habitacion}" value="${m ? (m.precio ?? m.Precio ?? 0) : 0}"></div></td>
+                    <td><input type="number" min="0" step="1" data-cupo="${h.id_Habitacion}" placeholder="Sin límite" value="${m && (m.cupo ?? m.Cupo) != null ? (m.cupo ?? m.Cupo) : ''}" title="Habitaciones para vender en cada fecha"></td></tr>`; }).join('')}
                 </tbody></table></div>`;
             filtrar();
         };
@@ -294,7 +295,7 @@
                 Id_Alojamiento: hotel.id, Nombre: hotel.nombre, Id_Regimen: $('[data-k=regimen]').value,
                 Peso: $('[data-k=peso]').value === '' ? null : Math.round(+$('[data-k=peso]').value), Precio_Proveedor: $('[data-k=proveedor]').value === '' ? null : +$('[data-k=proveedor]').value,
                 Id_Estado: $('[data-k=estado]').value ? +$('[data-k=estado]').value : null,   // CAMBIO 131
-                Habitaciones: [...caja.querySelectorAll('[data-hab]:checked')].map(c => ({ Id_Habitacion: +c.dataset.hab, Precio: parseFloat(caja.querySelector(`[data-sup="${c.dataset.hab}"]`).value) || 0 }))
+                Habitaciones: [...caja.querySelectorAll('[data-hab]:checked')].map(c => { const cu = caja.querySelector(`[data-cupo="${c.dataset.hab}"]`)?.value; return { Id_Habitacion: +c.dataset.hab, Precio: parseFloat(caja.querySelector(`[data-sup="${c.dataset.hab}"]`).value) || 0, Cupo: cu === '' || cu == null ? null : Math.max(0, Math.round(+cu)) }; })
             },
             validar() {
                 const e = [];

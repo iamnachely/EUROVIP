@@ -71,6 +71,8 @@ namespace EuroVip.Repositories
             Eurovip.fnPrecioWeb(s.id_servicio) AS PrecioWeb, COALESCE(v.origen, so.origen) AS Origen,
             (SELECT COUNT(*) FROM Eurovip.servicio_itinerario x WHERE x.id_servicio = s.id_servicio) AS Vuelos,
             (SELECT COUNT(*) FROM Eurovip.servicio_habitacion h WHERE h.id_servicio = s.id_servicio) AS Habitaciones,
+            (SELECT SUM(h.cupo) FROM Eurovip.servicio_habitacion h WHERE h.id_servicio = s.id_servicio AND h.cupo IS NOT NULL) AS Cupo_Total,
+            (SELECT SUM(h.cupo_vendido) FROM Eurovip.servicio_habitacion h WHERE h.id_servicio = s.id_servicio) AS Cupo_Vendido,
             s.activo AS Activo, s.codigo AS Codigo, s.codigo_interno AS Codigo_Interno, s.usuario AS Usuario, p.nombre AS Proveedor, s.peso AS Peso, s.precio_proveedor AS Precio_Proveedor,
             s.id_estado_oferta AS Id_Estado, eo.nombre AS Estado_Oferta";
 
@@ -191,7 +193,8 @@ namespace EuroVip.Repositories
                 $"SELECT {Columnas}, s.id_Proveedor AS Id_Proveedor, COALESCE(v.id_pais_origen, so.id_pais_origen) AS Id_Pais_Origen {Base} AND s.id_servicio = @id", new { id, tipos = Tipos });
             if (o is null) return null;
             using var m = await cn.QueryMultipleAsync(@"
-                SELECT ah.id_habitacion AS Id_Habitacion, ah.nombre AS Nombre, ah.id_tipo_habitacion AS Id_Tipo_Habitacion, sh.precio AS Precio
+                SELECT ah.id_habitacion AS Id_Habitacion, ah.nombre AS Nombre, ah.id_tipo_habitacion AS Id_Tipo_Habitacion, sh.precio AS Precio,
+                       sh.cupo AS Cupo, sh.cupo_vendido AS Vendidas
                 FROM Eurovip.servicio_habitacion sh
                 JOIN Eurovip.alojamiento_habitacion ah ON ah.id_alojamiento = sh.id_alojamiento AND ah.id_habitacion = sh.id_habitacion AND ah.id_idioma = sh.id_idioma
                 WHERE sh.id_servicio = @id ORDER BY sh.precio, ah.nombre;
@@ -283,6 +286,18 @@ namespace EuroVip.Repositories
             }
             if (d.Textos is not null && !string.IsNullOrWhiteSpace(codigo))
                 await GuardarTextosAsync(cn, tx, codigo, d.Textos);
+            // CAMBIO 132 «Bloques de hoteles»: las habitaciones se borran y se vuelven a crear; lo VENDIDO se conserva siempre.
+            // No se puede quitar una habitación que ya tiene ventas ni dejarle un cupo menor que lo vendido.
+            var vendidas = (await cn.QueryAsync<(int Hab, int Vendidas, string? Nombre)>(@"
+                SELECT sh.id_habitacion, sh.cupo_vendido, ah.nombre FROM Eurovip.servicio_habitacion sh
+                LEFT JOIN Eurovip.alojamiento_habitacion ah ON ah.id_alojamiento = sh.id_alojamiento AND ah.id_habitacion = sh.id_habitacion AND ah.id_idioma = sh.id_idioma
+                WHERE sh.id_servicio = @id", new { id = d.Id_Servicio }, tx)).GroupBy(x => x.Hab).ToDictionary(g => g.Key, g => g.First());
+            foreach (var (hab, v) in vendidas.Where(x => x.Value.Vendidas > 0))
+            {
+                var nueva = d.Habitaciones.FirstOrDefault(x => x.Id_Habitacion == hab);
+                if (nueva is null) return $"La habitación «{v.Nombre ?? "#" + hab}» ya tiene {v.Vendidas} vendida(s): no se puede quitar de esta oferta.";
+                if (nueva.Cupo is int c && c < v.Vendidas) return $"La habitación «{v.Nombre ?? "#" + hab}» ya tiene {v.Vendidas} vendida(s): el cupo no puede ser menor que {v.Vendidas}.";
+            }
             await cn.ExecuteAsync(@"
                 UPDATE Eurovip.servicio SET precio_base = @pb, descuento = @desc, id_campanya = @camp, activo = @activo, noches = @noches,
                        peso = @peso, precio_proveedor = @prov, id_estado_oferta = @est WHERE id_servicio = @id;
@@ -305,8 +320,14 @@ namespace EuroVip.Repositories
                 new { id = d.Id_Servicio, pb = d.PrecioTotal - tasas, desc = d.Descuento, camp = d.Id_Campanya, activo = d.Activo, noches = d.Noches, reg = d.Id_Regimen, desde = d.Desde.Date,
                       peso = d.Peso, prov = d.Precio_Proveedor, todas = d.PrioridadTodas, aloj = actual.Aloj, est = d.Id_Estado, estTodas = d.EstadoTodas }, tx);
             foreach (var h in d.Habitaciones.DistinctBy(x => x.Id_Habitacion))
+            {
                 await cn.ExecuteAsync("Eurovip.InsertarServicioHabitacion",
                     new { Id_Servicio = d.Id_Servicio, Secuencia = 1, Id_Alojamiento = actual.Aloj, Id_Idioma = Idioma, h.Id_Habitacion, h.Precio }, tx, commandType: CommandType.StoredProcedure);
+                var vend = vendidas.TryGetValue(h.Id_Habitacion, out var vv) ? vv.Vendidas : 0;
+                if (h.Cupo is not null || vend > 0)
+                    await cn.ExecuteAsync("UPDATE Eurovip.servicio_habitacion SET cupo = @cupo, cupo_vendido = @vend WHERE id_servicio = @id AND id_habitacion = @hab",
+                        new { cupo = h.Cupo, vend, id = d.Id_Servicio, hab = h.Id_Habitacion }, tx);
+            }
             foreach (var s in d.Suplementos.Where(x => !string.IsNullOrWhiteSpace(x.Id_Tasa)).DistinctBy(x => x.Id_Tasa))
                 await cn.ExecuteAsync("Eurovip.spInsertaServicioSuplemento",
                     new { numeroServicio = d.Id_Servicio, nombreSuplemento = s.Id_Tasa, codigoIdioma = Idioma, valor = s.Valor }, tx, commandType: CommandType.StoredProcedure);

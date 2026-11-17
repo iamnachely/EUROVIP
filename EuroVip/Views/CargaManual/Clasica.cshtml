@@ -176,6 +176,7 @@
                     <div class="ui-f"><label>Tasas</label><div class="ui-money"><b class="sim">RD$</b><input type="number" id="gTasa" min="0" step="0.01" placeholder="0"></div></div>
                     <div class="ui-f"><label>Régimen</label><select id="gRegimen"></select></div>
                     <div class="ui-f" data-siempre><label>Estado <em>opcional</em></label><select id="gEstado"></select></div>
+                    <div class="ui-f" data-siempre><label>Cupo <em>habitaciones por fecha · opcional</em></label><input type="number" id="gCupo" min="0" step="1" placeholder="No cambiar"></div>
                 </div>
                 <button type="button" class="ev-btn aqua sm" style="width:100%;justify-content:center" onclick="CL.aplicarGlobales()"><i class="bi bi-arrow-down-circle"></i> Aplicar datos globales</button>
                 <small>Pone la tasa en todas las filas (recalcula el precio base) y el régimen en todos los hoteles. Cada hotel puede cambiar su régimen después.</small>
@@ -263,7 +264,7 @@ const CL = (() => {
             const hoy = EV.hoy(), tasa = $('#gTasa').value === '' ? tasasSup() : num($('#gTasa').value);
             let pasadas = 0;
             H = r.hoteles.map(h => ({
-                texto: h.texto, estado: h.estado, estadoOferta: h.id_Estado ?? null, estadoExcel: h.estadoTexto, aproximado: h.aproximado, candidatos: h.candidatos, habs: [], idHab: null, regimen: $('#gRegimen').value, omitir: false,
+                texto: h.texto, estado: h.estado, estadoOferta: h.id_Estado ?? null, estadoExcel: h.estadoTexto, cupo: h.cupo ?? null, aproximado: h.aproximado, candidatos: h.candidatos, habs: [], idHab: null, regimen: $('#gRegimen').value, omitir: false,
                 elegido: h.id_Alojamiento ? { id: h.id_Alojamiento, nombre: h.nombre, destino: h.destino } : null,
                 filas: h.precios.map(p => ({ desde: p.fecha.slice(0, 10), tasas: tasa, total: p.precio })).filter(f => { if (f.desde <= hoy) { pasadas++; return false; } return true; })
             }));
@@ -341,6 +342,7 @@ const CL = (() => {
                 <div class="ui-f" style="grid-column:span 2"><label>Habitación <em>por defecto la primera del hotel</em></label>
                     <select data-k="hab" ${h.habs.length ? '' : 'disabled'}>${h.habs.length ? h.habs.map(x => `<option value="${x.id_Habitacion}" ${x.id_Habitacion === h.idHab ? 'selected' : ''}>${esc(x.nombre)} · #${x.id_Habitacion}${x.id_Tipo_Habitacion ? ' · ' + esc(x.id_Tipo_Habitacion) : ''}</option>`).join('') : `<option>${h.elegido ? 'Este hotel no tiene habitaciones' : 'Primero elige el hotel'}</option>`}</select></div>
                 <div class="ui-f"><label>Régimen del hotel <em>sobrescribe el global</em></label><select data-k="regimen">${cat.regimenes.map(r => `<option value="${esc(r.valor)}" ${r.valor === h.regimen ? 'selected' : ''}>${esc(r.valor)} · ${esc(r.texto)}</option>`).join('')}</select></div>
+                <div class="ui-f" data-siempre><label><i class="bi bi-door-closed"></i> Cupo <em>habitaciones para vender en cada fecha · vacío = sin límite</em></label><input data-k="cupo" type="number" min="0" step="1" value="${h.cupo ?? ''}" placeholder="Sin límite"></div>
             </div>
             <div class="ui-row">
                 <div class="ui-f"><label><i class="bi bi-star-fill" style="color:#F5A623"></i> Prioridad en la web <em>opcional · elige el puesto</em></label><input data-k="peso" data-prio type="number" min="1" max="999" step="1" value="${h.peso ?? ''}"${h.elegido ? ` data-prio-ctx="${EV.esc(JSON.stringify({ que: 'oferta', aloj: h.elegido.id, tipo: TIPO }))}"` : ''}></div>
@@ -384,7 +386,7 @@ const CL = (() => {
             Noches: noches(), Divisa: moneda(), Origen: $('#iOrigen').dataset.valor || '', Id_Pais_Origen: $('#iPaisOrigen').value,
             Hoteles: H.filter(listo).map(h => ({
                 Id_Alojamiento: h.elegido.id, Nombre: h.elegido.nombre, Id_Regimen: h.regimen, Peso: h.peso ?? null, Precio_Proveedor: h.proveedor ?? null, Id_Estado: h.estadoOferta ?? null,
-                Habitaciones: [{ Id_Habitacion: h.idHab, Precio: 0 }],
+                Habitaciones: [{ Id_Habitacion: h.idHab, Precio: 0, Cupo: h.cupo ?? null }],   // CAMBIO 132: cupo (bloques de hoteles)
                 Salidas: filasOk(h).sort((a, b) => a.desde.localeCompare(b.desde)).map(f => ({ Desde: f.desde, PrecioTotal: num(f.total), Tasas: num(f.tasas) }))
             })),
             Campanyas: campanyas.datos().map(c => ({ Id_Campanya: parseInt(c.opcion, 10), Descuento: c.valor })),
@@ -539,6 +541,7 @@ const CL = (() => {
             else if (t.dataset.k === 'peso') h.peso = t.value === '' ? null : Math.round(+t.value);
             else if (t.dataset.k === 'proveedor') h.proveedor = t.value === '' ? null : +t.value;
             else if (t.dataset.k === 'estado') h.estadoOferta = t.value ? +t.value : null;   // CAMBIO 131
+            else if (t.dataset.k === 'cupo') h.cupo = t.value === '' ? null : Math.max(0, Math.round(+t.value));   // CAMBIO 132
             else if (t.dataset.f != null) pintar();
             limpiarRevision();
         });
@@ -565,10 +568,10 @@ const CL = (() => {
         navegar: d => { if (!H.length) return; actual = (actual + d + H.length) % H.length; pintar(); },
         aplicarGlobales: () => {
             if (!H.length) { EV.toast('Primero carga el Excel.', 'err'); return; }
-            const t = $('#gTasa').value === '' ? null : num($('#gTasa').value), r = $('#gRegimen').value, est = $('#gEstado').value;
-            H.forEach(h => { h.regimen = r; if (t != null) h.filas.forEach(f => f.tasas = t); if (est) h.estadoOferta = +est; });
+            const t = $('#gTasa').value === '' ? null : num($('#gTasa').value), r = $('#gRegimen').value, est = $('#gEstado').value, cupo = $('#gCupo').value;
+            H.forEach(h => { h.regimen = r; if (t != null) h.filas.forEach(f => f.tasas = t); if (est) h.estadoOferta = +est; if (cupo !== '') h.cupo = Math.max(0, Math.round(+cupo)); });
             pintar(); limpiarRevision();
-            EV.toast(`Aplicado a ${H.length} hoteles: régimen ${r}${t != null ? ` y tasa ${EV.fmt(t, 2)}` : ''}${est ? ` y estado «${$('#gEstado').selectedOptions[0].textContent}»` : ''}.`, 'ok');
+            EV.toast(`Aplicado a ${H.length} hoteles: régimen ${r}${t != null ? ` y tasa ${EV.fmt(t, 2)}` : ''}${est ? ` y estado «${$('#gEstado').selectedOptions[0].textContent}»` : ''}${cupo !== '' ? ` y cupo ${cupo}` : ''}.`, 'ok');
         },
         hotelManual: () => {
             H.push({ texto: 'Hotel agregado a mano', estado: 'not_found', candidatos: [], elegido: null, habs: [], idHab: null, regimen: $('#gRegimen').value, omitir: false, filas: [] });

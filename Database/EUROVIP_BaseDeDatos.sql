@@ -5704,6 +5704,68 @@ SELECT id_estado_oferta, nombre, orden FROM Eurovip.estado_oferta ORDER BY orden
 SELECT 'servicio.id_estado_oferta' AS revision, CASE WHEN COL_LENGTH('Eurovip.servicio','id_estado_oferta') > 0 THEN 'ok' ELSE 'FALTA' END AS estado;
 GO
 
+/* ---------- CAMBIO 132: «Bloques de hoteles» — cupo de habitaciones por oferta ----------
+   Explicación sencilla: pedido de la usuaria «al cargar una habitación del hotel, poner cuántas habitaciones tendrá disponible
+   la empresa (cuántas se pueden vender); opcional; también en el Excel; que se pueda editar y leer».
+     - servicio_habitacion.cupo: cuántas habitaciones de ese tipo hay para vender en esa oferta (fecha). NULL = sin límite
+       (como hasta ahora). 0 = agotada / no se vende.
+     - servicio_habitacion.cupo_vendido: cuántas ya se vendieron (lo suma la web al reservar y lo resta al cancelar, con los
+       procedimientos de abajo; el BackOffice nunca lo pone a cero al editar).
+     - Vista Eurovip.vInventarioHabitacion: lo que queda por vender de cada habitación de cada oferta (para la web y reportes).
+     - Eurovip.spInventarioReservar / spInventarioLiberar: suman / restan vendidas sin pasarse del cupo (a prueba de dos
+       reservas a la vez). Guía para el desarrollador de la web: Docs/bloques-de-hoteles.md.
+   No cambia ningún dato existente: todas las habitaciones quedan sin límite (cupo NULL) y con 0 vendidas. */
+IF COL_LENGTH('Eurovip.servicio_habitacion', 'cupo') IS NULL
+    ALTER TABLE Eurovip.servicio_habitacion ADD cupo int NULL CONSTRAINT CK_Eurovip_servicio_habitacion_cupo CHECK (cupo IS NULL OR cupo >= 0);
+IF COL_LENGTH('Eurovip.servicio_habitacion', 'cupo_vendido') IS NULL
+    ALTER TABLE Eurovip.servicio_habitacion ADD cupo_vendido int NOT NULL CONSTRAINT DF_Eurovip_servicio_habitacion_vendido DEFAULT (0)
+        CONSTRAINT CK_Eurovip_servicio_habitacion_vendido CHECK (cupo_vendido >= 0);
+GO
+CREATE OR ALTER VIEW Eurovip.vInventarioHabitacion
+AS
+    SELECT sh.id_servicio, s.id_tipo_servicio, s.activo, sd.desde, sd.hasta, sh.id_alojamiento, a.nombre AS hotel,
+           sh.id_habitacion, h.nombre AS habitacion, sh.cupo, sh.cupo_vendido,
+           CASE WHEN sh.cupo IS NULL THEN NULL WHEN sh.cupo > sh.cupo_vendido THEN sh.cupo - sh.cupo_vendido ELSE 0 END AS disponibles,
+           CAST(CASE WHEN sh.cupo IS NOT NULL AND sh.cupo_vendido >= sh.cupo THEN 1 ELSE 0 END AS bit) AS agotada
+      FROM Eurovip.servicio_habitacion sh
+      JOIN Eurovip.servicio s ON s.id_servicio = sh.id_servicio
+      LEFT JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = sh.id_servicio AND sd.secuencia = 1
+      LEFT JOIN Eurovip.alojamiento a ON a.id_alojamiento = sh.id_alojamiento AND a.id_idioma = sh.id_idioma
+      LEFT JOIN Eurovip.alojamiento_habitacion h ON h.id_habitacion = sh.id_habitacion AND h.id_alojamiento = sh.id_alojamiento AND h.id_idioma = sh.id_idioma;
+GO
+/* Reserva @cantidad habitaciones: solo si quedan (o si no hay límite). @ok = 1 si se reservó, 0 si no alcanza. */
+CREATE OR ALTER PROCEDURE Eurovip.spInventarioReservar
+    @id_servicio int, @id_habitacion int, @cantidad int = 1, @ok bit OUTPUT, @disponibles int = NULL OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET @ok = 0;
+    IF @cantidad IS NULL OR @cantidad < 1 RETURN;
+    UPDATE Eurovip.servicio_habitacion WITH (UPDLOCK, ROWLOCK)
+       SET cupo_vendido = cupo_vendido + @cantidad
+     WHERE id_servicio = @id_servicio AND id_habitacion = @id_habitacion
+       AND (cupo IS NULL OR cupo - cupo_vendido >= @cantidad);
+    IF @@ROWCOUNT > 0 SET @ok = 1;
+    SELECT @disponibles = CASE WHEN cupo IS NULL THEN NULL WHEN cupo > cupo_vendido THEN cupo - cupo_vendido ELSE 0 END
+      FROM Eurovip.servicio_habitacion WHERE id_servicio = @id_servicio AND id_habitacion = @id_habitacion;
+END
+GO
+/* Devuelve @cantidad habitaciones (reserva cancelada). Nunca baja de 0. */
+CREATE OR ALTER PROCEDURE Eurovip.spInventarioLiberar
+    @id_servicio int, @id_habitacion int, @cantidad int = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @cantidad IS NULL OR @cantidad < 1 RETURN;
+    UPDATE Eurovip.servicio_habitacion
+       SET cupo_vendido = CASE WHEN cupo_vendido > @cantidad THEN cupo_vendido - @cantidad ELSE 0 END
+     WHERE id_servicio = @id_servicio AND id_habitacion = @id_habitacion;
+END
+GO
+SELECT 'servicio_habitacion.cupo' AS revision, CASE WHEN COL_LENGTH('Eurovip.servicio_habitacion','cupo') > 0 AND COL_LENGTH('Eurovip.servicio_habitacion','cupo_vendido') > 0 THEN 'ok' ELSE 'FALTA' END AS estado;
+SELECT COUNT(*) AS habitaciones, SUM(CASE WHEN cupo IS NULL THEN 1 ELSE 0 END) AS sin_limite FROM Eurovip.vInventarioHabitacion;
+GO
+
 
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
@@ -6263,6 +6325,10 @@ GO
                como EstadoOferta_Crear). No se cambió el estado de ninguna oferta real.
                Para deshacer: ALTER TABLE Eurovip.servicio DROP CONSTRAINT FK_Eurovip_servicio_estado_oferta; DROP COLUMN
                id_estado_oferta; DROP TABLE Eurovip.estado_oferta.
+   17/11/2026  CAMBIO 132 aplicado SOLO en el 93 («Bloques de hoteles»): servicio_habitacion.cupo y cupo_vendido, vista
+               vInventarioHabitacion y procedimientos spInventarioReservar / spInventarioLiberar. Las 2.141 habitaciones de ofertas
+               quedaron sin límite (cupo NULL) y con 0 vendidas. Prueba de los procedimientos sobre una habitación real dentro de
+               BEGIN TRAN … ROLLBACK (no quedó nada cambiado). Guía para la web: Docs/bloques-de-hoteles.md.
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

@@ -268,6 +268,8 @@ const OF = (() => {
 
     // CAMBIO 131: etiqueta del estado (Confirmada en verde, Bajo petición en naranja, los demás en gris)
     const chipEstado = n => !n ? '' : `<span class="of-est" style="display:inline-block;margin-left:6px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:800;${/confirm/i.test(n) ? 'background:#DCFCE7;color:#166534' : /petici/i.test(n) ? 'background:#FFEDD5;color:#9A3412' : 'background:#EEF2F6;color:#475467'}">${esc(n)}</span>`;
+    // CAMBIO 132: «Bloques de hoteles» — cuántas habitaciones quedan por vender (si la oferta tiene cupo)
+    const chipCupo = o => o.cupo_Total == null ? '' : (() => { const q = Math.max(0, o.cupo_Total - (o.cupo_Vendido || 0)); return `<span class="of-est" title="Cupo: ${o.cupo_Total} habitaciones · ${o.cupo_Vendido || 0} vendidas" style="display:inline-block;margin-left:6px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:800;${q === 0 ? 'background:#FEE4E2;color:#B42318' : q <= 3 ? 'background:#FEF7C3;color:#854D0E' : 'background:#E0F2FE;color:#075985'}"><i class="bi bi-door-closed"></i> ${q === 0 ? 'Agotada' : `quedan ${q} de ${o.cupo_Total}`}</span>`; })();
     const params = () => new URLSearchParams({ tipo: TIPO, q: st.q, destino: st.destino, campanya: st.campanya, estado: st.estado, estadoOferta: st.estadoOferta, vuelo: st.vuelo, desde: st.desde, hasta: st.hasta, pasadas: st.pasadas, orden: st.orden, pagina: st.pagina, tam: 25 });
     const thumb = o => EV.esUrl(o.caratula) ? `<img src="${esc(o.caratula)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${esc(EV.iniciales(o.hotel)).replace(/'/g, '')}'">` : esc(EV.iniciales(o.hotel));
 
@@ -308,7 +310,7 @@ const OF = (() => {
             <th style="width:40px"><input type="checkbox" class="of-check" id="selTodo" title="Seleccionar todo"></th><th>Hotel</th><th>Régimen</th><th>Fechas</th><th>Campaña</th><th class="num">Precio web</th><th>Vuelo</th><th>Origen</th><th>Destino</th><th>Activa</th><th></th></tr></thead><tbody>
             ${d.items.map(o => `<tr class="${o.activo ? '' : 'off'} ${sel.has(o.id_Servicio) ? 'sel' : ''}" data-id="${o.id_Servicio}">
                 <td><input type="checkbox" class="of-check" data-sel="${o.id_Servicio}" ${sel.has(o.id_Servicio) ? 'checked' : ''}></td>
-                <td><div class="of-hotel"><span class="of-th">${thumb(o)}</span><div><b>${EVPrioridad.estrella(o.peso)} ${esc(o.hotel)}</b><span class="of-sub">#${o.id_Servicio}${chipEstado(o.estado_Oferta)}${o.codigo_Interno ? ' · <b title="Código interno">' + esc(o.codigo_Interno) + '</b>' : ''}${o.proveedor ? ' · <i class="bi bi-shop" title="Proveedor"></i> ' + esc(o.proveedor) : ''}</span></div></div></td>
+                <td><div class="of-hotel"><span class="of-th">${thumb(o)}</span><div><b>${EVPrioridad.estrella(o.peso)} ${esc(o.hotel)}</b><span class="of-sub">#${o.id_Servicio}${chipEstado(o.estado_Oferta)}${chipCupo(o)}${o.codigo_Interno ? ' · <b title="Código interno">' + esc(o.codigo_Interno) + '</b>' : ''}${o.proveedor ? ' · <i class="bi bi-shop" title="Proveedor"></i> ' + esc(o.proveedor) : ''}</span></div></div></td>
                 <td><span class="of-reg" title="${esc(o.regimen || '')}">${esc(o.id_Regimen)}</span></td>
                 <td class="of-fecha"><b>${EV.fechaCorta(o.desde.slice(0, 10))}</b><span class="of-sub">${o.noches} noches · hasta ${EV.fecha(o.hasta.slice(0, 10))}</span>${o.desde.slice(0, 10) <= EV.hoy() ? '<span class="of-nov" title="Las fechas de hoy o pasadas no se venden ni salen en la web"><i class="bi bi-calendar-x"></i> No se vende: es de hoy o pasada</span>' : ''}</td>
                 <td>${esc(o.campanya || '#' + o.id_Campanya)}${o.descuento ? ` <span class="ui-chip" style="padding:2px 8px;font-size:11px">-${EV.fmt(o.descuento, 1)}%</span>` : ''}</td>
@@ -464,12 +466,14 @@ const OF = (() => {
             $('#ePrioTodas').checked = true;
             sups = EVC.filas($('#eSuplementos'), { opciones: cat.tasas, etiqueta: 'Suplemento / tasa', valorEtiqueta: 'Importe', sufijo: EV.simbolo(), onChange: precioVivo, placeholder: 'Elige…', inicial: o.tasasDetalle.map(t => ({ opcion: t.id_Tasa, valor: t.valor })) });
             const marcadas = new Map(o.habitacionesDetalle.map(h => [h.id_Habitacion, h.precio]));
+            const cupos = new Map(o.habitacionesDetalle.map(h => [h.id_Habitacion, h]));   // CAMBIO 132: cupo, vendidas y quedan
             // marcadas primero; con muchas habitaciones, buscador
             habsHotel.sort((a, b) => (marcadas.has(b.id_Habitacion) ? 1 : 0) - (marcadas.has(a.id_Habitacion) ? 1 : 0));
             $('#eHabs').innerHTML = `${habsHotel.length > 8 ? `<label class="ui-search" style="margin-bottom:10px"><i class="bi bi-search"></i><input type="search" id="eHabFiltro" placeholder="Filtrar ${habsHotel.length} habitaciones…"></label>` : ''}
-                <div class="ui-table-wrap" style="max-height:280px;overflow:auto"><table class="ui-table"><thead><tr><th style="width:44px"></th><th>Habitación</th><th>Tipo</th><th style="width:160px">Suplemento</th></tr></thead><tbody>
+                <div class="ui-table-wrap" style="max-height:280px;overflow:auto"><table class="ui-table"><thead><tr><th style="width:44px"></th><th>Habitación</th><th>Tipo</th><th style="width:160px">Suplemento</th><th style="width:190px" title="Bloques de hoteles: habitaciones para vender en esta fecha. Vacío = sin límite">Cupo <em style="font-weight:600;text-transform:none">opcional</em></th></tr></thead><tbody>
                 ${habsHotel.map(h => `<tr data-txt="${esc(`${h.nombre} ${h.id_Tipo_Habitacion || ''} ${h.id_Habitacion}`.toLowerCase())}"><td><input type="checkbox" class="of-check" data-hab="${h.id_Habitacion}" ${marcadas.has(h.id_Habitacion) ? 'checked' : ''}></td><td><b>${esc(h.nombre)}</b> <small style="color:var(--ev-muted)">#${h.id_Habitacion}</small></td>
-                    <td>${esc(h.id_Tipo_Habitacion || '')}</td><td><div class="ui-money"><b>+</b><input type="number" min="0" step="1" data-sup="${h.id_Habitacion}" value="${marcadas.get(h.id_Habitacion) ?? 0}"></div></td></tr>`).join('')}</tbody></table></div>`;
+                    <td>${esc(h.id_Tipo_Habitacion || '')}</td><td><div class="ui-money"><b>+</b><input type="number" min="0" step="1" data-sup="${h.id_Habitacion}" value="${marcadas.get(h.id_Habitacion) ?? 0}"></div></td>
+                    <td>${(() => { const c = cupos.get(h.id_Habitacion); const v = c?.vendidas ?? 0; return `<input type="number" min="${v}" step="1" data-cupo="${h.id_Habitacion}" placeholder="Sin límite" value="${c?.cupo ?? ''}"><small style="display:block;color:var(--ev-muted);font-weight:600;margin-top:3px">${v ? `${v} vendida${v === 1 ? '' : 's'}` : 'Sin ventas'}${c?.cupo != null ? ` · quedan ${Math.max(0, c.cupo - v)}` : ''}</small>`; })()}</td></tr>`).join('')}</tbody></table></div>`;
             const vuelos = o.vuelosDetalle;
             // Punto 7: ahora se edita todo — nombre, código de la carga, moneda, proveedor, origen y los textos de la carga
             const nota = t => o.notas.find(n => n.tipo === t)?.nota1 || '';
@@ -543,7 +547,7 @@ const OF = (() => {
     }
 
     async function guardar() {
-        const habs = $$('#eHabs [data-hab]:checked').map(c => ({ Id_Habitacion: +c.dataset.hab, Precio: parseFloat($(`#eHabs [data-sup="${c.dataset.hab}"]`).value) || 0 }));
+        const habs = $$('#eHabs [data-hab]:checked').map(c => { const cu = $(`#eHabs [data-cupo="${c.dataset.hab}"]`)?.value; return { Id_Habitacion: +c.dataset.hab, Precio: parseFloat($(`#eHabs [data-sup="${c.dataset.hab}"]`).value) || 0, Cupo: cu === '' || cu == null ? null : Math.max(0, Math.round(+cu)) }; });
         if (!habs.length) { EV.toast('Marca al menos una habitación.', 'err'); return; }
         const dto = {
             Id_Servicio: actual.id_Servicio, PrecioTotal: parseFloat($('#eTotal').value) || 0, Descuento: parseFloat($('#eDescuento').value) || 0,

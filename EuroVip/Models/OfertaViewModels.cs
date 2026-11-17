@@ -9,6 +9,8 @@ namespace EuroVip.Models
         public int Id_Habitacion { get; set; }
         /// <summary>Suplemento de esta habitación sobre el precio (0 = la habitación base).</summary>
         [Range(0, 999999)] public decimal Precio { get; set; }
+        /// <summary>«Bloques de hoteles» (CAMBIO 132): cuántas habitaciones de este tipo hay para vender en cada fecha. null = sin límite.</summary>
+        [Range(0, 100000, ErrorMessage = "El cupo va de 0 a 100.000 habitaciones")] public int? Cupo { get; set; }
         public string? Nombre { get; set; }
     }
 
@@ -110,6 +112,9 @@ namespace EuroVip.Models
 
     public class OfertaItem
     {
+        /// <summary>«Bloques de hoteles» (CAMBIO 132): suma del cupo de sus habitaciones (null = sin límite) y lo vendido.</summary>
+        public int? Cupo_Total { get; set; }
+        public int? Cupo_Vendido { get; set; }
         /// <summary>Estado de la oferta (CAMBIO 131): Confirmada, Bajo petición… null = sin estado.</summary>
         public int? Id_Estado { get; set; }
         public string? Estado_Oferta { get; set; }
@@ -164,6 +169,10 @@ namespace EuroVip.Models
         public string Nombre { get; set; } = "";
         public string? Id_Tipo_Habitacion { get; set; }
         public decimal Precio { get; set; }
+        /// <summary>Cupo (CAMBIO 132): habitaciones para vender (null = sin límite), vendidas y las que quedan.</summary>
+        public int? Cupo { get; set; }
+        public int Vendidas { get; set; }
+        public int? Disponibles => Cupo is int c ? Math.Max(0, c - Vendidas) : null;
     }
 
     public class OfertaVuelo
@@ -263,6 +272,8 @@ namespace EuroVip.Models
         public bool Aproximado { get; set; }
         /// <summary>Columna «Estado» del Excel (CAMBIO 131): lo escrito y el estado reconocido (null si no se reconoce o está vacío).</summary>
         public string? EstadoTexto { get; set; }
+        /// <summary>Columna «Cupo» del Excel (CAMBIO 132): habitaciones para vender en cada fecha; null = sin límite.</summary>
+        public int? Cupo { get; set; }
         public int? Id_Estado { get; set; }
         public List<Opcion> Candidatos { get; set; } = new();
         public List<ExcelFecha> Precios { get; set; } = new();

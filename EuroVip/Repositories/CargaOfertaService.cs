@@ -231,9 +231,13 @@ namespace EuroVip.Repositories
                         }, tx, commandType: CommandType.StoredProcedure);
 
                         foreach (var h in hotel.Habitaciones.DistinctBy(x => x.Id_Habitacion))
+                        {
                             await cn.ExecuteAsync("Eurovip.InsertarServicioHabitacion",
                                 new { Id_Servicio = id, Secuencia = 1, Id_Alojamiento = hotel.Id_Alojamiento, Id_Idioma = Idioma, h.Id_Habitacion, h.Precio },
                                 tx, commandType: CommandType.StoredProcedure);
+                            if (h.Cupo is int cupo)   // CAMBIO 132: «Bloques de hoteles», habitaciones para vender en cada fecha
+                                await cn.ExecuteAsync("UPDATE Eurovip.servicio_habitacion SET cupo = @cupo WHERE id_servicio = @id AND id_habitacion = @hab", new { cupo, id, hab = h.Id_Habitacion }, tx);
+                        }
 
                         if (!string.IsNullOrEmpty(dto.Origen))
                             await cn.ExecuteAsync("INSERT INTO Eurovip.servicio_origen (id_servicio, id_pais_origen, origen) VALUES (@id, @p, @o)",
