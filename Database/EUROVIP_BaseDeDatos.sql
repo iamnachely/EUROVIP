@@ -5986,6 +5986,49 @@ EXEC Eurovip.spPortalListarCircuitosDestino 'JP';
 GO
 
 
+/* ---------- CAMBIO 138: envíos programados de Flyer Agencia (WhatsApp) ----------
+   Pedido de la usuaria (/Agencia/Index): «un apartado para establecer los envíos: que se pueda colocar un día de la semana
+   y una hora para el envío, o que se pueda seleccionar una fecha del calendario».
+   - tipo = 'SEMANAL': se repite cada semana los días de «dias» (0 = domingo … 6 = sábado, separados por coma) a la «hora».
+   - tipo = 'FECHA'  : una sola vez en «fecha» (fecha y hora); después de enviarse queda inactiva.
+   - imagenes / agencias: JSON con lo elegido; vacío o NULL = todas en el momento del envío (como el botón «Enviar»).
+   - prueba: si viene, se envía solo a ese número.
+   - proxima: cuándo toca (hora de República Dominicana). La calcula el BackOffice al guardar y después de cada envío.
+   - base_editor: dominio del back para el link del editor de cada agencia (se guarda al programar, porque el envío
+     automático no tiene una página abierta de la que sacarlo).
+   El servicio AgenciaProgramador (BackOffice) revisa cada minuto; si ya hay un envío en curso, espera al minuto siguiente. */
+IF OBJECT_ID('Eurovip.flyer_envio_programado') IS NULL
+CREATE TABLE Eurovip.flyer_envio_programado (
+    id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_flyer_envio_programado PRIMARY KEY,
+    nombre nvarchar(120) NULL,
+    tipo varchar(10) NOT NULL,
+    dias varchar(20) NULL,
+    hora time(0) NULL,
+    fecha datetime2(0) NULL,
+    imagenes nvarchar(max) NULL,
+    agencias nvarchar(max) NULL,
+    prueba varchar(30) NULL,
+    base_editor varchar(200) NULL,
+    activo bit NOT NULL CONSTRAINT DF_flyer_envio_programado_activo DEFAULT 1,
+    proxima datetime2(0) NULL,
+    ultima_ejecucion datetime2(0) NULL,
+    ultimo_envio int NULL,
+    ultimo_error nvarchar(400) NULL,
+    usuario varchar(50) NULL,
+    fecha_alta datetime2(0) NOT NULL CONSTRAINT DF_flyer_envio_programado_alta DEFAULT SYSDATETIME(),
+    usuario_modificacion varchar(50) NULL,
+    fecha_modificacion datetime2(0) NULL,
+    CONSTRAINT CK_flyer_envio_programado_tipo CHECK (tipo IN ('SEMANAL', 'FECHA')),
+    CONSTRAINT CK_flyer_envio_programado_datos CHECK ((tipo = 'SEMANAL' AND dias IS NOT NULL AND hora IS NOT NULL) OR (tipo = 'FECHA' AND fecha IS NOT NULL))
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_flyer_envio_programado_proxima')
+    CREATE INDEX IX_flyer_envio_programado_proxima ON Eurovip.flyer_envio_programado (activo, proxima);
+GO
+SELECT COUNT(*) AS programados FROM Eurovip.flyer_envio_programado;
+GO
+
+
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
@@ -6562,6 +6605,9 @@ GO
                ordenado por esa prioridad. Se pone desde Circuitos › Circuitos por el mundo (campo «Prioridad» de cada circuito).
    17/11/2026  CAMBIO 137 aplicado SOLO en el 93: spPortalListarCircuitosDestino usa el peso propio de cada circuito cuando el
                destino no tiene prioridad puesta (circuito.peso / inicio.peso; 1 sale primero). No cambia ningún dato.
+   17/11/2026  CAMBIO 138 aplicado SOLO en el 93: Eurovip.flyer_envio_programado (envíos programados de Flyer Agencia).
+               Prueba: se creó la programación #1 «PRUEBA CLAUDE (borrar)» (número ficticio), se pausó, se editó y se BORRÓ.
+               El servicio que los envía solo corre en el servidor (en local está apagado: Eurovip:Flyer:EnviosProgramados).
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

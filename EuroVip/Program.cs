@@ -72,6 +72,8 @@ builder.Services.AddSingleton<EuroVip.Services.FlyerEnvioJob>();
 builder.Services.AddScoped<EuroVip.Repositories.IAgenciaRepository, EuroVip.Repositories.AgenciaRepository>();
 builder.Services.AddSingleton<EuroVip.Services.AgenciaImagenes>();
 builder.Services.AddSingleton<EuroVip.Services.AgenciaEnvioJob>();
+builder.Services.AddScoped<EuroVip.Services.AgenciaProgramador>();             // CAMBIO 138: envíos programados de Agencia
+builder.Services.AddHostedService<EuroVip.Services.AgenciaProgramadorWorker>();
 builder.Services.AddSingleton<EuroVip.Services.IProgresoCargas, EuroVip.Services.ProgresoCargas>();   // barra de progreso de las cargas
 builder.Services.AddHttpClient("whatsapp");
 builder.Services.AddHttpClient("fotos", c => c.Timeout = TimeSpan.FromSeconds(10));   // imagen por defecto: comprobar fotos de antes en el servidor

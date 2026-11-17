@@ -207,6 +207,19 @@
     .ag-estado.va { background: #FFF1E6; color: #C2410C; } .ag-estado.gris { background: var(--ev-surface-2); color: var(--ev-muted); }
     .ag-link { font: 600 12px ui-monospace, Consolas, monospace; color: var(--ev-deep); word-break: break-all; }
     @@media (max-width: 1100px) { .ag-env { grid-template-columns: 1fr; } }
+    /* CAMBIO 138: programar envíos */
+    .ag-lbl { display: block; font-weight: 800; font-size: 12.5px; margin-bottom: 6px; }
+    .ag-dias { display: flex; gap: 6px; flex-wrap: wrap; }
+    .ag-dias button { min-width: 50px; border: 1.5px solid var(--ev-line); background: var(--ev-surface); border-radius: 12px; padding: 8px 10px; font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; color: inherit; }
+    .ag-dias button.on { background: var(--ev-ink, #0B1215); border-color: var(--ev-ink, #0B1215); color: #74F2E6; }
+    .ag-dias button:focus-visible { outline: 2px solid #0E8F86; outline-offset: 2px; }
+    .ag-pro { border: 1px solid var(--ev-line); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; background: var(--ev-surface); display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+    .ag-pro.off { opacity: .6; }
+    .ag-pro .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #E6FBF8; color: #0E8F86; font-size: 18px; }
+    .ag-pro b { display: block; font-size: 14px; }
+    .ag-pro small { display: block; color: var(--ev-muted); font-weight: 600; font-size: 12.5px; }
+    .ag-pro .err { color: #B42318; }
+    .ag-pro .acc { display: flex; gap: 4px; align-items: center; }
 </style>
 }
 
@@ -233,6 +246,7 @@
     <button type="button" data-tab="tAge"><i class="bi bi-people"></i> Agencias <span class="n" id="nAge">0</span></button>
     <button type="button" data-tab="tLin"><i class="bi bi-link-45deg"></i> Links <span class="n" id="nLin">0</span></button>
     <button type="button" data-tab="tEnv"><i class="bi bi-whatsapp"></i> Enviar</button>
+    <button type="button" data-tab="tPro"><i class="bi bi-calendar-week"></i> Programar envíos <span class="n" id="nPro">0</span></button>
     <button type="button" data-tab="tMon"><i class="bi bi-activity"></i> Monitor</button>
 </div>
 
@@ -333,6 +347,48 @@
     </div>
 </section>
 
+<!-- PROGRAMAR ENVÍOS (CAMBIO 138) -->
+<section class="ui-pane" id="tPro" style="margin-top:14px">
+    <div class="ag-env">
+        <div>
+            <div class="ag-paso"><h3><span>1</span> ¿Cuándo?</h3>
+                <div class="ui-chips" id="pModo" role="group" aria-label="Cómo se repite">
+                    <button type="button" class="ui-pick on" data-v="SEMANAL"><i class="bi bi-arrow-repeat"></i> Cada semana</button>
+                    <button type="button" class="ui-pick" data-v="FECHA"><i class="bi bi-calendar-event"></i> Una fecha del calendario</button>
+                </div>
+                <div id="pSemanal" style="margin-top:12px">
+                    <label class="ag-lbl">Día(s) de la semana</label>
+                    <div class="ag-dias" id="pDias"></div>
+                    <label class="ag-lbl" for="pHora" style="margin-top:12px">Hora</label>
+                    <input type="time" id="pHora" class="ui-input" value="09:00" style="max-width:180px">
+                </div>
+                <div id="pFecha" hidden style="margin-top:12px">
+                    <label class="ag-lbl" for="pCuando">Fecha y hora</label>
+                    <input type="datetime-local" id="pCuando" class="ui-input" style="max-width:260px">
+                </div>
+                <div class="ui-help" id="pResumen" style="margin-top:10px"></div>
+            </div>
+            <div class="ag-paso"><h3><span>2</span> ¿Qué y a quién?</h3>
+                <div id="pImgs" class="ui-help" style="margin:0 0 10px"></div>
+                <div class="ag-opc">
+                    <label><input type="radio" name="pQuien" value="todas" checked><span><b>Todas las agencias activas</b><small id="pTotal"></small></span></label>
+                    <label><input type="radio" name="pQuien" value="prueba"><span><b>Prueba a un número</b><small>Para comprobar que sale a la hora: te llega a ti.</small><input id="pNum" class="ui-input" placeholder="18095551234 (con código de país)" style="margin-top:8px;width:100%"></span></label>
+                </div></div>
+            <div class="ag-paso"><h3><span>3</span> Nombre <small style="font-weight:600;color:var(--ev-muted)">opcional</small></h3>
+                <input id="pNombre" class="ui-input" maxlength="120" placeholder="Ej.: Ofertas de los lunes" style="width:100%"></div>
+            <div style="display:flex;gap:8px;margin:12px 0">
+                <button type="button" class="ev-btn ghost" id="pLimpiar" hidden><i class="bi bi-x-lg"></i> Cancelar edición</button>
+                <button type="button" class="ev-btn" id="pGuardar" style="flex:1;justify-content:center"><i class="bi bi-calendar-check"></i> Programar envío</button>
+            </div>
+        </div>
+        <div>
+            <h3 style="margin:0 0 4px;font-size:16px;font-weight:800"><i class="bi bi-list-check"></i> Envíos programados</h3>
+            <div class="ui-help" style="margin:0 0 10px">Horas de República Dominicana. Cada uno sale solo, igual que el botón «Enviar», y queda en el Monitor. Si en ese momento hay otro envío en curso, sale apenas termine.</div>
+            <div id="pLista"></div>
+        </div>
+    </div>
+</section>
+
 <!-- MONITOR -->
 <section class="ui-pane" id="tMon" style="margin-top:14px"><div id="agMon"></div></section>
 
@@ -363,7 +419,7 @@
     const esc = EV.esc;
     let D = null, cat = null, elegidas = new Set(), sondeo = null, actual = null;
     const drawer = EV.drawer($('#agDrawer'));
-    const tabs = EV.tabs($('#agTabs'), id => { if (id === 'tFly') setTimeout(escalar, 30); if (id === 'tEnv') pintarEnvio(); });
+    const tabs = EV.tabs($('#agTabs'), id => { if (id === 'tFly') setTimeout(escalar, 30); if (id === 'tEnv') pintarEnvio(); if (id === 'tPro') pintarProg(); });
     const precio = n => n == null ? '—' : `RD$ ${EV.fmt(n)}`;
     // en el flyer: con el símbolo elegido y en su sitio («RD$ 12.990» / «12.990 €»)
     const precioFly = n => window.EVDisenos ? EVDisenos.precio(n) : precio(n);
@@ -794,6 +850,113 @@
         if (!await EV.confirmar({ titulo: '¿Cancelar el envío?', texto: 'Termina el mensaje actual y se detiene. Lo ya enviado no se puede deshacer.', si: 'Sí, cancelar', peligro: true })) return;
         try { EV.toast((await EV.post('/Agencia/Cancelar', {})).mensaje); } catch (er) { EV.toast(er.message, 'err'); }
     };
+
+    // ================= PROGRAMAR ENVÍOS (CAMBIO 138) =================
+    // Pedido de la usuaria: «un apartado para establecer los envíos: un día de la semana y una hora, o una fecha del calendario».
+    const DIAS = [[1, 'Lun'], [2, 'Mar'], [3, 'Mié'], [4, 'Jue'], [5, 'Vie'], [6, 'Sáb'], [0, 'Dom']];
+    const NDIA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const pr = { modo: 'SEMANAL', dias: new Set([1]), editando: null, lista: [] };
+    const fechaHora = s => s ? new Date(s).toLocaleString('es-DO', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+    function pintarDias() {
+        $('#pDias').innerHTML = DIAS.map(([n, t]) => `<button type="button" data-d="${n}" class="${pr.dias.has(n) ? 'on' : ''}" aria-pressed="${pr.dias.has(n)}" title="${NDIA[n]}">${t}</button>`).join('');
+        $$('#pDias [data-d]').forEach(b => b.onclick = () => { const n = +b.dataset.d; pr.dias.has(n) ? pr.dias.delete(n) : pr.dias.add(n); pintarDias(); resumen(); });
+    }
+    function resumen() {
+        let tx;
+        if (pr.modo === 'SEMANAL') {
+            const d = DIAS.filter(([n]) => pr.dias.has(n)).map(([n]) => NDIA[n]);
+            const h = $('#pHora').value;
+            tx = !d.length ? 'Elige al menos un día.' : `Saldrá ${d.length === 7 ? 'todos los días' : 'cada ' + (d.length === 1 ? d[0] : d.slice(0, -1).join(', ') + ' y ' + d.at(-1))}${h ? ' a las ' + new Date('2000-01-01T' + h).toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' }) : ''}`;
+        } else {
+            const v = $('#pCuando').value;
+            tx = v ? `Saldrá una sola vez: ${fechaHora(v)}.` : 'Elige la fecha y la hora en el calendario.';
+        }
+        $('#pResumen').innerHTML = '<i class="bi bi-clock"></i> ' + tx;
+    }
+    function modo(m) {
+        pr.modo = m;
+        $$('#pModo .ui-pick').forEach(x => x.classList.toggle('on', x.dataset.v === m));
+        $('#pSemanal').hidden = m !== 'SEMANAL'; $('#pFecha').hidden = m !== 'FECHA';
+        resumen();
+    }
+    $$('#pModo [data-v]').forEach(b => b.onclick = () => modo(b.dataset.v));
+    $('#pHora').oninput = resumen; $('#pCuando').oninput = resumen;
+    function minFecha() { const d = new Date(Date.now() + 5 * 60000); d.setSeconds(0, 0); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
+
+    function pintarProg() {
+        pintarDias(); $('#pCuando').min = minFecha(); resumen();
+        $('#pImgs').innerHTML = elegidas.size
+            ? `<i class="bi bi-images"></i> Envía las <b>${elegidas.size} imagen(es) elegidas</b> en la Galería.`
+            : '<i class="bi bi-images"></i> Envía <b>todas las imágenes que haya en la Galería ese día</b> (así salen los flyers del momento). Para fijar unas, elígelas en la Galería antes de programar.';
+        $('#pTotal').textContent = `${D.agencias.filter(a => a.activo).length} agencia(s) activa(s) hoy.`;
+        cargarProg();
+    }
+    async function cargarProg() {
+        try { const r = await EV.api('/Agencia/Programados'); pr.lista = r.lista; } catch (e) { pr.lista = []; EV.toast(e.message, 'err'); }
+        $('#nPro').textContent = pr.lista.filter(p => p.activo).length;
+        $('#pLista').innerHTML = pr.lista.length ? pr.lista.map(p => `<div class="ag-pro ${p.activo ? '' : 'off'}">
+                <span class="ic"><i class="bi ${p.tipo === 'FECHA' ? 'bi-calendar-event' : 'bi-arrow-repeat'}"></i></span>
+                <div style="min-width:0"><b>${esc(p.nombre || p.descripcion)}</b>
+                    ${p.nombre ? `<small>${esc(p.descripcion)}</small>` : ''}
+                    <small>${p.activo && p.proxima ? `<i class="bi bi-send"></i> Próximo: <b style="display:inline;font-size:12.5px">${fechaHora(p.proxima)}</b>` : p.tipo === 'FECHA' && p.ultima_Ejecucion ? 'Ya se envió' : 'En pausa'}
+                        · ${p.prueba ? 'prueba a ' + esc(p.prueba) : p.agencias.length ? p.agencias.length + ' agencia(s)' : 'todas las agencias'} · ${p.imagenes.length ? p.imagenes.length + ' imagen(es)' : 'toda la galería'}</small>
+                    ${p.ultima_Ejecucion ? `<small>Último: ${fechaHora(p.ultima_Ejecucion)}${p.ultimo_Envio ? ` · <a href="/Agencia/Reporte/${p.ultimo_Envio}" target="_blank">envío #${p.ultimo_Envio}</a>` : ''}</small>` : ''}
+                    ${p.ultimo_Error ? `<small class="err"><i class="bi bi-exclamation-triangle"></i> ${esc(p.ultimo_Error)}</small>` : ''}</div>
+                <div class="acc">
+                    <label class="ui-switch" title="${p.activo ? 'Pausar' : 'Activar'}"><input type="checkbox" data-act="${p.id}" ${p.activo ? 'checked' : ''}><span class="tr"></span></label>
+                    <button type="button" class="ui-ibtn" title="Editar" aria-label="Editar" data-edit="${p.id}"><i class="bi bi-pencil"></i></button>
+                    <button type="button" class="ui-ibtn danger" title="Eliminar" aria-label="Eliminar" data-del="${p.id}"><i class="bi bi-trash3"></i></button>
+                </div></div>`).join('')
+            : '<div class="ui-empty" style="padding:26px"><i class="bi bi-calendar-week big"></i><h3>Todavía no hay envíos programados</h3><p>Elige a la izquierda cuándo y a quién, y pulsa «Programar envío».</p></div>';
+        $$('#pLista [data-act]').forEach(c => c.onchange = async () => {
+            try { EV.toast((await EV.post(`/Agencia/ProgramadoActivo?id=${c.dataset.act}&activo=${c.checked}`, {})).mensaje); } catch (e) { EV.toast(e.message, 'err'); }
+            cargarProg();
+        });
+        $$('#pLista [data-edit]').forEach(b => b.onclick = () => editarProg(pr.lista.find(p => p.id === +b.dataset.edit)));
+        $$('#pLista [data-del]').forEach(b => b.onclick = async () => {
+            const p = pr.lista.find(x => x.id === +b.dataset.del);
+            if (!await EV.confirmar({ titulo: '¿Eliminar este envío programado?', texto: `<b>${esc(p.nombre || p.descripcion)}</b> ya no saldrá. Los envíos que ya salieron siguen en el Monitor.`, si: 'Sí, eliminar', peligro: true })) return;
+            try { EV.toast((await EV.post(`/Agencia/ProgramadoBorrar?id=${p.id}`, {})).mensaje); } catch (e) { EV.toast(e.message, 'err'); }
+            if (pr.editando === p.id) limpiarProg();
+            cargarProg();
+        });
+    }
+    function editarProg(p) {
+        pr.editando = p.id;
+        modo(p.tipo);
+        pr.dias = new Set(p.dias.length ? p.dias : [1]); pintarDias();
+        $('#pHora').value = p.hora || '09:00';
+        $('#pCuando').value = p.fecha || '';
+        $('#pNombre').value = p.nombre || '';
+        $(`[name=pQuien][value=${p.prueba ? 'prueba' : 'todas'}]`).checked = true; $('#pNum').value = p.prueba || '';
+        if (p.imagenes.length) { elegidas.clear(); p.imagenes.forEach(x => elegidas.add(x)); }
+        $('#pGuardar').innerHTML = '<i class="bi bi-check2"></i> Guardar cambios'; $('#pLimpiar').hidden = false;
+        resumen(); pintarProg();
+        $('#tPro').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    function limpiarProg() {
+        pr.editando = null; $('#pNombre').value = ''; $('#pGuardar').innerHTML = '<i class="bi bi-calendar-check"></i> Programar envío'; $('#pLimpiar').hidden = true;
+    }
+    $('#pLimpiar').onclick = limpiarProg;
+    $('#pGuardar').onclick = async () => {
+        if (!D.puedeEnviar) return EV.toast('No tienes el permiso «Enviar flyers por WhatsApp».', 'err');
+        const prueba = $('[name=pQuien]:checked').value === 'prueba' ? $('#pNum').value.trim() : null;
+        if ($('[name=pQuien]:checked').value === 'prueba' && !prueba) { $('#pNum').focus(); return EV.toast('Escribe el número de prueba.', 'err'); }
+        if (pr.modo === 'SEMANAL' && !pr.dias.size) return EV.toast('Elige al menos un día de la semana.', 'err');
+        if (pr.modo === 'SEMANAL' && !$('#pHora').value) { $('#pHora').focus(); return EV.toast('Elige la hora.', 'err'); }
+        if (pr.modo === 'FECHA' && !$('#pCuando').value) { $('#pCuando').focus(); return EV.toast('Elige la fecha y la hora en el calendario.', 'err'); }
+        const b = $('#pGuardar'); b.disabled = true;
+        try {
+            const r = await EV.post('/Agencia/Programar', {
+                Id: pr.editando, Nombre: $('#pNombre').value.trim() || null, Tipo: pr.modo, Dias: [...pr.dias], Hora: $('#pHora').value || null,
+                Fecha: $('#pCuando').value || null, Imagenes: [...elegidas], Agencias: [], Prueba: prueba, Activo: true
+            });
+            EV.toast(r.mensaje); limpiarProg(); cargarProg();
+        } catch (e) { EV.toast(e.message, 'err'); }
+        finally { b.disabled = false; }
+    };
+    // el número de la pestaña se ve sin abrirla
+    EV.api('/Agencia/Programados').then(r => { $('#nPro').textContent = r.lista.filter(p => p.activo).length; }).catch(() => { });
 
     // ================= MONITOR =================
     const estado = s => ({ Completado: 'ok', ConErrores: 'mal', Cancelado: 'gris', Interrumpido: 'mal', EnProceso: 'va', Pendiente: 'va' }[s] || 'gris');

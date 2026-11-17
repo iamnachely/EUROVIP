@@ -237,22 +237,8 @@ namespace EuroVip.Controllers
 
         // ================= envío masivo =================
         /// <summary>Qué imágenes se enviarían y a qué destino corresponde cada una (las que no son de un destino de Agencia no se pueden enviar).</summary>
-        private async Task<(List<AgenciaImagenEnvio> Imagenes, List<string> SinDestino)> ImagenesEnvioAsync(List<string> elegidas)
-        {
-            var configs = await _flyers.ConfigsAsync(Tipo);
-            var archivos = _arch.Listar().Where(i => elegidas.Count == 0 || elegidas.Contains(i.Archivo)).ToList();
-            var r = new List<AgenciaImagenEnvio>(); var sin = new List<string>();
-            foreach (var a in archivos)
-            {
-                var clave = AgenciaImagenes.ClaveDe(a.Archivo);
-                var c = configs.FirstOrDefault(x => clave is not null && (AgenciaImagenes.Clave(x.Id_Destino) == clave || AgenciaImagenes.Clave(x.Nombre_Destino ?? "") == clave));
-                var ruta = _arch.Fisico(a.Archivo);
-                if (c is null || ruta is null) { sin.Add(a.Archivo); continue; }
-                var nombre = c.Nombre_Destino ?? c.Id_Destino;
-                r.Add(new AgenciaImagenEnvio(ruta, a.Archivo, c.Id_Destino, nombre, UrlDestino(nombre)));
-            }
-            return (r, sin);
-        }
+        private Task<(List<AgenciaImagenEnvio> Imagenes, List<string> SinDestino)> ImagenesEnvioAsync(List<string> elegidas) =>
+            AgenciaEnvioPreparar.ImagenesAsync(_flyers, _arch, Web, elegidas);
 
         /// <summary>Antes de enviar: cuántos mensajes salen, cuánto cuesta (aprox., USD) y cuánto tarda.</summary>
         [HttpPost, ValidateAntiForgeryToken]
@@ -328,6 +314,52 @@ namespace EuroVip.Controllers
             if (e is null) return NotFound();
             ViewData["Detalle"] = await _repo.DetalleAsync(id);
             return View(e);
+        }
+
+        // ================= envíos programados (CAMBIO 138) =================
+        // Pedido de la usuaria: «un apartado para establecer los envíos: un día de la semana y una hora, o una fecha del calendario».
+        [HttpGet]
+        public async Task<IActionResult> Programados([FromServices] AgenciaProgramador prog) =>
+            Json(new
+            {
+                ahora = prog.Ahora(),
+                lista = (await prog.ListarAsync()).Select(p => new
+                {
+                    p.Id, p.Nombre, p.Tipo, dias = AgenciaProgramador.LeerDias(p.Dias), hora = p.Hora?.ToString(@"hh\:mm"), fecha = p.Fecha?.ToString("yyyy-MM-ddTHH:mm"),
+                    imagenes = string.IsNullOrWhiteSpace(p.Imagenes) ? new List<string>() : System.Text.Json.JsonSerializer.Deserialize<List<string>>(p.Imagenes),
+                    agencias = string.IsNullOrWhiteSpace(p.Agencias) ? new List<int>() : System.Text.Json.JsonSerializer.Deserialize<List<int>>(p.Agencias),
+                    p.Prueba, p.Activo, p.Proxima, p.Ultima_Ejecucion, p.Ultimo_Envio, p.Ultimo_Error, p.Usuario, descripcion = AgenciaProgramador.Describir(p)
+                })
+            });
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Programar([FromServices] AgenciaProgramador prog, [FromBody] EnvioProgramadoDto d)
+        {
+            if (!PuedeEnviar) return StatusCode(403, new { mensaje = "No tienes el permiso \"Enviar flyers por WhatsApp\". Pídeselo a un administrador." });
+            var (id, error) = await prog.GuardarAsync(d, BaseEditor, User.Identity?.Name ?? "desconocido");
+            if (error is not null) return BadRequest(new { mensaje = error });
+            await Auditar("Agencia_Programar", new { id, d.Tipo, d.Dias, d.Hora, d.Fecha, d.Imagenes, d.Agencias, d.Prueba, d.Activo });
+            var p = await prog.UnoAsync(id!.Value);
+            return Json(new { ok = true, id, mensaje = p?.Proxima is DateTime px ? $"Listo: {AgenciaProgramador.Describir(p)}. Próximo envío: {px.ToString("dddd d 'de' MMMM 'a las' h:mm tt", new System.Globalization.CultureInfo("es-DO"))}" : "Programación guardada (pausada)." });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProgramadoActivo([FromServices] AgenciaProgramador prog, int id, bool activo)
+        {
+            if (!PuedeEnviar) return StatusCode(403, new { mensaje = "No tienes el permiso \"Enviar flyers por WhatsApp\"." });
+            if (!await prog.ActivarAsync(id, activo, User.Identity?.Name ?? "desconocido")) return NotFound(new { mensaje = "Esa programación ya no existe." });
+            await Auditar("Agencia_ProgramadoActivo", new { id, activo });
+            var p = await prog.UnoAsync(id);
+            return Json(new { ok = true, mensaje = !activo ? "Programación pausada." : p?.Proxima is null ? "Esa fecha ya pasó: cámbiala para volver a programarla." : "Programación activada." });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProgramadoBorrar([FromServices] AgenciaProgramador prog, int id)
+        {
+            if (!PuedeEnviar) return StatusCode(403, new { mensaje = "No tienes el permiso \"Enviar flyers por WhatsApp\"." });
+            if (!await prog.BorrarAsync(id)) return NotFound(new { mensaje = "Esa programación ya no existe." });
+            await Auditar("Agencia_ProgramadoBorrar", new { id });
+            return Json(new { ok = true, mensaje = "Programación eliminada." });
         }
 
         private IActionResult Error() => BadRequest(new { mensaje = ModelState.Values.SelectMany(v => v.Errors).First().ErrorMessage });
