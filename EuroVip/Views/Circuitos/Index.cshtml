@@ -79,6 +79,23 @@
     .cx-noches { display: flex; align-items: center; gap: 8px; }
     .cx-noches input { text-align: center; font-weight: 800 !important; font-size: 18px !important; }
     .cx-progress { display: flex; gap: 6px; flex-wrap: wrap; }
+    /* CAMBIO 133: pestañas «Mis circuitos» / «Circuitos por el mundo» (separadas del título, con su explicación) */
+    .cx-vista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 22px 0 18px; }
+    @@media (max-width: 720px) { .cx-vista { grid-template-columns: 1fr; } }
+    .cx-vt { display: flex; align-items: center; gap: 14px; text-align: left; border: 1px solid var(--ev-line); border-radius: 20px; padding: 14px 16px; background: var(--ev-surface); color: inherit; font: inherit; cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .2s, background .2s; }
+    .cx-vt:hover { border-color: #9EDFD8; transform: translateY(-1px); box-shadow: 0 14px 26px -22px rgba(11,18,21,.45); }
+    .cx-vt .ic { width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center; font-size: 21px; flex: none; background: #E6FBF8; color: #0E8F86; transition: background .2s, color .2s; }
+    .cx-vt .ic.mundo { background: #FFF1E8; color: #EA580C; }
+    .cx-vt .tx { min-width: 0; flex: 1; }
+    .cx-vt b { display: block; font-size: 15.5px; font-weight: 800; letter-spacing: -.2px; }
+    .cx-vt small { display: block; color: var(--ev-muted); font-weight: 600; font-size: 12.5px; line-height: 1.35; margin-top: 2px; }
+    .cx-vt .n { flex: none; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 4px 10px; background: #FFF1E8; color: #C2410C; white-space: nowrap; }
+    .cx-vt .n:empty { display: none; }
+    .cx-vt .chk { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--ev-line); display: grid; place-items: center; color: transparent; font-size: 12px; transition: all .2s; }
+    .cx-vt.on { border-color: var(--ev-ink, #0B1215); box-shadow: 0 0 0 1px var(--ev-ink, #0B1215), 0 16px 30px -24px rgba(11,18,21,.55); }
+    .cx-vt.on .ic { background: var(--ev-ink, #0B1215); color: #74F2E6; }
+    .cx-vt.on .ic.mundo { background: #EA580C; color: #fff; }
+    .cx-vt.on .chk { background: var(--ev-ink, #0B1215); border-color: var(--ev-ink, #0B1215); color: #fff; }
 </style>
 }
 
@@ -104,10 +121,19 @@
 </section>
 
 <!-- CAMBIO 133: dos pestañas — los circuitos propios y los de Yourttoo («Circuitos por el mundo») que se eligen para la Home -->
-<div class="ui-chips" id="cxVista" style="margin:0 0 14px">
-    <button type="button" class="ui-pick on" data-v="propios"><i class="bi bi-signpost-split"></i> Mis circuitos</button>
-    <button type="button" class="ui-pick" data-v="mundo"><i class="bi bi-globe-americas"></i> Circuitos por el mundo <small style="font-weight:600;opacity:.75">Yourttoo</small></button>
-</div>
+<nav class="cx-vista" id="cxVista" role="tablist" aria-label="Qué circuitos ver">
+    <button type="button" class="cx-vt on" data-v="propios" role="tab">
+        <span class="ic"><i class="bi bi-signpost-split"></i></span>
+        <span class="tx"><b>Mis circuitos</b><small>Los que cargas tú: destinos, hoteles, itinerario y salidas</small></span>
+        <span class="chk"><i class="bi bi-check-lg"></i></span>
+    </button>
+    <button type="button" class="cx-vt" data-v="mundo" role="tab">
+        <span class="ic mundo"><i class="bi bi-globe-americas"></i></span>
+        <span class="tx"><b>Circuitos por el mundo</b><small>De Yourttoo: elige por destino cuáles salen en la Home</small></span>
+        <span class="n" id="cxNMundo"></span>
+        <span class="chk"><i class="bi bi-check-lg"></i></span>
+    </button>
+</nav>
 <div id="cxPropios">
 <div class="ui-toolbar">
     <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar por nombre, código o destino…" /></label>

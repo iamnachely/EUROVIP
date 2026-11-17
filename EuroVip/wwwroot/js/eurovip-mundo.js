@@ -8,7 +8,7 @@ window.CXM = (() => {
     const $ = (s, el = document) => el.querySelector(s);
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const dinero = (v, m) => v == null ? '—' : `${m === 'EUR' ? '€' : m === 'DOP' ? 'RD$' : 'US$'}${Number(v).toLocaleString('es-DO', { maximumFractionDigits: 0 })}`;
-    let raiz, destinos = [], elegidos = [], actual = null, pagina = null, cargando = false, filtro = '';
+    let raiz, destinos = [], elegidos = [], tarjetas = { destinos: [] }, actual = null, pagina = null, cargando = false, filtro = '';
 
     function estilos() {
         if ($('#cxm-css')) return;
@@ -17,7 +17,20 @@ window.CXM = (() => {
 .cxm-home{border:1px solid var(--ev-line,#E2EFED);border-radius:20px;padding:16px 18px;margin-bottom:16px;background:var(--ev-surface,#fff)}
 .cxm-home h3{margin:0 0 4px;font-size:16px;font-weight:800;display:flex;gap:8px;align-items:center}
 .cxm-home .sub{color:var(--ev-muted,#66807C);font-weight:600;font-size:13px;margin:0 0 10px}
-.cxm-grupo{margin-top:10px}.cxm-grupo>b{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ev-muted,#66807C)}
+.cxm-grupo{margin-top:14px;display:grid;grid-template-columns:240px 1fr;gap:14px;align-items:start;padding-top:14px;border-top:1px solid var(--ev-line,#E2EFED)}
+.cxm-grupo:first-of-type{border-top:0;padding-top:0}
+@media (max-width:860px){.cxm-grupo{grid-template-columns:1fr}}
+.cxm-dcard{border-radius:16px;overflow:hidden;border:1px solid var(--ev-line,#E2EFED);background:#fff;box-shadow:0 10px 24px -20px rgba(11,18,21,.5)}
+.cxm-dcard .ft{position:relative;height:120px;background:#DDEFEC}.cxm-dcard .ft img{width:100%;height:100%;object-fit:cover;display:block}
+.cxm-dcard .vis{position:absolute;left:8px;top:8px;font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;background:#FEF7C3;color:#854D0E}
+.cxm-dcard .vis.si{background:#DCFCE7;color:#166534}
+.cxm-dcard .bd{padding:10px 12px}.cxm-dcard b{display:block;font-size:14.5px;font-weight:800}
+.cxm-dcard small{display:block;color:var(--ev-muted,#66807C);font-weight:600;font-size:12px}
+.cxm-dcard .pr{color:#C2410C;font-weight:800;font-size:13px;margin-top:4px}
+.cxm-propios{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.cxm-propios>small{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--ev-muted,#66807C)}
+.cxm-propio{font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px;background:#E6FBF8;color:#0E8F86}
+.cxm-aviso{display:flex;gap:10px;align-items:flex-start;border-radius:14px;padding:10px 12px;background:#FFF7E0;color:#854D0E;font-weight:600;font-size:13px;margin:6px 0 4px}
 .cxm-fila{display:flex;gap:10px;overflow:auto;padding:8px 2px 4px}
 .cxm-mini{flex:0 0 220px;display:flex;gap:10px;align-items:center;border:1px solid var(--ev-line,#E2EFED);border-radius:14px;padding:8px;background:var(--ev-surface-2,#F5FBFA)}
 .cxm-mini img,.cxm-mini .ph{width:56px;height:56px;border-radius:10px;object-fit:cover;flex:none;background:#DDEFEC}
@@ -66,8 +79,10 @@ window.CXM = (() => {
         catch (e) { $('#cxmDest').innerHTML = `<li class="cxm-vacio">No pude conectar con Yourttoo: ${esc(e.message)}</li>`; }
     }
     async function cargarElegidos() {
-        try { elegidos = await EV.api('/Circuitos/MundoElegidos'); } catch (e) { elegidos = []; EV.toast(e.message, 'err'); }
+        try { [elegidos, tarjetas] = await Promise.all([EV.api('/Circuitos/MundoElegidos'), EV.api('/Circuitos/MundoTarjetas')]); }
+        catch (e) { elegidos = []; tarjetas = { destinos: [] }; EV.toast(e.message, 'err'); }
         pintarHome();
+        const n = document.getElementById('cxNMundo'); if (n) n.textContent = elegidos.length ? `${elegidos.length} en la Home` : '';
     }
 
     function pintarDestinos() {
@@ -82,15 +97,22 @@ window.CXM = (() => {
 
     function pintarHome() {
         const grupos = new Map(); elegidos.forEach(x => { if (!grupos.has(x.pais)) grupos.set(x.pais, { nombre: x.destino, items: [] }); grupos.get(x.pais).items.push(x); });
+        const porPais = new Map((tarjetas.destinos || []).map(d => [d.pais, d]));
+        const ocultas = (tarjetas.destinos || []).filter(d => !d.visible).length;
         $('#cxmHome').innerHTML = `<h3><i class="bi bi-house-heart"></i> En la Home <small style="font-weight:600;color:var(--ev-muted)">${elegidos.length} circuito${elegidos.length === 1 ? '' : 's'} en ${grupos.size} destino${grupos.size === 1 ? '' : 's'}</small></h3>
-            <p class="sub">Así se agrupan en la Home. Ordénalos con las flechas (el primero sale primero) o quítalos con ×.</p>
-            ${grupos.size ? [...grupos.entries()].map(([pais, g]) => `<div class="cxm-grupo"><b><i class="bi bi-geo-alt-fill"></i> ${esc(g.nombre)}</b>
+            <p class="sub">Cada destino es una tarjeta en la sección «${esc(tarjetas.seccion || 'CIRCUITOS')}» de la Home, junto a tus circuitos. Al abrirla, la web muestra los circuitos de Yourttoo elegidos y tus circuitos de ese país. Ordena con las flechas: el primero pone la foto de la tarjeta.</p>
+            ${ocultas ? `<div class="cxm-aviso"><i class="bi bi-eye-slash"></i><div>${ocultas === 1 ? 'Hay 1 tarjeta de destino oculta' : `Hay ${ocultas} tarjetas de destino ocultas`} en la web. Enciéndelas con el ojo en <a href="/HomeWeb/Index" style="color:inherit;font-weight:800">Home de la web</a> cuando la web ya esté publicada con los circuitos por destino.</div></div>` : ''}
+            ${grupos.size ? [...grupos.entries()].map(([pais, g]) => { const d = porPais.get(pais); return `<div class="cxm-grupo">
+                <div class="cxm-dcard">${d ? `<div class="ft">${d.imagen ? `<img src="${esc(d.imagen)}" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="vis ${d.visible ? 'si' : ''}">${d.visible ? '<i class="bi bi-eye"></i> En la web' : '<i class="bi bi-eye-slash"></i> Oculta'}</span></div>
+                    <div class="bd"><b>${esc(d.titulo)}</b><small>${esc(d.circuitos || '')}${d.ciudades ? ' · ' + esc(d.ciudades) : ''}</small><div class="pr">Desde ${dinero(d.desde, d.moneda)}</div></div>` : `<div class="bd"><b>${esc(g.nombre)}</b><small>Preparando la tarjeta…</small></div>`}</div>
+                <div><b style="font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ev-muted,#66807C)"><i class="bi bi-geo-alt-fill"></i> ${esc(g.nombre)} · de Yourttoo</b>
                 <div class="cxm-fila">${g.items.map((x, i) => `<div class="cxm-mini" title="${esc(x.titulo)}">
                     ${x.imagen ? `<img src="${esc(x.imagen)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ph'}))">` : '<span class="ph"></span>'}
                     <div style="min-width:0"><div class="t">${esc(x.titulo)}</div><div class="p">Desde ${dinero(x.desde, x.moneda)}</div><small style="color:var(--ev-muted);font-weight:600">${x.dias ? x.dias + ' días' : ''}</small></div>
                     <div class="acc"><button type="button" title="Antes" data-mover="${pais}|${i}|-1" ${i === 0 ? 'disabled' : ''}><i class="bi bi-arrow-left"></i></button>
                         <button type="button" title="Quitar de la Home" data-quitar="${x.id}"><i class="bi bi-x-lg"></i></button>
-                        <button type="button" title="Después" data-mover="${pais}|${i}|1" ${i === g.items.length - 1 ? 'disabled' : ''}><i class="bi bi-arrow-right"></i></button></div></div>`).join('')}</div></div>`).join('')
+                        <button type="button" title="Después" data-mover="${pais}|${i}|1" ${i === g.items.length - 1 ? 'disabled' : ''}><i class="bi bi-arrow-right"></i></button></div></div>`).join('')}</div>
+                ${d?.propios?.length ? `<div class="cxm-propios"><small>Y tus circuitos de ${esc(g.nombre)}</small>${d.propios.map(n => `<span class="cxm-propio"><i class="bi bi-signpost-split"></i> ${esc(n)}</span>`).join('')}</div>` : ''}</div></div>`; }).join('')
               : '<div class="cxm-vacio">Todavía no hay circuitos por el mundo en la Home. Elige un destino y pulsa «Agregar a la Home» en los que quieras.</div>'}`;
         $('#cxmHome').querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => quitar(+b.dataset.quitar));
         $('#cxmHome').querySelectorAll('[data-mover]').forEach(b => b.onclick = () => { const [p, i, d] = b.dataset.mover.split('|'); mover(p, +i, +d); });
@@ -157,6 +179,8 @@ window.CXM = (() => {
             history.replaceState(null, '', mundo ? '#mundo' : location.pathname + location.search);
         }));
         if (location.hash === '#mundo') v.querySelector('[data-v="mundo"]').click();
+        // cuántos hay ya en la Home (se ve en la pestaña sin abrirla)
+        EV.api('/Circuitos/MundoElegidos').then(l => { const n = document.getElementById('cxNMundo'); if (n && l.length) n.textContent = `${l.length} en la Home`; }).catch(() => { });
     });
 
     return { abrir, recargar: () => { cargarElegidos(); } };

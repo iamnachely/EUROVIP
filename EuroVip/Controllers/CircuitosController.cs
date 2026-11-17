@@ -305,6 +305,10 @@ namespace EuroVip.Controllers
         [HttpGet]
         public async Task<IActionResult> MundoElegidos([FromServices] ICircuitosMundo m) => Json(await m.ElegidosAsync());
 
+        /// <summary>CAMBIO 135: tarjetas de destino («Circuitos en Japón») de la sección CIRCUITOS, ya al día, con sus manuales.</summary>
+        [HttpGet]
+        public async Task<IActionResult> MundoTarjetas([FromServices] ICircuitosMundo m) => Json(await m.TarjetasAsync());
+
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> MundoAgregar([FromServices] ICircuitosMundo m, [FromBody] MundoAgregarDto dto, CancellationToken ct)
         {

@@ -5846,6 +5846,50 @@ GO
 EXEC Eurovip.spPortalListarBuscadorPestanas;
 GO
 
+/* ---------- CAMBIO 135: circuitos agrupados por destino (Yourttoo + manuales) ----------
+   Explicación sencilla: pedido de la usuaria «los circuitos manuales y los de la integración van en la misma sección
+   (CIRCUITOS) agrupados por destino; al dar clic a un destino salen todos los circuitos de la integración y los manuales que
+   pertenecen a ese destino».
+     - El destino es el PAÍS (ISO de 2 letras): en Yourttoo, el país del programa; en los manuales, circuito_destino.id_pais.
+     - La tarjeta del destino («Circuitos en Japón») la crea el BackOffice en Eurovip.inicio (tipo CIRCUITO_MUNDO, sin
+       programa_codigo) dentro de la sección CIRCUITOS, OCULTA hasta que se encienda en Home de la web.
+     - Eurovip.spPortalListarCircuitosDestino @pais: lo que la web muestra al hacer clic en el destino. Junta los de Yourttoo
+       elegidos (fuente YOURTTOO, código del programa) y los manuales del país con salidas a la venta (fuente PROPIO, código =
+       nombre del circuito). Sin precio de agencia: «desde» es el de origen (Yourttoo en su moneda sin margen; los manuales,
+       precio web en su moneda); la web calcula el de la agencia como ya hace en cada caso.
+   No cambia ningún dato. */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarCircuitosDestino
+    @pais char(2), @Idioma char(2) = 'ES'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT x.fuente, x.codigo, x.titulo, x.imagen, x.dias, x.ciudades, x.desde, x.moneda, x.peso
+      FROM (
+        -- Yourttoo elegidos en el BackOffice (Circuitos › Circuitos por el mundo)
+        SELECT 'YOURTTOO' AS fuente, CAST(i.programa_codigo AS nvarchar(200)) COLLATE DATABASE_DEFAULT AS codigo, CAST(i.descripcion AS nvarchar(400)) AS titulo,
+               CAST(i.caratulaDestino AS nvarchar(500)) AS imagen, CAST(i.programa_dias AS int) AS dias, i.programa_ciudades AS ciudades,
+               CAST(i.precioWeb AS decimal(18,2)) AS desde, LTRIM(RTRIM(i.id_moneda)) AS moneda, i.peso
+          FROM Eurovip.inicio i
+         WHERE i.tipo_servicio = 'CIRCUITO_MUNDO' AND i.programa_codigo IS NOT NULL AND i.id_paisDestino = @pais AND i.id_idioma = @Idioma
+        UNION ALL
+        -- Manuales del país con salidas activas desde mañana
+        SELECT 'PROPIO', CAST(c.nombre_circuito AS nvarchar(200)), CAST(c.nombre_circuito AS nvarchar(400)), CAST(c.caratula AS nvarchar(500)),
+               CAST(c.noches + 1 AS int),
+               (SELECT STRING_AGG(CAST(d.id_destino AS nvarchar(max)), N' ' + NCHAR(183) + N' ') FROM Eurovip.circuito_destino d WHERE d.nombre_circuito = c.nombre_circuito AND d.id_idioma = c.id_idioma),
+               v.desde, v.moneda, c.peso
+          FROM Eurovip.circuito c
+         CROSS APPLY (SELECT MIN(Eurovip.fnPrecioWeb(s.id_servicio)) AS desde, MIN(LTRIM(RTRIM(s.id_moneda))) AS moneda
+                        FROM Eurovip.servicio_circuito sc JOIN Eurovip.servicio s ON s.id_servicio = sc.id_servicio
+                       WHERE sc.nombre_circuito = c.nombre_circuito AND s.activo = 1 AND sc.desde > CAST(GETDATE() AS date)) v
+         WHERE c.id_idioma = @Idioma AND v.desde IS NOT NULL
+           AND EXISTS (SELECT 1 FROM Eurovip.circuito_destino d WHERE d.nombre_circuito = c.nombre_circuito AND d.id_idioma = c.id_idioma AND d.id_pais = @pais)
+      ) x
+     ORDER BY CASE WHEN x.peso IS NULL THEN 1 ELSE 0 END, x.peso, x.desde, x.titulo;
+END
+GO
+EXEC Eurovip.spPortalListarCircuitosDestino 'JP';
+GO
+
 
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
@@ -6415,6 +6459,10 @@ GO
                solo en appsettings.Local.json (ignorado por git) y en la configuración del servidor (Yourttoo:Url/Usuario/Clave).
    17/11/2026  CAMBIO 134 aplicado SOLO en el 93: Eurovip.buscador_pestana (7 pestañas, mismo orden que la web hoy) y
                spPortalListarBuscadorPestanas. Prueba: ocultar y volver a mostrar «Coches» desde Home de la web (quedó igual).
+   17/11/2026  CAMBIO 135 aplicado SOLO en el 93: spPortalListarCircuitosDestino (Yourttoo elegidos + circuitos propios del país).
+               El BackOffice creó la tarjeta «Circuitos en Japón» (inicio.id 1283, sección CIRCUITOS, oculta) con los 3 programas
+               de Japón que eligió la usuaria + 1 circuito propio; la usuaria la encendió desde Home de la web (19:29).
+               Hasta publicar la web con el enlace nuevo (SeccionesInicio.tsx), esa tarjeta lleva a la búsqueda de hoteles.
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

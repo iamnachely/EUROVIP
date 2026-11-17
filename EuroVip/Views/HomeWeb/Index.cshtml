@@ -327,7 +327,7 @@ const HW = (() => {
     const img = (ruta, d = dev) => !ruta ? '' : `${{ web: D.imagenes.web, tablet: D.imagenes.tablet, movil: D.imagenes.movil }[d]}/${encodeURIComponent(ruta)}?v=${(D.slides || []).find(s => s.ruta === ruta)?.version || '0'}`;
     // t.imagen la calcula el servidor desde las carpetas del proyecto (fotos de Hoteles y portadas de Circuitos)
     const carat = t => t.imagen || (t.caratulaDestino && (EV.esUrl(t.caratulaDestino) || t.caratulaDestino.startsWith('/')) ? t.caratulaDestino : null);
-    const tipoChip = { OFERTA: 'Solo Hotel', PAQUETES: 'Paquetes', CIRCUITO: 'Circuito', HOTEL: 'Hotel', EXCURSION: 'Excursiones', TRASLADO: 'Traslados', CRUCERO: 'Cruceros', COMBINADO: 'Combinado' };
+    const tipoChip = { OFERTA: 'Solo Hotel', PAQUETES: 'Paquetes', CIRCUITO: 'Circuito', HOTEL: 'Hotel', EXCURSION: 'Excursiones', TRASLADO: 'Traslados', CRUCERO: 'Cruceros', COMBINADO: 'Combinado', CIRCUITO_MUNDO: 'Circuitos por destino' };
 
     async function cargar() {
         D = await EV.api('/HomeWeb/Datos');
@@ -698,6 +698,8 @@ const HW = (() => {
 
     // ===================== TARJETAS =====================
     async function abrirTarjeta(t, idSeccion, irAFoto) {
+        // CAMBIO 135: la tarjeta de un destino de «Circuitos por el mundo» se rehace sola: se gestiona en Circuitos
+        if (t?.tipo_Servicio === 'CIRCUITO_MUNDO') { if (await EV.confirmar({ titulo: t.descripcion || 'Circuitos por destino', texto: 'Esta tarjeta junta los circuitos de Yourttoo elegidos y tus circuitos de ese país. Se cambia en Circuitos › Circuitos por el mundo. Para mostrarla u ocultarla en la web usa el ojo de la tarjeta.', si: 'Ir a Circuitos' })) location.href = '/Circuitos/Index#mundo'; return; }
         cat ??= await EVC.catalogos();
         tarjetaActual = t;
         const v = t || { tipo_Servicio: 'OFERTA', id_Pais_Origen: 'DO', origen: 'Santo Domingo', id_PaisDestino: 'DO', id_Destino: '', estado: true, id_Contenedor: idSeccion ?? null };

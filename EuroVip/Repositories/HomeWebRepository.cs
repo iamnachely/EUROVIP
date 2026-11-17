@@ -76,7 +76,7 @@ namespace EuroVip.Repositories
                 SELECT id_contenedor AS Id_Contenedor, nombre AS Nombre, posicion AS Posicion, CAST(ISNULL(estado, 1) AS bit) AS Estado, prioridad AS Prioridad
                 FROM Eurovip.contenedores WHERE UPPER(id_idioma) = @Idioma ORDER BY posicion, id_contenedor", new { Idioma })).ToList();
             var tarjetas = (await cn.QueryAsync<HwTarjeta>(SelTarjeta + @"
-                WHERE i.id_idioma = @Idioma AND i.tipo_servicio <> 'CIRCUITO_MUNDO'   -- CAMBIO 133: los de Yourttoo se eligen en Circuitos › Circuitos por el mundo
+                WHERE i.id_idioma = @Idioma AND NOT (i.tipo_servicio = 'CIRCUITO_MUNDO' AND i.programa_codigo IS NOT NULL)   -- CAMBIO 135: se ve la tarjeta del destino; sus circuitos de Yourttoo se eligen en Circuitos
                 ORDER BY ISNULL(i.posicion_destino, 9999), i.id_destino", new { Idioma })).ToList();
             var porCont = conts.ToDictionary(c => c.Id_Contenedor);
             var sin = new List<HwTarjeta>();
