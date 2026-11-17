@@ -138,8 +138,8 @@
 
 <div class="ui-toolbar">
     <div class="ui-chips" id="fVista" role="group" aria-label="Cómo ver los @ofs">
-        <button type="button" class="ui-pick on" data-v="lista"><i class="bi bi-list-ul"></i> Lista</button>
-        <button type="button" class="ui-pick" data-v="hoteles"><i class="bi bi-grid-3x2-gap"></i> Por hotel</button>
+        <button type="button" class="ui-pick on" data-v="hoteles"><i class="bi bi-grid-3x2-gap"></i> Por hotel</button>
+        <button type="button" class="ui-pick" data-v="lista"><i class="bi bi-list-ul"></i> Lista</button>
     </div>
     <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar hotel, destino, campaña, código o nº de @of1…" /></label>
     <select class="ui-select" id="fDestino"><option value="">Todos los destinos</option></select>
@@ -250,7 +250,8 @@ const OF = (() => {
     const $ = (s, el = document) => el.querySelector(s);
     const $$ = (s, el = document) => [...el.querySelectorAll(s)];
     const esc = EV.esc;
-    const st = { vista: 'lista', q: '', destino: '', campanya: '', estado: '', estadoOferta: '', vuelo: '', desde: '', hasta: '', pasadas: false, orden: 'fecha', pagina: 1 };
+    // Pedido de la usuaria: «a Ofertas vamos a entrar por el tab de hoteles» → la vista por defecto es «Por hotel» (?vista=lista para la lista)
+    const st = { vista: 'hoteles', q: '', destino: '', campanya: '', estado: '', estadoOferta: '', vuelo: '', desde: '', hasta: '', pasadas: false, orden: 'fecha', pagina: 1 };
     const DEF = { ...st };   // valores por defecto: lo que no es igual a esto se guarda en la dirección (?destino=…)
 
     /** Pone en pantalla los filtros de st (al volver a la página o al limpiar). */
