@@ -76,6 +76,13 @@
     .tr-paso { border: 1px solid var(--ev-line); border-radius: 18px; padding: 14px 16px 6px; margin-bottom: 14px; }
     .tr-paso > h3 { margin: 0 0 12px; font-size: 14.5px; font-weight: 800; display: flex; gap: 8px; align-items: center; }
     .tr-paso > h3 .n { width: 24px; height: 24px; border-radius: 50%; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-size: 12px; }
+    .tr-sub { margin: -6px 0 12px 32px; color: var(--ev-muted); font-size: 12.5px; font-weight: 600; }
+    details.tr-pleg > summary { list-style: none; cursor: pointer; }
+    details.tr-pleg > summary::-webkit-details-marker { display: none; }
+    details.tr-pleg > summary h3::after { content: "\F282"; font-family: "bootstrap-icons"; font-weight: 400; color: var(--ev-muted); transition: transform .2s; }
+    details.tr-pleg[open] > summary h3::after { transform: rotate(180deg); }
+    details.tr-pleg:not([open]) { padding-bottom: 2px; }
+    .tr-paso > h3 .ui-req, .tr-paso > h3 .ui-opc { margin-left: 2px; }
     .tr-paso > h3 small { margin-left: auto; color: var(--ev-muted); font-weight: 600; font-size: 12px; }
     .tr-seg { display: flex; gap: 8px; flex-wrap: wrap; }
     .tr-seg button { flex: 1; min-width: 110px; border: 1px solid var(--ev-line); background: var(--ev-surface); border-radius: 14px; padding: 10px 12px; cursor: pointer; font: 700 13.5px var(--ev-font); color: var(--ev-text);
@@ -172,24 +179,15 @@
         <button class="ui-ibtn x" type="button" id="edCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="ui-db">
-        <div class="tr-zona" id="edZona">
-            <div class="tr-zona-prev" id="edPrev"></div>
-            <div class="tr-zona-acc">
-                <b>Foto del vehículo</b>
-                <small>Arrastra una imagen aquí o pulsa «Subir foto» (mejor con fondo blanco, como en el tour operador). JPG, PNG o WebP hasta 10 MB.</small>
-                <label class="ev-btn ghost sm" style="cursor:pointer"><i class="bi bi-upload"></i> <span id="edSubirTxt">Subir foto</span><input type="file" id="edArchivo" accept="image/jpeg,image/png,image/webp" hidden></label>
-                <button type="button" class="ev-btn ghost sm" id="edQuitarFoto" hidden><i class="bi bi-trash3"></i> Quitar foto</button>
-            </div>
-        </div>
+        <div class="ui-guia"><span><b class="ui-req">Obligatorio</b> pasos 1 a 4 (lo que tiene <b class="ui-ast">*</b>)</span><span><b class="ui-opc">Opcional</b> pasos 5 a 8: fotos, textos para el cliente y datos internos</span></div>
 
-        <div class="ui-f"><label>Galería <em>más fotos del vehículo para la ficha; se guardan al momento</em></label><div id="edGaleria"></div></div>
-
-        <section class="tr-paso"><h3><span class="n">1</span> Ruta <small>Desde → A</small></h3>
+        <section class="tr-paso"><h3><span class="n">1</span> Ruta <b class="ui-req">Obligatorio</b><small>Desde → A</small></h3>
+            <p class="tr-sub">De qué aeropuerto sale y a qué destino llega. Por defecto sirve para todos los hoteles del destino.</p>
             <div class="ui-row">
-                <div class="ui-f" style="position:relative"><label for="edOrigen">Desde (aeropuerto) *</label>
+                <div class="ui-f" style="position:relative"><label for="edOrigen">Desde (aeropuerto) <b class="ui-ast">*</b></label>
                     <input id="edOrigen" maxlength="60" placeholder="Código o nombre… ej. PUJ" autocomplete="off" role="combobox" aria-expanded="false">
                     <div class="tr-busc" id="edOrigenBusc" hidden role="listbox"></div><span class="msg"></span></div>
-                <div class="ui-f" style="position:relative"><label for="edDestino">A (destino de los hoteles) *</label>
+                <div class="ui-f" style="position:relative"><label for="edDestino">A (destino de los hoteles) <b class="ui-ast">*</b></label>
                     <input id="edDestino" maxlength="50" placeholder="Escribe para buscar… ej. Punta Cana" autocomplete="off" role="combobox" aria-expanded="false">
                     <div class="tr-busc" id="edDestinoBusc" hidden role="listbox"></div><span class="msg"></span></div>
             </div>
@@ -201,36 +199,39 @@
                 </div><span class="msg"></span></div>
         </section>
 
-        <section class="tr-paso"><h3><span class="n">2</span> Opción de traslado</h3>
-            <div class="ui-f"><label>Tipo *</label>
+        <section class="tr-paso"><h3><span class="n">2</span> Opción de traslado <b class="ui-req">Obligatorio</b></h3>
+            <p class="tr-sub">Compartido o privado, la categoría y el vehículo. El nombre interno se arma solo.</p>
+            <div class="ui-f"><label>Tipo <b class="ui-ast">*</b></label>
                 <div class="tr-seg" id="edTipo">
                     <button type="button" data-v="COMPARTIDO"><i class="bi bi-people"></i><span>Compartido<small>con otros pasajeros</small></span></button>
                     <button type="button" data-v="PRIVADO"><i class="bi bi-person-check"></i><span>Privado<small>solo el cliente</small></span></button>
                 </div><span class="msg"></span></div>
             <div class="ui-row">
-                <div class="ui-f"><label for="edCategoria">Categoría *</label><select id="edCategoria"></select><span class="msg"></span></div>
-                <div class="ui-f"><label for="edVehiculo">Vehículo *</label><select id="edVehiculo"></select><span class="msg"></span></div>
+                <div class="ui-f"><label for="edCategoria">Categoría <b class="ui-ast">*</b></label><select id="edCategoria"></select><span class="msg"></span></div>
+                <div class="ui-f"><label for="edVehiculo">Vehículo <b class="ui-ast">*</b></label><select id="edVehiculo"></select><span class="msg"></span></div>
             </div>
-            <div class="ui-f"><label for="edNombre">Nombre interno * <em>se arma solo; puedes cambiarlo</em></label>
+            <div class="ui-f"><label for="edNombre">Nombre interno <b class="ui-ast">*</b> <em>se arma solo; puedes cambiarlo</em></label>
                 <input id="edNombre" maxlength="150" placeholder="Ej. Compartido Estándar PUJ a Punta Cana"><span class="msg"></span></div>
         </section>
 
-        <section class="tr-paso"><h3><span class="n">3</span> Capacidad</h3>
+        <section class="tr-paso"><h3><span class="n">3</span> Capacidad <b class="ui-req">Obligatorio</b></h3>
+            <p class="tr-sub">Cuántos pasajeros caben. Maletas y duración son opcionales.</p>
             <div class="ui-row" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+                <div class="ui-f"><label for="edPmin">Pasajeros mínimo <b class="ui-ast">*</b></label><input id="edPmin" type="number" min="1" max="999" value="1"><span class="msg"></span></div>
+                <div class="ui-f"><label for="edPmax">Pasajeros máximo <b class="ui-ast">*</b></label><input id="edPmax" type="number" min="1" max="999" value="99"><span class="msg"></span></div>
                 <div class="ui-f"><label for="edMaletas">Maletas permitidas</label><input id="edMaletas" type="number" min="0" max="50" value="2"><span class="msg"></span></div>
                 <div class="ui-f"><label for="edDuracion">Duración (minutos)</label><input id="edDuracion" type="number" min="1" max="1440" placeholder="Ej. 45"><span class="msg"></span></div>
-                <div class="ui-f"><label for="edPmin">Pasajeros mínimo *</label><input id="edPmin" type="number" min="1" max="999" value="1"><span class="msg"></span></div>
-                <div class="ui-f"><label for="edPmax">Pasajeros máximo *</label><input id="edPmax" type="number" min="1" max="999" value="99"><span class="msg"></span></div>
             </div>
         </section>
 
-        <section class="tr-paso"><h3><span class="n">4</span> Precio <small>en <span class="sim">RD$</span></small></h3>
-            <div class="ui-f"><label>¿Cómo se cobra? *</label>
+        <section class="tr-paso"><h3><span class="n">4</span> Precio <b class="ui-req">Obligatorio</b><small>en <span class="sim">RD$</span></small></h3>
+            <p class="tr-sub">Cómo se cobra y cuánto. Carga al menos un precio (ida y vuelta o solo ida).</p>
+            <div class="ui-f"><label>¿Cómo se cobra? <b class="ui-ast">*</b></label>
                 <div class="tr-seg" id="edCobro">
                     <button type="button" data-v="VEHICULO"><i class="bi bi-bus-front"></i><span>Para todos los viajeros<small>un precio por el vehículo</small></span></button>
                     <button type="button" data-v="PERSONA"><i class="bi bi-person"></i><span>Por persona<small>se multiplica por los viajeros</small></span></button>
                 </div></div>
-            <div class="ui-f"><label for="edMoneda">Moneda *</label>
+            <div class="ui-f"><label for="edMoneda">Moneda <b class="ui-ast">*</b></label>
                 <select id="edMoneda"><option value="DOP">DOP · RD$</option></select><span class="msg"></span></div>
             <div class="ui-row">
                 <div class="ui-f"><label for="edPrecioIV">Precio ida y vuelta</label>
@@ -239,25 +240,47 @@
                     <div class="tr-money"><b class="sim">RD$</b><input id="edPrecioI" type="number" min="0" step="0.01" placeholder="Opcional"></div><span class="msg"></span></div>
             </div>
             <small style="color:var(--ev-muted);font-weight:600;display:block;margin:-4px 0 10px">Carga al menos uno. Si dejas uno vacío, esa opción no sale en la web.</small>
+        </section>
+
+        <section class="tr-paso"><h3><span class="n">5</span> Fotos <b class="ui-opc">Opcional</b></h3>
+            <p class="tr-sub">Foto del vehículo (mejor con fondo blanco) y más fotos para la ficha.</p>
+            <div class="tr-zona" id="edZona">
+                <div class="tr-zona-prev" id="edPrev"></div>
+                <div class="tr-zona-acc">
+                    <b>Foto del vehículo</b>
+                    <small>Arrastra una imagen aquí o pulsa «Subir foto» (mejor con fondo blanco, como en el tour operador). JPG, PNG o WebP hasta 10 MB.</small>
+                    <label class="ev-btn ghost sm" style="cursor:pointer"><i class="bi bi-upload"></i> <span id="edSubirTxt">Subir foto</span><input type="file" id="edArchivo" accept="image/jpeg,image/png,image/webp" hidden></label>
+                    <button type="button" class="ev-btn ghost sm" id="edQuitarFoto" hidden><i class="bi bi-trash3"></i> Quitar foto</button>
+                </div>
+            </div>
+            <div class="ui-f" style="margin-top:12px"><label>Galería <em>más fotos del vehículo para la ficha; se guardan al momento</em></label><div id="edGaleria"></div></div>
+        </section>
+
+        <section class="tr-paso"><h3><span class="n">6</span> Cancelación, descripción y publicación <b class="ui-opc">Opcional</b></h3>
+            <p class="tr-sub">Ya viene: cancelable y activo en la web. Cámbialo solo si hace falta.</p>
+            <div class="ui-row">
+                <div class="ui-f"><label class="ui-switch"><input type="checkbox" id="edCancelable" checked><span class="tr"></span> Se puede cancelar</label></div>
+                <div class="ui-f" id="edHorasF"><label for="edHoras">Gratis hasta (horas antes)</label><input id="edHoras" type="number" min="0" max="720" placeholder="Ej. 24"><span class="msg"></span></div>
+            </div>
+            <div class="ui-f"><label for="edDesc">Descripción <em>se ve en la web: punto de encuentro, qué incluye…</em></label>
+                <textarea id="edDesc" rows="4" placeholder="Ej. Un representante le espera a la salida de la terminal con un cartel. Incluye asistencia en español."></textarea></div>
+            <div class="ui-f"><label class="ui-switch"><input type="checkbox" id="edActivo" checked><span class="tr"></span> Activo (sale en la web)</label></div>
+        </section>
+
+        <section class="tr-paso"><h3><span class="n">7</span> Información para el cliente <b class="ui-opc">Opcional</b></h3>
+            <div id="edInfo"></div>
+        </section>
+
+        <details class="tr-paso tr-pleg" id="edInternos" data-pleg data-siempre>
+            <summary><h3><span class="n">8</span> Proveedor, código y prioridad <b class="ui-opc">Opcional</b><small>solo para el equipo · no se ve en la web</small></h3></summary>
             <div class="ui-row">
                 <div class="ui-f"><label for="edCodigo">Código interno <em>letras y números · único en todo el sistema</em></label>
                     <input id="edCodigo"><span class="msg"></span></div>
                 <div class="ui-f"><label for="edProveedor">Proveedor <em>de dónde sale el traslado</em></label>
                     <select id="edProveedor"><option value="">— Sin proveedor —</option></select><span class="msg"></span></div>
             </div>
-        </section>
-
-        <section class="tr-paso"><h3><span class="n">5</span> Condiciones y descripción</h3>
-            <div class="ui-row">
-                <div class="ui-f"><label class="ui-switch"><input type="checkbox" id="edCancelable" checked><span class="tr"></span> Se puede cancelar</label></div>
-                <div class="ui-f" id="edPrio" style="grid-column:1/-1"></div>
-                <div class="ui-f" id="edHorasF"><label for="edHoras">Gratis hasta (horas antes)</label><input id="edHoras" type="number" min="0" max="720" placeholder="Ej. 24"><span class="msg"></span></div>
-            </div>
-            <div class="ui-f"><label for="edDesc">Descripción <em>se ve en la web: punto de encuentro, qué incluye…</em></label>
-                <textarea id="edDesc" rows="4" placeholder="Ej. Un representante le espera a la salida de la terminal con un cartel. Incluye asistencia en español."></textarea></div>
-                <div id="edInfo"></div>
-            <div class="ui-f"><label class="ui-switch"><input type="checkbox" id="edActivo" checked><span class="tr"></span> Activo (sale en la web)</label></div>
-        </section>
+            <div class="ui-f" id="edPrio"></div>
+        </details>
 
         <div class="ui-f"><label>Así lo verá el cliente</label><div class="tr-prev" id="edVista"></div></div>
     </div>
@@ -544,7 +567,8 @@
         EVPrioridad.vivo($('#edPrio'), () => $('#edPrecioIV').value || $('#edPrecioI').value);
         $('#edHoras').value = t?.horas_Cancelacion ?? '';
         $('#edDesc').value = t?.descripcion || '';
-        $('#edInfo').innerHTML = EVCodigo.info(t || {});   // CAMBIO 130
+        $('#edInfo').innerHTML = EVCodigo.info(t || {}, { plano: true, titulo: '' });   // CAMBIO 130: una fila por texto
+        $('#edInternos').open = !!(t && (t.codigo || t.id_Proveedor || t.peso || t.precio_Proveedor));   // al editar se abre si ya tiene algo
         $('#edActivo').checked = t ? t.activo : true;
         $('#edTodos').checked = t ? t.todos_Hoteles : true;
         hoteles = (t?.hoteles || []).map(h => ({ valor: h.valor, texto: h.texto }));

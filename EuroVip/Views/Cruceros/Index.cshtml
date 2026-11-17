@@ -392,6 +392,7 @@
             <button type="button" data-tab="eBordo"><span class="num">5</span> A bordo</button>
             <button type="button" data-tab="eCabinas"><span class="num">6</span> Cabinas</button>
             <button type="button" data-tab="ePrecios"><span class="num">7</span> Fechas y precios</button>
+            <button type="button" data-tab="eInfo"><span class="num">8</span> Info. cliente <span class="n" id="czInfoN">opcional</span></button>
             <button type="button" data-tab="eResumen"><span class="num"><i class="bi bi-check2"></i></span> Revisar y guardar</button>
         </div>
     </div>
@@ -403,6 +404,7 @@
         <section class="ui-pane" id="eBordo"></section>
         <section class="ui-pane" id="eCabinas"></section>
         <section class="ui-pane" id="ePrecios"></section>
+        <section class="ui-pane" id="eInfo"></section>
         <section class="ui-pane" id="eResumen"></section>
     </div>
     <div class="ui-df">
@@ -459,9 +461,10 @@
     const esc = EV.esc;
     const editor = EV.drawer($('#czEditor')), visor = EV.drawer($('#czVer')), dCat = EV.drawer($('#czCat'));
     const vistas = EV.tabs($('#czVistas'));
-    const PASOS = ['eDatos', 'eFotos', 'eItin', 'eMapa', 'eBordo', 'eCabinas', 'ePrecios', 'eResumen'];
+    const PASOS = ['eDatos', 'eFotos', 'eItin', 'eMapa', 'eBordo', 'eCabinas', 'ePrecios', 'eInfo', 'eResumen'];
     let paso = 'eDatos';
     const edTabs = EV.tabs($('#edTabs'), id => { paso = id; alCambiarPaso(); });
+    EVCodigo.infoContador($('#czInfoN'), $('#eInfo'));   // «2/6» en el tab Info. cliente
     let D = { cruceros: [], navieras: [], barcos: [], categorias: [], categoriasCabina: {} };
     let C = null, verId = null, sec = 0, tarSel = null;
     let fotosMontadas = false;          // componente de fotos (crucero ya guardado)
@@ -667,7 +670,7 @@
         $('#edSub').textContent = id ? `n.º ${C.id_Crucero}` : 'Solo el título es obligatorio. Lo demás, cuando lo tengas.';
         if (id) EVQuien.pintar($('#edSub'), 'crucero', C.id_Crucero); else EVQuien.quitar($('#edSub'));
         $('#edEliminar').hidden = !id;
-        pintarDatos(); pintarItin(); pintarBordo(); pintarCabinas(); pintarPrecios();
+        pintarDatos(); pintarItin(); pintarBordo(); pintarCabinas(); pintarPrecios(); pintarInfo();
         edTabs.ir('eDatos'); editor.abrir();
         setTimeout(() => $('[data-b="titulo"]')?.focus(), 80);
     }
@@ -712,7 +715,8 @@
         });
         if (C._codigoAntes === undefined) C._codigoAntes = C.codigo_Interno || '';
         $('#eDatos').innerHTML = `
-            <div class="cz-blq"><h3><i class="bi bi-info-circle"></i> El crucero</h3>
+            <div class="ui-guia"><span><b class="ui-req">Obligatorio</b> solo el título</span><span><b class="ui-opc">Opcional</b> todo lo demás · los textos para el cliente (incluye, no incluye…) están en el paso <b>8 · Info. cliente</b></span></div>
+            <div class="cz-blq"><h3><i class="bi bi-info-circle"></i> El crucero <b class="ui-req">Título obligatorio</b></h3>
                 <div class="ui-f"><label>Título * <em>el que sale en la tarjeta y la cabecera</em></label>${inp('titulo', 'maxlength="200" placeholder="Ej. Halloween en Alta Mar del Caribe Oriental"')}</div>
                 <div class="ui-row">
                     <div class="ui-f"><label>Naviera ${opc}</label><input data-b="naviera_Nombre" list="dlNavieras" maxlength="100" value="${esc(C.naviera_Nombre || '')}" placeholder="Ej. Disney Cruise Line">
@@ -738,13 +742,10 @@
                     <span style="display:inline-flex;gap:6px"><input id="edCatNueva" maxlength="100" placeholder="Nueva categoría…" style="width:190px"><button type="button" class="ev-btn ghost sm" data-cat-agregar><i class="bi bi-plus-lg"></i> Agregar</button></span>
                 </div>
             </div>
-            <details class="cz-blq cz-mas" ${C.descripcion || C.subtitulo || C.codigo || C.incluye || C.no_Incluye || C.condiciones || C.documentacion || C.importante || C.oferta_Especial ? 'open' : ''}><summary><i class="bi bi-text-paragraph"></i> Más textos ${opc} <i class="bi bi-chevron-down"></i></summary><div>
+            <details class="cz-blq cz-mas" ${C.descripcion || C.subtitulo || C.codigo ? 'open' : ''}><summary><i class="bi bi-text-paragraph"></i> Subtítulo, descripción y código del proveedor ${opc} <i class="bi bi-chevron-down"></i></summary><div>
                 <div class="ui-row"><div class="ui-f"><label>Subtítulo <em>si lo dejas vacío: «Saliendo el {fecha} para {noches} noches a bordo del {barco}»</em></label>${inp('subtitulo', 'maxlength="300"')}</div>
                     <div class="ui-f"><label>Código / ID del proveedor</label>${inp('codigo', 'maxlength="50" placeholder="Ej. 2256635"')}</div></div>
                 <div class="ui-f"><label>Descripción</label>${txt('descripcion', 'rows="4"')}</div>
-                <div class="ui-row"><div class="ui-f"><label>Incluye</label>${txt('incluye', 'rows="3"')}</div><div class="ui-f"><label>No incluye</label>${txt('no_Incluye', 'rows="3"')}</div></div>
-                <div class="ui-row"><div class="ui-f"><label>Condiciones</label>${txt('condiciones', 'rows="3" placeholder="Cancelación, cambios, edades…"')}</div><div class="ui-f"><label>Documentación</label>${txt('documentacion', 'rows="3" placeholder="Pasaporte, visado, vacunas…"')}</div></div>
-                <div class="ui-row"><div class="ui-f"><label>Importante</label>${txt('importante', 'rows="3" placeholder="Lo que el cliente tiene que saber sí o sí"')}</div><div class="ui-f"><label>Oferta especial</label>${txt('oferta_Especial', 'rows="3" placeholder="Promoción o ventaja"')}</div></div>
             </div></details>
             <div class="cz-blq"><h3><i class="bi bi-star-fill" style="color:#F5A623"></i> Prioridad y precio del proveedor <small>los dos opcionales</small></h3><div id="edPrio"></div></div>
             <div class="cz-blq" id="edPdfs"></div>`;
@@ -752,6 +753,13 @@
         $('#edPrio').innerHTML = EVPrioridad.campos({ peso: C.peso, proveedor: C.precio_Proveedor, precio: desde, ayuda: 'Compáralo con el «desde» por persona del crucero.', contexto: { que: 'crucero', id: C.id_Crucero } });
         EVPrioridad.vivo($('#edPrio'), () => desde);
         pintarPdfs();
+    }
+
+    // ---------- 8. Información para el cliente (pedido: tab aparte, opcional, un texto por fila) ----------
+    // Los campos llevan data-b="incluye"… como antes: se guardan en C al escribir y viajan igual al servidor.
+    function pintarInfo() {
+        $('#eInfo').innerHTML = `<div class="cz-blq"><h3><i class="bi bi-info-circle"></i> Información para el cliente ${opc}<small>se ve en la ficha del crucero</small></h3>`
+            + EVCodigo.info(C, { plano: true, titulo: '', attrs: { Incluye: 'data-b="incluye"', No_Incluye: 'data-b="no_Incluye"', Condiciones: 'data-b="condiciones"', Documentacion: 'data-b="documentacion"', Importante: 'data-b="importante"', Oferta_Especial: 'data-b="oferta_Especial"' } }) + '</div>';
     }
 
     // ---------- PDF del crucero (FASE 30): se suben y se quitan al momento ----------

@@ -527,3 +527,30 @@ button.ev-nav-label i { font-size: 11px; transition: transform .3s var(--ev-ease
 .ev-busq .vacio { padding: 14px; color: var(--ev-muted); font-weight: 600; font-size: 13px; display: flex; gap: 8px; align-items: center; }
 .ev-busq-spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ev-line); border-top-color: var(--ev-teal); animation: evGiro .7s linear infinite; }
 @keyframes evGiro { to { transform: rotate(360deg); } }
+
+/* ── Cargas organizadas por secciones (pedido: «que el usuario no se abrume y sepa qué es opcional») ──
+   <div class="ui-sec"><div class="ui-sec-t"><span>1</span> Datos básicos <b class="ui-req">Obligatorio</b></div><p class="ui-sec-sub">Una línea que explica la sección.</p>…</div>
+   Sección plegable: <details class="ui-sec ui-pleg"><summary class="ui-sec-t">…<b class="ui-opc">Opcional</b><small>resumen</small></summary>…</details>
+   Campo obligatorio: <label>Nombre <b class="ui-ast">*</b></label> */
+.ui-req, .ui-opc { display: inline-flex; align-items: center; gap: 4px; font: 800 10.5px var(--ev-font); letter-spacing: .4px; text-transform: uppercase; padding: 3px 9px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; }
+.ui-req { background: #FEF0C7; color: #93370D; border: 1px solid #FEDF89; }
+.ui-opc { background: var(--ev-surface-2); color: var(--ev-muted); border: 1px solid var(--ev-line); }
+:root[data-theme="dark"] .ui-req { background: #3A2A0B; color: #FEC84B; border-color: #6B4A10; }
+.ui-ast { color: #D92D20; font-weight: 800; margin-left: 2px; }
+.ui-sec-sub { margin: -8px 0 14px 42px; color: var(--ev-muted); font-size: 13px; font-weight: 600; }
+details.ui-pleg { border: 1px solid var(--ev-line); border-radius: 18px; padding: 0 16px; background: var(--ev-surface); }
+details.ui-pleg + .ui-sec, .ui-sec + details.ui-pleg, details.ui-pleg + details.ui-pleg { margin-top: 4px; }
+.ui-sec + details.ui-pleg { border-top: 1px solid var(--ev-line); padding-top: 0; }
+details.ui-pleg > summary.ui-sec-t { list-style: none; cursor: pointer; margin: 0; padding: 14px 0; flex-wrap: wrap; }
+details.ui-pleg > summary.ui-sec-t::-webkit-details-marker { display: none; }
+details.ui-pleg > summary.ui-sec-t::after { content: "\F282"; font-family: "bootstrap-icons"; font-weight: 400; color: var(--ev-muted); transition: transform .2s; margin-left: 8px; }
+details.ui-pleg[open] > summary.ui-sec-t::after { transform: rotate(180deg); }
+details.ui-pleg > summary.ui-sec-t small { margin-left: auto; }
+details.ui-pleg[open] > summary.ui-sec-t { border-bottom: 1px dashed var(--ev-line); margin-bottom: 16px; }
+details.ui-pleg > .ui-sec-sub { margin-left: 0; margin-top: 0; }
+.ui-guia { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 10px 14px; border-radius: 14px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); font-size: 12.5px; font-weight: 600; color: var(--ev-muted); margin-bottom: 18px; }
+.ui-guia b { color: var(--ev-text); }
+.ui-guia .ui-req, .ui-guia .ui-opc { margin-right: 4px; }
+.ui-tabs button .n.si, .hx-tabs button .n.si { background: var(--ev-ink); color: var(--ev-aqua); }
+@media (max-width: 640px) { .ui-sec-sub { margin-left: 0; } }
+.ui-f > label .ui-ast, .hx-f > label .ui-ast { margin-right: auto; margin-left: 3px; }

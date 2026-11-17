@@ -27,8 +27,7 @@
     .xp-break { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13.5px; font-weight: 700; padding: 12px 14px; border-radius: 14px; background: var(--ev-surface-2); margin-top: 6px; }
     .xp-break span { padding: 5px 10px; border-radius: 10px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
     .xp-break .eq { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
-    .xp-notas .nota { display: grid; grid-template-columns: 200px minmax(0,1fr) auto; gap: 10px; margin-bottom: 10px; align-items: start; }
-    .xp-add { width: 100%; border: 2px dashed var(--ev-line); border-radius: 20px; background: var(--ev-surface-2); padding: 18px; font: 800 14px var(--ev-font); color: var(--ev-text); cursor: pointer; transition: all .25s var(--ev-ease); }
+        .xp-add { width: 100%; border: 2px dashed var(--ev-line); border-radius: 20px; background: var(--ev-surface-2); padding: 18px; font: 800 14px var(--ev-font); color: var(--ev-text); cursor: pointer; transition: all .25s var(--ev-ease); }
     .xp-add:hover { border-color: var(--ev-teal); background: var(--ev-grad-soft); }
     @@media (max-width: 1250px) { .xp { grid-template-columns: 1fr; } .ui-summary { position: static; } }
     @@media (max-width: 1500px) { .xp-gen { grid-template-columns: repeat(3, minmax(0, 1fr)); } .xp-gen .ui-f:nth-child(5) { grid-column: 1 / -1; } .xp-gen > .ev-btn { grid-column: 1 / -1; justify-content: center; } }
@@ -63,7 +62,7 @@
             <button type="button" class="ui-step" data-p="2"><span class="b">2</span><span><b>Fechas y precios</b><small>una tabla</small></span></button>
             <button type="button" class="ui-step" data-p="3"><span class="b">3</span><span><b>Comercial</b><small>proveedor, campaña</small></span></button>
             <button type="button" class="ui-step" data-p="4"><span class="b">4</span><span><b>Vuelo</b><small>opcional</small></span></button>
-            <button type="button" class="ui-step" data-p="5"><span class="b">5</span><span><b>Confirmar</b><small>notas y cargar</small></span></button>
+            <button type="button" class="ui-step" data-p="5"><span class="b">5</span><span><b>Confirmar</b><small>info. cliente y cargar</small></span></button>
         </nav>
 
         <!-- PASO 1 -->
@@ -110,27 +109,28 @@
             <h2>Datos comerciales</h2>
             <p class="sub">Quién la vende, desde dónde, en qué campañas y qué suplementos lleva.</p>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>A</span> @(esPaq ? "Paquete" : "Oferta")</div>
+                <div class="ui-sec-t"><span>A</span> @(esPaq ? "Paquete" : "Oferta") <b class="ui-req">Proveedor obligatorio</b></div>
+                <p class="ui-sec-sub">Solo el proveedor es obligatorio. El nombre y el código interno son opcionales.</p>
                 <div class="ui-row r3">
-                    <div class="ui-f" data-siempre><label>Proveedor <em>tour operador</em></label><input id="cProveedor" placeholder="Busca el proveedor…"><span class="msg"></span></div>
+                    <div class="ui-f" data-siempre><label>Proveedor <b class="ui-ast">*</b> <em>tour operador</em></label><input id="cProveedor" placeholder="Busca el proveedor…"><span class="msg"></span></div>
                     <div class="ui-f"><label>Nombre @(esPaq ? "del paquete" : "de la oferta") <em>opcional</em></label><input id="cNombre" maxlength="50" placeholder="Ej. Punta Cana verano"></div>
                     <div class="ui-f" data-siempre><label>Código interno <em>opcional · letras y números, único en todo el sistema</em></label><input id="cCodigo" maxlength="30" placeholder="Ej. OFPUJVERANO26"></div>
                     <div class="ui-f"><label>Moneda</label><select id="cDivisa"></select></div>
                 </div>
             </div>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>B</span> Origen de venta @if (!esPaq) {<small>opcional · déjalo vacío si se vende desde cualquier origen</small>}</div>
+                <div class="ui-sec-t"><span>B</span> Origen de venta @if (esPaq) {<b class="ui-req">Obligatorio</b>} else {<b class="ui-opc">Opcional</b><small>déjalo vacío si se vende desde cualquier origen</small>}</div>
                 <div class="ui-row">
                     <div class="ui-f" data-siempre><label>País de origen</label><select id="cPaisOrigen"></select></div>
                     <div class="ui-f" data-siempre><label>Ciudad de origen @if (!esPaq) {<em>opcional</em>}</label><input id="cOrigen" placeholder="@(esPaq ? "Ej. Madrid" : "Ej. Madrid · o déjalo vacío")"><span class="msg"></span></div>
                 </div>
             </div>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>C</span> Campañas <small>se crea @(esPaq ? "un paquete" : "una oferta") por cada hotel × fecha × campaña</small></div>
+                <div class="ui-sec-t"><span>C</span> Campañas <b class="ui-req">Al menos una</b><small>se crea @(esPaq ? "un paquete" : "una oferta") por cada hotel × fecha × campaña</small></div>
                 <div id="cCampanyas"></div>
             </div>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>D</span> Suplementos y tasas <small>van incluidos en el precio total</small></div>
+                <div class="ui-sec-t"><span>D</span> Suplementos y tasas <b class="ui-opc">Si aplica</b><small>van incluidos en el precio total</small></div>
                 <div id="cSuplementos"></div>
                 <div class="xp-break" id="cDesglose"></div>
             </div>
@@ -155,17 +155,10 @@
 
         <!-- PASO 5 -->
         <section class="xp-panel ui-pane" data-paso="5">
-            <h2>Notas y confirmación</h2>
-            <p class="sub">Agrega lo que incluye y no incluye (opcional) y revisa antes de cargar.</p>
-            <div class="ui-sec xp-notas">
-                <div class="ui-sec-t"><span><i class="bi bi-journal-text"></i></span> Notas <small>se guardan en cada @of1</small></div>
-                <div id="xpNotas"></div>
-                <div class="ui-chips">
-                    <button type="button" class="ui-pick" onclick="XP.nota('Incluye')">+ Incluye</button>
-                    <button type="button" class="ui-pick" onclick="XP.nota('No incluye')">+ No incluye</button>
-                    <button type="button" class="ui-pick" onclick="XP.nota('Condiciones')">+ Condiciones</button>
-                    <button type="button" class="ui-pick" onclick="XP.nota('Importante')">+ Importante</button>
-                </div>
+            <h2>Información para el cliente y confirmación</h2>
+            <p class="sub">Lo de abajo es <b>opcional</b>. Pulsa «Revisar» para ver si falta algo y luego «Cargar».</p>
+            <div class="ui-sec">
+                <div id="xpInfo"></div>
             </div>
             <label class="ui-switch" style="margin-bottom:18px"><input type="checkbox" id="xpPublicar" checked><span class="tr"></span> Actualizar la vitrina web de hoteles al terminar</label>
             <div id="xpRevision"></div>
@@ -282,11 +275,11 @@ const XP = (() => {
     }
 
     // ===================== NOTAS =====================
-    function pintarNotas() {
-        $('#xpNotas').innerHTML = S.notas.map((n, i) => `<div class="nota">
-            <select class="ui-input" data-i="${i}" data-k="tipo">${['Incluye', 'No incluye', 'Condiciones', 'Importante', 'Documentación', 'Oferta'].map(t => `<option ${t === n.tipo ? 'selected' : ''}>${t}</option>`).join('')}</select>
-            <textarea class="ui-input" data-i="${i}" data-k="texto" rows="2" placeholder="Escribe la nota…">${esc(n.texto)}</textarea>
-            <button type="button" class="ui-ibtn danger" onclick="XP.quitarNota(${i})"><i class="bi bi-trash3"></i></button></div>`).join('');
+    // Cada fila del bloque común se manda con el mismo «Tipo» que usaban las notas sueltas (el servidor no cambia)
+    const NOTA_TIPO = [['Incluye', 'Incluye'], ['No_Incluye', 'No incluye'], ['Condiciones', 'Condiciones'], ['Documentacion', 'Documentación'], ['Importante', 'Importante'], ['Oferta_Especial', 'Oferta']];
+    function notasInfo() {
+        const v = EVCodigo.leerInfo($('#xpInfo')) || {};
+        return NOTA_TIPO.filter(([k]) => v[k]).map(([k, tipo]) => ({ Tipo: tipo, Texto: v[k] }));
     }
 
     // ===================== RESUMEN =====================
@@ -325,7 +318,7 @@ const XP = (() => {
             Campanyas: campanyas.datos().map(c => ({ Id_Campanya: parseInt(c.opcion, 10), Descuento: c.valor })),
             Suplementos: suplementos.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor })),
             ConVuelo: S.conVuelo, VuelosIda: S.conVuelo ? vIda.datos() : [], VuelosVuelta: S.conVuelo ? vVuelta.datos() : [],
-            Notas: S.notas.filter(n => n.texto.trim()).map(n => ({ Tipo: n.tipo, Texto: n.texto })),
+            Notas: notasInfo(),
             PublicarEnWeb: $('#xpPublicar').checked
         };
     }
@@ -425,7 +418,7 @@ const XP = (() => {
             resumen();
         }));
 
-        $('#xpNotas').addEventListener('input', e => { const x = e.target.closest('[data-i]'); if (x) S.notas[+x.dataset.i][x.dataset.k] = x.value; });
+        $('#xpInfo').innerHTML = EVCodigo.info({});   // Información para el cliente: desplegable, opcional, una fila por texto
         $('#xpRevisar').onclick = revisar;
         $('#xpCargar').onclick = cargarTodo;
 
@@ -461,8 +454,8 @@ const XP = (() => {
         },
         precioTodas: () => { const p = parseFloat($('#xpTodas').value); if (!(p > 0)) { EV.toast('Escribe el precio.', 'err'); return; } mx.todas(p); },
         limpiarFechas: async () => { if (!mx.fechas().length) return; if (await EV.confirmar({ titulo: '¿Quitar todas las fechas?', texto: `Se quitarán ${mx.fechas().length} fechas de esta carga (no afecta lo ya guardado).`, si: 'Quitar todas', peligro: true })) mx.limpiar(); },
-        nota: t => { S.notas.push({ tipo: t, texto: '' }); pintarNotas(); $$('#xpNotas textarea').pop()?.focus(); },
-        quitarNota: i => { S.notas.splice(i, 1); pintarNotas(); }
+        // XP.nota('Incluye') abre el bloque y pone el cursor en esa fila
+        nota: t => { const d = $('#xpInfo details'); if (d) d.open = true; $(`#xpInfo [data-info="${NOTA_TIPO.find(x => x[1] === t)?.[0] || 'Incluye'}"]`)?.focus(); }
     };
 })();
 </script>

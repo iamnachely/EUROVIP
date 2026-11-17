@@ -7,6 +7,14 @@
 <style>
     /* Punto 6 y 7: información de cada carga y ventana para editar una salida */
     .cx-cargas { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; padding: 12px 14px; border-radius: 16px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    .cx-info-carga { border: 1px solid var(--ev-line); border-radius: 18px; background: var(--ev-surface); margin-bottom: 12px; }
+    .cx-info-carga > summary { list-style: none; cursor: pointer; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 14px 16px; font-size: 14px; }
+    .cx-info-carga > summary::-webkit-details-marker { display: none; }
+    .cx-info-carga > summary .est { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--ev-muted); }
+    .cx-info-carga > summary .est.si { color: var(--ev-deep); }
+    .cx-info-carga > .cuerpo { padding: 0 16px 16px; }
+    .cx-info-carga .ev-info.plano > .cab { display: none; }
+    .cx-info-carga .acts { display: flex; gap: 10px; justify-content: flex-end; align-items: center; margin-top: 12px; }
     .cx-cargas small { color: var(--ev-muted); font-weight: 600; flex: 1 1 200px; }
     .cx-modal-fondo { position: fixed; inset: 0; background: rgba(11,18,21,.55); z-index: 2500; display: flex; align-items: flex-start; justify-content: center; padding: 5vh 16px; overflow: auto; }
     .cx-modal { background: var(--ev-surface); border-radius: 22px; width: min(760px, 100%); box-shadow: 0 30px 80px -30px rgba(11,18,21,.5); }
@@ -163,47 +171,63 @@
     </div>
     <div class="ui-dt">
         <div class="ui-tabs" id="edTabs">
-            <button type="button" data-tab="tDatos" class="on"><i class="bi bi-card-text"></i> Datos</button>
+            <button type="button" data-tab="tDatos" class="on"><i class="bi bi-card-text"></i> Datos <span class="n">obligatorio</span></button>
             <button type="button" data-tab="tDestinos"><i class="bi bi-geo-alt"></i> Destinos <span class="n" id="nDest">0</span></button>
             <button type="button" data-tab="tHoteles"><i class="bi bi-building"></i> Hoteles <span class="n" id="nHot">0</span></button>
             <button type="button" data-tab="tDias"><i class="bi bi-calendar3-week"></i> Itinerario <span class="n" id="nDias">0</span></button>
             <button type="button" data-tab="tSalidas" id="tabSalidas"><i class="bi bi-airplane-engines"></i> Salidas <span class="n" id="nSal">0</span></button>
+            <button type="button" data-tab="tInfo"><i class="bi bi-info-circle"></i> Info. cliente <span class="n" id="nInfo">opcional</span></button>
         </div>
     </div>
     <div class="ui-db">
         <!-- DATOS -->
         <section class="ui-pane on" id="tDatos">
-            <div class="ui-row">
-                <div class="ui-f"><label for="edCodigo">Código interno <em>letras y números, sin espacios · único en todo el sistema</em></label><input id="edCodigo" maxlength="100" placeholder="Ej. CostaRicaEsencial"><span class="msg"></span></div>
-                <div class="ui-f"><label for="edNombre">Nombre del circuito <em>máx. 50</em></label><input id="edNombre" maxlength="50" placeholder="Ej. Costa Rica Esencial"><span class="msg"></span></div>
-            </div>
-            <div class="ui-row">
-                <div class="ui-f"><label for="edProveedor">Tour operador (proveedor)</label><input id="edProveedor" placeholder="Busca el tour operador…"><span class="msg"></span></div>
-                <div class="ui-f"><label for="edNoches">Noches</label>
-                    <div class="cx-noches">
-                        <button type="button" class="ui-ibtn" onclick="CX.noches(-1)"><i class="bi bi-dash-lg"></i></button>
-                        <input id="edNoches" type="number" min="1" max="60" value="7">
-                        <button type="button" class="ui-ibtn" onclick="CX.noches(1)"><i class="bi bi-plus-lg"></i></button>
-                    </div><span class="msg"></span>
+            <div class="ui-guia"><span><b class="ui-req">Obligatorio</b> sección 1 y al menos un destino (pestaña <b>Destinos</b>)</span><span><b class="ui-opc">Opcional</b> fotos, resumen, prioridad, hoteles, itinerario e info. para el cliente</span></div>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>1</span> Datos básicos <b class="ui-req">Obligatorio</b></div>
+                <p class="ui-sec-sub">Código, nombre, tour operador y noches. Con esto y un destino ya se puede guardar.</p>
+                <div class="ui-row">
+                    <div class="ui-f"><label for="edCodigo">Código interno <b class="ui-ast">*</b> <em>letras y números, sin espacios · único en todo el sistema</em></label><input id="edCodigo" maxlength="100" placeholder="Ej. CostaRicaEsencial"><span class="msg"></span></div>
+                    <div class="ui-f"><label for="edNombre">Nombre del circuito <b class="ui-ast">*</b> <em>máx. 50</em></label><input id="edNombre" maxlength="50" placeholder="Ej. Costa Rica Esencial"><span class="msg"></span></div>
+                </div>
+                <div class="ui-row">
+                    <div class="ui-f"><label for="edProveedor">Tour operador (proveedor) <b class="ui-ast">*</b></label><input id="edProveedor" placeholder="Busca el tour operador…"><span class="msg"></span></div>
+                    <div class="ui-f"><label for="edNoches">Noches <b class="ui-ast">*</b></label>
+                        <div class="cx-noches">
+                            <button type="button" class="ui-ibtn" onclick="CX.noches(-1)"><i class="bi bi-dash-lg"></i></button>
+                            <input id="edNoches" type="number" min="1" max="60" value="7">
+                            <button type="button" class="ui-ibtn" onclick="CX.noches(1)"><i class="bi bi-plus-lg"></i></button>
+                        </div><span class="msg"></span>
+                    </div>
                 </div>
             </div>
-            <div class="ui-f" id="edPrio"></div>
-            <div class="ui-f"><label>Imagen de portada <em>opcional · se guarda en multimedia/circuitos</em></label>
-                <input id="edCaratula" type="hidden">
-                <div class="cx-portada" id="edPortada" title="Arrastra aquí la imagen de portada"></div>
-                <div class="cx-img-acts">
-                    <label class="ev-btn ghost sm"><input type="file" id="edPortadaArchivo" accept="image/jpeg,image/png,image/webp" hidden><i class="bi bi-upload"></i> <span id="edPortadaTxt">Subir portada</span></label>
-                    <button type="button" class="ev-btn ghost sm" id="edPortadaQuitar" hidden><i class="bi bi-x-lg"></i> Quitar</button>
-                    <small id="edPortadaNombre"></small>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>2</span> Fotos <b class="ui-opc">Opcional</b></div>
+                <p class="ui-sec-sub">La portada sale en la tarjeta; la intermedia y la galería, en la ficha del circuito.</p>
+                <div class="ui-f"><label>Imagen de portada <em>se guarda en multimedia/circuitos</em></label>
+                    <input id="edCaratula" type="hidden">
+                    <div class="cx-portada" id="edPortada" title="Arrastra aquí la imagen de portada"></div>
+                    <div class="cx-img-acts">
+                        <label class="ev-btn ghost sm"><input type="file" id="edPortadaArchivo" accept="image/jpeg,image/png,image/webp" hidden><i class="bi bi-upload"></i> <span id="edPortadaTxt">Subir portada</span></label>
+                        <button type="button" class="ev-btn ghost sm" id="edPortadaQuitar" hidden><i class="bi bi-x-lg"></i> Quitar</button>
+                        <small id="edPortadaNombre"></small>
+                    </div>
                 </div>
+                <div class="ui-f"><label>Foto intermedia y galería <em>cabecera de la ficha y más fotos; se guardan al momento</em></label><div id="edGaleria"></div></div>
             </div>
-            <div class="ui-f"><label>Foto intermedia y galería <em>cabecera de la ficha y más fotos; se guardan al momento</em></label><div id="edGaleria"></div></div>
-            <div class="ui-f"><label for="edResumen">Resumen del recorrido <em>opcional</em></label><textarea id="edResumen" placeholder="Ej. 7 noches recorriendo San José, Arenal y Manuel Antonio…"></textarea></div>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>3</span> Resumen del recorrido <b class="ui-opc">Opcional</b></div>
+                <div class="ui-f"><label for="edResumen">Resumen del recorrido <em>se ve en la web</em></label><textarea id="edResumen" placeholder="Ej. 7 noches recorriendo San José, Arenal y Manuel Antonio…"></textarea></div>
+            </div>
+            <div class="ui-sec">
+                <div class="ui-sec-t"><span>4</span> Prioridad y precio del proveedor <b class="ui-opc">Opcional</b></div>
+                <div class="ui-f" id="edPrio"></div>
+            </div>
         </section>
 
         <!-- DESTINOS -->
         <section class="ui-pane" id="tDestinos">
-            <div class="ui-note info"><i class="bi bi-info-circle"></i><div>Elige el país y busca los destinos que recorre el circuito. Se guardan en el orden en que los agregues.</div></div>
+            <div class="ui-note info"><i class="bi bi-info-circle"></i><div><b>Obligatorio: al menos un destino.</b> Elige el país y busca los destinos que recorre el circuito. Se guardan en el orden en que los agregues.</div></div>
             <div class="ui-row">
                 <div class="ui-f"><label>País</label><select id="edPais"></select></div>
                 <div class="ui-f"><label>Agregar destino</label><input id="edDestino" placeholder="Escribe un destino…"></div>
@@ -213,7 +237,7 @@
 
         <!-- HOTELES -->
         <section class="ui-pane" id="tHoteles">
-            <div class="ui-note info"><i class="bi bi-info-circle"></i><div>Agrega los hoteles que usa el circuito según la categoría (Standard, Superior…). Un mismo hotel puede estar en varias categorías.</div></div>
+            <div class="ui-note info"><i class="bi bi-info-circle"></i><div><b>Opcional.</b> Agrega los hoteles que usa el circuito según la categoría (Standard, Superior…). Un mismo hotel puede estar en varias categorías.</div></div>
             <div class="ui-row">
                 <div class="ui-f"><label>Categoría</label><select id="edCategoria"></select></div>
                 <div class="ui-f"><label>Buscar hotel <em>filtra por los destinos del circuito</em></label><input id="edHotel" placeholder="Nombre o número del hotel…"></div>
@@ -242,6 +266,12 @@
                 <a class="ev-btn ghost sm" id="edCargarClasica" href="#"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</a>
             </div>
             <div id="edSalidas"></div>
+        </section>
+
+        <!-- INFORMACIÓN PARA EL CLIENTE (opcional): se guarda por cada carga de salidas -->
+        <section class="ui-pane" id="tInfo">
+            <div class="ui-sec-t"><span><i class="bi bi-info-circle"></i></span> Información para el cliente <b class="ui-opc">Opcional</b><small>incluye, no incluye, condiciones… · una por cada carga de salidas</small></div>
+            <div id="edInfoCargas"></div>
         </section>
     </div>
     <div class="ui-df">
@@ -305,7 +335,7 @@ const CX = (() => {
     const drawer = EV.drawer(ed);
     let galeria = null;   // intermedia + galería (Eurovip.multimedia); la portada sigue en su recuadro
     const drawerCat = EV.drawer($('#cxCat'));
-    const tabs = EV.tabs($('#edTabs'));
+    const tabs = EV.tabs($('#edTabs'), id => { if (id === 'tInfo') pintarInfo(); });
     let lista = [], estado = null, paises = [], categorias = [], regimenes = [];
 
     // ======================= LISTA =======================
@@ -333,7 +363,10 @@ const CX = (() => {
         const nombrePais = cod => (paises.find(p => p.valor === cod)?.texto) || cod || 'Sin país';
         const grupos = new Map();
         lista.forEach(c => { const k = (c.paises || '').split(',')[0].trim(); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(c); });
-        const orden = [...grupos.keys()].sort((a, b) => !a ? 1 : !b ? -1 : nombrePais(a).localeCompare(nombrePais(b), 'es'));
+        // «si le pongo prioridad o peso 1, ese circuito sale de primero»: los grupos con prioridad van arriba (por su mejor
+        // prioridad) y dentro de cada grupo la lista ya viene ordenada por prioridad; el resto, por nombre del país.
+        const mejor = k => Math.min(...grupos.get(k).map(c => c.peso || 99999));
+        const orden = [...grupos.keys()].sort((a, b) => mejor(a) - mejor(b) || (!a ? 1 : !b ? -1 : nombrePais(a).localeCompare(nombrePais(b), 'es')));
         let n = 0;
         $('#cxLista').innerHTML = `<div class="cx-grupos-nav">${orden.map(k => `<a href="#cxg-${esc(k || 'x')}" onclick="event.preventDefault();document.getElementById('cxg-${esc(k || 'x')}').scrollIntoView({behavior:'smooth',block:'start'})"><i class="bi bi-geo-alt-fill"></i> ${esc(nombrePais(k))} <b>${grupos.get(k).length}</b></a>`).join('')}</div>` +
             orden.map(k => `<section class="cx-grupo" id="cxg-${esc(k || 'x')}"><h2><i class="bi bi-geo-alt-fill"></i> ${esc(nombrePais(k))} <small>${grupos.get(k).length} circuito${grupos.get(k).length === 1 ? '' : 's'}</small></h2>
@@ -400,7 +433,7 @@ const CX = (() => {
         $('#edEliminar').hidden = !c.codigoOriginal;
         $('#tabSalidas').hidden = !c.codigoOriginal;
         $$('.ui-f.err', ed).forEach(f => { f.classList.remove('err'); const m = $('.msg', f); if (m) m.textContent = ''; });
-        portada(); pintarDestinos(); pintarHoteles(); pintarDias(); pintarSalidas();
+        portada(); pintarDestinos(); pintarHoteles(); pintarDias(); pintarSalidas(); $('#edInfoCargas').innerHTML = '';
         galeria ??= EVMultimedia.montar($('#edGaleria'), { tipo: 'CIRCUITO', portada: false, intermedia: true, nombre: 'el circuito' });
         galeria.cambiar(c.codigoOriginal ? c.nombre : null);
         tabs.ir('tDatos');
@@ -520,12 +553,13 @@ const CX = (() => {
 
     // ---- salidas ----
     function pintarSalidas() {
+        estado._info = null; contarInfo();   // las cargas pueden haber cambiado: el tab «Info. cliente» se vuelve a leer al abrirlo
         $('#nSal').textContent = estado.salidas.length;
         $('#edCargarExpress').href = '/CargaCircuitos/Express?circuito=' + encodeURIComponent(estado.codigoOriginal || '');
         $('#edCargarClasica').href = '/CargaCircuitos/Clasica?circuito=' + encodeURIComponent(estado.codigoOriginal || '');
         if (!estado.salidas.length) { $('#edSalidas').innerHTML = '<div class="ui-empty" style="padding:24px"><i class="bi bi-calendar-plus big"></i><h3>Sin salidas cargadas</h3><p>Carga fechas y precios con la Carga Express o con Cargar Excel.</p></div>'; return; }
         const cargas = [...new Set(estado.salidas.map(x => x.codigo).filter(Boolean))];
-        $('#edSalidas').innerHTML = `<div class="cx-cargas"><b><i class="bi bi-journal-text"></i> Información para el cliente</b> <small>incluye, no incluye, condiciones y documentación de cada carga</small>
+        $('#edSalidas').innerHTML = `<div class="cx-cargas"><b><i class="bi bi-journal-text"></i> Información para el cliente</b> <small>incluye, no incluye, condiciones y documentación de cada carga · se editan en la pestaña «Info. cliente»</small>
             ${cargas.map(c => `<button type="button" class="ev-btn ghost sm" onclick="CX.textos('${esc(c)}')"><i class="bi bi-pencil-square"></i> Carga ${esc(c)} <span class="ui-chip ghost">${estado.salidas.filter(x => x.codigo === c).length} salidas</span></button>`).join('')}</div>
             <div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Salida</th><th>Regreso</th><th>Campaña</th><th>Categoría</th><th>Origen</th><th>Vuelo</th><th class="num">Precio web</th><th>Activa</th><th></th></tr></thead><tbody>
             ${estado.salidas.map(s => `<tr>
@@ -536,6 +570,47 @@ const CX = (() => {
                 <td style="white-space:nowrap"><button class="ui-ibtn" title="Editar salida" onclick="CX.editarSalida(${s.id_Servicio})"><i class="bi bi-pencil"></i></button>
                     <button class="ui-ibtn danger" title="Eliminar salida" onclick="CX.eliminarSalida(${s.id_Servicio})"><i class="bi bi-trash3"></i></button></td></tr>`).join('')}
             </tbody></table></div>`;
+    }
+
+    // ---- información para el cliente (tab «Info. cliente») ----
+    // El circuito no guarda estos textos: van con cada CARGA de salidas en Eurovip.servicio_descripcion (como ya hacían la Carga
+    // Express y Cargar Excel). Se leen con /Circuitos/Textos y se guardan con /Circuitos/GuardarTextos (mismo formato de siempre).
+    const cargasDe = () => [...new Set((estado?.salidas || []).map(x => x.codigo).filter(Boolean))];
+    function contarInfo() { const n = cargasDe().length; $('#nInfo').textContent = n ? n + (n === 1 ? ' carga' : ' cargas') : 'opcional'; }
+    async function pintarInfo() {
+        const caja = $('#edInfoCargas'), cargas = cargasDe();
+        contarInfo();
+        if (estado._info) return;   // ya pintado: no se pierde lo que se esté escribiendo
+        if (!estado.codigoOriginal || !cargas.length) {
+            caja.innerHTML = `<div class="ui-note info"><i class="bi bi-info-circle"></i><div>La información para el cliente se guarda <b>con cada carga de salidas</b>.
+                ${estado.codigoOriginal ? 'Este circuito todavía no tiene salidas.' : 'Primero guarda el circuito.'} Al cargar salidas con la <b>Carga Express</b> (paso 5) o con <b>Cargar Excel</b> (pestaña INFO. CLIENTE) la puedes escribir; después la editas aquí.</div></div>`;
+            return;
+        }
+        estado._info = true;
+        caja.innerHTML = cargas.map((c, i) => `<details class="cx-info-carga" data-carga-info="${esc(c)}" ${i === 0 ? 'open' : ''}>
+            <summary><i class="bi bi-box-seam"></i> <b>Carga ${esc(c)}</b> <span class="ui-chip ghost">${estado.salidas.filter(x => x.codigo === c).length} salidas</span><span class="est" data-est>Cargando…</span><i class="bi bi-chevron-down"></i></summary>
+            <div class="cuerpo"><div data-bloque><div class="ui-skel" style="height:120px"></div></div>
+                <div class="acts"><small style="color:var(--ev-muted);font-weight:600">Vale para todas las salidas de esta carga.</small><button type="button" class="ev-btn sm" data-guardar-info disabled><i class="bi bi-check2-circle"></i> Guardar información</button></div></div></details>`).join('');
+        $$('[data-carga-info]', caja).forEach(async d => {
+            const c = d.dataset.cargaInfo, bloque = $('[data-bloque]', d), est = $('[data-est]', d), btn = $('[data-guardar-info]', d);
+            const pintaEst = () => { const n = EVCodigo.contarInfo(bloque); est.textContent = n ? `${n} de 6 con texto` : 'vacío'; est.classList.toggle('si', n > 0); };
+            try {
+                const x = await EV.api('/Circuitos/Textos?codigo=' + encodeURIComponent(c));
+                bloque.innerHTML = EVCodigo.info({ ...x, oferta_Especial: x.oferta }, { plano: true, titulo: '' });
+                pintaEst(); btn.disabled = false;
+                bloque.addEventListener('ev:info', pintaEst);
+            } catch (e) { bloque.innerHTML = `<div class="ui-note err"><i class="bi bi-exclamation-octagon"></i><div>${esc(e.message)}</div></div>`; est.textContent = ''; return; }
+            btn.onclick = async () => {
+                const v = EVCodigo.leerInfo(bloque) || {};
+                btn.disabled = true;
+                try {
+                    const r = await EV.post('/Circuitos/GuardarTextos', { Codigo: c, Incluye: v.Incluye || '', No_Incluye: v.No_Incluye || '', Condiciones: v.Condiciones || '',
+                        Documentacion: v.Documentacion || '', Importante: v.Importante || '', Oferta: v.Oferta_Especial || '' });
+                    EV.toast(r.mensaje);
+                } catch (e) { EV.toast(e.message, 'err'); }
+                finally { btn.disabled = false; }
+            };
+        });
     }
 
     // ---- guardar ----
@@ -764,17 +839,12 @@ const CX = (() => {
             EVCodigo.campo($('#vsInterno'), { producto: 'CIRCUITO', clave: () => x.codigo || '', anterior: () => x.codigo_Interno || '' });
         },
         // ---- Punto 6: información para el cliente de una carga ----
+        // ---- Punto 6: información para el cliente de una carga → pestaña «Info. cliente» (una fila por texto) ----
         textos: async codigo => {
-            let t; try { t = await EV.api('/Circuitos/Textos?codigo=' + encodeURIComponent(codigo)); } catch (e) { EV.toast(e.message, 'err'); return; }
-            const area = (id, et, v) => `<div class="ui-f"><label for="${id}">${et}</label><textarea id="${id}" rows="4">${esc(v || '')}</textarea></div>`;
-            ventana('Información para el cliente', `Carga ${esc(codigo)} · vale para todas sus salidas`, `
-                <div class="ui-row">${area('vtInc', 'Incluye', t.incluye)}${area('vtNoInc', 'No incluye', t.no_Incluye)}</div>
-                <div class="ui-row">${area('vtCond', 'Nota / condiciones', t.condiciones)}${area('vtDocs', 'Documentación', t.documentacion)}</div>
-                <div class="ui-row">${area('vtImp', 'Importante', t.importante)}${area('vtOfe', 'Oferta especial', t.oferta)}</div>`, async () => {
-                const r = await EV.post('/Circuitos/GuardarTextos', { Codigo: codigo, Incluye: $('#vtInc').value, No_Incluye: $('#vtNoInc').value, Condiciones: $('#vtCond').value,
-                    Documentacion: $('#vtDocs').value, Importante: $('#vtImp').value, Oferta: $('#vtOfe').value });
-                EV.toast(r.mensaje);
-            });
+            tabs.ir('tInfo');
+            await pintarInfo();
+            const d = [...document.querySelectorAll('[data-carga-info]')].find(x => x.dataset.cargaInfo === codigo);
+            if (d) { d.open = true; setTimeout(() => d.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120); }
         },
         eliminarSalida: async id => {
             if (!await EV.confirmar({ titulo: '¿Eliminar esta salida?', texto: `La salida #${id} se borra con sus vuelos, tasas y notas.`, peligro: true, si: 'Eliminar salida' })) return;

@@ -251,6 +251,10 @@
     .hx-sec { margin-bottom: 26px; padding-bottom: 6px; }
     .hx-sec + .hx-sec { border-top: 1px dashed var(--ev-line); padding-top: 22px; }
     .hx-sec-t { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 16px; margin-bottom: 16px; }
+    .hx-sec-sub { margin: -10px 0 16px 42px; color: var(--ev-muted); font-size: 13px; font-weight: 600; }
+    .hx-tabs button .n { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: var(--ev-line); color: var(--ev-muted); }
+    .hx-tabs button .hx-tab-req { color: #B54708; }
+    .hx-sec-t .ui-req, .hx-sec-t .ui-opc { margin-left: 4px; }
     .hx-sec-t span { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--ev-ink); color: var(--ev-aqua); font-size: 13px; }
     .hx-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
     .hx-row.r3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -450,13 +454,16 @@
 
         <!-- Pestañas: lo que hay que escribir siempre / lo que ya viene relleno -->
         <div class="hx-tabs" role="tablist">
-            <button type="button" class="on" data-ptab="principal" role="tab"><i class="bi bi-building"></i> Lo principal</button>
-            <button type="button" data-ptab="mas" role="tab"><i class="bi bi-sliders"></i> Más datos <small>ya rellenos</small><span class="hx-tab-err" hidden>!</span></button>
+            <button type="button" class="on" data-ptab="principal" role="tab"><i class="bi bi-building"></i> 1 · Lo principal <small class="hx-tab-req">obligatorio</small></button>
+            <button type="button" data-ptab="mas" role="tab"><i class="bi bi-sliders"></i> 2 · Más datos <small>ya rellenos</small><span class="hx-tab-err" hidden>!</span></button>
+            <button type="button" data-ptab="info" role="tab"><i class="bi bi-info-circle"></i> 3 · Info. cliente <span class="n" id="hInfoN">opcional</span></button>
         </div>
         <div class="hx-pane on" data-pane="principal">
+        <div class="ui-guia"><span><b class="ui-req">Obligatorio</b> lo que dice «obligatorio»</span><span><b class="ui-opc">Opcional</b> foto, prioridad, «Más datos» e «Info. cliente»</span><span>Para guardar basta con esta pestaña.</span></div>
         <!-- 1. Hotel: se guarda igual que ViajeVDT.dbo.inicio (tipo_servicio = Hotel) -->
         <div class="hx-sec">
-            <div class="hx-sec-t"><span>1</span> El hotel</div>
+            <div class="hx-sec-t"><span>1</span> El hotel <b class="ui-req">Obligatorio</b></div>
+            <p class="hx-sec-sub">Nombre, destino, régimen y código del proveedor. El precio «desde» es opcional.</p>
             <details class="hx-guia">
                 <summary><i class="bi bi-lightbulb"></i> ¿Cómo se llena? Mira ejemplos reales</summary>
                 <p>Así están cargados los hoteles en la web (datos reales de ViajeVDT):</p>
@@ -517,7 +524,7 @@
             </div>
             <div class="hx-row">
                 <div class="hx-f">
-                    <label for="PrecioWeb">Precio desde</label>
+                    <label for="PrecioWeb">Precio desde <em>opcional</em></label>
                     <div class="hx-money"><b id="mSim">RD$</b><input id="PrecioWeb" name="PrecioWeb" type="number" min="0" step="1" placeholder="0" /></div>
                     <span class="msg"></span>
                 </div>
@@ -528,7 +535,8 @@
 
         <!-- Foto: se guarda en wwwroot/imagenes/hoteles con el nombre del hotel (no va a la base) -->
         <div class="hx-sec">
-            <div class="hx-sec-t"><span><i class="bi bi-camera"></i></span> Foto del hotel</div>
+            <div class="hx-sec-t"><span>2</span> Foto del hotel <b class="ui-opc">Opcional</b></div>
+            <p class="hx-sec-sub">Se puede subir ahora o después; sin foto el hotel se guarda igual.</p>
             <div class="hx-foto" id="fotoZona">
                 <div class="hx-foto-img" id="fotoImg"></div>
                 <div class="hx-foto-info">
@@ -544,14 +552,18 @@
             </div>
         </div>
 
+        <div class="hx-sec">
+            <div class="hx-sec-t"><span>3</span> Prioridad y precio del proveedor <b class="ui-opc">Opcional</b></div>
+            <p class="hx-sec-sub">Para ordenar en la web y comparar con lo que cobra el proveedor. Déjalo vacío si no lo sabes.</p>
             <div class="hx-f" style="margin-top:4px" id="edPrio"></div>
+        </div>
         </div>
 
         <div class="hx-pane" data-pane="mas">
         <div class="hx-mas-nota"><i class="bi bi-magic"></i><span>Todo esto ya viene relleno con lo habitual (campaña General-DT, salida desde Santo Domingo (República Dominicana), sección HOTELES BOOKINGMOTOR…). Cámbialo solo si este hotel es distinto.</span></div>
         <!-- 2. Precio y campaña -->
         <div class="hx-sec">
-            <div class="hx-sec-t"><span>2</span> Campaña, moneda y noches</div>
+            <div class="hx-sec-t"><span><i class="bi bi-megaphone"></i></span> Campaña, moneda y noches <b class="ui-opc">Ya relleno</b></div>
             <div class="hx-row">
                 <div class="hx-f">
                     <label>Idioma <em>fijo</em></label>
@@ -597,7 +609,7 @@
 
         <!-- 3. Viaje -->
         <div class="hx-sec">
-            <div class="hx-sec-t"><span>3</span> Origen y destino</div>
+            <div class="hx-sec-t"><span><i class="bi bi-geo-alt"></i></span> Origen y destino <b class="ui-opc">Ya relleno</b></div>
             <div class="hx-row">
                 <div class="hx-f">
                     <label for="Id_Pais_Origen">País de salida</label>
@@ -647,7 +659,7 @@
 
         <!-- 4. Publicación -->
         <div class="hx-sec">
-            <div class="hx-sec-t"><span>4</span> Publicación en la web</div>
+            <div class="hx-sec-t"><span><i class="bi bi-globe2"></i></span> Publicación en la web <b class="ui-opc">Ya relleno</b></div>
             <div class="hx-row">
                 <div class="hx-f">
                     <label for="Id_Contenedor">Sección de la web</label>
@@ -669,8 +681,12 @@
                 <textarea id="Notas" name="Notas" maxlength="1000" placeholder="Solo para el equipo, no se publica."></textarea>
                 <span class="msg"></span>
             </div>
-            <div id="hInfo" style="margin-top:12px"></div>
         </div>
+        </div>
+
+        <!-- 3. Información para el cliente: tab propio, todo opcional, un texto por fila -->
+        <div class="hx-pane" data-pane="info">
+            <div id="hInfo"></div>
         </div>
     </form>
 
@@ -1174,7 +1190,7 @@ const HX = (() => {
         frm.reset();
         campo('Id_Servicio').value = '';
         valoresPorDefecto();
-        $('#hInfo').innerHTML = EVCodigo.info({});   // CAMBIO 130
+        $('#hInfo').innerHTML = EVCodigo.info({}, { plano: true });   // CAMBIO 130 · tab «Info. cliente»
         irPestana('principal');
         prioridad(null);
         limpiarErrores();
@@ -1205,7 +1221,7 @@ const HX = (() => {
             set('Id_Moneda', (h.id_Moneda || '').trim()); set('Noches', h.noches); set('Id_Pais_Origen', (h.id_Pais_Origen || '').trim());
             set('Origen', h.origen); campo('Origen').evOrigen?.poner(h.origen); set('Id_PaisDestino', (h.id_PaisDestino || '').trim()); set('Latitud', h.latitud); set('Longitud', h.longitud);
             set('Posicion_Destino', h.posicion_Destino); set('Notas', h.notas);
-            $('#hInfo').innerHTML = EVCodigo.info(h);   // CAMBIO 130: incluye, no incluye, condiciones…
+            $('#hInfo').innerHTML = EVCodigo.info(h, { plano: true });   // CAMBIO 130: incluye, no incluye, condiciones…
             prioridad(h);
             codigoProveedor(h);
             campo('Estado').checked = h.estado !== false;
@@ -1420,6 +1436,7 @@ const HX = (() => {
         frm.addEventListener('input', e => { quitarError(e); preview(); });
         frm.addEventListener('change', quitarError);
         $$('[data-ptab]', $('#hxForm')).forEach(b => b.addEventListener('click', () => irPestana(b.dataset.ptab)));
+        EVCodigo.infoContador($('#hInfoN'), $('#hInfo'));   // «2/6» en el tab de información para el cliente
         ['input', 'change'].forEach(t => frm.addEventListener(t, e => { if (e.isTrusted && formAbierto()) formSucio = true; }));
         window.addEventListener('beforeunload', e => { if (formSucio && formAbierto()) { e.preventDefault(); e.returnValue = ''; } });
         frm.addEventListener('change', preview);

@@ -60,64 +60,60 @@
 
 <div class="cl-wrap">
     <div class="ui-tabs" id="clTabs">
-        <button type="button" data-tab="pInicio" class="on"><i class="bi bi-house"></i> INICIO</button>
-        <button type="button" data-tab="pVuelos"><i class="bi bi-airplane"></i> VUELOS <span class="n" id="nVuelos">no</span></button>
-        <button type="button" data-tab="pExcel"><i class="bi bi-file-earmark-excel"></i> CARGAR EXCEL <span class="n" id="nFechas">0</span></button>
+        <button type="button" data-tab="pInicio" class="on"><i class="bi bi-house"></i> 1 · INICIO <span class="n">obligatorio</span></button>
+        <button type="button" data-tab="pVuelos"><i class="bi bi-airplane"></i> 2 · VUELOS <span class="n" id="nVuelos">no</span></button>
+        <button type="button" data-tab="pInfo"><i class="bi bi-info-circle"></i> 3 · INFO. CLIENTE <span class="n" id="nInfo">opcional</span></button>
+        <button type="button" data-tab="pExcel"><i class="bi bi-file-earmark-excel"></i> 4 · CARGAR EXCEL <span class="n" id="nFechas">0</span></button>
     </div>
 
     <!-- ===================== INICIO ===================== -->
     <section class="cl-panel ui-pane on" id="pInicio">
+        <div class="ui-guia"><span><b>Cómo cargar:</b> 1) completa INICIO · 2) VUELOS solo si lleva vuelo · 3) INFO. CLIENTE si quieres · 4) sube el Excel y guarda.</span><span><b class="ui-req">Obligatorio</b> lo que tiene <b class="ui-ast">*</b></span></div>
         <div class="ui-sec">
-            <div class="ui-sec-t"><span>1</span> Datos de la oferta</div>
+            <div class="ui-sec-t"><span>1</span> Datos básicos <b class="ui-req">Obligatorio</b></div>
+            <p class="ui-sec-sub">Qué circuito es, cuántas noches y desde dónde sale el cliente.</p>
+            <div class="ui-row r3">
+                <div class="ui-f"><label>Circuito <b class="ui-ast">*</b></label><input id="iCircuito" placeholder="Busca el circuito…"><span class="msg"></span></div>
+                <div class="ui-f"><label>Noches <b class="ui-ast">*</b></label><input id="iNoches" type="number" min="1" max="60" value="7"><span class="msg"></span></div>
+                <div class="ui-f"><label>Divisa <b class="ui-ast">*</b></label><select id="iDivisa"></select></div>
+            </div>
+            <div id="iDetalle"></div>
+            <div class="ui-row r3">
+                <div class="ui-f" data-siempre><label>País de origen</label><select id="iPaisOrigen"></select></div>
+                <div class="ui-f" data-siempre><label>Ciudad de origen <b class="ui-ast">*</b></label><input id="iOrigen" placeholder="Ciudad de salida…"><span class="msg"></span></div>
+                <div class="ui-f"><label>Categoría de alojamientos</label><select id="iCategoria"></select><span class="msg"></span></div>
+            </div>
+        </div>
+        <div class="ui-sec">
+            <div class="ui-sec-t"><span>2</span> Campañas <b class="ui-req">Al menos una</b><small>una salida por fecha × campaña</small></div>
+            <p class="ui-sec-sub">Elige en qué campañas se publica y su porcentaje.</p>
+            <div id="iCampanyas"></div>
+        </div>
+        <div class="ui-sec">
+            <div class="ui-sec-t"><span>3</span> Suplementos <b class="ui-opc">Si aplica</b><small>se guardan en cada salida</small></div>
+            <div id="iSuplementos"></div>
+        </div>
+        <details data-siempre class="ui-sec ui-pleg">
+            <summary class="ui-sec-t"><span>4</span> Proveedor y códigos <b class="ui-opc">Opcional</b><small>el proveedor viene del circuito · el código de servicio se genera solo</small></summary>
             <div class="ui-row r4">
                 <div class="ui-f"><label>Código servicio</label>
                     <div style="display:flex;gap:6px"><input id="iCodigo" maxlength="30" placeholder="Se genera solo"><button type="button" class="ui-ibtn" title="Generar código" onclick="CL.generarCodigo()"><i class="bi bi-arrow-repeat"></i></button></div></div>
                 <div class="ui-f"><label>Tipo servicio</label><input value="CIRCUITO" readonly tabindex="-1" style="font-weight:800"></div>
                 <div class="ui-f"><label>Idioma</label><input value="ES · Español" readonly tabindex="-1" style="font-weight:800"></div>
-                <div class="ui-f"><label>Divisa</label><select id="iDivisa"></select></div>
+                <div class="ui-f" data-siempre><label>Proveedor <em>por defecto el del circuito</em></label><input id="iProveedor" placeholder="Tour operador…"></div>
             </div>
-            <div class="ui-row r4">
-                <div class="ui-f" data-siempre style="grid-column:span 2"><label>Código interno <em>opcional · tu código: letras y números, sin espacios; único en todo el sistema</em></label><input id="iCodigoInterno" maxlength="30" placeholder="Ej. CIRCEUROPA26"></div>
+            <div class="ui-row">
+                <div class="ui-f" data-siempre><label>Código interno <em>opcional · tu código: letras y números, sin espacios; único en todo el sistema</em></label><input id="iCodigoInterno" maxlength="30" placeholder="Ej. CIRCEUROPA26"></div>
             </div>
-            <div class="ui-row r3">
-                <div class="ui-f"><label>ID del circuito</label><input id="iCircuito" placeholder="Busca el circuito…"><span class="msg"></span></div>
-                <div class="ui-f" data-siempre><label>Selecciona proveedor <em>por defecto el del circuito</em></label><input id="iProveedor" placeholder="Tour operador…"></div>
-                <div class="ui-f"><label>Noches</label><input id="iNoches" type="number" min="1" max="60" value="7"><span class="msg"></span></div>
-            </div>
-            <div id="iDetalle"></div>
-            <div class="ui-row r3">
-                <div class="ui-f" data-siempre><label>País de origen</label><select id="iPaisOrigen"></select></div>
-                <div class="ui-f" data-siempre><label>Selecciona origen</label><input id="iOrigen" placeholder="Ciudad de salida…"><span class="msg"></span></div>
-                <div class="ui-f"><label>Categoría de alojamientos</label><select id="iCategoria"></select><span class="msg"></span></div>
-            </div>
-        </div>
-        <div class="ui-sec">
-            <div class="ui-sec-t"><span>2</span> Campañas <small>una salida por fecha × campaña</small></div>
-            <div id="iCampanyas"></div>
-        </div>
-        <div class="ui-sec">
-            <div class="ui-sec-t"><span>3</span> Suplementos <small>se guardan en cada salida</small></div>
-            <div id="iSuplementos"></div>
-        </div>
-        <div class="ui-sec">
-            <details>
-                <summary style="cursor:pointer;font-weight:800"><i class="bi bi-journal-text"></i> Información para el usuario (notas) <em style="font-style:normal;color:var(--ev-muted);font-weight:600">opcional</em></summary>
-                <div class="ui-row" style="margin-top:12px">
-                    <div class="ui-f"><label>Incluye</label><textarea id="nIncluye"></textarea></div>
-                    <div class="ui-f"><label>No incluye</label><textarea id="nNoIncluye"></textarea></div>
-                </div>
-                <div class="ui-row">
-                    <div class="ui-f"><label>Condiciones</label><textarea id="nNota"></textarea></div>
-                    <div class="ui-f"><label>Documentación</label><textarea id="nDocs"></textarea></div>
-                </div>
-                <div class="ui-row">
-                    <div class="ui-f"><label>Importante</label><textarea id="nImportante" placeholder="Lo que el cliente tiene que saber sí o sí"></textarea></div>
-                    <div class="ui-f"><label>Oferta especial</label><textarea id="nOferta" placeholder="Promoción o ventaja"></textarea></div>
-                </div>
-            </details>
-        </div>
-        <div class="ui-note info" style="margin:0"><i class="bi bi-info-circle"></i><div>Los <b>hoteles, fechas y precios</b> del circuito se cargan desde la pestaña <b>CARGAR EXCEL</b>.</div>
+        </details>
+        <div class="ui-note info" style="margin:16px 0 0"><i class="bi bi-info-circle"></i><div>Los <b>hoteles, fechas y precios</b> del circuito se cargan desde la pestaña <b>CARGAR EXCEL</b>. Los textos para el cliente (incluye, no incluye…) están en <b>INFO. CLIENTE</b>.</div>
             <button type="button" class="ev-btn sm" style="margin-left:auto" onclick="CL.ir('pExcel')">Ir a CARGAR EXCEL <i class="bi bi-arrow-right"></i></button></div>
+    </section>
+
+    <!-- ===================== INFO. CLIENTE (opcional) ===================== -->
+    <section class="cl-panel ui-pane" id="pInfo">
+        <div class="ui-sec-t"><span><i class="bi bi-info-circle"></i></span> Información para el cliente <b class="ui-opc">Opcional</b><small>se guarda en todas las salidas de esta carga</small></div>
+        <div id="clInfo"></div>
     </section>
 
     <!-- ===================== VUELOS ===================== -->
@@ -443,6 +439,9 @@ const CL = (() => {
 
     // ================= INICIO =================
     const tabs = EV.tabs($('#clTabs'));
+    // Información para el cliente: tab propio, una fila por texto. Los campos conservan sus id (#nIncluye, #nNota…) y se leen igual al guardar.
+    $('#clInfo').innerHTML = EVCodigo.info({}, { plano: true, titulo: '', ids: { Incluye: 'nIncluye', No_Incluye: 'nNoIncluye', Condiciones: 'nNota', Documentacion: 'nDocs', Importante: 'nImportante', Oferta_Especial: 'nOferta' } });
+    EVCodigo.infoContador($('#nInfo'), $('#clInfo'));
 
     // Aviso al salir de la página (menú, recargar, cerrar pestaña) si hay una carga a medias. Se apaga al guardar bien.
     let guardia = null;

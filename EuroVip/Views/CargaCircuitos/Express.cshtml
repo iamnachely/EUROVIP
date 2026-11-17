@@ -30,8 +30,7 @@
     .xp-break { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13.5px; font-weight: 700; padding: 12px 14px; border-radius: 14px; background: var(--ev-surface-2); margin-top: 6px; }
     .xp-break span { padding: 5px 10px; border-radius: 10px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
     .xp-break .eq { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
-    .xp-notas .nota { display: grid; grid-template-columns: 200px minmax(0,1fr) auto; gap: 10px; margin-bottom: 10px; align-items: start; }
-    @@media (max-width: 1250px) { .xp { grid-template-columns: 1fr; } .ui-summary { position: static; } }
+        @@media (max-width: 1250px) { .xp { grid-template-columns: 1fr; } .ui-summary { position: static; } }
     @@media (max-width: 1500px) { .xp-gen { grid-template-columns: repeat(3, minmax(0, 1fr)); } .xp-gen .ui-f:nth-child(4) { grid-column: 1 / -1; } .xp-gen > .ev-btn { grid-column: 1 / -1; justify-content: center; } }
     @@media (max-width: 900px) { .xp-gen { grid-template-columns: 1fr 1fr; } .xp-notas .nota { grid-template-columns: 1fr; } }
 </style>
@@ -63,7 +62,7 @@
             <button type="button" class="ui-step" data-p="2"><span class="b">2</span><span><b>Fechas y precios</b><small>calendario</small></span></button>
             <button type="button" class="ui-step" data-p="3"><span class="b">3</span><span><b>Comercial</b><small>campaña, tasas</small></span></button>
             <button type="button" class="ui-step" data-p="4"><span class="b">4</span><span><b>Vuelo</b><small>opcional</small></span></button>
-            <button type="button" class="ui-step" data-p="5"><span class="b">5</span><span><b>Confirmar</b><small>notas y cargar</small></span></button>
+            <button type="button" class="ui-step" data-p="5"><span class="b">5</span><span><b>Confirmar</b><small>info. cliente y cargar</small></span></button>
         </nav>
 
         <!-- PASO 1 -->
@@ -83,12 +82,12 @@
 
             <div id="xpNuevo" hidden>
                 <div class="ui-row">
-                    <div class="ui-f"><label>Nombre del circuito <em>máx. 50</em></label><input id="nNombre" maxlength="50" placeholder="Ej. Joyas de Quisqueya"><span class="msg"></span></div>
-                    <div class="ui-f" data-siempre><label>Código interno <em>del circuito</em></label><input id="nCodigo" maxlength="30" placeholder="Se llena solo"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Nombre del circuito <b class="ui-ast">*</b> <em>máx. 50</em></label><input id="nNombre" maxlength="50" placeholder="Ej. Joyas de Quisqueya"><span class="msg"></span></div>
+                    <div class="ui-f" data-siempre><label>Código interno <b class="ui-ast">*</b> <em>del circuito</em></label><input id="nCodigo" maxlength="30" placeholder="Se llena solo"><span class="msg"></span></div>
                 </div>
                 <div class="ui-row r3">
-                    <div class="ui-f"><label>Tour operador</label><input id="nProveedor" placeholder="Busca el tour operador…"><span class="msg"></span></div>
-                    <div class="ui-f"><label>Noches</label><input id="nNoches" type="number" min="1" max="60" value="7"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Tour operador <b class="ui-ast">*</b></label><input id="nProveedor" placeholder="Busca el tour operador…"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Noches <b class="ui-ast">*</b></label><input id="nNoches" type="number" min="1" max="60" value="7"><span class="msg"></span></div>
                     <div class="ui-f"><label>Portada <em>opcional</em></label>
                         <input type="hidden" id="nCaratula">
                         <div style="display:flex;gap:8px;align-items:center">
@@ -99,7 +98,7 @@
                 </div>
                 <div class="ui-row">
                     <div class="ui-f"><label>País de los destinos</label><select id="nPais"></select></div>
-                    <div class="ui-f"><label>Agregar destinos</label><input id="nDestino" placeholder="Escribe un destino…"><span class="msg"></span></div>
+                    <div class="ui-f"><label>Agregar destinos <b class="ui-ast">*</b> <em>al menos uno</em></label><input id="nDestino" placeholder="Escribe un destino…"><span class="msg"></span></div>
                 </div>
                 <div class="ui-chips" id="nDestinos" style="margin-bottom:16px"></div>
                 <details>
@@ -147,24 +146,25 @@
             <h2>Datos comerciales</h2>
             <p class="sub">Categoría de hoteles, desde dónde se vende, campañas y suplementos.</p>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>A</span> Categoría de hoteles</div>
+                <div class="ui-sec-t"><span>A</span> Categoría de hoteles <b class="ui-req">Obligatorio</b></div>
                 <div class="ui-chips" id="cCategorias"></div>
             </div>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>B</span> Origen de venta, moneda, proveedor y código interno</div>
+                <div class="ui-sec-t"><span>B</span> Origen de venta, moneda, proveedor y código interno <b class="ui-req">Ciudad obligatoria</b></div>
+                <p class="ui-sec-sub">Solo la ciudad de origen es obligatoria. Proveedor y código interno son opcionales.</p>
                 <div class="ui-row r3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
                     <div class="ui-f" data-siempre><label>País de origen</label><select id="cPaisOrigen"></select></div>
-                    <div class="ui-f" data-siempre><label>Ciudad de origen</label><input id="cOrigen" placeholder="Ej. Madrid"><span class="msg"></span></div>
+                    <div class="ui-f" data-siempre><label>Ciudad de origen <b class="ui-ast">*</b></label><input id="cOrigen" placeholder="Ej. Madrid"><span class="msg"></span></div>
                     <div class="ui-f"><label>Moneda</label><select id="cDivisa"></select></div>
                     <div class="ui-f" data-siempre><label>Proveedor <em>de dónde sale · vacío = el del circuito</em></label><select id="cProveedorCarga"><option value="">— El del circuito —</option></select></div>                    <div class="ui-f" data-siempre><label>Código interno <em>opcional · letras y números, único en todo el sistema</em></label><input id="cCodigoCarga" maxlength="30" placeholder="Ej. CIRCEUROPA26"></div>
                 </div>
             </div>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>C</span> Campañas <small>se crea una salida por cada fecha × campaña</small></div>
+                <div class="ui-sec-t"><span>C</span> Campañas <b class="ui-req">Al menos una</b><small>se crea una salida por cada fecha × campaña</small></div>
                 <div id="cCampanyas"></div>
             </div>
             <div class="ui-sec">
-                <div class="ui-sec-t"><span>D</span> Suplementos y tasas <small>van incluidos en el precio total</small></div>
+                <div class="ui-sec-t"><span>D</span> Suplementos y tasas <b class="ui-opc">Si aplica</b><small>van incluidos en el precio total</small></div>
                 <div id="cSuplementos"></div>
                 <div class="xp-break" id="cDesglose"></div>
             </div>
@@ -189,17 +189,10 @@
 
         <!-- PASO 5 -->
         <section class="xp-panel ui-pane" data-paso="5">
-            <h2>Notas y confirmación</h2>
-            <p class="sub">Agrega lo que incluye y no incluye (opcional) y revisa antes de cargar.</p>
-            <div class="ui-sec xp-notas">
-                <div class="ui-sec-t"><span><i class="bi bi-journal-text"></i></span> Notas <small>se guardan en cada salida</small></div>
-                <div id="xpNotas"></div>
-                <div class="ui-chips">
-                    <button type="button" class="ui-pick" onclick="XP.nota('Incluye')">+ Incluye</button>
-                    <button type="button" class="ui-pick" onclick="XP.nota('No incluye')">+ No incluye</button>
-                    <button type="button" class="ui-pick" onclick="XP.nota('Condiciones')">+ Condiciones</button>
-                    <button type="button" class="ui-pick" onclick="XP.nota('Importante')">+ Importante</button>
-                </div>
+            <h2>Información para el cliente y confirmación</h2>
+            <p class="sub">Lo de abajo es <b>opcional</b>. Pulsa «Revisar» para ver si falta algo y luego «Cargar».</p>
+            <div class="ui-sec">
+                <div id="xpInfo"></div>
             </div>
             <label class="ui-switch" style="margin-bottom:18px"><input type="checkbox" id="xpPublicar" checked><span class="tr"></span> Actualizar la vitrina web de circuitos al terminar</label>
             <div id="xpRevision"></div>
@@ -348,11 +341,11 @@ const XP = (() => {
     }
 
     // ===================== NOTAS =====================
-    function pintarNotas() {
-        $('#xpNotas').innerHTML = S.notas.map((n, i) => `<div class="nota">
-            <select class="ui-input" data-i="${i}" data-k="tipo">${['Incluye', 'No incluye', 'Condiciones', 'Importante', 'Documentación', 'Oferta'].map(t => `<option ${t === n.tipo ? 'selected' : ''}>${t}</option>`).join('')}</select>
-            <textarea class="ui-input" data-i="${i}" data-k="texto" rows="2" placeholder="Escribe la nota…">${esc(n.texto)}</textarea>
-            <button type="button" class="ui-ibtn danger" onclick="XP.quitarNota(${i})"><i class="bi bi-trash3"></i></button></div>`).join('');
+    // Cada fila del bloque común se manda con el mismo «Tipo» que usaban las notas sueltas (el servidor no cambia)
+    const NOTA_TIPO = [['Incluye', 'Incluye'], ['No_Incluye', 'No incluye'], ['Condiciones', 'Condiciones'], ['Documentacion', 'Documentación'], ['Importante', 'Importante'], ['Oferta_Especial', 'Oferta']];
+    function notasInfo() {
+        const v = EVCodigo.leerInfo($('#xpInfo')) || {};
+        return NOTA_TIPO.filter(([k]) => v[k]).map(([k, tipo]) => ({ Tipo: tipo, Texto: v[k] }));
     }
 
     // ===================== RESUMEN =====================
@@ -399,7 +392,7 @@ const XP = (() => {
             Suplementos: suplementos.datos().map(s => ({ Id_Tasa: s.opcion, Valor: s.valor })),
             Salidas: [...S.salidas.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([f, p]) => ({ Desde: f, PrecioTotal: p || 0 })),
             ConVuelo: S.conVuelo, VuelosIda: S.conVuelo ? vIda.datos() : [], VuelosVuelta: S.conVuelo ? vVuelta.datos() : [],
-            Notas: S.notas.filter(n => n.texto.trim()).map(n => ({ Tipo: n.tipo, Texto: n.texto })),
+            Notas: notasInfo(),
             PublicarEnWeb: $('#xpPublicar').checked
         };
         return dto;
@@ -541,7 +534,7 @@ const XP = (() => {
         }));
 
         // eventos paso 5
-        $('#xpNotas').addEventListener('input', e => { const x = e.target.closest('[data-i]'); if (x) S.notas[+x.dataset.i][x.dataset.k] = x.value; });
+        $('#xpInfo').innerHTML = EVCodigo.info({});   // Información para el cliente: desplegable, opcional, una fila por texto
         $('#xpRevisar').onclick = revisar;
         $('#xpCargar').onclick = cargarTodo;
 
@@ -590,8 +583,8 @@ const XP = (() => {
         limpiarSalidas: async () => { if (!S.salidas.size) return; if (await EV.confirmar({ titulo: '¿Quitar todas las fechas?', texto: `Se quitarán ${S.salidas.size} fechas de esta carga (no afecta lo ya guardado).`, si: 'Quitar todas', peligro: true })) { S.salidas.clear(); cal.pintar(); pintarSalidas(); } },
         quitarDestino: i => { S.nuevo.destinos.splice(i, 1); pintarNuevo(); },
         quitarHotel: i => { S.nuevo.hoteles.splice(i, 1); pintarNuevo(); },
-        nota: t => { S.notas.push({ tipo: t, texto: '' }); pintarNotas(); $$('#xpNotas textarea').pop()?.focus(); },
-        quitarNota: i => { S.notas.splice(i, 1); pintarNotas(); }
+        // XP.nota('Incluye') abre el bloque y pone el cursor en esa fila
+        nota: t => { const d = $('#xpInfo details'); if (d) d.open = true; $(`#xpInfo [data-info="${NOTA_TIPO.find(x => x[1] === t)?.[0] || 'Incluye'}"]`)?.focus(); }
     };
 })();
 </script>

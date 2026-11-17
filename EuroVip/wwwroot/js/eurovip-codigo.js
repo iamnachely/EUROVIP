@@ -140,36 +140,122 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
     // ---------- Información para el cliente (CAMBIO 130) ----------
     // Los mismos 6 textos opcionales en todos los productos. EVCodigo.info(valores) → HTML del bloque (se abre solo si tiene algo);
     // EVCodigo.leerInfo(raiz) → { Incluye, No_Incluye, Condiciones, Documentacion, Importante, Oferta_Especial } para mandar al guardar.
+    // Pedido de la usuaria: «que sea simple, opcional, y que cada sección esté en una línea». Cada texto va en SU fila:
+    // etiqueta + ayuda corta a la izquierda, campo a la derecha (crece solo al escribir). Arriba, un contador «2 de 6».
+    //   EVCodigo.info(valores, { titulo, plano, ids, attrs })
+    //      plano: true  → sin desplegable (para ponerlo dentro de un tab «Información para el cliente»)
+    //      ids:   { Incluye: 'nIncluye', … } → id de cada campo (pantallas que ya leen sus campos por id)
+    //      attrs: { Incluye: 'data-k="incluye"', … } → atributos extra de cada campo (texto fijo del código, no del usuario)
+    //   EVCodigo.contarInfo(raiz) → cuántos de los 6 tienen texto · EVCodigo.infoContador(elemento, raiz) pinta ese número en vivo
+    //   (en un tab, por ejemplo). Los nombres que se mandan al servidor NO cambian: data-info="Incluye" … "Oferta_Especial".
     const INFO = [
-        ['Incluye', 'Incluye', 'Una cosa por línea. Ej.: Traslado ida y vuelta · Almuerzo buffet'],
-        ['No_Incluye', 'No incluye', 'Una cosa por línea. Ej.: Propinas · Bebidas premium'],
-        ['Condiciones', 'Condiciones', 'Cancelación, cambios, edades, horarios…'],
-        ['Documentacion', 'Documentación', 'Pasaporte, visado, vacunas…'],
-        ['Importante', 'Importante', 'Lo que el cliente tiene que saber sí o sí (qué llevar, punto de encuentro…)'],
-        ['Oferta_Especial', 'Oferta especial', 'Promoción o ventaja de esta oferta']
+        ['Incluye', 'Incluye', 'Lo que entra en el precio', 'Ej.: Traslado ida y vuelta, desayuno buffet (una cosa por línea)', 'bi-check2-circle'],
+        ['No_Incluye', 'No incluye', 'Lo que se paga aparte', 'Ej.: Propinas, bebidas premium, tasas locales', 'bi-x-circle'],
+        ['Condiciones', 'Condiciones', 'Cancelación, cambios, edades', 'Ej.: Cancelación gratis hasta 7 días antes de la salida', 'bi-file-text'],
+        ['Documentacion', 'Documentación', 'Papeles para viajar', 'Ej.: Pasaporte con 6 meses de vigencia', 'bi-passport'],
+        ['Importante', 'Importante', 'Lo que debe saber sí o sí', 'Ej.: Presentarse 30 minutos antes en el lobby del hotel', 'bi-exclamation-triangle'],
+        ['Oferta_Especial', 'Oferta especial', 'Promoción o ventaja', 'Ej.: 2do niño gratis reservando antes del 30 de junio', 'bi-stars']
     ];
     let cssInfo = false;
-    function info(v = {}, { titulo = 'Información para el cliente' } = {}) {
-        if (!cssInfo) {
-            cssInfo = true;
-            const s = document.createElement('style');
-            s.textContent = `.ev-info{border:1px solid var(--ev-line,#E2EFED);border-radius:16px;padding:0 14px;margin:12px 0;background:var(--ev-surface,#fff)}
-.ev-info>summary{cursor:pointer;padding:12px 0;font-weight:800;list-style:none;display:flex;gap:8px;align-items:center}
+    function cssDeInfo() {
+        if (cssInfo) return;
+        cssInfo = true;
+        const s = document.createElement('style');
+        s.textContent = `.ev-info{border:1px solid var(--ev-line,#E2EFED);border-radius:16px;margin:12px 0;background:var(--ev-surface,#fff)}
+.ev-info.plano{border:0;margin:0;background:none}
+.ev-info>summary,.ev-info>.cab{padding:12px 14px;font-weight:800;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ev-info>summary{cursor:pointer;list-style:none;border-radius:16px}
+.ev-info>summary:hover{background:var(--ev-surface-2,#F4F8F7)}
+.ev-info.plano>.cab{padding:0 0 10px}
 .ev-info>summary::-webkit-details-marker{display:none}
-.ev-info>summary em{font-style:normal;font-weight:600;color:var(--ev-muted,#66807C);font-size:12.5px}
-.ev-info>summary .n{margin-left:auto;font-size:12px;font-weight:700;color:var(--ev-deep,#0E8F86)}
-.ev-info .g{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 14px;padding:0 0 14px}
-.ev-info label{display:block;font-size:12.5px;font-weight:800;margin-bottom:4px}
-.ev-info textarea{width:100%;min-height:74px;border:1px solid var(--ev-line,#E2EFED);border-radius:12px;padding:8px 10px;font:inherit;font-size:13.5px;background:var(--ev-surface,#fff);color:inherit;resize:vertical}`;
-            document.head.appendChild(s);
-        }
+.ev-info>summary em,.ev-info>.cab em{font-style:normal;font-weight:600;color:var(--ev-muted,#66807C);font-size:12.5px}
+.ev-info .opc{font-size:11px;font-weight:800;padding:2px 9px;border-radius:99px;background:var(--ev-surface-2,#F4F8F7);border:1px solid var(--ev-line,#E2EFED);color:var(--ev-muted,#66807C);text-transform:uppercase;letter-spacing:.3px}
+.ev-info .n{margin-left:auto;font-size:12px;font-weight:800;color:var(--ev-muted,#66807C);background:var(--ev-surface-2,#F4F8F7);padding:3px 10px;border-radius:99px}
+.ev-info .n.si{background:var(--ev-ink,#0B1215);color:var(--ev-aqua,#74F2E6)}
+.ev-info>summary .chev{transition:transform .2s;color:var(--ev-muted,#66807C)}
+.ev-info[open]>summary .chev{transform:rotate(180deg)}
+.ev-info .ayu{margin:0 14px 10px;font-size:12.5px;font-weight:600;color:var(--ev-muted,#66807C)}
+.ev-info.plano .ayu{margin:0 0 12px}
+.ev-info .filas{display:flex;flex-direction:column;gap:8px;padding:0 14px 14px}
+.ev-info.plano .filas{padding:0}
+.ev-info .fila{display:grid;grid-template-columns:200px minmax(0,1fr);gap:12px;align-items:start;padding:8px 10px;border-radius:14px;background:var(--ev-surface-2,#F4F8F7);border:1.5px solid transparent;transition:border-color .2s,background .2s}
+.ev-info .fila:focus-within{border-color:var(--ev-teal,#2BD4C4);background:var(--ev-surface,#fff)}
+.ev-info .fila>label{display:flex;gap:9px;align-items:flex-start;padding-top:7px;margin:0;font-size:13px;font-weight:800;cursor:pointer;line-height:1.25}
+.ev-info .fila>label>i{font-size:16px;color:var(--ev-muted,#66807C);margin-top:-1px}
+.ev-info .fila.llena>label>i{color:var(--ev-deep,#0E8F86)}
+.ev-info .fila>label small{display:block;font-size:11.5px;font-weight:600;color:var(--ev-muted,#66807C);margin-top:2px}
+.ev-info textarea{width:100%;min-height:40px;border:1.5px solid var(--ev-line,#E2EFED);border-radius:11px;padding:8px 11px;font:500 14px var(--ev-font,inherit);line-height:1.45;background:var(--ev-surface,#fff);color:var(--ev-text,inherit);resize:vertical;outline:0;overflow:hidden}
+.ev-info textarea:focus{border-color:var(--ev-teal,#2BD4C4);box-shadow:0 0 0 4px rgba(116,242,230,.3)}
+.ev-info textarea::placeholder{color:var(--ev-muted,#66807C);opacity:.75}
+@media (max-width:640px){.ev-info .fila{grid-template-columns:1fr;gap:4px}.ev-info .fila>label{padding-top:2px}}`;
+        document.head.appendChild(s);
+    }
+    // Filas visibles al pintar (1 si está vacío; crece con el texto, hasta 8)
+    const filasDe = t => Math.min(8, Math.max(1, String(t).split('\n').reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 70)), 0)));
+    const crecer = ta => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 3, 260) + 'px'; ta.style.overflowY = ta.scrollHeight > 257 ? 'auto' : 'hidden'; };
+    const textoN = n => n ? `${n} de ${INFO.length} con texto` : 'vacío';
+    function info(v = {}, { titulo = 'Información para el cliente', plano = false, ids = {}, attrs = {} } = {}) {
+        cssDeInfo();
         const val = k => v?.[k] ?? v?.[k[0].toLowerCase() + k.slice(1)] ?? '';
         const llenos = INFO.filter(([k]) => String(val(k)).trim()).length;
-        return `<details class="ev-info" data-ev-info data-siempre ${llenos ? 'open' : ''}><summary><i class="bi bi-info-circle"></i> ${esc(titulo)} <em>opcional · se ve en la web</em><span class="n">${llenos ? llenos + ' con texto' : 'vacío'}</span></summary>
-            <div class="g">${INFO.map(([k, t, ph]) => `<div><label>${esc(t)}</label><textarea data-info="${k}" placeholder="${esc(ph)}">${esc(val(k))}</textarea></div>`).join('')}</div></details>`;
+        const cuenta = `<span class="n ${llenos ? 'si' : ''}" data-ev-info-n>${textoN(llenos)}</span>`;
+        // titulo vacío = la sección de la pantalla ya tiene su propio título: solo «se ve en la web» y el contador
+        const cab = titulo ? `<i class="bi bi-info-circle"></i> ${esc(titulo)} <span class="opc">Opcional</span> <em>se ve en la web</em>${cuenta}` : `<em><i class="bi bi-globe2"></i> Se ve en la web, en la ficha del producto.</em>${cuenta}`;
+        const filas = INFO.map(([k, t, ayuda, ph, ico]) => {
+            const id = ids[k] || `evi_${k}_${Math.random().toString(36).slice(2, 8)}`;
+            return `<div class="fila ${String(val(k)).trim() ? 'llena' : ''}"><label for="${esc(id)}"><i class="bi ${ico}"></i><span>${esc(t)}<small>${esc(ayuda)}</small></span></label>`
+                + `<textarea id="${esc(id)}" data-info="${k}" ${attrs[k] || ''} rows="${filasDe(val(k))}" placeholder="${esc(ph)}">${esc(val(k))}</textarea></div>`;
+        }).join('');
+        const cuerpo = `<p class="ayu">Nada aquí es obligatorio: escribe solo lo que quieras que el cliente lea. En «Incluye» y «No incluye» pon una cosa por línea (Enter).</p><div class="filas">${filas}</div>`;
+        return plano
+            ? `<div class="ev-info plano" data-ev-info data-siempre><div class="cab">${cab}</div>${cuerpo}</div>`
+            : `<details class="ev-info" data-ev-info data-siempre ${llenos ? 'open' : ''}><summary>${cab}<i class="bi bi-chevron-down chev"></i></summary>${cuerpo}</details>`;
     }
+    const bloqueInfo = raiz => raiz?.matches?.('[data-ev-info]') ? raiz : raiz?.querySelector?.('[data-ev-info]');
+    function contarInfo(raiz) {
+        const b = bloqueInfo(raiz);
+        return b ? [...b.querySelectorAll('[data-info]')].filter(t => t.value.trim()).length : 0;
+    }
+    // Repinta el contador y las filas con texto (se llama solo al escribir; también se puede llamar tras poner valores por código)
+    function refrescarInfo(raiz) {
+        const b = bloqueInfo(raiz);
+        if (!b) return 0;
+        b.querySelectorAll('[data-info]').forEach(t => t.closest('.fila')?.classList.toggle('llena', !!t.value.trim()));
+        const n = contarInfo(b), el = b.querySelector('[data-ev-info-n]');
+        if (el) { el.textContent = textoN(n); el.classList.toggle('si', n > 0); }
+        b.dispatchEvent(new CustomEvent('ev:info', { bubbles: true, detail: { llenos: n } }));
+        return n;
+    }
+    document.addEventListener('input', e => {
+        const t = e.target;
+        if (!t?.matches?.('[data-ev-info] textarea[data-info]')) return;
+        crecer(t); refrescarInfo(t.closest('[data-ev-info]'));
+    });
+    document.addEventListener('focusin', e => { if (e.target?.matches?.('[data-ev-info] textarea[data-info]')) crecer(e.target); });
+    // Contador para un tab o un título: «Información para el cliente (2)». Sigue al bloque aunque se vuelva a pintar.
+    function infoContador(el, raiz) {
+        if (!el || !raiz) return;
+        const pinta = () => { const n = contarInfo(raiz); el.textContent = n ? `${n}/${INFO.length}` : 'opcional'; el.classList.toggle('si', n > 0); };
+        raiz.addEventListener('ev:info', pinta);
+        new MutationObserver(pinta).observe(raiz, { childList: true, subtree: true });
+        pinta();
+        return pinta;
+    }
+    // ---------- Secciones plegables de las cargas (<details class="ui-pleg">) ----------
+    // • Si un campo de adentro se marca con error, la sección se abre sola (para que se vea qué falta).
+    // • EVCodigo.abrirConDatos(raiz): al editar, abre las secciones plegables que ya tienen algo cargado.
+    const conDato = x => x.type === 'checkbox' || x.type === 'radio' ? false : x.tagName === 'SELECT' ? x.value !== '' && x.selectedIndex > 0 : (x.type !== 'hidden' && x.value.trim() !== '');
+    function abrirConDatos(raiz = document) {
+        raiz.querySelectorAll('details.ui-pleg, details[data-pleg]').forEach(d => { if ([...d.querySelectorAll('input, select, textarea')].some(conDato)) d.open = true; });
+    }
+    const vigilarErrores = () => new MutationObserver(ms => ms.forEach(m => {
+        const t = m.target;
+        if (t.classList?.contains('err') || t.classList?.contains('ev-cod-mal')) { const d = t.closest('details.ui-pleg:not([open]), details[data-pleg]:not([open]), details.ev-info:not([open])'); if (d) d.open = true; }
+    })).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+    if (document.body) vigilarErrores(); else document.addEventListener('DOMContentLoaded', vigilarErrores);
+
     function leerInfo(raiz) {
-        const b = raiz?.matches?.('[data-ev-info]') ? raiz : raiz?.querySelector('[data-ev-info]');
+        const b = bloqueInfo(raiz);
         if (!b) return null;
         return Object.fromEntries(INFO.map(([k]) => [k, b.querySelector(`[data-info="${k}"]`)?.value.trim() || null]));
     }
@@ -224,5 +310,5 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
         q('nombre').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); crear(); } });
     }
 
-    return { campo, validar, proveedores, monedas, simbolo, limpiar, nombreProveedor, origen, ORIGEN, info, leerInfo, estados, estadosLista };
+    return { campo, validar, proveedores, monedas, simbolo, limpiar, nombreProveedor, origen, ORIGEN, info, leerInfo, contarInfo, refrescarInfo, infoContador, abrirConDatos, estados, estadosLista };
 })();
