@@ -8,6 +8,7 @@ window.CXM = (() => {
     const $ = (s, el = document) => el.querySelector(s);
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const dinero = (v, m) => v == null ? '—' : `${m === 'EUR' ? '€' : m === 'DOP' ? 'RD$' : 'US$'}${Number(v).toLocaleString('es-DO', { maximumFractionDigits: 0 })}`;
+    let marcados = new Set(), agregando = false;
     let raiz, destinos = [], elegidos = [], tarjetas = { destinos: [] }, actual = null, pagina = null, cargando = false, filtro = '';
 
     function estilos() {
@@ -27,6 +28,23 @@ window.CXM = (() => {
 .cxm-dcard .bd{padding:10px 12px}.cxm-dcard b{display:block;font-size:14.5px;font-weight:800}
 .cxm-dcard small{display:block;color:var(--ev-muted,#66807C);font-weight:600;font-size:12px}
 .cxm-dcard .pr{color:#C2410C;font-weight:800;font-size:13px;margin-top:4px}
+.cxm-dcard.off .ft img{filter:grayscale(.7);opacity:.7}
+.cxm-sw{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;font-weight:800;cursor:pointer;user-select:none;position:relative}
+.cxm-sw input{position:absolute;opacity:0;width:0;height:0}
+.cxm-sw span{width:38px;height:22px;border-radius:999px;background:#D0D5DD;position:relative;transition:background .2s;flex:none}
+.cxm-sw span::after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.cxm-sw input:checked+span{background:#16A34A}.cxm-sw input:checked+span::after{left:19px}
+.cxm-sw input:focus-visible+span{outline:2px solid #0E8F86;outline-offset:2px}
+.cxm-gt{display:block;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ev-muted,#66807C);margin-bottom:6px}
+.cxm-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.cxm-lista li{display:flex;align-items:center;gap:10px;border:1px solid var(--ev-line,#E2EFED);border-radius:14px;padding:6px 8px;background:var(--ev-surface-2,#F5FBFA)}
+.cxm-lista input[type=number]{width:52px;border:1px solid var(--ev-line,#E2EFED);border-radius:10px;padding:6px 4px;text-align:center;font:inherit;font-weight:800;background:#fff}
+.cxm-lista img,.cxm-lista .ph{width:52px;height:40px;border-radius:9px;object-fit:cover;flex:none;background:#DDEFEC}
+.cxm-lista .tx{min-width:0;flex:1}.cxm-lista .t{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cxm-lista small{color:var(--ev-muted,#66807C);font-weight:600;font-size:12px}.cxm-lista small b{color:#C2410C}
+.cxm-lista .fu{font-weight:800;color:#C2410C}.cxm-lista .fu.pr{color:#0E8F86}
+.cxm-lista .acc{display:flex;gap:2px}.cxm-lista .acc button{border:0;background:none;cursor:pointer;color:var(--ev-muted,#66807C);padding:4px;font-size:14px;border-radius:8px}
+.cxm-lista .acc button:hover:not(:disabled){color:var(--ev-ink,#0B1215);background:#fff}.cxm-lista .acc button:disabled{opacity:.3;cursor:default}
 .cxm-propios{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
 .cxm-propios>small{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--ev-muted,#66807C)}
 .cxm-propio{font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px;background:#E6FBF8;color:#0E8F86}
@@ -60,6 +78,13 @@ window.CXM = (() => {
 .cxm-card .pr{margin-top:auto;padding-top:6px;font-weight:600;font-size:13px}.cxm-card .pr b{color:#C2410C;font-size:17px}
 .cxm-card button.sel{margin:0 14px 14px;border-radius:999px;padding:9px 14px;font-weight:800;cursor:pointer;border:1px solid var(--ev-line,#E2EFED);background:var(--ev-ink,#0B1215);color:#fff;font:inherit;font-weight:800}
 .cxm-card.si button.sel{background:#fff;color:#B42318;border-color:#FECDCA}
+.cxm-selbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:8px 10px;border:1px solid var(--ev-line,#E2EFED);border-radius:14px;background:var(--ev-surface-2,#F5FBFA);position:sticky;top:8px;z-index:3}
+.cxm-selinfo{flex:1;color:var(--ev-muted,#66807C);font-weight:600;font-size:13px}.cxm-selinfo b{color:var(--ev-ink,#0B1215)}
+.cxm-chk{position:absolute;left:10px;top:10px;z-index:2;cursor:pointer}
+.cxm-chk input{position:absolute;opacity:0;width:0;height:0}
+.cxm-chk span{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,.92);border:2px solid #fff;color:transparent;box-shadow:0 2px 6px rgba(0,0,0,.25);font-size:15px}
+.cxm-chk input:checked+span{background:#0E8F86;border-color:#0E8F86;color:#fff}
+.cxm-chk input:focus-visible+span{outline:2px solid #0E8F86;outline-offset:2px}
 .cxm-vacio{border:1px dashed var(--ev-line,#E2EFED);border-radius:18px;padding:30px;text-align:center;color:var(--ev-muted,#66807C);font-weight:600}`;
         document.head.appendChild(s);
     }
@@ -95,31 +120,37 @@ window.CXM = (() => {
         $('#cxmDest').querySelectorAll('[data-pais]').forEach(b => b.onclick = () => abrir(b.dataset.pais));
     }
 
+    // CAMBIO 136: cada destino con su tarjeta (encender/apagar en la web) y la lista completa de sus circuitos
+    // (Yourttoo + propios) en el orden en que salen en la web. La prioridad se cambia con el número o con las flechas.
     function pintarHome() {
-        const grupos = new Map(); elegidos.forEach(x => { if (!grupos.has(x.pais)) grupos.set(x.pais, { nombre: x.destino, items: [] }); grupos.get(x.pais).items.push(x); });
-        const porPais = new Map((tarjetas.destinos || []).map(d => [d.pais, d]));
-        const ocultas = (tarjetas.destinos || []).filter(d => !d.visible).length;
-        $('#cxmHome').innerHTML = `<h3><i class="bi bi-house-heart"></i> En la Home <small style="font-weight:600;color:var(--ev-muted)">${elegidos.length} circuito${elegidos.length === 1 ? '' : 's'} en ${grupos.size} destino${grupos.size === 1 ? '' : 's'}</small></h3>
-            <p class="sub">Cada destino es una tarjeta en la sección «${esc(tarjetas.seccion || 'CIRCUITOS')}» de la Home, junto a tus circuitos. Al abrirla, la web muestra los circuitos de Yourttoo elegidos y tus circuitos de ese país. Ordena con las flechas: el primero pone la foto de la tarjeta.</p>
-            ${ocultas ? `<div class="cxm-aviso"><i class="bi bi-eye-slash"></i><div>${ocultas === 1 ? 'Hay 1 tarjeta de destino oculta' : `Hay ${ocultas} tarjetas de destino ocultas`} en la web. Enciéndelas con el ojo en <a href="/HomeWeb/Index" style="color:inherit;font-weight:800">Home de la web</a> cuando la web ya esté publicada con los circuitos por destino.</div></div>` : ''}
-            ${grupos.size ? [...grupos.entries()].map(([pais, g]) => { const d = porPais.get(pais); return `<div class="cxm-grupo">
-                <div class="cxm-dcard">${d ? `<div class="ft">${d.imagen ? `<img src="${esc(d.imagen)}" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="vis ${d.visible ? 'si' : ''}">${d.visible ? '<i class="bi bi-eye"></i> En la web' : '<i class="bi bi-eye-slash"></i> Oculta'}</span></div>
-                    <div class="bd"><b>${esc(d.titulo)}</b><small>${esc(d.circuitos || '')}${d.ciudades ? ' · ' + esc(d.ciudades) : ''}</small><div class="pr">Desde ${dinero(d.desde, d.moneda)}</div></div>` : `<div class="bd"><b>${esc(g.nombre)}</b><small>Preparando la tarjeta…</small></div>`}</div>
-                <div><b style="font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ev-muted,#66807C)"><i class="bi bi-geo-alt-fill"></i> ${esc(g.nombre)} · de Yourttoo</b>
-                <div class="cxm-fila">${g.items.map((x, i) => `<div class="cxm-mini" title="${esc(x.titulo)}">
-                    ${x.imagen ? `<img src="${esc(x.imagen)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ph'}))">` : '<span class="ph"></span>'}
-                    <div style="min-width:0"><div class="t">${esc(x.titulo)}</div><div class="p">Desde ${dinero(x.desde, x.moneda)}</div><small style="color:var(--ev-muted);font-weight:600">${x.dias ? x.dias + ' días' : ''}</small></div>
-                    <div class="acc"><button type="button" title="Antes" data-mover="${pais}|${i}|-1" ${i === 0 ? 'disabled' : ''}><i class="bi bi-arrow-left"></i></button>
-                        <button type="button" title="Quitar de la Home" data-quitar="${x.id}"><i class="bi bi-x-lg"></i></button>
-                        <button type="button" title="Después" data-mover="${pais}|${i}|1" ${i === g.items.length - 1 ? 'disabled' : ''}><i class="bi bi-arrow-right"></i></button></div></div>`).join('')}</div>
-                ${d?.propios?.length ? `<div class="cxm-propios"><small>Y tus circuitos de ${esc(g.nombre)}</small>${d.propios.map(n => `<span class="cxm-propio"><i class="bi bi-signpost-split"></i> ${esc(n)}</span>`).join('')}</div>` : ''}</div></div>`; }).join('')
+        const lista = tarjetas.destinos || [];
+        const ocultas = lista.filter(d => !d.visible).length;
+        $('#cxmHome').innerHTML = `<h3><i class="bi bi-house-heart"></i> En la Home <small style="font-weight:600;color:var(--ev-muted)">${elegidos.length} circuito${elegidos.length === 1 ? '' : 's'} de Yourttoo en ${lista.length} destino${lista.length === 1 ? '' : 's'}</small></h3>
+            <p class="sub">Cada destino es una tarjeta en la sección «${esc(tarjetas.seccion || 'CIRCUITOS')}» de la Home. Al abrirla, la web muestra sus circuitos (los de Yourttoo elegidos y los tuyos) en el orden de la <b>prioridad</b>: 1 sale primero. Cambia el número o usa las flechas; se guarda solo.</p>
+            ${ocultas ? `<div class="cxm-aviso"><i class="bi bi-eye-slash"></i><div>${ocultas === 1 ? 'Hay 1 destino oculto' : `Hay ${ocultas} destinos ocultos`} en la web. Enciéndelos con el interruptor «Se ve en la web» de cada destino.</div></div>` : ''}
+            ${lista.length ? lista.map(d => `<div class="cxm-grupo">
+                <div class="cxm-dcard ${d.visible ? '' : 'off'}"><div class="ft">${d.imagen ? `<img src="${esc(d.imagen)}" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="vis ${d.visible ? 'si' : ''}">${d.visible ? '<i class="bi bi-eye"></i> En la web' : '<i class="bi bi-eye-slash"></i> Oculta'}</span></div>
+                    <div class="bd"><b>${esc(d.titulo)}</b><small>${esc(d.circuitos || '')}${d.ciudades ? ' · ' + esc(d.ciudades) : ''}</small><div class="pr">Desde ${dinero(d.desde, d.moneda)}</div>
+                    <label class="cxm-sw" title="Encender o apagar esta tarjeta en la Home de la web"><input type="checkbox" data-visible="${d.id}" ${d.visible ? 'checked' : ''}><span></span> Se ve en la web</label></div></div>
+                <div><b class="cxm-gt"><i class="bi bi-geo-alt-fill"></i> ${esc(d.destino)} · ${d.lista.length} circuito${d.lista.length === 1 ? '' : 's'} en la web, por prioridad</b>
+                <ol class="cxm-lista">${d.lista.map((c, i) => `<li>
+                    <input type="number" min="1" max="${d.lista.length}" value="${i + 1}" title="Prioridad: 1 sale primero" data-puesto="${esc(d.pais)}|${i}" aria-label="Prioridad">
+                    ${c.imagen ? `<img src="${esc(c.imagen)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ph'}))">` : '<span class="ph"></span>'}
+                    <div class="tx"><div class="t">${esc(c.titulo)}</div><small><span class="fu ${c.fuente === 'PROPIO' ? 'pr' : ''}">${c.fuente === 'PROPIO' ? '<i class="bi bi-signpost-split"></i> Carga manual' : '<i class="bi bi-globe-americas"></i> Yourttoo'}</span>${c.dias ? ' · ' + c.dias + ' días' : ''} · Desde <b>${dinero(c.desde, c.moneda)}</b></small></div>
+                    <div class="acc"><button type="button" title="Subir" data-mover="${esc(d.pais)}|${i}|-1" ${i === 0 ? 'disabled' : ''}><i class="bi bi-arrow-up"></i></button>
+                        <button type="button" title="Bajar" data-mover="${esc(d.pais)}|${i}|1" ${i === d.lista.length - 1 ? 'disabled' : ''}><i class="bi bi-arrow-down"></i></button>
+                        ${c.idElegido ? `<button type="button" title="Quitar de la Home" data-quitar="${c.idElegido}"><i class="bi bi-x-lg"></i></button>` : '<span style="width:22px"></span>'}</div></li>`).join('')}</ol></div></div>`).join('')
               : '<div class="cxm-vacio">Todavía no hay circuitos por el mundo en la Home. Elige un destino y pulsa «Agregar a la Home» en los que quieras.</div>'}`;
-        $('#cxmHome').querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => quitar(+b.dataset.quitar));
-        $('#cxmHome').querySelectorAll('[data-mover]').forEach(b => b.onclick = () => { const [p, i, d] = b.dataset.mover.split('|'); mover(p, +i, +d); });
+        const h = $('#cxmHome');
+        h.querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => quitar(+b.dataset.quitar));
+        h.querySelectorAll('[data-mover]').forEach(b => b.onclick = () => { const [p, i, d] = b.dataset.mover.split('|'); mover(p, +i, +i + +d); });
+        h.querySelectorAll('[data-puesto]').forEach(inp => inp.onchange = () => { const [p, i] = inp.dataset.puesto.split('|'); mover(p, +i, (parseInt(inp.value, 10) || 1) - 1); });
+        h.querySelectorAll('[data-visible]').forEach(c => c.onchange = () => visible(+c.dataset.visible, c.checked, c));
     }
 
     async function abrir(pais, pag = 0) {
         if (cargando) return;
+        if (pag === 0 && pais !== actual) marcados = new Set();
         actual = pais; pintarDestinos();
         const caja = $('#cxmProgs');
         if (pag === 0) caja.innerHTML = '<div class="cxm-vacio"><span class="ui-spin"></span> Buscando los circuitos en Yourttoo…</div>';
@@ -135,10 +166,16 @@ window.CXM = (() => {
     function pintarProgramas() {
         const p = pagina, caja = $('#cxmProgs');
         const ids = new Map(elegidos.map(x => [x.codigo, x.id]));
+        const libres = p.programas.filter(x => !ids.has(x.codigo));
         caja.innerHTML = `<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 12px;flex-wrap:wrap"><h3 style="margin:0;font-size:19px;font-weight:800">${esc(p.nombre)}</h3>
                 <small style="color:var(--ev-muted);font-weight:600">${p.total} circuito${p.total === 1 ? '' : 's'} · del más económico al más caro · precio de Yourttoo por persona en doble (la web aplica el de la agencia)</small></div>
+            ${p.programas.length ? `<div class="cxm-selbar">
+                <button type="button" class="ev-btn ghost sm" id="cxmSelTodos"><i class="bi bi-check2-all"></i> ${libres.length && libres.every(x => marcados.has(x.codigo)) && p.actual + 1 >= p.paginas ? 'Quitar selección' : 'Seleccionar todos'}</button>
+                <span class="cxm-selinfo">${marcados.size ? `<b>${marcados.size}</b> seleccionado${marcados.size === 1 ? '' : 's'}` : 'Marca los circuitos con la casilla o selecciónalos todos'}</span>
+                <button type="button" class="ev-btn sm" id="cxmAgregarSel" ${marcados.size && !agregando ? '' : 'disabled'}><i class="bi bi-plus-lg"></i> Agregar ${marcados.size || ''} a la Home</button>
+            </div>` : ''}
             ${p.programas.length ? `<div class="cxm-grid">${p.programas.map(x => { const id = ids.get(x.codigo); return `<article class="cxm-card ${id ? 'si' : ''}">
-                <div class="ft">${x.imagen ? `<img src="${esc(x.imagen)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${x.dias ? `<span class="dias">${x.dias} días</span>` : ''}${id ? '<span class="ok"><i class="bi bi-check2"></i> En la Home</span>' : ''}</div>
+                <div class="ft">${id ? '' : `<label class="cxm-chk" title="Seleccionar"><input type="checkbox" data-marcar="${esc(x.codigo)}" ${marcados.has(x.codigo) ? 'checked' : ''}><span><i class="bi bi-check-lg"></i></span></label>`}${x.imagen ? `<img src="${esc(x.imagen)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${x.dias ? `<span class="dias">${x.dias} días</span>` : ''}${id ? '<span class="ok"><i class="bi bi-check2"></i> En la Home</span>' : ''}</div>
                 <div class="bd"><h4>${esc(x.titulo)}</h4>${x.ciudades ? `<small>${esc(x.ciudades)}</small>` : ''}${x.categoria ? `<small>${esc(x.categoria)}</small>` : ''}
                     <div class="pr">Desde <b>${dinero(x.desde, x.moneda)}</b><br><small>por persona en doble · ${esc(x.codigo)}</small></div></div>
                 <button type="button" class="sel" data-codigo="${esc(x.codigo)}" data-id="${id ?? ''}">${id ? '<i class="bi bi-x-lg"></i> Quitar de la Home' : '<i class="bi bi-plus-lg"></i> Agregar a la Home'}</button></article>`; }).join('')}</div>`
@@ -146,8 +183,42 @@ window.CXM = (() => {
             ${p.actual + 1 < p.paginas ? `<div style="text-align:center;margin-top:14px"><button type="button" class="ev-btn ghost" id="cxmMas"><i class="bi bi-chevron-down"></i> Ver más (${p.programas.length} de ${p.total})</button></div>` : ''}`;
         caja.querySelectorAll('button.sel').forEach(b => b.onclick = () => b.dataset.id ? quitar(+b.dataset.id) : agregar(b.dataset.codigo, b));
         $('#cxmMas')?.addEventListener('click', () => abrir(p.pais, p.actual + 1));
+        caja.querySelectorAll('[data-marcar]').forEach(c => c.onchange = () => { c.checked ? marcados.add(c.dataset.marcar) : marcados.delete(c.dataset.marcar); pintarProgramas(); });
+        $('#cxmSelTodos')?.addEventListener('click', seleccionarTodos);
+        $('#cxmAgregarSel')?.addEventListener('click', agregarMarcados);
     }
 
+    // Pedido de la usuaria: «botones para seleccionar y agregar todos los circuitos de un destino, uno para seleccionar y otro para agregar».
+    // «Seleccionar todos» trae primero las páginas que falten del destino, así se marcan TODOS (no solo los que se ven).
+    async function seleccionarTodos() {
+        const ids = new Set(elegidos.map(x => x.codigo));
+        const todos = () => pagina.programas.filter(x => !ids.has(x.codigo)).map(x => x.codigo);
+        if (todos().length && todos().every(c => marcados.has(c)) && pagina.actual + 1 >= pagina.paginas) { marcados = new Set(); pintarProgramas(); return; }
+        const b = $('#cxmSelTodos'); if (b) { b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Trayendo todos…'; }
+        try {
+            while (pagina.actual + 1 < pagina.paginas) {
+                const r = await EV.api(`/Circuitos/MundoProgramas?pais=${encodeURIComponent(pagina.pais)}&pagina=${pagina.actual + 1}`);
+                pagina = { ...r, programas: [...pagina.programas, ...r.programas] };
+                const bb = $('#cxmSelTodos'); if (bb) bb.innerHTML = `<span class="ui-spin"></span> Trayendo ${pagina.programas.length} de ${pagina.total}…`;
+            }
+        } catch (e) { EV.toast(e.message, 'err'); }
+        todos().forEach(c => marcados.add(c));
+        pintarProgramas();
+    }
+    async function agregarMarcados() {
+        if (agregando || !marcados.size) return;
+        agregando = true;
+        const lista = [...marcados]; let ok = 0, fallos = 0;
+        const b = $('#cxmAgregarSel');
+        for (const [n, codigo] of lista.entries()) {
+            if (b) b.innerHTML = `<span class="ui-spin"></span> Agregando ${n + 1} de ${lista.length}…`;
+            try { await EV.post('/Circuitos/MundoAgregar', { Codigo: codigo, Pais: actual }); ok++; marcados.delete(codigo); }
+            catch (e) { fallos++; }
+        }
+        agregando = false;
+        EV.toast(fallos ? `Agregados ${ok}; ${fallos} no se pudieron agregar (siguen marcados, vuelve a intentarlo).` : `${ok} circuito${ok === 1 ? '' : 's'} agregado${ok === 1 ? '' : 's'} a la Home.`, fallos ? 'err' : 'ok');
+        await cargarElegidos(); pintarDestinos(); if (pagina) pintarProgramas();
+    }
     async function agregar(codigo, boton) {
         if (boton) { boton.disabled = true; boton.innerHTML = '<span class="ui-spin"></span> Agregando…'; }
         try { const r = await EV.post('/Circuitos/MundoAgregar', { Codigo: codigo, Pais: actual }); EV.toast(r.mensaje, 'ok'); }
@@ -159,11 +230,20 @@ window.CXM = (() => {
         catch (e) { EV.toast(e.message, 'err'); }
         await cargarElegidos(); pintarDestinos(); if (pagina) pintarProgramas();
     }
-    async function mover(pais, i, d) {
-        const l = elegidos.filter(x => x.pais === pais).map(x => x.id), j = i + d;
-        if (j < 0 || j >= l.length) return;
-        [l[i], l[j]] = [l[j], l[i]];
-        try { await EV.post('/Circuitos/MundoOrdenar', { Pais: pais, Ids: l }); } catch (e) { EV.toast(e.message, 'err'); }
+    async function mover(pais, i, j) {
+        const d = (tarjetas.destinos || []).find(x => x.pais === pais); if (!d) return;
+        const l = d.lista.slice(); j = Math.max(0, Math.min(l.length - 1, j));
+        if (j === i) { pintarHome(); return; }
+        const [x] = l.splice(i, 1); l.splice(j, 0, x);
+        d.lista = l; pintarHome();   // se ve al instante; luego se confirma con el servidor
+        try { await EV.post('/Circuitos/MundoPrioridad', { Pais: pais, Orden: l.map(c => ({ Fuente: c.fuente, Codigo: c.codigo })) }); EV.toast('Prioridad guardada.', 'ok'); }
+        catch (e) { EV.toast(e.message, 'err'); }
+        await cargarElegidos();
+    }
+    async function visible(id, si, caja) {
+        caja.disabled = true;
+        try { const r = await EV.post('/Circuitos/MundoVisible', { Id: id, Visible: si }); EV.toast(r.mensaje, 'ok'); }
+        catch (e) { EV.toast(e.message, 'err'); }
         await cargarElegidos();
     }
 

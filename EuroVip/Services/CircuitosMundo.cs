@@ -24,6 +24,8 @@ namespace EuroVip.Services
         Task OrdenarAsync(string pais, IReadOnlyList<int> ids);
         /// <summary>Las tarjetas de destino («Circuitos en Japón») que van a la Home, ya actualizadas.</summary>
         Task<CircuitosMundo.Home> TarjetasAsync();
+        Task<bool> VisibleAsync(int id, bool visible, string usuario);
+        Task<string?> PrioridadAsync(string pais, IReadOnlyList<CircuitosMundo.Puesto> orden, string usuario);
     }
 
     public sealed class CircuitosMundo : ICircuitosMundo
@@ -48,7 +50,14 @@ namespace EuroVip.Services
         {
             /// <summary>Circuitos manuales del mismo país (salen junto a los de Yourttoo al abrir el destino en la web).</summary>
             public List<string> Propios { get; set; } = new();
+            /// <summary>CAMBIO 136: todos los circuitos del destino (Yourttoo + propios) en el orden de la web, con su prioridad.</summary>
+            public List<CircuitoDestino> Lista { get; set; } = new();
         }
+        public sealed record CircuitoDestino(string Fuente, string Codigo, string Titulo, string? Imagen, int? Dias, string? Ciudades, decimal? Desde, string? Moneda, short? Peso)
+        {
+            public int? IdElegido { get; set; }
+        }
+        public sealed record Puesto(string Fuente, string Codigo);
         public sealed record Home(int? IdSeccion, string Seccion, bool SeccionVisible, List<TarjetaDestino> Destinos);
 
         /// <summary>Sección de la Home donde van las tarjetas de destino: la misma de los circuitos manuales (CAMBIO 135).</summary>
@@ -320,6 +329,48 @@ namespace EuroVip.Services
                 new { Tipo, Fuente, pais, destino, titulo, imagen, desde = minimo.Desde, moneda, cuantos, ciudades, campanya = hijos[0].Campanya, usuario, sec });
         }
 
+        /// <summary>CAMBIO 136: encender o apagar la tarjeta del destino en la web (inicio.estado), desde Circuitos › por el mundo.</summary>
+        public async Task<bool> VisibleAsync(int id, bool visible, string usuario)
+        {
+            using var cn = _db.Conexion();
+            var n = await cn.ExecuteAsync(@"UPDATE Eurovip.inicio SET estado = @estado, usuario_modificacion = @usuario, fecha_modificacion = SYSDATETIME()
+                WHERE id = @id AND tipo_servicio = @Tipo AND programa_codigo IS NULL",
+                new { id, estado = visible ? 1 : 0, Tipo, usuario = usuario.Length > 50 ? usuario[..50] : usuario });
+            return n > 0;
+        }
+
+        /// <summary>
+        /// CAMBIO 136: prioridad dentro del destino, mezclando Yourttoo y propios. «orden» es la lista completa del destino
+        /// (el primero = prioridad 1). Se guarda en circuito_destino_prioridad (sin triggers: inicio.peso y circuito.peso son
+        /// únicos en todo su ámbito y no sirven para ordenar dentro de un país). Los de Yourttoo además quedan en ese orden en
+        /// inicio.peso, para que la foto de la tarjeta sea la del primero.
+        /// </summary>
+        public async Task<string?> PrioridadAsync(string pais, IReadOnlyList<Puesto> orden, string usuario)
+        {
+            pais = (pais ?? "").Trim().ToUpperInvariant();
+            if (pais.Length != 2) return "Falta el destino.";
+            var limpio = (orden ?? Array.Empty<Puesto>())
+                .Where(p => (p.Fuente == "YOURTTOO" || p.Fuente == "PROPIO") && !string.IsNullOrWhiteSpace(p.Codigo) && p.Codigo.Length <= 200)
+                .DistinctBy(p => (p.Fuente, p.Codigo)).Take(999).ToList();
+            if (limpio.Count == 0) return "No llegó ningún circuito para ordenar.";
+            if (usuario.Length > 50) usuario = usuario[..50];
+            using (var cn = _db.Conexion())
+            {
+                cn.Open();
+                using var tx = cn.BeginTransaction();
+                await cn.ExecuteAsync("DELETE FROM Eurovip.circuito_destino_prioridad WHERE id_pais = @pais", new { pais }, tx);
+                for (var i = 0; i < limpio.Count; i++)
+                    await cn.ExecuteAsync("INSERT INTO Eurovip.circuito_destino_prioridad (id_pais, fuente, codigo, prioridad, usuario) VALUES (@pais, @f, @c, @p, @usuario)",
+                        new { pais, f = limpio[i].Fuente, c = limpio[i].Codigo, p = (short)(i + 1), usuario }, tx);
+                tx.Commit();
+            }
+            var ids = (await ElegidosAsync()).Where(e => e.Pais == pais.ToLowerInvariant()).ToDictionary(e => e.Codigo, e => e.Id);
+            var yt = limpio.Where(p => p.Fuente == "YOURTTOO" && ids.ContainsKey(p.Codigo)).Select(p => ids[p.Codigo]).ToList();
+            if (yt.Count > 0) await OrdenarAsync(pais, yt);
+            else await SincronizarDestinoAsync(pais, usuario);
+            return null;
+        }
+
         public async Task<Home> TarjetasAsync()
         {
             using var cn = _db.Conexion();
@@ -332,7 +383,14 @@ namespace EuroVip.Services
                        CAST(precioWeb AS decimal(18,2)) AS Desde, LTRIM(RTRIM(id_moneda)) AS Moneda, programa_categoria AS Circuitos, programa_ciudades AS Ciudades,
                        CAST(ISNULL(estado, 0) AS bit) AS Visible
                 FROM Eurovip.inicio WHERE tipo_servicio = @Tipo AND programa_codigo IS NULL AND id_idioma = 'ES' ORDER BY posicion_destino, id_destino", new { Tipo })).ToList();
-            foreach (var d in destinos) d.Propios = await PropiosAsync(cn, d.Pais.ToUpperInvariant());
+            var ids = (await ElegidosAsync()).ToDictionary(e => e.Codigo, e => e.Id);
+            foreach (var d in destinos)
+            {
+                d.Propios = await PropiosAsync(cn, d.Pais.ToUpperInvariant());
+                d.Lista = (await cn.QueryAsync<CircuitoDestino>("Eurovip.spPortalListarCircuitosDestino", new { pais = d.Pais.ToUpperInvariant(), Idioma = "ES" },
+                    commandType: System.Data.CommandType.StoredProcedure)).ToList();
+                foreach (var c in d.Lista) if (c.Fuente == "YOURTTOO" && ids.TryGetValue(c.Codigo, out var idE)) c.IdElegido = idE;
+            }
             return new Home(sec?.Id, Seccion, sec?.Estado ?? false, destinos);
         }
     }

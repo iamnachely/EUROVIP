@@ -80,6 +80,15 @@
     .cx-noches input { text-align: center; font-weight: 800 !important; font-size: 18px !important; }
     .cx-progress { display: flex; gap: 6px; flex-wrap: wrap; }
     /* CAMBIO 133: pestañas «Mis circuitos» / «Circuitos por el mundo» (separadas del título, con su explicación) */
+    /* Mis circuitos agrupados por destino (país) */
+    .cx-grupos-nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+    .cx-grupos-nav a { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--ev-line); border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 13px; color: inherit; text-decoration: none; background: var(--ev-surface); }
+    .cx-grupos-nav a:hover { border-color: #9EDFD8; }
+    .cx-grupos-nav b { font-size: 11.5px; border-radius: 999px; padding: 1px 7px; background: #E6FBF8; color: #0E8F86; }
+    .cx-grupo { margin: 0 0 26px; scroll-margin-top: 16px; }
+    .cx-grupo > h2 { display: flex; align-items: baseline; gap: 10px; font-size: 18px; font-weight: 800; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--ev-line); }
+    .cx-grupo > h2 i { color: #0E8F86; }
+    .cx-grupo > h2 small { font-size: 13px; font-weight: 600; color: var(--ev-muted); }
     .cx-vista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 22px 0 18px; }
     @@media (max-width: 720px) { .cx-vista { grid-template-columns: 1fr; } }
     .cx-vt { display: flex; align-items: center; gap: 14px; text-align: left; border: 1px solid var(--ev-line); border-radius: 20px; padding: 14px 16px; background: var(--ev-surface); color: inherit; font: inherit; cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .2s, background .2s; }
@@ -319,7 +328,20 @@ const CX = (() => {
                 <a class="ev-btn ghost" href="/CargaCircuitos/Express"><i class="bi bi-lightning-charge"></i> Carga Express</a></div></div>`;
             return;
         }
-        $('#cxLista').innerHTML = `<div class="cx-grid">${lista.map((c, n) => `
+        // Pedido de la usuaria: «aquí también agrupado por destino». Un grupo por país (el primero del circuito; si recorre
+        // varios, sale en el de su primer país y la etiqueta muestra todos). Dentro, el mismo orden: prioridad y luego el resto.
+        const nombrePais = cod => (paises.find(p => p.valor === cod)?.texto) || cod || 'Sin país';
+        const grupos = new Map();
+        lista.forEach(c => { const k = (c.paises || '').split(',')[0].trim(); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(c); });
+        const orden = [...grupos.keys()].sort((a, b) => !a ? 1 : !b ? -1 : nombrePais(a).localeCompare(nombrePais(b), 'es'));
+        let n = 0;
+        $('#cxLista').innerHTML = `<div class="cx-grupos-nav">${orden.map(k => `<a href="#cxg-${esc(k || 'x')}" onclick="event.preventDefault();document.getElementById('cxg-${esc(k || 'x')}').scrollIntoView({behavior:'smooth',block:'start'})"><i class="bi bi-geo-alt-fill"></i> ${esc(nombrePais(k))} <b>${grupos.get(k).length}</b></a>`).join('')}</div>` +
+            orden.map(k => `<section class="cx-grupo" id="cxg-${esc(k || 'x')}"><h2><i class="bi bi-geo-alt-fill"></i> ${esc(nombrePais(k))} <small>${grupos.get(k).length} circuito${grupos.get(k).length === 1 ? '' : 's'}</small></h2>
+            <div class="cx-grid">${grupos.get(k).map(c => tarjeta(c, n++)).join('')}</div></section>`).join('');
+    }
+
+    function tarjeta(c, n) {
+        return `
             <article class="cx-card ${c.peso ? 'ev-con-prioridad' : ''}" style="--n:${n}" data-cod="${esc(c.codigo)}">
                 <div class="cx-img" onclick="CX.editar('${esc(c.codigo)}')">
                     ${imagen(c.caratula, c.nombre)}
@@ -347,7 +369,7 @@ const CX = (() => {
                     <button class="ui-ibtn" title="Duplicar: crear uno parecido" aria-label="Duplicar" onclick="CX.duplicar('${esc(c.codigo)}')"><i class="bi bi-copy"></i></button>
                     <button class="ui-ibtn danger" title="Eliminar" onclick="CX.eliminar('${esc(c.codigo)}')"><i class="bi bi-trash3"></i></button>
                 </div>
-            </article>`).join('')}</div>`;
+            </article>`;
     }
 
     /** ¿Sale en la Home de la web? Y si no, por qué (el usuario no tiene que adivinarlo). */

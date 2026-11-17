@@ -334,6 +334,29 @@ namespace EuroVip.Controllers
             return Json(new { ok = true, mensaje = "Orden guardado." });
         }
 
+        // CAMBIO 136: pedido de la usuaria «activar o desactivar desde esta vista y poner prioridad de peso a los circuitos,
+        // tanto a los de carga manual como a los de circuitos por el mundo».
+        public sealed record MundoVisibleDto(int Id, bool Visible);
+        public sealed record MundoPrioridadDto(string Pais, List<CircuitosMundo.Puesto> Orden);
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> MundoVisible([FromServices] ICircuitosMundo m, [FromBody] MundoVisibleDto dto)
+        {
+            if (!await m.VisibleAsync(dto.Id, dto.Visible, User.Identity?.Name ?? "desconocido"))
+                return NotFound(new { mensaje = "No encontré la tarjeta de ese destino. Recarga la página." });
+            await Auditar("CircuitoMundo_Visible", dto, dto.Id);
+            return Json(new { ok = true, mensaje = dto.Visible ? "El destino ya se ve en la web." : "Destino oculto en la web." });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> MundoPrioridad([FromServices] ICircuitosMundo m, [FromBody] MundoPrioridadDto dto)
+        {
+            var error = await m.PrioridadAsync(dto.Pais, dto.Orden ?? new(), User.Identity?.Name ?? "desconocido");
+            if (error is not null) return BadRequest(new { mensaje = error });
+            await Auditar("CircuitoMundo_Prioridad", dto);
+            return Json(new { ok = true, mensaje = "Prioridad guardada." });
+        }
+
         private Task Auditar(string tipo, object cambios, int? id = null) =>
             _repo.AuditarAsync(tipo, id is null ? Array.Empty<int>() : new[] { id.Value }, cambios,
                 User.Identity?.Name ?? "desconocido", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());

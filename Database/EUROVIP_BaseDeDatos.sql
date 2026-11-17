@@ -5891,6 +5891,62 @@ EXEC Eurovip.spPortalListarCircuitosDestino 'JP';
 GO
 
 
+/* ---------- CAMBIO 136: prioridad de los circuitos dentro de su destino (Yourttoo + propios) ----------
+   Pedido de la usuaria: «en Circuitos › Circuitos por el mundo poder activar o desactivar el destino y poner prioridad de
+   peso a los circuitos, tanto a los de carga manual como a los de Yourttoo».
+   - inicio.peso y circuito.peso tienen triggers que los mantienen únicos en TODO su ámbito (todos los Yourttoo / todos
+     los circuitos del idioma), así que no sirven para ordenar dentro de un país mezclando las dos fuentes.
+   - Eurovip.circuito_destino_prioridad guarda el puesto de cada circuito dentro de su país (1 = primero), sin triggers.
+     fuente = 'YOURTTOO' (codigo = código del programa) o 'PROPIO' (codigo = nombre del circuito). Sin fila = sin prioridad
+     (van después, por precio).
+   - spPortalListarCircuitosDestino ordena por esa prioridad; la columna «peso» que devuelve es ahora la prioridad. */
+IF OBJECT_ID('Eurovip.circuito_destino_prioridad') IS NULL
+CREATE TABLE Eurovip.circuito_destino_prioridad (
+    id_pais char(2) NOT NULL,
+    fuente varchar(10) NOT NULL,
+    codigo nvarchar(200) NOT NULL,
+    prioridad smallint NOT NULL,
+    usuario varchar(50) NULL,
+    fecha datetime2(0) NOT NULL CONSTRAINT DF_circuito_destino_prioridad_fecha DEFAULT SYSDATETIME(),
+    CONSTRAINT PK_circuito_destino_prioridad PRIMARY KEY (id_pais, fuente, codigo),
+    CONSTRAINT CK_circuito_destino_prioridad_fuente CHECK (fuente IN ('YOURTTOO', 'PROPIO')),
+    CONSTRAINT CK_circuito_destino_prioridad_valor CHECK (prioridad BETWEEN 1 AND 999)
+);
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarCircuitosDestino
+    @pais char(2), @Idioma char(2) = 'ES'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT x.fuente, x.codigo, x.titulo, x.imagen, x.dias, x.ciudades, x.desde, x.moneda, p.prioridad AS peso
+      FROM (
+        -- Yourttoo elegidos en el BackOffice (Circuitos › Circuitos por el mundo)
+        SELECT 'YOURTTOO' AS fuente, CAST(i.programa_codigo AS nvarchar(200)) COLLATE DATABASE_DEFAULT AS codigo, CAST(i.descripcion AS nvarchar(400)) AS titulo,
+               CAST(i.caratulaDestino AS nvarchar(500)) AS imagen, CAST(i.programa_dias AS int) AS dias, i.programa_ciudades AS ciudades,
+               CAST(i.precioWeb AS decimal(18,2)) AS desde, LTRIM(RTRIM(i.id_moneda)) AS moneda
+          FROM Eurovip.inicio i
+         WHERE i.tipo_servicio = 'CIRCUITO_MUNDO' AND i.programa_codigo IS NOT NULL AND i.id_paisDestino = @pais AND i.id_idioma = @Idioma
+        UNION ALL
+        -- Manuales del país con salidas activas desde mañana
+        SELECT 'PROPIO', CAST(c.nombre_circuito AS nvarchar(200)), CAST(c.nombre_circuito AS nvarchar(400)), CAST(c.caratula AS nvarchar(500)),
+               CAST(c.noches + 1 AS int),
+               (SELECT STRING_AGG(CAST(d.id_destino AS nvarchar(max)), N' ' + NCHAR(183) + N' ') FROM Eurovip.circuito_destino d WHERE d.nombre_circuito = c.nombre_circuito AND d.id_idioma = c.id_idioma),
+               v.desde, v.moneda
+          FROM Eurovip.circuito c
+         CROSS APPLY (SELECT MIN(Eurovip.fnPrecioWeb(s.id_servicio)) AS desde, MIN(LTRIM(RTRIM(s.id_moneda))) AS moneda
+                        FROM Eurovip.servicio_circuito sc JOIN Eurovip.servicio s ON s.id_servicio = sc.id_servicio
+                       WHERE sc.nombre_circuito = c.nombre_circuito AND s.activo = 1 AND sc.desde > CAST(GETDATE() AS date)) v
+         WHERE c.id_idioma = @Idioma AND v.desde IS NOT NULL
+           AND EXISTS (SELECT 1 FROM Eurovip.circuito_destino d WHERE d.nombre_circuito = c.nombre_circuito AND d.id_idioma = c.id_idioma AND d.id_pais = @pais)
+      ) x
+      LEFT JOIN Eurovip.circuito_destino_prioridad p ON p.id_pais = @pais AND p.fuente = x.fuente AND p.codigo = x.codigo
+     ORDER BY CASE WHEN p.prioridad IS NULL THEN 1 ELSE 0 END, p.prioridad, x.desde, x.titulo;
+END
+GO
+EXEC Eurovip.spPortalListarCircuitosDestino 'JP';
+GO
+
+
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
@@ -6463,6 +6519,8 @@ GO
                El BackOffice creó la tarjeta «Circuitos en Japón» (inicio.id 1283, sección CIRCUITOS, oculta) con los 3 programas
                de Japón que eligió la usuaria + 1 circuito propio; la usuaria la encendió desde Home de la web (19:29).
                Hasta publicar la web con el enlace nuevo (SeccionesInicio.tsx), esa tarjeta lleva a la búsqueda de hoteles.
+   17/11/2026  CAMBIO 136 aplicado SOLO en el 93: Eurovip.circuito_destino_prioridad (vacía) y spPortalListarCircuitosDestino
+               ordenado por esa prioridad. Se pone desde Circuitos › Circuitos por el mundo (campo «Prioridad» de cada circuito).
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".
