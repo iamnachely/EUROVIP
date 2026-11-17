@@ -289,6 +289,47 @@ namespace EuroVip.Controllers
             return await ImagenSegura.ExtensionAsync(archivo) is null ? "El archivo no es una imagen JPG, PNG o WebP." : null;
         }
 
+        // ================= CIRCUITOS POR EL MUNDO (Yourttoo → Home, CAMBIO 133) =================
+        // Pedido de la usuaria: «una sección nueva con los circuitos de la integración, agrupados por destino; el usuario elige
+        // visualmente (sin formularios) cuáles van a la Home; se guardan en la tabla inicio como circuito, por destino».
+        public sealed record MundoAgregarDto(string Codigo, string Pais);
+        public sealed record MundoOrdenDto(string Pais, List<int> Ids);
+
+        [HttpGet]
+        public async Task<IActionResult> MundoDestinos([FromServices] ICircuitosMundo m, CancellationToken ct) => Json(await m.DestinosAsync(ct));
+
+        [HttpGet]
+        public async Task<IActionResult> MundoProgramas([FromServices] ICircuitosMundo m, string pais, int pagina = 0, CancellationToken ct = default) =>
+            Json(await m.ProgramasAsync(pais, pagina, ct));
+
+        [HttpGet]
+        public async Task<IActionResult> MundoElegidos([FromServices] ICircuitosMundo m) => Json(await m.ElegidosAsync());
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> MundoAgregar([FromServices] ICircuitosMundo m, [FromBody] MundoAgregarDto dto, CancellationToken ct)
+        {
+            var (id, error) = await m.AgregarAsync(dto.Codigo, dto.Pais, User.Identity?.Name ?? "desconocido", ct);
+            if (error is not null) return BadRequest(new { mensaje = error });
+            await Auditar("CircuitoMundo_Agregar", dto, id);
+            return Json(new { ok = true, id, mensaje = "Circuito agregado a la Home." });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> MundoQuitar([FromServices] ICircuitosMundo m, int id)
+        {
+            if (!await m.QuitarAsync(id)) return NotFound(new { mensaje = "Ese circuito ya no estaba en la Home." });
+            await Auditar("CircuitoMundo_Quitar", new { id }, id);
+            return Json(new { ok = true, mensaje = "Circuito quitado de la Home." });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> MundoOrdenar([FromServices] ICircuitosMundo m, [FromBody] MundoOrdenDto dto)
+        {
+            await m.OrdenarAsync(dto.Pais, dto.Ids ?? new());
+            await Auditar("CircuitoMundo_Ordenar", dto);
+            return Json(new { ok = true, mensaje = "Orden guardado." });
+        }
+
         private Task Auditar(string tipo, object cambios, int? id = null) =>
             _repo.AuditarAsync(tipo, id is null ? Array.Empty<int>() : new[] { id.Value }, cambios,
                 User.Identity?.Name ?? "desconocido", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());

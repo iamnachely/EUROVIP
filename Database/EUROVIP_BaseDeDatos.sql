@@ -5766,6 +5766,86 @@ SELECT 'servicio_habitacion.cupo' AS revision, CASE WHEN COL_LENGTH('Eurovip.ser
 SELECT COUNT(*) AS habitaciones, SUM(CASE WHEN cupo IS NULL THEN 1 ELSE 0 END) AS sin_limite FROM Eurovip.vInventarioHabitacion;
 GO
 
+/* ---------- CAMBIO 133: «Circuitos por el mundo» (Yourttoo) elegidos para la Home, en Eurovip.inicio ----------
+   Explicación sencilla: pedido de la usuaria «en /Circuitos/Index una sección nueva con los circuitos de la integración
+   (Yourttoo), agrupados por destino; el usuario elige visualmente (sin formularios) cuáles van a la Home y se guardan en la
+   tabla inicio como circuito, por destino; inicio es la tabla intermedia».
+     - Cada circuito elegido es una fila de Eurovip.inicio con tipo_servicio = 'CIRCUITO_MUNDO':
+         id_destino = destino (país, en español) · id_paisDestino = código ISO (TR, GR…) · descripcion = título ·
+         caratulaDestino = foto · precioWeb = precio «desde» de Yourttoo por persona en doble · id_moneda = su moneda (USD) ·
+         noches = días - 1 · peso = orden dentro del destino (1 = primero).
+     - Columnas nuevas (solo para estas filas): programa_fuente ('YOURTTOO'), programa_codigo (código del programa, distingue
+       mayúsculas), programa_dias, programa_ciudades, programa_categoria.
+     - Van SIN sección (id_contenedor vacío): la Home actual no las muestra (el trigger trInicioSinSeccion las deja ocultas) y
+       ningún procedimiento de spActualizaInicio* las toca (cada uno borra solo su tipo).
+     - Eurovip.spPortalListarCircuitosMundo: lo que debe leer la web para la fila «Circuitos por el mundo», por destino.
+   No cambia ningún dato existente. */
+IF COL_LENGTH('Eurovip.inicio', 'programa_fuente') IS NULL ALTER TABLE Eurovip.inicio ADD programa_fuente varchar(20) NULL;
+IF COL_LENGTH('Eurovip.inicio', 'programa_codigo') IS NULL ALTER TABLE Eurovip.inicio ADD programa_codigo varchar(60) COLLATE Latin1_General_CS_AS NULL;
+IF COL_LENGTH('Eurovip.inicio', 'programa_dias') IS NULL ALTER TABLE Eurovip.inicio ADD programa_dias smallint NULL;
+IF COL_LENGTH('Eurovip.inicio', 'programa_ciudades') IS NULL ALTER TABLE Eurovip.inicio ADD programa_ciudades nvarchar(400) NULL;
+IF COL_LENGTH('Eurovip.inicio', 'programa_categoria') IS NULL ALTER TABLE Eurovip.inicio ADD programa_categoria nvarchar(100) NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Eurovip_inicio_programa')
+    CREATE UNIQUE INDEX UX_Eurovip_inicio_programa ON Eurovip.inicio (programa_fuente, programa_codigo, id_idioma) WHERE programa_codigo IS NOT NULL;
+GO
+/* La web: circuitos de Yourttoo elegidos en el BackOffice, por destino (orden: destino, peso, precio). Sin precioWeb público:
+   el precio de la agencia se calcula en vivo en la API (fórmula de la integración). */
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarCircuitosMundo
+    @Idioma char(2) = 'ES'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT i.id, i.programa_fuente AS fuente, i.programa_codigo AS codigo, i.id_paisDestino AS pais, i.id_destino AS destino,
+           i.descripcion AS titulo, i.caratulaDestino AS imagen, i.programa_dias AS dias, i.programa_ciudades AS ciudades,
+           i.programa_categoria AS categoria, i.precioWeb AS desde, i.id_moneda AS moneda, i.peso
+      FROM Eurovip.inicio i
+     WHERE i.tipo_servicio = 'CIRCUITO_MUNDO' AND i.id_idioma = @Idioma AND i.programa_codigo IS NOT NULL
+     ORDER BY i.id_destino, CASE WHEN i.peso IS NULL THEN 1 ELSE 0 END, i.peso, i.precioWeb, i.id;
+END
+GO
+SELECT 'inicio.programa_codigo' AS revision, CASE WHEN COL_LENGTH('Eurovip.inicio','programa_codigo') > 0 THEN 'ok' ELSE 'FALTA' END AS estado;
+GO
+
+/* ---------- CAMBIO 134: orden de las pestañas del buscador de la web ----------
+   Explicación sencilla: pedido de la usuaria «poder cambiar las secciones del buscador y ponerles orden (Hoteles, Vuelos,
+   Circuitos, Excursiones, Traslados, Coches, Cruceros)». Se configura en el BackOffice (Home de la web › Buscador) y la web
+   lo lee con Eurovip.spPortalListarBuscadorPestanas. Guía para la web: Docs/buscador-pestanas.md.
+     - clave: la pestaña de la web (hoteles, vuelos, circuitos, excursiones, traslados, coches, cruceros). No se inventan claves:
+       la web solo sabe pintar estas.
+     - orden: 1 = la primera. activo: 0 = no se muestra. predeterminada: la que se abre al entrar (solo una).
+   Empieza igual que la web hoy (mismo orden, todas visibles, Hoteles por defecto): no cambia nada hasta que se toque. */
+IF OBJECT_ID('Eurovip.buscador_pestana') IS NULL
+    CREATE TABLE Eurovip.buscador_pestana (
+        clave varchar(20) NOT NULL CONSTRAINT PK_Eurovip_buscador_pestana PRIMARY KEY,
+        nombre nvarchar(40) NOT NULL,
+        icono varchar(40) NULL,
+        orden smallint NOT NULL,
+        activo bit NOT NULL CONSTRAINT DF_Eurovip_buscador_pestana_activo DEFAULT (1),
+        predeterminada bit NOT NULL CONSTRAINT DF_Eurovip_buscador_pestana_pred DEFAULT (0),
+        usuario varchar(50) NULL,
+        fecha_modificacion datetime2(0) NOT NULL CONSTRAINT DF_Eurovip_buscador_pestana_fecha DEFAULT (SYSDATETIME()));
+GO
+IF NOT EXISTS (SELECT 1 FROM Eurovip.buscador_pestana)
+    INSERT INTO Eurovip.buscador_pestana (clave, nombre, icono, orden, activo, predeterminada, usuario) VALUES
+        ('hoteles', N'Hoteles', 'bi-building', 1, 1, 1, 'CAMBIO 134'),
+        ('vuelos', N'Vuelos', 'bi-airplane', 2, 1, 0, 'CAMBIO 134'),
+        ('circuitos', N'Circuitos', 'bi-signpost-split', 3, 1, 0, 'CAMBIO 134'),
+        ('excursiones', N'Excursiones', 'bi-compass', 4, 1, 0, 'CAMBIO 134'),
+        ('traslados', N'Traslados', 'bi-bus-front', 5, 1, 0, 'CAMBIO 134'),
+        ('coches', N'Coches', 'bi-car-front', 6, 1, 0, 'CAMBIO 134'),
+        ('cruceros', N'Cruceros', 'bi-water', 7, 1, 0, 'CAMBIO 134');
+GO
+CREATE OR ALTER PROCEDURE Eurovip.spPortalListarBuscadorPestanas
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT clave, nombre, orden, activo, predeterminada FROM Eurovip.buscador_pestana ORDER BY orden, clave;
+END
+GO
+EXEC Eurovip.spPortalListarBuscadorPestanas;
+GO
+
 
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
@@ -6329,6 +6409,12 @@ GO
                vInventarioHabitacion y procedimientos spInventarioReservar / spInventarioLiberar. Las 2.141 habitaciones de ofertas
                quedaron sin límite (cupo NULL) y con 0 vendidas. Prueba de los procedimientos sobre una habitación real dentro de
                BEGIN TRAN … ROLLBACK (no quedó nada cambiado). Guía para la web: Docs/bloques-de-hoteles.md.
+   17/11/2026  CAMBIO 133 aplicado SOLO en el 93: columnas programa_* en inicio, índice UX_Eurovip_inicio_programa y
+               spPortalListarCircuitosMundo. Prueba: se agregó «Maravillas de Estambul» (Yourttoo 03596231898, inicio.id 1265),
+               se comprobó que no se duplica y que la web lo lee, y se quitó. Las credenciales de Yourttoo del BackOffice van
+               solo en appsettings.Local.json (ignorado por git) y en la configuración del servidor (Yourttoo:Url/Usuario/Clave).
+   17/11/2026  CAMBIO 134 aplicado SOLO en el 93: Eurovip.buscador_pestana (7 pestañas, mismo orden que la web hoy) y
+               spPortalListarBuscadorPestanas. Prueba: ocultar y volver a mostrar «Coches» desde Home de la web (quedó igual).
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

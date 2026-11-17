@@ -103,6 +103,12 @@
     </svg>
 </section>
 
+<!-- CAMBIO 133: dos pestañas — los circuitos propios y los de Yourttoo («Circuitos por el mundo») que se eligen para la Home -->
+<div class="ui-chips" id="cxVista" style="margin:0 0 14px">
+    <button type="button" class="ui-pick on" data-v="propios"><i class="bi bi-signpost-split"></i> Mis circuitos</button>
+    <button type="button" class="ui-pick" data-v="mundo"><i class="bi bi-globe-americas"></i> Circuitos por el mundo <small style="font-weight:600;opacity:.75">Yourttoo</small></button>
+</div>
+<div id="cxPropios">
 <div class="ui-toolbar">
     <label class="ui-search"><i class="bi bi-search"></i><input id="fQ" type="search" placeholder="Buscar por nombre, código o destino…" /></label>
     <select class="ui-select" id="fPais" title="País"><option value="">Todos los países</option></select>
@@ -110,6 +116,8 @@
 </div>
 
 <div id="cxLista"></div>
+</div>
+<div id="cxMundo" hidden></div>
 
 <!-- ===================== EDITOR ===================== -->
 <aside class="ui-drawer" id="cxEditor" style="width:min(1560px, calc(100vw - 24px))" aria-hidden="true">
@@ -236,6 +244,7 @@
 <script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-fotos.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-mundo.js" asp-append-version="true"></script>
 <script>
 const CX = (() => {
     const $ = (s, el = document) => el.querySelector(s);

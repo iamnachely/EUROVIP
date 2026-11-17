@@ -134,6 +134,19 @@ namespace EuroVip.Controllers
             return Json(new { ok = true, mensaje = n > 0 ? $"Sección eliminada. Sus {n} tarjeta(s) quedaron en «Sin sección»." : "Sección eliminada." });
         }
 
+        // ================= BUSCADOR DE LA WEB: orden de sus pestañas (CAMBIO 134) =================
+        [HttpGet]
+        public async Task<IActionResult> Buscador() => Json(await BuscadorPestanas.ListarAsync(_db));
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> BuscadorGuardar([FromBody] List<BuscadorPestanas.Cambio> lista)
+        {
+            var error = await BuscadorPestanas.GuardarAsync(_db, lista ?? new(), User.Identity?.Name ?? "desconocido");
+            if (error is not null) return BadRequest(new { mensaje = error });
+            await Auditar("Home_BuscadorPestanas", lista!);
+            return Json(new { ok = true, mensaje = "Buscador de la web guardado." });
+        }
+
         // ================= TARJETAS =================
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> OrdenTarjetas([FromBody] HwOrdenDto dto)
