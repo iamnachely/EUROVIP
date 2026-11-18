@@ -40,7 +40,7 @@ namespace EuroVip.Controllers
         {
             var errores = ErroresModelo();
             if (errores.Count == 0) errores = await _carga.ValidarAsync(dto);
-            return Json(new { ok = errores.Count == 0, errores, servicios = dto.Hoteles.Sum(h => h.Salidas.Count) * Math.Max(1, dto.Campanyas.Count) });
+            return Json(new { ok = errores.Count == 0, errores, servicios = dto.Hoteles.Sum(h => h.Salidas.Count) * Math.Max(1, dto.Campanyas.Count), precioMinimo = _carga.PrecioMinimo?.Info(), precioMinimoLista = _carga.PrecioMinimo?.Lista });
         }
 
         /// <summary>Cómo va la carga en curso (la pantalla lo consulta cada medio segundo para la barra de progreso).</summary>
@@ -57,7 +57,7 @@ namespace EuroVip.Controllers
             try
             {
                 var (r, errs) = await _carga.CargarAsync(dto, User.Identity?.Name ?? "eurovip", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), Request.Headers[ProgresoCargas.Cabecera].ToString());
-                if (r is null) return BadRequest(new { mensaje = errs.FirstOrDefault(), errores = errs });
+                if (r is null) return BadRequest(new { mensaje = errs.FirstOrDefault(), errores = errs, precioMinimo = _carga.PrecioMinimo?.Info(), precioMinimoLista = _carga.PrecioMinimo?.Lista });   // CAMBIO 139
                 await _aud.AuditarAsync(OfertaRepository.TipoDe(dto.Tipo) == OfertaRepository.TipoPaquete ? "Paquete_Carga" : "Oferta_Carga", r.Ids, new { dto.Modo, r.Codigo, r.LogId }, User.Identity?.Name ?? "desconocido",
                     HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
                 return Json(r);

@@ -47,7 +47,8 @@
         <h1>Circuitos · Cargar Excel</h1>
         <p>Como en BackTiTan (CargarCircuito/Index2): INICIO con los datos del circuito, VUELOS (opcional) y CARGAR EXCEL con los hoteles, las fechas y los precios. Revisa el formulario y guarda.</p>
     </div>
-    <div class="ui-hero-acts">
+    <div class="ui-hero-acts" style="align-items:center">
+        <span data-precio-minimo="CIRCUITOS"></span>   @* CAMBIO 139: precio mínimo de esta vista *@
         <a class="ev-btn light" href="/CargaCircuitos/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
         <a class="ev-btn light" asp-controller="CargaCircuitos" asp-action="Express"><i class="bi bi-lightning-charge"></i> Ir a la Express</a>
         <a class="ev-btn light" asp-controller="Circuitos" asp-action="Index"><i class="bi bi-signpost-split"></i> Catálogo</a>
@@ -231,7 +232,7 @@ const CL = (() => {
         filas().forEach(f => {
             $('[data-k=hasta]', f.tr).textContent = f.desde && n ? EV.fecha(EV.sumarDias(f.desde, n)) : '—';
             const base = f.total - f.tasas;
-            const bad = f.total > 0 && base < cat.minimo;
+            const bad = f.total > 0 && f.total < cat.minimo;   // CAMBIO 139: el precio que se escribe vs. el mínimo de Circuitos
             const celda = $('[data-k=base]', f.tr);
             celda.innerHTML = f.total > 0 ? `${EV.fmt(base)}${bad ? ' <i class="bi bi-exclamation-triangle" title="Menor al mínimo"></i>' : ''}` : '—';
             celda.style.color = bad ? '#D92D20' : '';

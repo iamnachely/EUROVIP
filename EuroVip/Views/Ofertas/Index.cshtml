@@ -118,7 +118,8 @@
         <h1>@nombre</h1>
         <p>Aquí ves todos los @ofs cargados: búscalos, edítalos, actívalos o elimínalos. Para cargar nuevos usa la Carga Express (todo junto) o Cargar Excel (un Excel con los hoteles y sus precios). Descarga la plantilla si no la tienes. El vuelo es opcional.</p>
     </div>
-    <div class="ui-hero-acts">
+    <div class="ui-hero-acts" style="align-items:center">
+        <span data-precio-minimo="@(esPaq ? "PAQUETES" : "OFERTAS")"></span>   @* CAMBIO 139: precio mínimo de esta vista *@
         <a class="ev-btn light" href="/CargaManual/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
         <a class="ev-btn light" href="/CargaManual/Clasica@(qs)"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</a>
         <a class="ev-btn" href="/CargaManual/Express@(qs)"><i class="bi bi-lightning-charge"></i> Carga Express</a>
@@ -544,7 +545,7 @@ const OF = (() => {
         const supMin = Math.min(...$$('#eHabs [data-hab]:checked').map(c => parseFloat($(`#eHabs [data-sup="${c.dataset.hab}"]`).value) || 0), Infinity);
         const extra = isFinite(supMin) ? supMin : 0;
         $('#ePrecio').innerHTML = `<i class="bi bi-calculator"></i> <span>Base ${EV.dinero(base, m)}</span> + <span>Tasas ${EV.dinero(tasas, m)}</span>${extra ? ` + <span>Hab. ${EV.dinero(extra, m)}</span>` : ''}${desc ? ` − <span>Desc. ${EV.fmt(desc, 1)}%</span>` : ''} = <span class="eq">Precio web ${EV.dinero(final + extra, m)}</span>
-            ${base < cat.minimo ? `<span style="background:#FEE4E2;color:#B42318;border-color:#FECDCA"><i class="bi bi-exclamation-triangle"></i> base menor al mínimo (${EV.fmt(cat.minimo)})</span>` : ''}`;
+            ${total > 0 && total < cat.minimo ? `<span style="background:#FEE4E2;color:#B42318;border-color:#FECDCA"><i class="bi bi-shield-exclamation"></i> menor al precio mínimo (${EV.fmt(cat.minimo)})</span>` : ''}`;
     }
 
     async function guardar() {
@@ -562,7 +563,8 @@ const OF = (() => {
         };
         if (dto.Origen && !dto.Id_Pais_Origen) { EV.toast('Elige el país de origen (o borra la ciudad).', 'err'); return; }
         if (dto.CodigoInterno && dto.CodigoInterno !== (actual.codigo_Interno || '') && !(await EVCodigo.validar($('#eCodigoInterno')))) { EV.toast($('#eCodigoInterno').nextElementSibling?.textContent?.trim() || 'Revisa el código interno.', 'err'); return; }
-        if (dto.PrecioTotal - sups.total() < cat.minimo && !await EV.confirmar({ titulo: 'Precio base bajo', texto: `El precio base queda por debajo del mínimo (${EV.fmt(cat.minimo)}). ¿Guardar igual?`, si: 'Guardar igual' })) return;
+        // CAMBIO 139: por debajo del mínimo de la vista no se guarda: aviso y se queda editando para ajustar el precio
+        if (!await EVPrecioMin.revisar(EVC.modulo(), [{ precio: dto.PrecioTotal, que: 'Precio total' }])) { $('#eTotal')?.focus(); return; }
         const b = $('#eGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
         try {
             const r = await EV.post('/Ofertas/Editar', dto); EV.toast(r.mensaje); drawer.cerrar(true);

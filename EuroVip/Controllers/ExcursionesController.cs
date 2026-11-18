@@ -103,6 +103,9 @@ namespace EuroVip.Controllers
             }
             if (await RevisarAsync(dto) is var (campo, mal))
                 return BadRequest(new { mensaje = mal, errores = new Dictionary<string, string> { [campo] = mal } });
+            using (var cnMin = _aud.Conexion())   // CAMBIO 139: precio mínimo de la vista Excursiones
+                if (await PreciosMinimos.ObtenerAsync(cnMin, PreciosMinimos.Excursiones) is decimal min && PreciosMinimos.Bajo(min, dto.Precio))
+                    return BadRequest(PreciosMinimos.Rechazo(PreciosMinimos.Excursiones, min, new[] { ((string?)dto.Nombre, dto.Precio!.Value) }, nameof(dto.Precio)));
 
             try
             {
@@ -232,7 +235,8 @@ namespace EuroVip.Controllers
             var vistas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var codigos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             List<CatalogoCargas.Proveedor> proveedores; ISet<string> monedas;
-            using (var cn = _aud.Conexion()) { proveedores = await CatalogoCargas.ProveedoresAsync(cn); monedas = await CatalogoCargas.MonedasAsync(cn); }
+            decimal? minimo;   // CAMBIO 139
+            using (var cn = _aud.Conexion()) { proveedores = await CatalogoCargas.ProveedoresAsync(cn); monedas = await CatalogoCargas.MonedasAsync(cn); minimo = await PreciosMinimos.ObtenerAsync(cn, PreciosMinimos.Excursiones); }
             foreach (var f in filas!)
             {
                 var (idProv, malProv) = CatalogoCargas.BuscarProveedor(f.Texto("Proveedor"), proveedores);
@@ -252,6 +256,7 @@ namespace EuroVip.Controllers
                 if (malProv is not null) CargaExcel.Marcar(fila, "Id_Proveedor", columnas);
                 if (fila.Mensaje is null && !vistas.Add($"{dto.Id_Destino}|{dto.Nombre}")) fila.Mensaje = "Está repetida en el Excel (mismo nombre y destino).";
                 if (fila.Mensaje is null && dto.Codigo is not null && !codigos.Add(dto.Codigo)) fila.Mensaje = $"El código «{dto.Codigo}» está repetido en el Excel.";
+                if (CargaExcel.RevisarMinimo(r, fila, PreciosMinimos.Excursiones, minimo, dto.Precio, "Precio", dto.Nombre) is string mMin) { if (fila.Mensaje is null) fila.Columna = "Precio"; fila.Mensaje ??= mMin; }
                 fila.Detalle = $"{dto.Id_Destino} · {(dto.Precio is decimal pr ? $"{dto.Id_Moneda} {pr:N2}" : "sin precio")}" + (dto.Codigo is null ? "" : $" · {dto.Codigo}");
                 fila.Nombre = dto.Nombre; fila.Ok = fila.Mensaje is null;
                 if (!fila.Ok || !guardar) continue;

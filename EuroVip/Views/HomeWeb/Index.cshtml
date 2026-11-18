@@ -212,7 +212,7 @@
     </div>
     <span class="sp"></span>
     <div class="acts">
-        <button type="button" class="ev-btn light sm" id="hwAjustes"><i class="bi bi-sliders"></i> Ajustes</button>
+        @* CAMBIO 139: se quitó «Ajustes › Precio base mínimo» (300 para todo); ahora cada vista de carga tiene su botón «Precio mínimo» *@
         <button type="button" class="ev-btn light sm" id="hwRecalc"><i class="bi bi-arrow-repeat"></i> Recalcular precios del carrusel</button>
         <button type="button" class="ev-btn aqua sm" id="hwTraer"><i class="bi bi-magic"></i> Traer ofertas a la Home</button>
     </div>
@@ -921,15 +921,6 @@ const HW = (() => {
             const b = $('#hwRecalc'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Calculando…';
             try { const r = await EV.post('/HomeWeb/RecalcularPrecios', {}); EV.toast(r.mensaje, 'info'); cargar(); } catch (e) { EV.toast(e.message, 'err'); }
             finally { b.disabled = false; b.innerHTML = html; }
-        };
-        $('#hwAjustes').onclick = async () => {
-            const a = await EV.api('/HomeWeb/Ajustes');
-            const v = await EV.pedir({ titulo: 'Precio base mínimo', etiqueta: `Precio base mínimo (${EV.simbolo()})`, valor: a.precioBaseMinimo, tipo: 'number', min: 0, icono: 'sliders',
-                ayuda: 'Ninguna oferta ni circuito se puede cargar con un precio base menor a este valor.' });
-            if (v == null) return;
-            const n = parseFloat(String(v).replace(',', '.'));
-            if (isNaN(n) || n < 0) { EV.toast('Escribe un número válido.', 'err'); return; }
-            try { const r = await EV.post('/HomeWeb/GuardarAjustes', { PrecioBaseMinimo: n }); EV.toast(r.mensaje); } catch (e) { EV.toast(e.message, 'err'); }
         };
     }
     document.addEventListener('DOMContentLoaded', iniciar);

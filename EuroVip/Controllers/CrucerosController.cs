@@ -153,6 +153,13 @@ namespace EuroVip.Controllers
             Normalizar(dto);
             if (Revisar(dto, out var campo) is string mal) return Mal(mal, campo);
             if (await _repo.RevisarCodigoMonedaAsync(dto) is var (campoCod, malCod)) return Mal(malCod, campoCod);   // FASE 38
+            using (var cnMin = _aud.Conexion())   // CAMBIO 139: precio mínimo de la vista Cruceros (cada precio por persona de la tabla)
+                if (await PreciosMinimos.ObtenerAsync(cnMin, PreciosMinimos.Cruceros) is decimal min)
+                {
+                    var bajos = dto.Precios.Where(p => PreciosMinimos.Bajo(min, p.Precio_Pp))
+                        .Select(p => ((string?)string.Join(" · ", new[] { p.Salida, p.Cabina, p.Tarifa }.Where(x => !string.IsNullOrWhiteSpace(x))), p.Precio_Pp)).ToList();
+                    if (bajos.Count > 0) return BadRequest(PreciosMinimos.Rechazo(PreciosMinimos.Cruceros, min, bajos, "Precios"));
+                }
             if (await _repo.RepetidoAsync(dto.Titulo, dto.Id_Barco, dto.Id_Crucero) is int otro)
                 return Mal($"Ya existe el crucero «{dto.Titulo}» en ese barco (n.º {otro}).", "Titulo");
             try

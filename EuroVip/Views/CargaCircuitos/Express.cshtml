@@ -46,7 +46,8 @@
         <h1>Carga Express de circuitos</h1>
         <p>En 5 pasos: elige o crea el circuito, marca las fechas en el calendario, pon precio y campaña, decide si lleva vuelo y listo. A la derecha ves en vivo lo que se va a crear.</p>
     </div>
-    <div class="ui-hero-acts">
+    <div class="ui-hero-acts" style="align-items:center">
+        <span data-precio-minimo="CIRCUITOS"></span>   @* CAMBIO 139: precio mínimo de esta vista *@
         <a class="ev-btn light" asp-controller="CargaCircuitos" asp-action="Clasica"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</a>
         <a class="ev-btn light" asp-controller="Circuitos" asp-action="Index"><i class="bi bi-signpost-split"></i> Catálogo</a>
     </div>
@@ -260,8 +261,8 @@ const XP = (() => {
             if (!S.salidas.size) err.push('Agrega al menos una fecha de salida.');
             const sinPrecio = [...S.salidas.values()].filter(v => !(v > 0)).length;
             if (sinPrecio) err.push(`Hay ${sinPrecio} fecha${sinPrecio > 1 ? 's' : ''} sin precio.`);
-            const bajas = [...S.salidas.values()].filter(v => v > 0 && v - suplementos.total() < cat.minimo).length;
-            if (bajas) err.push(`${bajas} salida${bajas > 1 ? 's quedan' : ' queda'} con precio base menor al mínimo (${EV.fmt(cat.minimo)}).`);
+            const bajas = [...S.salidas.values()].filter(v => v > 0 && v < cat.minimo).length;
+            if (bajas) err.push(`${bajas} salida${bajas > 1 ? 's tienen' : ' tiene'} un precio menor al mínimo de Circuitos (${EV.fmt(cat.minimo)}). Súbelo para poder cargar.`);
         }
         if (p === 3) {
             if (!S.categoria) err.push('Elige la categoría de hoteles.');
@@ -318,7 +319,7 @@ const XP = (() => {
         const base = suplementos.total();
         $('#xpTabla').innerHTML = !lista.length ? '<div class="ui-empty" style="padding:22px"><p style="margin:0">Sin fechas. Usa el generador o toca días en el calendario.</p></div>' :
             `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Salida</th><th>Regreso</th><th style="width:170px">Precio total</th><th class="num">Precio base</th><th></th></tr></thead><tbody>
-            ${lista.map(([f, p]) => { const b = (p || 0) - base; const bad = p > 0 && b < cat.minimo; return `<tr class="${!(p > 0) || bad ? 'bad' : ''}">
+            ${lista.map(([f, p]) => { const b = (p || 0) - base; const bad = p > 0 && p < cat.minimo; return `<tr class="${!(p > 0) || bad ? 'bad' : ''}">
                 <td><b>${EV.fechaCorta(f)}</b> <small style="color:var(--ev-muted)">${f.slice(0, 4)}</small></td><td>${n ? EV.fechaCorta(EV.sumarDias(f, n)) : '—'}</td>
                 <td><div class="ui-money"><b>${EV.simbolo($('#cDivisa').value)}</b><input type="number" min="0" step="1" value="${p || ''}" data-f="${f}"></div></td>
                 <td class="num" style="color:${bad ? '#D92D20' : 'inherit'}">${p > 0 ? EV.fmt(b) : '—'}${bad ? ' <i class="bi bi-exclamation-triangle" title="Menor al mínimo"></i>' : ''}</td>

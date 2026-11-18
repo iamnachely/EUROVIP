@@ -11,6 +11,8 @@ namespace EuroVip.Repositories
     {
         Task<List<string>> ValidarAsync(CargaOfertaDto dto);
         Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaOfertaDto dto, string usuario, string? ip, string? navegador, string? progresoId = null);
+        /// <summary>CAMBIO 139: precios por debajo del mínimo de la vista en la última revisión (null = ninguno).</summary>
+        EuroVip.Services.PreciosMinimos.Fallo? PrecioMinimo { get; }
     }
 
     /// <summary>
@@ -37,8 +39,11 @@ namespace EuroVip.Repositories
             _logger = logger;
         }
 
+        public EuroVip.Services.PreciosMinimos.Fallo? PrecioMinimo { get; private set; }
+
         public async Task<List<string>> ValidarAsync(CargaOfertaDto dto)
         {
+            PrecioMinimo = null;
             Normalizar(dto);
             var e = new List<string>();
             using var cn = _db.Conexion();
@@ -82,7 +87,11 @@ namespace EuroVip.Repositories
                           ". Haz una carga por destino.");
             }
 
-            var minimo = await _db.PrecioBaseMinimoAsync();
+            // CAMBIO 139: el mínimo es el de la vista (Solo Hotel o Paquetes) y se compara con el precio que se escribe.
+            // Antes era el «precio base mínimo» de 300 para todo (config_sistema), comparado con el precio sin tasas.
+            var modMin = OfertaRepository.TipoDe(dto.Tipo) == OfertaRepository.TipoPaquete ? EuroVip.Services.PreciosMinimos.Paquetes : EuroVip.Services.PreciosMinimos.Ofertas;
+            var minimo = await EuroVip.Services.PreciosMinimos.ObtenerAsync(cn, modMin);
+            var bajosMin = new List<string>();
             var tasas = dto.Suplementos.Sum(x => x.Valor);
             foreach (var h in dto.Hoteles)
             {
@@ -106,7 +115,11 @@ namespace EuroVip.Repositories
                     // Las fechas de hoy o pasadas no se venden ni salen en la web: solo desde mañana.
                     if (s.Desde.Date <= DateTime.Today) e.Add($"{et}: la fecha {f} es de hoy o ya pasó. Solo se cargan fechas desde mañana ({DateTime.Today.AddDays(1):dd/MM/yyyy}), si no la oferta no sale en la web.");
                     if (s.PrecioTotal <= 0) e.Add($"{et}: la fecha {f} no tiene precio.");
-                    else if (s.PrecioTotal - (s.Tasas ?? tasas) < minimo) e.Add($"{et}, {f}: el precio base ({s.PrecioTotal - (s.Tasas ?? tasas):N0}) queda por debajo del mínimo ({minimo:N0}).");
+                    else if (EuroVip.Services.PreciosMinimos.Bajo(minimo, s.PrecioTotal))
+                    {
+                        var mm = EuroVip.Services.PreciosMinimos.Mensaje(modMin, minimo!.Value, s.PrecioTotal, $"{et}, {f}");
+                        e.Add(mm); bajosMin.Add(mm);
+                    }
                     if (s.Tasas is not null && Math.Abs(s.Tasas.Value - tasas) > 0.009m)
                         e.Add($"{et}, {f}: las tasas de la fila ({s.Tasas:0.##}) no coinciden con la suma de suplementos ({tasas:0.##}).");
                 }
@@ -139,6 +152,7 @@ namespace EuroVip.Repositories
                     if (!TimeSpan.TryParse(v.HoraSalida, out _) || !TimeSpan.TryParse(v.HoraLlegada, out _)) e.Add($"Vuelo {n}: revisa las horas (HH:MM).");
                 }
             }
+            if (bajosMin.Count > 0) PrecioMinimo = new(modMin, minimo!.Value, bajosMin);
             return e;
         }
 

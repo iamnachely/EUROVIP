@@ -83,6 +83,10 @@ namespace EuroVip.Controllers
             // Nada de nombres basura ("222") ni destinos que no existen o están mal escritos.
             if (await RevisarAsync(dto) is var (campo, mal))
                 return BadRequest(new { mensaje = mal, errores = new Dictionary<string, string> { [campo] = mal } });
+            // CAMBIO 139: precio mínimo de la vista Hoteles
+            using (var cnMin = HttpContext.RequestServices.GetRequiredService<ICircuitoRepository>().Conexion())
+                if (await PreciosMinimos.ObtenerAsync(cnMin, PreciosMinimos.Hoteles) is decimal min && PreciosMinimos.Bajo(min, dto.PrecioWeb))
+                    return BadRequest(PreciosMinimos.Rechazo(PreciosMinimos.Hoteles, min, new[] { ((string?)dto.Id_Destino, dto.PrecioWeb!.Value) }, nameof(dto.PrecioWeb)));
 
             try
             {
@@ -281,6 +285,7 @@ namespace EuroVip.Controllers
             var vistas = new HashSet<string>();
             var proveedores = await _repo.ProveedoresAsync();
             var codigos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            decimal? minimo; using (var cnMin = HttpContext.RequestServices.GetRequiredService<ICircuitoRepository>().Conexion()) minimo = await PreciosMinimos.ObtenerAsync(cnMin, PreciosMinimos.Hoteles);   // CAMBIO 139
             foreach (var f in filas!)
             {
                 var fila = new CargaExcelFila { Fila = f.Numero, Nombre = f.Texto("Hotel", "Nombre", "Nombre del hotel") ?? "" };
@@ -325,6 +330,7 @@ namespace EuroVip.Controllers
                 if (mal is null && existentes.Contains(ExcelTabla.Clave(dto.Id_Destino))) mal = $"Ya hay un hotel «{dto.Id_Destino}» en la vitrina: edítalo en la lista.";
                 if (mal is null && !vistas.Add(ExcelTabla.Clave(dto.Id_Destino))) mal = "Está repetido en el Excel.";
                 if (mal is null && dto.Codigo is not null && !codigos.Add(dto.Codigo)) mal = $"El código «{dto.Codigo}» está repetido en el Excel.";
+                if (CargaExcel.RevisarMinimo(r, fila, PreciosMinimos.Hoteles, minimo, dto.PrecioWeb, "Precio", dto.Id_Destino) is string mMin) { if (mal is null) fila.Columna = "Precio"; mal ??= mMin; }
                 fila.Nombre = dto.Id_Destino;
                 fila.Detalle = $"{dto.CaratulaDestino} · {dto.Descripcion} · {(dto.PrecioWeb is decimal p ? p.ToString("N2") + " " + moneda : "sin precio")}";
                 fila.Mensaje = mal; fila.Ok = mal is null;

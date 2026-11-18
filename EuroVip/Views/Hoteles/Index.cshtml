@@ -22,6 +22,10 @@
     .hx-hero h1 { font-size: clamp(26px, 3vw, 36px); font-weight: 800; letter-spacing: -1.2px; margin: 10px 0 6px; }
     .hx-hero p { margin: 0; opacity: .75; font-weight: 500; max-width: 60ch; }
     .hx-hero .ev-btn { padding: 15px 22px; font-size: 15px; }
+    /* CAMBIO 139: botón «Precio mínimo» arriba a la derecha (en la fila de botones apretaba el texto) */
+    .hx-hero > div > [data-precio-minimo] { position: absolute; top: 20px; right: 32px; z-index: 2; }
+    @@media (min-width: 1251px) { .hx-hero { padding-top: 78px; } }
+    @@media (max-width: 1250px) { .hx-hero { grid-template-columns: minmax(0, 1fr); } .hx-hero > div > [data-precio-minimo] { position: static; flex-basis: 100%; } }   /* en pantallas medianas el texto y los botones van uno debajo del otro */
     .hx-hero-waves { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; pointer-events: none; opacity: .5; }
     .hx-hero-waves g { animation: hxWave 6s linear infinite; }
     .hx-hero-waves g + g { animation-duration: 4s; animation-direction: reverse; opacity: .6; }
@@ -363,7 +367,8 @@
         <h1>Carga de Hoteles</h1>
         <p>Publica hoteles en la web de Eurovip: nombre, destino, régimen, precio desde, foto y la sección donde aparecen. Todo lo que cargues aquí se guarda en la vitrina (<b>inicio</b>).</p>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span data-precio-minimo="HOTELES"></span>   @* CAMBIO 139: precio mínimo de esta vista *@
         <button class="ev-btn ghost" type="button" onclick="HX.fotos()"><i class="bi bi-images"></i> Fotos</button>
         <a class="ev-btn ghost" href="/Hoteles/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
         <button class="ev-btn ghost" type="button" onclick="EVExcel.abrir({ titulo: 'Cargar hoteles con Excel', plantilla: '/Hoteles/Plantilla', url: '/Hoteles/CargarExcel', uno: 'hotel', varios: 'hoteles', alTerminar: () => HX.recargar() })"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</button>

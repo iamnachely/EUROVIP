@@ -72,6 +72,15 @@ namespace EuroVip.Controllers
                 return BadRequest(new { mensaje = errores.Values.First(), errores });
             }
             if (await RevisarAsync(dto) is var (campo, mal)) return Mal(campo, mal);
+            using (var cnMin = _aud.Conexion())   // CAMBIO 139: precio mínimo de la vista Traslados (ida y vuelta y solo ida)
+                if (await PreciosMinimos.ObtenerAsync(cnMin, PreciosMinimos.Traslados) is decimal min)
+                {
+                    var bajos = new List<(string?, decimal)>();
+                    if (PreciosMinimos.Bajo(min, dto.Precio_Ida_Vuelta)) bajos.Add(("Precio ida y vuelta", dto.Precio_Ida_Vuelta!.Value));
+                    if (PreciosMinimos.Bajo(min, dto.Precio_Ida)) bajos.Add(("Precio solo ida", dto.Precio_Ida!.Value));
+                    if (bajos.Count > 0) return BadRequest(PreciosMinimos.Rechazo(PreciosMinimos.Traslados, min, bajos,
+                        PreciosMinimos.Bajo(min, dto.Precio_Ida_Vuelta) ? nameof(dto.Precio_Ida_Vuelta) : nameof(dto.Precio_Ida)));
+                }
 
             try
             {
@@ -242,7 +251,8 @@ namespace EuroVip.Controllers
             var vistas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var codigos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             List<CatalogoCargas.Proveedor> proveedores; ISet<string> monedas;
-            using (var cn = _aud.Conexion()) { proveedores = await CatalogoCargas.ProveedoresAsync(cn); monedas = await CatalogoCargas.MonedasAsync(cn); }
+            decimal? minimo;   // CAMBIO 139
+            using (var cn = _aud.Conexion()) { proveedores = await CatalogoCargas.ProveedoresAsync(cn); monedas = await CatalogoCargas.MonedasAsync(cn); minimo = await PreciosMinimos.ObtenerAsync(cn, PreciosMinimos.Traslados); }
             short Corto(ExcelTabla.Fila f, short defecto, params string[] c) => f.Cifra(c) is decimal d ? (short)Math.Clamp(Math.Round(d), short.MinValue, short.MaxValue) : defecto;
             foreach (var f in filas!)
             {
@@ -271,6 +281,8 @@ namespace EuroVip.Controllers
                 if (fila.Mensaje is null && !vistas.Add($"{dto.Id_Estacion_Origen}|{dto.Id_Destino}|{dto.Tipo}|{dto.Categoria}|{dto.Vehiculo}"))
                     fila.Mensaje = "Está repetido en el Excel (misma ruta, tipo, categoría y vehículo).";
                 if (fila.Mensaje is null && dto.Codigo is not null && !codigos.Add(dto.Codigo)) fila.Mensaje = $"El código «{dto.Codigo}» está repetido en el Excel.";
+                foreach (var (col, precio) in new[] { ("Precio ida y vuelta", dto.Precio_Ida_Vuelta), ("Precio solo ida", dto.Precio_Ida) })
+                    if (CargaExcel.RevisarMinimo(r, fila, PreciosMinimos.Traslados, minimo, precio, col, $"{dto.Nombre} ({col.ToLowerInvariant()})") is string mMin) { if (fila.Mensaje is null) fila.Columna = col; fila.Mensaje ??= mMin; }
                 fila.Detalle += $" · {dto.Id_Moneda}" + (dto.Codigo is null ? "" : $" · {dto.Codigo}");
                 fila.Nombre = dto.Nombre; fila.Ok = fila.Mensaje is null;
                 if (!fila.Ok || !guardar) continue;

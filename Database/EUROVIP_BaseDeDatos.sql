@@ -6029,6 +6029,26 @@ SELECT COUNT(*) AS programados FROM Eurovip.flyer_envio_programado;
 GO
 
 
+/* ---------- CAMBIO 139: precio mínimo de carga por vista ----------
+   Pedido de la usuaria: «en cada módulo de carga un botón para establecer el precio mínimo con que se podrá cargar en
+   esa vista (ej.: traslados mínimo 30 → no se puede cargar un traslado de menos de 30). Se evalúa en los formularios y
+   en los Excel. Si no se pone nada, no hay mínimo. Quita el valor mínimo que hay ahora en las cargas».
+   - Una fila por vista: HOTELES, OFERTAS (Solo Hotel), PAQUETES, CIRCUITOS, EXCURSIONES, TRASLADOS, CRUCEROS.
+   - precio NULL (o sin fila) = sin mínimo. Se compara con el precio tal como se escribe (el total), en la moneda de la carga.
+   - El antiguo Eurovip.config_sistema 'precio_base_minimo' (300, el mismo para todo) ya NO se usa en las cargas; la fila
+     se deja como estaba para no borrar datos. */
+IF OBJECT_ID('Eurovip.precio_minimo_carga') IS NULL
+CREATE TABLE Eurovip.precio_minimo_carga (
+    modulo varchar(20) NOT NULL CONSTRAINT PK_precio_minimo_carga PRIMARY KEY,
+    precio decimal(18,2) NULL,
+    usuario nvarchar(100) NULL,
+    fecha datetime2(0) NOT NULL CONSTRAINT DF_precio_minimo_carga_fecha DEFAULT SYSDATETIME(),
+    CONSTRAINT CK_precio_minimo_carga_modulo CHECK (modulo IN ('HOTELES','OFERTAS','PAQUETES','CIRCUITOS','EXCURSIONES','TRASLADOS','CRUCEROS')),
+    CONSTRAINT CK_precio_minimo_carga_precio CHECK (precio IS NULL OR (precio >= 0 AND precio <= 100000000))
+);
+GO
+
+
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
@@ -6608,6 +6628,9 @@ GO
    17/11/2026  CAMBIO 138 aplicado SOLO en el 93: Eurovip.flyer_envio_programado (envíos programados de Flyer Agencia).
                Prueba: se creó la programación #1 «PRUEBA CLAUDE (borrar)» (número ficticio), se pausó, se editó y se BORRÓ.
                El servicio que los envía solo corre en el servidor (en local está apagado: Eurovip:Flyer:EnviosProgramados).
+   18/11/2026  CAMBIO 139 aplicado SOLO en el 93: Eurovip.precio_minimo_carga (precio mínimo de carga por vista).
+               Prueba: se pusieron mínimos de prueba (Traslados 30, Solo Hotel 500, Circuitos 500, Excursiones 5000, Hoteles 1300)
+               y se QUITARON todos: las filas quedaron con precio NULL (= sin mínimo). config_sistema.precio_base_minimo (300) no se tocó.
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

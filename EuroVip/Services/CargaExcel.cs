@@ -58,6 +58,9 @@ namespace EuroVip.Services
         public int ConError => Filas.Count(f => !f.Ok);
         public int Guardadas { get; set; }
         public bool Guardado { get; set; }
+        /// <summary>CAMBIO 139: si alguna fila tiene precio por debajo del mínimo de la vista (la pantalla muestra el aviso).</summary>
+        public object? PrecioMinimo { get; set; }
+        public List<string> PrecioMinimoLista { get; set; } = new();
         public string Mensaje { get; set; } = "";
         /// <summary>Columnas de la plantilla con sus listas (para ver y editar cada dato en la pantalla).</summary>
         public List<CargaExcelColumna> Columnas { get; set; } = new();
@@ -297,7 +300,22 @@ namespace EuroVip.Services
             foreach (var c in columnas.Where(c => c.Tipo == "numero"))
                 if (fila.Valores.GetValueOrDefault(c.Nombre) is { Length: > 0 } v && ExcelTabla.Numero(v) is null && !e.Any(x => x.Columna == c.Nombre))
                     e.Add(new(c.Nombre, $"«{v}» no es un número: escribe solo cifras (ej.: 1250 o 1,250.50)."));
-            fila.Errores = e;
+            // los que ya traía la fila (precio mínimo, CAMBIO 139) se suman, sin repetir columna
+            fila.Errores = e.Concat(fila.Errores.Where(x => !e.Any(y => y.Columna == x.Columna && y.Mensaje == x.Mensaje))).ToList();
+        }
+
+        /// <summary>
+        /// CAMBIO 139: precio por debajo del mínimo de la vista → error en la columna del precio (se puede corregir en la
+        /// pantalla). Devuelve el mensaje, o null si está bien o la vista no tiene mínimo.
+        /// </summary>
+        public static string? RevisarMinimo(CargaExcelResultado r, CargaExcelFila fila, string modulo, decimal? minimo, decimal? precio, string columna, string? que = null)
+        {
+            if (!PreciosMinimos.Bajo(minimo, precio)) return null;
+            var m = PreciosMinimos.Mensaje(modulo, minimo!.Value, precio!.Value, que);
+            fila.Errores.Add(new CargaExcelError(columna, m));
+            r.PrecioMinimo ??= PreciosMinimos.Info(modulo, minimo.Value);
+            r.PrecioMinimoLista.Add($"Fila {fila.Fila}{(string.IsNullOrWhiteSpace(que ?? fila.Nombre) ? "" : " · " + (que ?? fila.Nombre))}: {PreciosMinimos.Cifra(precio.Value)}");
+            return m;
         }
 
         /// <summary>Marca la columna del error a partir del campo del formulario que devolvió la revisión (Id_Destino → Destino).</summary>

@@ -45,7 +45,8 @@
         <h1>@nombre · Carga Express</h1>
         <p>En 5 pasos: elige los hoteles, marca las fechas y pon los precios en una sola tabla, completa los datos comerciales, decide si lleva vuelo y listo. A la derecha ves en vivo lo que se va a crear.</p>
     </div>
-    <div class="ui-hero-acts">
+    <div class="ui-hero-acts" style="align-items:center">
+        <span data-precio-minimo="@(esPaq ? "PAQUETES" : "OFERTAS")"></span>   @* CAMBIO 139: precio mínimo de esta vista *@
         <a class="ev-btn light" href="/CargaManual/Clasica@(qs)"><i class="bi bi-file-earmark-excel"></i> Cargar Excel</a>
         <a class="ev-btn light" href="/CargaManual/Plantilla"><i class="bi bi-download"></i> Descargar plantilla</a>
         <a class="ev-btn light" href="@lista"><i class="bi bi-list-ul"></i> Ver @nombre</a>
@@ -272,7 +273,7 @@ const XP = (() => {
         const t = suplementos.total(), m = moneda();
         $('#cDesglose').innerHTML = `<i class="bi bi-calculator"></i> Ejemplo con el precio más bajo:
             <span>Base ${EV.dinero(ejemplo - t, m)}</span> + <span>Tasas ${EV.dinero(t, m)}</span> = <span class="eq">Cliente paga ${EV.dinero(ejemplo, m)}</span>
-            ${precios.length && ejemplo - t < cat.minimo ? `<span style="background:#FEE4E2;color:#B42318;border-color:#FECDCA"><i class="bi bi-exclamation-triangle"></i> base menor al mínimo (${EV.fmt(cat.minimo)})</span>` : ''}`;
+            ${precios.length && ejemplo > 0 && ejemplo < cat.minimo ? `<span style="background:#FEE4E2;color:#B42318;border-color:#FECDCA"><i class="bi bi-shield-exclamation"></i> menor al precio mínimo (${EV.fmt(cat.minimo)})</span>` : ''}`;
     }
 
     // ===================== NOTAS =====================
@@ -372,7 +373,7 @@ const XP = (() => {
         $('#cPaisOrigen').value = EVCodigo.ORIGEN.pais;
         $$('.sim').forEach(x => x.textContent = EV.simbolo(moneda()));
 
-        mx = EVC.matriz($('#xpMatriz'), { hoteles, noches, moneda, tasas: () => suplementos ? suplementos.total() : 0, minimo: cat.minimo, onChange: () => { cal.pintar(); resumen(); } });
+        mx = EVC.matriz($('#xpMatriz'), { hoteles, noches, moneda, tasas: () => suplementos ? suplementos.total() : 0, get minimo() { return cat.minimo; }, onChange: () => { cal.pintar(); resumen(); } });
         cal = EVC.calendario($('#xpCal'), {
             obtener: () => mx.mapa(),
             alternar: f => { if (mx.tiene(f)) mx.quitar(f); else { mx.agregar(f, parseFloat($('#gPrecio').value) || 0); mx.pintar(); } cal.pintar(); resumen(); }

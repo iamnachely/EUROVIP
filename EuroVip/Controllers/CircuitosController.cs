@@ -129,6 +129,9 @@ namespace EuroVip.Controllers
         public async Task<IActionResult> EditarSalida([FromBody] CircuitoSalidaEditar dto)
         {
             if (!ModelState.IsValid) return Errores();
+            using (var cnMin = _repo.Conexion())   // CAMBIO 139: precio mínimo de la vista Circuitos
+                if (await PreciosMinimos.ObtenerAsync(cnMin, PreciosMinimos.Circuitos) is decimal min && PreciosMinimos.Bajo(min, dto.PrecioTotal))
+                    return BadRequest(PreciosMinimos.Rechazo(PreciosMinimos.Circuitos, min, new[] { ((string?)$"Salida #{dto.Id_Servicio}", dto.PrecioTotal) }, nameof(dto.PrecioTotal)));
             var antes = await _repo.SalidaAsync(dto.Id_Servicio);
             var error = await _repo.EditarSalidaAsync(dto);
             if (error is not null) return BadRequest(new { mensaje = error });
@@ -197,7 +200,13 @@ namespace EuroVip.Controllers
         [HttpGet] public async Task<IActionResult> Tasas() => Json(await _repo.TasasAsync());
         [HttpGet] public async Task<IActionResult> Regimenes() => Json(await _repo.RegimenesAsync());
         [HttpGet] public async Task<IActionResult> Monedas() => Json(await _repo.MonedasAsync());
-        [HttpGet] public async Task<IActionResult> PrecioMinimo() => Json(await _repo.PrecioBaseMinimoAsync());
+        /// <summary>CAMBIO 139: el mínimo de la vista (OFERTAS, PAQUETES, CIRCUITOS…); 0 = sin mínimo. Antes: el mismo 300 para todo.</summary>
+        [HttpGet]
+        public async Task<IActionResult> PrecioMinimo(string? modulo)
+        {
+            using var cn = _repo.Conexion();
+            return Json(await PreciosMinimos.ObtenerAsync(cn, PreciosMinimos.Normalizar(modulo) ?? PreciosMinimos.Circuitos) ?? 0m);
+        }
 
         private IActionResult Errores()
         {

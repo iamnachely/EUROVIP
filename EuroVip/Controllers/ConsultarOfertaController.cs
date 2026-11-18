@@ -62,11 +62,8 @@ namespace EuroVip.Controllers
             if (d.Ids.Count == 0) return BadRequest(new { mensaje = "No elegiste ninguna oferta." });
             if (d.Ids.Count > ConsultaRepository.MaxMasivo) return BadRequest(new { mensaje = $"Máximo {ConsultaRepository.MaxMasivo} ofertas por vez." });
             if (d.PrecioBase is not null && d.SumarPrecio is not null) return BadRequest(new { mensaje = "Elige fijar el precio O sumarle, no las dos cosas." });
-            if (d.PrecioBase is not null)
-            {
-                var min = await _db.PrecioBaseMinimoAsync();
-                if (d.PrecioBase < min) return BadRequest(new { mensaje = $"El precio base no puede ser menor que {min:N0}." });
-            }
+            // CAMBIO 139: ya no hay «precio base mínimo» de 300 para todo; el mínimo es por vista de carga (Solo Hotel, Paquetes…).
+            if (d.PrecioBase is <= 0) return BadRequest(new { mensaje = "El precio base tiene que ser mayor que 0." });
             if (d is { Moneda: null, Id_Campanya: null, Proveedor: null, PrecioBase: null, SumarPrecio: null or 0, Descuento: null, PrecioMasMenos: null, Activo: null, Aerolinea: null })
                 return BadRequest(new { mensaje = "No elegiste ningún cambio." });
             try

@@ -94,7 +94,7 @@ namespace EuroVip.Controllers
             var errores = ErroresModelo();
             if (errores.Count == 0) errores = await _carga.ValidarAsync(dto);
             var servicios = dto.Salidas.Count * Math.Max(1, dto.Campanyas.Count);
-            return Json(new { ok = errores.Count == 0, errores, servicios });
+            return Json(new { ok = errores.Count == 0, errores, servicios, precioMinimo = _carga.PrecioMinimo?.Info(), precioMinimoLista = _carga.PrecioMinimo?.Lista });
         }
 
         /// <summary>Cómo va la carga en curso (la pantalla lo consulta cada medio segundo para la barra de progreso).</summary>
@@ -113,7 +113,7 @@ namespace EuroVip.Controllers
             {
                 var (resultado, errs) = await _carga.CargarAsync(dto, User.Identity?.Name ?? "eurovip",
                     HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), Request.Headers[ProgresoCargas.Cabecera].ToString());
-                if (resultado is null) return BadRequest(new { mensaje = errs.FirstOrDefault(), errores = errs });
+                if (resultado is null) return BadRequest(new { mensaje = errs.FirstOrDefault(), errores = errs, precioMinimo = _carga.PrecioMinimo?.Info(), precioMinimoLista = _carga.PrecioMinimo?.Lista });   // CAMBIO 139
 
                 await _repo.AuditarAsync("Circuito_Carga", resultado.Ids, new { dto.Modo, resultado.Circuito, resultado.Codigo, resultado.LogId },
                     User.Identity?.Name ?? "desconocido", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());

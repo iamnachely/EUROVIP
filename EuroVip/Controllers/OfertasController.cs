@@ -70,7 +70,14 @@ namespace EuroVip.Controllers
             if (antes is not null && dto.Desde.Date != antes.Desde.Date && dto.Desde.Date <= DateTime.Today)
                 return BadRequest(new { mensaje = $"La fecha de entrada tiene que ser desde mañana ({DateTime.Today.AddDays(1):dd/MM/yyyy}). Con una fecha de hoy o pasada la oferta no se vende ni sale en la web." });
             using (var cnE = _aud.Conexion())   // CAMBIO 131: el estado tiene que existir
+            {
                 if (await EstadosOferta.ErrorAsync(cnE, dto.Id_Estado) is string malEstado) return BadRequest(new { mensaje = malEstado });
+                // CAMBIO 139: precio mínimo de la vista (Solo Hotel o Paquetes, según la oferta)
+                var tipo = await Dapper.SqlMapper.ExecuteScalarAsync<string?>(cnE, "SELECT TOP 1 RTRIM(id_tipo_servicio) FROM Eurovip.servicio WHERE id_servicio = @id", new { id = dto.Id_Servicio });
+                var modMin = string.Equals(tipo, OfertaRepository.TipoPaquete, StringComparison.OrdinalIgnoreCase) ? PreciosMinimos.Paquetes : PreciosMinimos.Ofertas;
+                if (await PreciosMinimos.ObtenerAsync(cnE, modMin) is decimal min && PreciosMinimos.Bajo(min, dto.PrecioTotal))
+                    return BadRequest(PreciosMinimos.Rechazo(modMin, min, new[] { ((string?)$"Oferta #{dto.Id_Servicio}", dto.PrecioTotal) }, nameof(dto.PrecioTotal)));
+            }
             var error = await _repo.EditarAsync(dto);
             if (error is not null) return BadRequest(new { mensaje = error });
             await Auditar("Oferta_Editar", new[] { dto.Id_Servicio }, new { antes, despues = dto });

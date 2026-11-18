@@ -9,11 +9,16 @@
     const EVC = {};
     let cache = null;
 
+    // CAMBIO 139: vista de la carga para el precio mínimo (Circuitos, Paquetes o Solo Hotel); antes era un 300 para todo
+    EVC.modulo = () => /circuito/i.test(location.pathname) ? 'CIRCUITOS'
+        : (/^\/paquetes/i.test(location.pathname) || (new URLSearchParams(location.search).get('tipo') || '').toUpperCase() === 'PAQUETES') ? 'PAQUETES' : 'OFERTAS';
+    document.addEventListener('ev:precio-minimo', e => { if (cache && e.detail.modulo === EVC.modulo()) cache.minimo = e.detail.minimo || 0; });
+
     EVC.catalogos = async () => {
         if (cache) return cache;
         const [campanyas, tasas, categorias, monedas, paises, minimo, regimenes] = await Promise.all([
             EV.api('/Circuitos/Campanyas'), EV.api('/Circuitos/Tasas'), EV.api('/Circuitos/Categorias'),
-            EV.api('/Circuitos/Monedas'), EV.api('/Circuitos/Paises'), EV.api('/Circuitos/PrecioMinimo'), EV.api('/Circuitos/Regimenes')
+            EV.api('/Circuitos/Monedas'), EV.api('/Circuitos/Paises'), EV.api('/Circuitos/PrecioMinimo?modulo=' + EVC.modulo()), EV.api('/Circuitos/Regimenes')
         ]);
         cache = { campanyas, tasas, categorias, monedas, paises, minimo, regimenes };
         return cache;
@@ -332,7 +337,7 @@
                     <div class="ui-money"><b>${sim}</b><input type="number" min="0" step="1" placeholder="Todas" data-col="${h.uid}" title="Precio para todas las fechas de este hotel"></div></th>`).join('')}
                 <th style="width:52px"></th></tr></thead><tbody>
                 ${fs.map(f => `<tr><td><b>${EV.fechaCorta(f)}</b> <small style="color:var(--ev-muted)">${f.slice(0, 4)}</small><div style="color:var(--ev-muted);font-size:12px;font-weight:600">${n ? 'hasta ' + EV.fechaCorta(EV.sumarDias(f, n)) : ''}</div></td>
-                    ${hs.map(h => { const p = precios.get(k(h.uid, f)); const bad = p > 0 && p - t < cfg.minimo;
+                    ${hs.map(h => { const p = precios.get(k(h.uid, f)); const bad = p > 0 && p < cfg.minimo;
                         return `<td style="${bad ? 'background:#FFFBFA' : ''}"><div class="ui-money"><b>${sim}</b><input type="number" min="0" step="1" value="${p || ''}" data-h="${h.uid}" data-f="${f}" placeholder="no se vende"></div>
                         ${bad ? `<small style="color:#D92D20;font-weight:700"><i class="bi bi-exclamation-triangle"></i> base ${EV.fmt(p - t)} &lt; mínimo</small>` : ''}</td>`; }).join('')}
                     <td><button type="button" class="ui-ibtn danger" data-quitar="${f}" title="Quitar fecha"><i class="bi bi-x-lg"></i></button></td></tr>`).join('')}
@@ -372,8 +377,8 @@
                 const e = [], hs = cfg.hoteles(), t = cfg.tasas();
                 if (!fechas.size) e.push('Agrega al menos una fecha de entrada.');
                 hs.forEach(h => { if (fechas.size && !api.salidas(h.uid).length) e.push(`${h.nombre || 'Un hotel'}: no tiene ningún precio.`); });
-                const bajas = api.precios().filter(p => p - t < cfg.minimo).length;
-                if (bajas) e.push(`${bajas} precio${bajas > 1 ? 's quedan' : ' queda'} con base menor al mínimo (${EV.fmt(cfg.minimo)}).`);
+                const bajas = api.precios().filter(p => p > 0 && p < cfg.minimo).length;
+                if (bajas) e.push(`${bajas} precio${bajas > 1 ? 's son menores' : ' es menor'} al precio mínimo (${EV.fmt(cfg.minimo)}). Súbelos para poder cargar.`);
                 return e;
             }
         };

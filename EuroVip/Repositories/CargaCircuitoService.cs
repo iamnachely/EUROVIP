@@ -12,6 +12,8 @@ namespace EuroVip.Repositories
     {
         Task<(CargaResultado? Resultado, List<string> Errores)> CargarAsync(CargaCircuitoDto dto, string usuario, string? ip, string? navegador, string? progresoId = null);
         Task<List<string>> ValidarAsync(CargaCircuitoDto dto);
+        /// <summary>CAMBIO 139: precios por debajo del mínimo de la vista en la última revisión (null = ninguno).</summary>
+        EuroVip.Services.PreciosMinimos.Fallo? PrecioMinimo { get; }
     }
 
     /// <summary>
@@ -40,8 +42,11 @@ namespace EuroVip.Repositories
         private record CircuitoBase(string Nombre, string Id_Proveedor, short Noches);
         internal record Estacion(string Id_Estacion, string Id_Destino, string Id_Pais);
 
+        public EuroVip.Services.PreciosMinimos.Fallo? PrecioMinimo { get; private set; }
+
         public async Task<List<string>> ValidarAsync(CargaCircuitoDto dto)
         {
+            PrecioMinimo = null;
             var errores = new List<string>();
             using var cn = _circuitos.Conexion();
             await cn.OpenAsync();
@@ -86,7 +91,9 @@ namespace EuroVip.Repositories
                 errores.Add("Hay suplementos repetidos: cada suplemento solo puede ir una vez.");
 
             // --- salidas ---
-            var minimo = await _circuitos.PrecioBaseMinimoAsync();
+            // CAMBIO 139: el mínimo es el de la vista Circuitos y se compara con el precio que se escribe (antes: 300 para todo, sin tasas)
+            var minimo = await EuroVip.Services.PreciosMinimos.ObtenerAsync(cn, EuroVip.Services.PreciosMinimos.Circuitos);
+            var bajosMin = new List<string>();
             var hoy = DateTime.Today;
             if (dto.Salidas.Count == 0) errores.Add("Agrega al menos una fecha de salida con su precio.");
             if (dto.Salidas.GroupBy(x => x.Desde.Date).Any(g => g.Count() > 1)) errores.Add("Hay fechas de salida repetidas.");
@@ -104,9 +111,11 @@ namespace EuroVip.Repositories
                 // Las salidas de hoy o pasadas no se venden ni salen en la web: solo desde mañana.
                 if (s.Desde.Date <= hoy) errores.Add($"La salida del {etiqueta} es de hoy o ya pasó: solo se cargan salidas desde mañana ({hoy.AddDays(1):dd/MM/yyyy}), si no el circuito no sale en la web.");
                 if (s.PrecioTotal <= 0) errores.Add($"La salida del {etiqueta} no tiene precio.");
-                var base_ = s.PrecioTotal - (s.Tasas ?? tasasSuplementos);
-                if (s.PrecioTotal > 0 && base_ < minimo)
-                    errores.Add($"La salida del {etiqueta}: el precio base ({base_:N0}) queda por debajo del mínimo ({minimo:N0}).");
+                if (EuroVip.Services.PreciosMinimos.Bajo(minimo, s.PrecioTotal))
+                {
+                    var mm = EuroVip.Services.PreciosMinimos.Mensaje(EuroVip.Services.PreciosMinimos.Circuitos, minimo!.Value, s.PrecioTotal, $"Salida del {etiqueta}");
+                    errores.Add(mm); bajosMin.Add(mm);
+                }
             }
 
             // --- vuelos (opcionales) ---
@@ -143,6 +152,7 @@ namespace EuroVip.Repositories
                         ". Desactívalas en el catálogo o quita esas fechas.");
             }
 
+            if (bajosMin.Count > 0) PrecioMinimo = new(EuroVip.Services.PreciosMinimos.Circuitos, minimo!.Value, bajosMin);
             return errores;
         }
 
