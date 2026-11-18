@@ -60,7 +60,7 @@ namespace EuroVip.Controllers
         /// Casi todo es opcional: lo que viene vacío se quita o se completa solo (un día sin puerto, una actividad sin
         /// título, una tarifa sin código…) en vez de dar error. Las horas valen "7:30", "07:30" o "07:30:00".
         /// </summary>
-        private static void Normalizar(CruceroDto d)
+        internal static void Normalizar(CruceroDto d)   // internal: también la usa GuardadoProductos (CAMBIO 140)
         {
             d.Titulo = ReglasDatos.Limpiar(d.Titulo);
             d.Naviera_Nombre = Texto(d.Naviera_Nombre); d.Barco_Nombre = Texto(d.Barco_Nombre);
@@ -108,7 +108,7 @@ namespace EuroVip.Controllers
         }
 
         /// <summary>Lo único que de verdad impide guardar (null = todo bien).</summary>
-        private static string? Revisar(CruceroDto d, out string? campo)
+        internal static string? Revisar(CruceroDto d, out string? campo)   // internal: también la usa GuardadoProductos (CAMBIO 140)
         {
             campo = null;
             if (ReglasDatos.Nombre("título del crucero", d.Titulo, 3) is string malTitulo) { campo = "Titulo"; return malTitulo; }
@@ -153,22 +153,16 @@ namespace EuroVip.Controllers
             Normalizar(dto);
             if (Revisar(dto, out var campo) is string mal) return Mal(mal, campo);
             if (await _repo.RevisarCodigoMonedaAsync(dto) is var (campoCod, malCod)) return Mal(malCod, campoCod);   // FASE 38
-            using (var cnMin = _aud.Conexion())   // CAMBIO 139: precio mínimo de la vista Cruceros (cada precio por persona de la tabla)
-                if (await PreciosMinimos.ObtenerAsync(cnMin, PreciosMinimos.Cruceros) is decimal min)
-                {
-                    var bajos = dto.Precios.Where(p => PreciosMinimos.Bajo(min, p.Precio_Pp))
-                        .Select(p => ((string?)string.Join(" · ", new[] { p.Salida, p.Cabina, p.Tarifa }.Where(x => !string.IsNullOrWhiteSpace(x))), p.Precio_Pp)).ToList();
-                    if (bajos.Count > 0) return BadRequest(PreciosMinimos.Rechazo(PreciosMinimos.Cruceros, min, bajos, "Precios"));
-                }
+            if (await HttpContext.RequestServices.GetRequiredService<GuardadoProductos>().MinimoCruceroAsync(dto) is { } bajo)   // CAMBIO 139: precio mínimo de la vista Cruceros (cada precio por persona de la tabla)
+                return BadRequest(bajo.Respuesta());
             if (await _repo.RepetidoAsync(dto.Titulo, dto.Id_Barco, dto.Id_Crucero) is int otro)
                 return Mal($"Ya existe el crucero «{dto.Titulo}» en ese barco (n.º {otro}).", "Titulo");
             try
             {
                 var antes = dto.Id_Crucero is int idA ? await _repo.ObtenerAsync(idA) : null;
                 if (dto.Id_Crucero is not null && antes is null) return NotFound(new { mensaje = "Ese crucero ya no existe. Recarga la página." });
-                var (id, cats) = await _repo.GuardarAsync(dto, User.Identity?.Name ?? "desconocido");
-                await PorDefectoAsync("CRUCERO", id, null, false);
-                await _repo.ActualizarInicioAsync(cats);
+                // guardar + imagen por defecto + tarjetas de la Home: el mismo camino que las cargas de proveedores (CAMBIO 140)
+                var id = await HttpContext.RequestServices.GetRequiredService<GuardadoProductos>().GuardarCruceroAsync(dto, User.Identity?.Name ?? "desconocido");
                 await Auditar(antes is null ? "Crucero_Crear" : "Crucero_Editar", id, new { dto.Titulo, dto.Id_Barco, dto.Noches, salidas = dto.Salidas.Count, cabinas = dto.Cabinas.Count, precios = dto.Precios.Count });
                 return Json(new { ok = true, id, mensaje = antes is null ? $"¡Listo! Se creó «{dto.Titulo}»." : "Cambios guardados." });
             }

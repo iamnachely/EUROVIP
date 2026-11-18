@@ -125,6 +125,72 @@
     @@media (max-width: 1100px) { .ht-orbita { display: none; } .ht-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(200px, auto); } .ht-card.tall, .ht-card.xl { grid-row: auto; } .ht-card.xl { min-height: 260px; } }
     @@media (max-width: 640px) { .ht-bento { grid-template-columns: 1fr; grid-auto-rows: auto; } .ht-card, .ht-card.wide, .ht-card.tall, .ht-card.xl { grid-column: auto; grid-row: auto; min-height: 170px; } .ht-hero { padding: 26px 20px; } }
     @@media (prefers-reduced-motion: reduce) { .ht-blob, .ht-orbita, .ht-orbita i, .ht-orbita .nucleo, .ht-card { animation: none !important; } }
+
+    /* ================= CAMBIO 140: secciones con pestañas + cargas de proveedores ================= */
+    .ht-secciones { position: sticky; top: 8px; z-index: 15; margin: 22px 0 0; display: flex; gap: 6px; padding: 6px; width: fit-content; max-width: 100%; overflow-x: auto;
+                    border-radius: 20px; background: var(--ev-surface); border: 1px solid var(--ev-line); box-shadow: var(--ev-shadow); }
+    .ht-secciones button { display: flex; align-items: center; gap: 9px; border: 0; background: transparent; padding: 11px 18px; border-radius: 15px; font: 800 14px var(--ev-font);
+                           color: var(--ev-muted); cursor: pointer; white-space: nowrap; transition: all .25s var(--ev-ease); }
+    .ht-secciones button:hover { color: var(--ev-text); background: var(--ev-surface-2); }
+    .ht-secciones button.on { background: var(--ev-ink); color: #fff; }
+    .ht-secciones button .n { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 99px; display: inline-grid; place-items: center; font-size: 11.5px; background: #FDE68A; color: #713F12; }
+    .ht-secciones button .n[hidden] { display: none; }
+    .ht-tab { display: none; }
+    .ht-tab.on { display: block; animation: uiFade .35s var(--ev-ease); }
+    .hp-cab { display: flex; align-items: center; gap: 18px; margin: 22px 0 16px; flex-wrap: wrap; }
+    .hp-cab img { width: 64px; height: 64px; border-radius: 20px; object-fit: cover; box-shadow: 0 0 0 5px var(--ev-mint); }
+    .hp-cab h2 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.6px; }
+    .hp-cab p { margin: 2px 0 0; color: var(--ev-muted); font-weight: 600; font-size: 13.5px; max-width: 720px; }
+    .hp-cab .acc { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+    .hp-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .hp-kpi { border: 1px solid var(--ev-line); background: var(--ev-surface); border-radius: 18px; padding: 12px 14px; cursor: pointer; text-align: left; font: inherit; color: var(--ev-text);
+              transition: transform .25s var(--ev-ease), border-color .25s, box-shadow .25s; }
+    .hp-kpi:hover { transform: translateY(-2px); box-shadow: var(--ev-shadow); }
+    .hp-kpi.on { border-color: var(--ev-teal); box-shadow: 0 0 0 3px rgba(116,242,230,.35); }
+    .hp-kpi b { display: block; font-size: 24px; font-weight: 800; letter-spacing: -.5px; }
+    .hp-kpi small { color: var(--ev-muted); font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+    .hp-fil { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .hp-fil .ui-input { width: auto; min-width: 180px; }
+    .hp-fil .q { flex: 1; min-width: 220px; }
+    .hp-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+    .hp-card { position: relative; display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 14px; padding: 14px; border-radius: 22px; background: var(--ev-surface);
+               border: 1px solid var(--ev-line); cursor: pointer; text-align: left; font: inherit; color: var(--ev-text); transition: transform .3s var(--ev-ease), box-shadow .3s; animation: evRise .45s var(--ev-ease) both; }
+    .hp-card:hover { transform: translateY(-3px); box-shadow: var(--ev-shadow); }
+    .hp-card .fl { width: 86px; height: 108px; border-radius: 14px; background: var(--ev-grad-soft) center / cover no-repeat; display: grid; place-items: center; color: var(--ev-deep); font-size: 26px; }
+    .hp-card h4 { margin: 0 0 2px; font-size: 15.5px; font-weight: 800; letter-spacing: -.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hp-card .sub { color: var(--ev-muted); font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hp-card .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .hp-card .meta span { font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 99px; background: var(--ev-surface-2); border: 1px solid var(--ev-line); }
+    .hp-card .err { margin-top: 8px; font-size: 12px; font-weight: 700; color: #B42318; }
+    .hp-est { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 4px 9px; border-radius: 99px; }
+    .hp-est.PENDIENTE { background: #FEF3C7; color: #92400E; }
+    .hp-est.PROGRAMADA { background: #E0E7FF; color: #3730A3; }
+    .hp-est.RECHAZADA { background: #FEE4E2; color: #B42318; }
+    .hp-est.ACTIVA { background: #DCFCE7; color: #166534; }
+    .hp-est.BORRADOR { background: var(--ev-surface-2); color: var(--ev-muted); border: 1px solid var(--ev-line); }
+    .hp-card .hp-est { position: absolute; top: 12px; right: 12px; }
+    .hp-mas { display: flex; justify-content: center; margin-top: 14px; }
+    /* detalle */
+    .hp-det { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+    .hp-aviso { display: flex; gap: 10px; padding: 12px 14px; border-radius: 16px; margin-bottom: 14px; font-weight: 600; font-size: 13.5px; }
+    .hp-aviso.rojo { background: #FEF3F2; color: #B42318; }
+    .hp-aviso.ama { background: #FFFBEB; color: #92400E; }
+    .hp-aviso.azul { background: #EEF2FF; color: #3730A3; }
+    .hp-aviso.verde { background: #ECFDF3; color: #067647; }
+    .hp-aviso[hidden], #hpMas[hidden] { display: none !important; }
+    .hp-linea { display: flex; gap: 0; margin: 0 0 16px; flex-wrap: wrap; }
+    .hp-linea div { flex: 1; min-width: 120px; padding: 10px 12px; border-top: 3px solid var(--ev-line); font-size: 12px; font-weight: 700; color: var(--ev-muted); }
+    .hp-linea div.ok { border-color: var(--ev-teal); color: var(--ev-text); }
+    .hp-linea b { display: block; font-size: 12.5px; }
+    .hp-flyer { border-radius: 20px; overflow: hidden; border: 1px solid var(--ev-line); background: var(--ev-surface-2); }
+    .hp-flyer img { display: block; width: 100%; }
+    .hp-flyer .acc { display: flex; gap: 6px; padding: 10px; flex-wrap: wrap; }
+    .hp-rev { margin-top: 16px; padding: 16px; border-radius: 20px; border: 1.5px dashed var(--ev-line); background: var(--ev-surface-2); }
+    .hp-rev h4 { margin: 0 0 10px; font-weight: 800; font-size: 14.5px; display: flex; align-items: center; gap: 8px; }
+    .hp-mods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .hp-mods label.ui-switch { padding: 10px 12px; border: 1px solid var(--ev-line); border-radius: 14px; background: var(--ev-surface); }
+    @@media (max-width: 1100px) { .hp-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hp-det { grid-template-columns: 1fr; } }
+    @@media (max-width: 640px) { .hp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hp-mods { grid-template-columns: 1fr; } .hp-lista { grid-template-columns: 1fr; } }
 </style>
 }
 
@@ -150,6 +216,7 @@
         <div class="ht-stat"><b>@HrCatalogos.Todos.Length</b><small>catálogos</small></div>
         <div class="ht-stat"><b>@grupos.Count</b><small>grupos</small></div>
         <div class="ht-stat"><b id="sHoy">—</b><small>cambios recientes</small></div>
+        <div class="ht-stat" style="cursor:pointer" id="sProvIr" title="Ver las cargas de proveedores por revisar"><b id="sProv">—</b><small>cargas de proveedores por revisar</small></div>
     </div>
 
     <div class="ht-cmd">
@@ -158,6 +225,14 @@
     </div>
 </section>
 
+@* CAMBIO 140: la vista se ordena por secciones con pestañas (Catálogos · Cargas de proveedores · Proveedores) *@
+<nav class="ht-secciones" id="htSecciones" role="tablist" aria-label="Secciones de Herramientas">
+    <button type="button" class="on" data-tab="htCat" role="tab"><i class="bi bi-grid-1x2"></i> Catálogos</button>
+    <button type="button" data-tab="htProv" role="tab"><i class="bi bi-inboxes"></i> Cargas de proveedores <span class="n" id="tabProvN" hidden>0</span></button>
+    <button type="button" data-tab="htCuentas" role="tab"><i class="bi bi-briefcase"></i> Proveedores</button>
+</nav>
+
+<section class="ht-tab on" id="htCat" role="tabpanel">
 <div class="ht-body">
     <div>
         <div class="ht-filtro" id="hrFiltro" role="tablist">
@@ -224,6 +299,81 @@
         </div>
     </aside>
 </div>
+</section>
+
+@* ================= CAMBIO 140: bandeja de cargas de proveedores ================= *@
+<section class="ht-tab" id="htProv" role="tabpanel">
+    <div class="hp-cab">
+        <img src="/img/ava/robot-escritorio.jpg" alt="">
+        <div>
+            <h2>Cargas de proveedores</h2>
+            <p>Lo que cargan las empresas proveedoras NO sale en la web hasta que lo apruebas. Revisa los productos y el flyer, y luego
+               <b>apruébala y publícala ahora</b>, <b>programa el alta</b> o <b>recházala</b> con el motivo y lo que tiene que corregir.</p>
+        </div>
+        <div class="acc"><button type="button" class="ev-btn ghost sm" id="hpRecargar"><i class="bi bi-arrow-clockwise"></i> Actualizar</button></div>
+    </div>
+    <div class="hp-kpis" id="hpKpis"></div>
+    <div class="hp-fil">
+        <input class="ui-input q" id="hpQ" type="search" placeholder="Buscar por código, título, proveedor o correo…" aria-label="Buscar cargas">
+        <select class="ui-input" id="hpModulo" aria-label="Módulo"><option value="">Todos los módulos</option></select>
+        <select class="ui-input" id="hpCuenta" aria-label="Proveedor"><option value="">Todos los proveedores</option></select>
+    </div>
+    <div id="hpProgramador" class="hp-aviso azul" hidden></div>
+    <div class="hp-lista" id="hpLista"><div class="ui-skel" style="height:140px"></div><div class="ui-skel" style="height:140px"></div></div>
+    <div class="hp-mas"><button type="button" class="ev-btn ghost sm" id="hpMas" hidden><i class="bi bi-chevron-down"></i> Ver más</button></div>
+</section>
+
+@* ================= CAMBIO 140: cuentas de proveedor (hasta la fase 3, que las dará de alta desde Gestión) ================= *@
+<section class="ht-tab" id="htCuentas" role="tabpanel">
+    <div class="hp-cab">
+        <img src="/img/ava/robot-saludo.jpg" alt="">
+        <div>
+            <h2>Proveedores</h2>
+            <p>Las empresas que pueden cargar productos. Cada cuenta pertenece a un proveedor del catálogo y solo carga en los módulos que le habilites.
+               Lo que cargan llega a «Cargas de proveedores» para revisarlo.</p>
+        </div>
+        <div class="acc"><button type="button" class="ev-btn sm" id="hcNueva"><i class="bi bi-plus-lg"></i> Nueva cuenta</button></div>
+    </div>
+    <div class="ui-table-wrap">
+        <table class="ui-table">
+            <thead><tr><th>Empresa</th><th>Correo · teléfono</th><th>Proveedor del catálogo</th><th>Puede cargar</th><th>Cargas</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="hcLista"><tr><td colspan="7"><div class="ui-skel" style="height:60px"></div></td></tr></tbody>
+        </table>
+    </div>
+</section>
+
+<aside class="ui-drawer" id="hpVer" aria-hidden="true">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-inboxes" id="hpVerIco"></i></div>
+        <div style="min-width:0"><h2 id="hpVerTitulo">Carga</h2><small id="hpVerSub"></small></div>
+        <button class="ui-ibtn x" type="button" id="hpVerCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="hpVerCuerpo"></div>
+</aside>
+
+<aside class="ui-drawer" id="hcEditor" aria-hidden="true" style="width:min(640px, calc(100vw - 24px))">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-briefcase"></i></div>
+        <div style="min-width:0"><h2 id="hcTitulo">Nueva cuenta de proveedor</h2><small>Los campos con * son obligatorios.</small></div>
+        <button class="ui-ibtn x" type="button" id="hcCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db">
+        <input type="hidden" id="hcId">
+        <div class="ui-f"><label for="hcNombre">Empresa *</label><input id="hcNombre" maxlength="150" placeholder="Nombre de la empresa proveedora"></div>
+        <div class="ui-row">
+            <div class="ui-f"><label for="hcEmail">Correo * <em>con él entra en Gestión</em></label><input id="hcEmail" type="email" maxlength="250" placeholder="correo de la empresa"></div>
+            <div class="ui-f"><label for="hcTel">Teléfono</label><input id="hcTel" maxlength="30"></div>
+        </div>
+        <div class="ui-f"><label for="hcProv">Proveedor del catálogo * <em>lo que cargue irá a nombre de este proveedor</em></label><select id="hcProv"></select></div>
+        <div class="ui-f"><label>Puede cargar en</label><div class="hp-mods" id="hcMods"></div></div>
+        <label class="ui-switch"><input type="checkbox" id="hcActivo" checked><span class="tr"></span> Cuenta activa (si la desactivas no puede entrar ni cargar)</label>
+    </div>
+    <div class="ui-df">
+        <span class="hint">El proveedor solo ve y edita sus propias cargas.</span>
+        <button type="button" class="ev-btn ghost" id="hcCancelar">Cancelar</button>
+        <button type="button" class="ev-btn" id="hcGuardar"><i class="bi bi-check2"></i> Guardar</button>
+    </div>
+</aside>
 
 @section Scripts {
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
@@ -372,6 +522,266 @@
     });
     document.addEventListener('click', e => { if (!e.target.closest('.ht-cmd')) pal.classList.remove('on'); });
     document.addEventListener('keydown', e => { if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) { e.preventDefault(); inp.focus(); } });
+})();
+</script>
+<script>
+// =====================================================================================================================
+// CAMBIO 140: secciones con pestañas, bandeja de «Cargas de proveedores» (revisar, aprobar y publicar, programar el alta,
+// rechazar con motivo e instrucciones, flyer) y «Proveedores» (cuentas de las empresas proveedoras y sus módulos).
+// =====================================================================================================================
+(() => {
+    const $ = s => document.querySelector(s), esc = EV.esc;
+    const EST = {
+        PENDIENTE: ['Por revisar', 'bi-hourglass-split'], PROGRAMADA: ['Programadas', 'bi-calendar-check'], RECHAZADA: ['Rechazadas', 'bi-x-octagon'],
+        ACTIVA: ['En la web', 'bi-globe2'], BORRADOR: ['Borradores', 'bi-pencil'], '': ['Todas', 'bi-collection']
+    };
+    const UNO = { PENDIENTE: 'Por revisar', PROGRAMADA: 'Programada', RECHAZADA: 'Rechazada', ACTIVA: 'En la web', BORRADOR: 'Borrador' };
+    const TABLAS = { SERVICIO: 'Oferta / salida', EXCURSION: 'Excursión', TRASLADO: 'Traslado', CRUCERO: 'Crucero' };
+    const fh = d => d ? new Date(d).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    const params = new URLSearchParams(location.search);
+    let modulos = {}, conteo = {}, filtro = 'PENDIENTE', pagina = 1, total = 0, items = [], cuentas = [], catalogo = [];
+    let listo = { prov: false, cuentas: false };
+
+    // ---------------- pestañas (la elegida queda en la dirección: ?tab=htProv) ----------------
+    const tabs = EV.tabs($('#htSecciones'), id => {
+        const u = new URL(location.href);
+        if (id === 'htCat') u.searchParams.delete('tab'); else u.searchParams.set('tab', id);
+        u.searchParams.delete('carga');
+        history.replaceState(null, '', u);
+        if (id === 'htProv' && !listo.prov) { listo.prov = true; cargarCuentas().then(() => listar(true)); }
+        if (id === 'htCuentas' && !listo.cuentas) { listo.cuentas = true; cargarCuentas(); }
+    });
+    $('#sProvIr').addEventListener('click', () => tabs.ir('htProv'));
+
+    // ---------------- resumen: contador de pendientes (portada y pestaña) ----------------
+    const resumen = EV.api('/Herramientas/ProveedoresResumen').then(r => {
+        modulos = Object.fromEntries(r.modulos.map(m => [m.clave, m]));
+        $('#hpModulo').insertAdjacentHTML('beforeend', r.modulos.map(m => `<option value="${esc(m.clave)}">${esc(m.nombre)}</option>`).join(''));
+        pintarConteo(r.conteo);
+        const pr = $('#hpProgramador');
+        pr.hidden = r.publicaProgramadas;
+        pr.innerHTML = '<i class="bi bi-info-circle"></i><span>En esta copia el <b>alta programada está apagada</b> (Eurovip:Proveedores:Publicar): las cargas programadas se publican solas solo en el servidor. Aquí puedes aprobarlas a mano.</span>';
+        return r;
+    }).catch(() => ({ modulos: [] }));
+
+    function pintarConteo(c) {
+        conteo = c || {};
+        const n = conteo.PENDIENTE || 0;
+        $('#sProv').textContent = EV.fmt(n);
+        $('#tabProvN').textContent = n > 99 ? '99+' : n; $('#tabProvN').hidden = !n;
+        const todas = Object.values(conteo).reduce((s, x) => s + x, 0);
+        $('#hpKpis').innerHTML = ['PENDIENTE', 'PROGRAMADA', 'RECHAZADA', 'ACTIVA', 'BORRADOR', ''].map(e =>
+            `<button type="button" class="hp-kpi ${filtro === e ? 'on' : ''}" data-est="${e}"><b>${EV.fmt(e ? conteo[e] || 0 : todas)}</b><small><i class="bi ${EST[e][1]}"></i> ${EST[e][0]}</small></button>`).join('');
+    }
+    $('#hpKpis').addEventListener('click', e => { const b = e.target.closest('[data-est]'); if (!b) return; filtro = b.dataset.est; pintarConteo(conteo); listar(true); });
+
+    // ---------------- bandeja ----------------
+    async function listar(reset) {
+        if (reset) { pagina = 1; items = []; }
+        const q = new URLSearchParams({ estado: filtro, modulo: $('#hpModulo').value, cuenta: $('#hpCuenta').value, q: $('#hpQ').value.trim(), pagina, tam: 24 });
+        try {
+            const r = await EV.api('/Herramientas/ProveedoresCargas?' + q);
+            items = items.concat(r.items); total = r.total;
+            pintarConteo(r.conteo);
+            pintarLista();
+        } catch (er) { $('#hpLista').innerHTML = `<div class="ui-empty" style="grid-column:1/-1"><h3>No se pudo cargar</h3><p>${esc(er.message)}</p></div>`; }
+    }
+
+    function fechaDe(c) {
+        return c.estado === 'PENDIENTE' ? `Enviada ${fh(c.fecha_Solicitud)}` : c.estado === 'PROGRAMADA' ? `Alta ${fh(c.activar_En)}`
+             : c.estado === 'ACTIVA' ? `Publicada ${fh(c.fecha_Activacion)}` : c.estado === 'RECHAZADA' ? `Rechazada ${fh(c.fecha_Revision)}` : `Creada ${fh(c.creado_En)}`;
+    }
+
+    function pintarLista() {
+        if (!items.length) {
+            $('#hpLista').innerHTML = `<div class="ui-empty" style="grid-column:1/-1"><i class="bi bi-inbox big"></i><h3>${filtro === 'PENDIENTE' ? '¡Nada por revisar!' : 'No hay cargas'}</h3>
+                <p>${filtro === 'PENDIENTE' ? 'Cuando un proveedor envíe una carga a revisión aparecerá aquí y te avisará la campana.' : 'Prueba con otro filtro.'}</p></div>`;
+        } else {
+            $('#hpLista').innerHTML = items.map((c, k) => {
+                const m = modulos[c.modulo] || { nombre: c.modulo, icono: 'bi-box' };
+                return `<button type="button" class="hp-card" data-id="${c.id}" style="animation-delay:${Math.min(k, 12) * 35}ms">
+                    <span class="fl" style="${c.flyer ? `background-image:url('${esc(c.flyer)}')` : ''}">${c.flyer ? '' : `<i class="bi ${esc(m.icono)}"></i>`}</span>
+                    <div style="min-width:0;padding-right:74px">
+                        <h4>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''}</h4>
+                        <div class="sub"><i class="bi ${esc(m.icono)}"></i> ${esc(m.nombre)} · ${esc(c.cuenta || '')}</div>
+                        <div class="meta"><span>${EV.fmt(c.productos)} producto${c.productos === 1 ? '' : 's'}</span>${c.precio_Desde ? `<span>desde ${EV.dinero(c.precio_Desde, c.moneda)}</span>` : ''}<span>${fechaDe(c)}</span></div>
+                        ${c.error ? `<div class="err"><i class="bi bi-exclamation-octagon"></i> ${esc(c.error.length > 120 ? c.error.slice(0, 120) + '…' : c.error)}</div>` : ''}
+                    </div>
+                    <span class="hp-est ${esc(c.estado)}">${UNO[c.estado] || esc(c.estado)}</span></button>`;
+            }).join('');
+        }
+        $('#hpMas').hidden = items.length >= total;
+    }
+    $('#hpLista').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) abrir(+b.dataset.id); });
+    $('#hpMas').addEventListener('click', () => { pagina++; listar(false); });
+    $('#hpQ').addEventListener('input', EV.debounce(() => listar(true), 300));
+    $('#hpModulo').addEventListener('change', () => listar(true));
+    $('#hpCuenta').addEventListener('change', () => listar(true));
+    $('#hpRecargar').addEventListener('click', () => { listar(true); refrescarResumen(); });
+    const refrescarResumen = () => EV.api('/Herramientas/ProveedoresResumen').then(r => pintarConteo(r.conteo)).catch(() => {});
+
+    // ---------------- detalle y revisión ----------------
+    const visor = EV.drawer($('#hpVer'));
+    $('#hpVerCerrar').addEventListener('click', () => visor.cerrar());
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && visor.abierto()) visor.cerrar(); });
+    let actual = null;
+
+    async function abrir(id) {
+        try { actual = await EV.api('/Herramientas/ProveedorCarga?id=' + id); }
+        catch (er) { EV.toast(er.message, 'err'); return; }
+        pintarDetalle();
+        visor.abrir();
+        const u = new URL(location.href); u.searchParams.set('carga', id); history.replaceState(null, '', u);
+    }
+
+    function pintarDetalle() {
+        const { carga: c, productos, items: pub, datos } = actual;
+        const m = modulos[c.modulo] || { nombre: c.modulo, icono: 'bi-box' };
+        $('#hpVerIco').className = 'bi ' + m.icono;
+        $('#hpVerTitulo').innerHTML = `Carga ${esc(c.codigo)} <span class="hp-est ${esc(c.estado)}" style="vertical-align:middle">${UNO[c.estado] || esc(c.estado)}</span>`;
+        $('#hpVerSub').textContent = `${m.nombre} · ${c.cuenta || ''} (${c.email || ''}) · proveedor ${c.proveedor || c.id_Proveedor || ''}${c.titulo ? ' · ' + c.titulo : ''}`;
+        const avisos = [];
+        if (c.error) avisos.push(`<div class="hp-aviso rojo"><i class="bi bi-exclamation-octagon"></i><span><b>No se pudo publicar:</b> ${esc(c.error)}</span></div>`);
+        if (c.estado === 'RECHAZADA') avisos.push(`<div class="hp-aviso ama"><i class="bi bi-x-octagon"></i><span><b>Rechazada</b> por ${esc(c.revisado_Por || '')} el ${fh(c.fecha_Revision)}.<br><b>Motivo:</b> ${esc(c.motivo || '')}${c.instrucciones ? `<br><b>Instrucciones:</b> ${esc(c.instrucciones)}` : ''}<br><small>El proveedor puede corregirla y volver a enviarla.</small></span></div>`);
+        else if (c.motivo && c.estado === 'PENDIENTE') avisos.push(`<div class="hp-aviso ama"><i class="bi bi-arrow-repeat"></i><span><b>Reenviada después de un rechazo.</b> Motivo anterior: ${esc(c.motivo)}</span></div>`);
+        if (c.estado === 'PROGRAMADA') avisos.push(`<div class="hp-aviso azul"><i class="bi bi-calendar-check"></i><span>Se publicará en la web el <b>${fh(c.activar_En)}</b> (hora de República Dominicana). Programada por ${esc(c.revisado_Por || '')}.</span></div>`);
+        if (c.estado === 'ACTIVA') avisos.push(`<div class="hp-aviso verde"><i class="bi bi-globe2"></i><span>En la web desde el <b>${fh(c.fecha_Activacion)}</b>. Revisó: ${esc(c.revisado_Por || '')}.</span></div>`);
+        const paso = (ok, t, d) => `<div class="${ok ? 'ok' : ''}"><b>${t}</b>${d}</div>`;
+        const linea = `<div class="hp-linea">${paso(true, 'Creada', fh(c.creado_En))}${paso(!!c.fecha_Solicitud, 'Enviada a revisión', fh(c.fecha_Solicitud))}${paso(!!c.fecha_Revision, 'Revisada', c.fecha_Revision ? `${fh(c.fecha_Revision)} · ${esc(c.revisado_Por || '')}` : '—')}${paso(!!c.fecha_Activacion, 'En la web', fh(c.fecha_Activacion))}</div>`;
+        const tablaProd = productos.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Producto</th><th>Destino</th><th>Detalle</th><th class="num">Desde</th></tr></thead><tbody>${
+            productos.map(p => `<tr><td>${p.indice}</td><td><b>${esc(p.nombre)}</b></td><td>${esc(p.destino || '—')}</td><td>${esc(p.detalle || '')}</td><td class="num">${p.precio != null ? EV.dinero(p.precio, p.moneda) : '—'}</td></tr>`).join('')
+        }</tbody></table></div>` : '<div class="ui-empty"><p>La carga no tiene productos que se puedan leer.</p></div>';
+        const tablaPub = pub.length ? `<h4 style="margin:18px 0 8px;font-weight:800">Publicado en la web (${pub.length})</h4><div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Tipo</th><th>N.º</th><th>Nombre</th><th class="num">Precio</th><th>A la venta</th></tr></thead><tbody>${
+            pub.map(x => `<tr><td>${TABLAS[x.tabla] || esc(x.tabla)}</td><td>${x.id_Registro}</td><td>${esc(x.nombre || '')}</td><td class="num">${x.precio != null ? EV.dinero(x.precio, x.moneda) : '—'}</td><td>${x.activo === true ? '<i class="bi bi-check-circle-fill" style="color:#16A34A"></i> Sí' : x.activo === false ? 'Desactivado' : 'Ya no existe'}</td></tr>`).join('')
+        }</tbody></table></div>` : '';
+        const flyer = c.flyer ? `<div class="hp-flyer"><a href="${esc(c.flyer)}" target="_blank" rel="noopener"><img src="${esc(c.flyer)}?v=${Date.now()}" alt="Flyer de la carga ${esc(c.codigo)}"></a>
+            <div class="acc"><a class="ev-btn ghost sm" href="${esc(c.flyer)}" target="_blank" rel="noopener"><i class="bi bi-eye"></i> Ver</a><a class="ev-btn ghost sm" href="${esc(c.flyer)}" download><i class="bi bi-download"></i> Descargar</a><button type="button" class="ev-btn ghost sm" data-acc="flyer"><i class="bi bi-arrow-repeat"></i> Regenerar</button></div></div>`
+            : `<div class="ui-empty"><i class="bi bi-image big"></i><p>${c.estado === 'BORRADOR' ? 'El flyer se genera cuando el proveedor envía la carga a revisión.' : 'Sin flyer.'}</p>${c.estado !== 'BORRADOR' ? '<button type="button" class="ev-btn ghost sm" data-acc="flyer"><i class="bi bi-magic"></i> Generar flyer</button>' : ''}</div>`;
+        const revisar = c.estado === 'PENDIENTE' || c.estado === 'PROGRAMADA';
+        const manana = new Date(Date.now() + 86400000); manana.setHours(9, 0, 0, 0);
+        const local = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        const panel = revisar ? `<div class="hp-rev">
+                <h4><i class="bi bi-rocket-takeoff"></i> Aprobar y publicar ahora</h4>
+                <p style="margin:0 0 10px;color:var(--ev-muted);font-size:12.5px;font-weight:600">Se crean en la web con el mismo guardado de cada pantalla (y sus reglas: precio mínimo, código…).</p>
+                <button type="button" class="ev-btn" data-acc="aprobar" style="width:100%;justify-content:center"><i class="bi bi-check2-circle"></i> Aprobar y publicar</button>
+                <h4 style="margin-top:18px"><i class="bi bi-calendar-event"></i> Programar el alta</h4>
+                <div class="ui-f"><label for="hpFecha">Fecha y hora <em>República Dominicana</em></label><input type="datetime-local" id="hpFecha" value="${c.activar_En ? String(c.activar_En).slice(0, 16) : local(manana)}"></div>
+                <button type="button" class="ev-btn ghost" data-acc="programar" style="width:100%;justify-content:center"><i class="bi bi-calendar-check"></i> ${c.estado === 'PROGRAMADA' ? 'Cambiar la fecha' : 'Programar'}</button>
+                <h4 style="margin-top:18px"><i class="bi bi-x-octagon"></i> Rechazar</h4>
+                <div class="ui-f"><label for="hpMotivo">Motivo *</label><textarea id="hpMotivo" rows="3" maxlength="1000" placeholder="Qué está mal (lo verá el proveedor)"></textarea></div>
+                <div class="ui-f"><label for="hpInstr">Instrucciones <em>qué tiene que corregir</em></label><textarea id="hpInstr" rows="3" maxlength="1000"></textarea></div>
+                <button type="button" class="ev-btn red" data-acc="rechazar" style="width:100%;justify-content:center"><i class="bi bi-x-lg"></i> Rechazar</button>
+            </div>` : '';
+        $('#hpVerCuerpo').innerHTML = `${avisos.join('')}${linea}
+            <div class="hp-det">
+                <div style="min-width:0">
+                    <h4 style="margin:0 0 8px;font-weight:800">Productos (${productos.length})</h4>${tablaProd}${tablaPub}
+                    <details style="margin-top:16px"><summary style="cursor:pointer;font-weight:700;color:var(--ev-muted)">Ver los datos tal como los envió el proveedor (JSON)</summary>
+                        <pre style="max-height:360px;overflow:auto;background:var(--ev-surface-2);border:1px solid var(--ev-line);border-radius:14px;padding:12px;font-size:12px">${esc(JSON.stringify(datos, null, 2))}</pre></details>
+                </div>
+                <div>${flyer}${panel}</div>
+            </div>`;
+    }
+
+    $('#hpVerCuerpo').addEventListener('click', async e => {
+        const b = e.target.closest('[data-acc]'); if (!b || !actual) return;
+        const c = actual.carga, acc = b.dataset.acc;
+        try {
+            if (acc === 'aprobar') {
+                if (!await EV.confirmar({ titulo: '¿Aprobar y publicar ahora?', si: 'Sí, publicar', icono: 'rocket-takeoff',
+                    texto: `Los ${c.productos} producto(s) de la carga <b>${esc(c.codigo)}</b> de <b>${esc(c.cuenta || '')}</b> se crean en la web en este momento.` })) return;
+                const r = await EV.post('/Herramientas/ProveedorCargaAprobar', { id: c.id });
+                EV.toast(r.mensaje); EV.confeti();
+            } else if (acc === 'programar') {
+                const f = $('#hpFecha').value;
+                if (!f) { EV.toast('Elige la fecha y la hora del alta.', 'err'); return; }
+                const r = await EV.post('/Herramientas/ProveedorCargaProgramar', { id: c.id, fecha: f });
+                EV.toast(r.mensaje);
+            } else if (acc === 'rechazar') {
+                const motivo = $('#hpMotivo').value.trim();
+                if (!motivo) { EV.toast('Escribe el motivo del rechazo.', 'err'); $('#hpMotivo').focus(); return; }
+                if (!await EV.confirmar({ titulo: '¿Rechazar la carga?', si: 'Sí, rechazar', peligro: true, icono: 'x-octagon',
+                    texto: `El proveedor verá el motivo y las instrucciones y podrá corregirla y volver a enviarla.` })) return;
+                const r = await EV.post('/Herramientas/ProveedorCargaRechazar', { id: c.id, motivo, instrucciones: $('#hpInstr').value.trim() });
+                EV.toast(r.mensaje);
+            } else if (acc === 'flyer') {
+                const r = await EV.post('/Herramientas/ProveedorCargaFlyer', { id: c.id });
+                EV.toast(r.mensaje);
+            }
+        } catch { /* EV.api ya mostró el aviso con la lista de problemas */ }
+        try { actual = await EV.api('/Herramientas/ProveedorCarga?id=' + c.id); pintarDetalle(); } catch { }
+        listar(true);
+    });
+
+    // ---------------- cuentas de proveedor ----------------
+    async function cargarCuentas() {
+        try {
+            const r = await EV.api('/Herramientas/ProveedoresCuentas');
+            cuentas = r.cuentas; catalogo = r.catalogo;
+            const sel = $('#hpCuenta'), v = sel.value;
+            sel.innerHTML = '<option value="">Todos los proveedores</option>' + cuentas.map(x => `<option value="${x.id}">${esc(x.nombre)}</option>`).join('');
+            sel.value = v;
+            pintarCuentas();
+        } catch (er) { $('#hcLista').innerHTML = `<tr><td colspan="7">${esc(er.message)}</td></tr>`; }
+    }
+
+    function pintarCuentas() {
+        $('#hcLista').innerHTML = cuentas.length ? cuentas.map(x => `<tr>
+            <td><b>${esc(x.nombre)}</b></td>
+            <td>${esc(x.email)}${x.telefono ? `<br><small style="color:var(--ev-muted)">${esc(x.telefono)}</small>` : ''}</td>
+            <td>${esc(x.proveedor || '')} <small style="color:var(--ev-muted)">(${esc(x.id_Proveedor)})</small></td>
+            <td><div class="ui-chips">${(x.listaModulos || []).map(mm => `<span class="ui-chip ghost"><i class="bi ${esc(modulos[mm]?.icono || 'bi-box')}"></i> ${esc(modulos[mm]?.nombre || mm)}</span>`).join('') || '<small style="color:var(--ev-muted)">Ninguno</small>'}</div></td>
+            <td>${EV.fmt(x.cargas)}${x.pendientes ? ` · <b style="color:#92400E">${x.pendientes} por revisar</b>` : ''}</td>
+            <td>${x.activo ? '<span class="hp-est ACTIVA">Activa</span>' : '<span class="hp-est BORRADOR">Desactivada</span>'}</td>
+            <td style="white-space:nowrap"><button type="button" class="ui-ibtn" data-editar="${x.id}" title="Editar"><i class="bi bi-pencil"></i></button>
+                <button type="button" class="ui-ibtn" data-cargas="${x.id}" title="Ver sus cargas"><i class="bi bi-inboxes"></i></button></td></tr>`).join('')
+            : `<tr><td colspan="7"><div class="ui-empty"><i class="bi bi-briefcase big"></i><h3>Todavía no hay proveedores</h3><p>Crea la primera cuenta con «Nueva cuenta».</p></div></td></tr>`;
+    }
+
+    const editor = EV.drawer($('#hcEditor'));
+    $('#hcCerrar').addEventListener('click', () => editor.cerrar());
+    $('#hcCancelar').addEventListener('click', () => editor.cerrar());
+    $('#hcNueva').addEventListener('click', () => editar(null));
+    $('#hcLista').addEventListener('click', e => {
+        const ed = e.target.closest('[data-editar]'); if (ed) return editar(cuentas.find(x => x.id === +ed.dataset.editar));
+        const cg = e.target.closest('[data-cargas]');
+        if (cg) { filtro = ''; tabs.ir('htProv'); $('#hpCuenta').value = cg.dataset.cargas; listar(true); }
+    });
+
+    async function editar(x) {
+        await resumen;
+        $('#hcTitulo').textContent = x ? `Editar «${x.nombre}»` : 'Nueva cuenta de proveedor';
+        $('#hcId').value = x?.id || '';
+        $('#hcNombre').value = x?.nombre || ''; $('#hcEmail').value = x?.email || ''; $('#hcTel').value = x?.telefono || '';
+        const grupos = {};
+        catalogo.forEach(p => (grupos[p.tipo || 'Otros'] ||= []).push(p));
+        $('#hcProv').innerHTML = '<option value="">Elige el proveedor…</option>' + Object.entries(grupos).map(([g, l]) =>
+            `<optgroup label="${esc(g)}">${l.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)} (${esc(p.id)})</option>`).join('')}</optgroup>`).join('');
+        $('#hcProv').value = x?.id_Proveedor || '';
+        const tiene = new Set(x?.listaModulos || []);
+        $('#hcMods').innerHTML = Object.values(modulos).map(m => `<label class="ui-switch"><input type="checkbox" value="${esc(m.clave)}" ${tiene.has(m.clave) ? 'checked' : ''}><span class="tr"></span><i class="bi ${esc(m.icono)}"></i> ${esc(m.nombre)}</label>`).join('');
+        $('#hcActivo').checked = x ? x.activo : true;
+        editor.abrir();
+        setTimeout(() => $('#hcNombre').focus(), 200);
+    }
+
+    $('#hcGuardar').addEventListener('click', async () => {
+        const dto = {
+            id: +$('#hcId').value || null, nombre: $('#hcNombre').value.trim(), email: $('#hcEmail').value.trim(), telefono: $('#hcTel').value.trim() || null,
+            id_Proveedor: $('#hcProv').value, modulos: [...$('#hcMods').querySelectorAll('input:checked')].map(i => i.value), activo: $('#hcActivo').checked
+        };
+        try {
+            const r = await EV.post('/Herramientas/ProveedorCuentaGuardar', dto);
+            EV.toast(r.mensaje); editor.cerrar(true); await cargarCuentas();
+        } catch { }
+    });
+
+    // ---------------- abrir directo (campana: /Herramientas/Index?tab=htProv&carga=12) ----------------
+    const tab = params.get('tab'), carga = +params.get('carga');
+    if (tab && document.getElementById(tab)) {
+        tabs.ir(tab);
+        if (carga) resumen.then(() => abrir(carga));
+    }
 })();
 </script>
 }

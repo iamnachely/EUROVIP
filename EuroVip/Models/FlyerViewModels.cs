@@ -49,6 +49,10 @@ namespace EuroVip.Models
         public string? Fondo { get; set; }
         public DateTime? Fecha_Actualizacion { get; set; }
         public List<FlyerHotel> Hoteles { get; set; } = new();
+        /// <summary>CAMBIO 140: moneda de los precios (DOP, USD, EUR…). null = pesos (RD$), como siempre.</summary>
+        public string? Moneda { get; set; }
+        /// <summary>CAMBIO 140: frase de arriba propia (p. ej. «Excursiones · Proveedor X»). null = la automática.</summary>
+        public string? Gancho { get; set; }
     }
 
     public class FlyerContacto

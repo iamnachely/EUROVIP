@@ -103,17 +103,15 @@ namespace EuroVip.Controllers
             }
             if (await RevisarAsync(dto) is var (campo, mal))
                 return BadRequest(new { mensaje = mal, errores = new Dictionary<string, string> { [campo] = mal } });
-            using (var cnMin = _aud.Conexion())   // CAMBIO 139: precio mínimo de la vista Excursiones
-                if (await PreciosMinimos.ObtenerAsync(cnMin, PreciosMinimos.Excursiones) is decimal min && PreciosMinimos.Bajo(min, dto.Precio))
-                    return BadRequest(PreciosMinimos.Rechazo(PreciosMinimos.Excursiones, min, new[] { ((string?)dto.Nombre, dto.Precio!.Value) }, nameof(dto.Precio)));
+            if (await Guardado.MinimoExcursionAsync(dto) is { } bajo)   // CAMBIO 139: precio mínimo de la vista Excursiones
+                return BadRequest(bajo.Respuesta());
 
             try
             {
                 var antes = dto.Id_Excursion is int idAntes ? await _repo.ObtenerAsync(idAntes) : null;
                 if (dto.Id_Excursion is not null && antes is null) return NotFound(new { mensaje = "Esa excursión ya no existe. Recarga la página." });
-                var id = await _repo.GuardarAsync(dto);
-                using (var cnInfo = _aud.Conexion()) await InfoCliente.GuardarAsync(cnInfo, "Eurovip.servicio_excursion", id, dto.Info);   // CAMBIO 130
-                await PorDefectoAsync(TipoMm, id, dto.Id_Destino, _img.BuscarArchivo(TipoImagen, Archivo(dto.Nombre)) is not null);
+                // guardar + información para el cliente (CAMBIO 130) + imagen por defecto: el mismo camino que las cargas de proveedores (CAMBIO 140)
+                var id = await Guardado.GuardarExcursionAsync(dto);
 
                 // Si cambió el nombre, la foto pasa al nombre nuevo (se relaciona por nombre).
                 var fotoMovida = antes is not null && Archivo(antes.Nombre) != Archivo(dto.Nombre)
@@ -135,27 +133,11 @@ namespace EuroVip.Controllers
         /// Reglas para guardar una excursión (las mismas en el formulario y en Cargar Excel): nombre con letras, destino que exista
         /// (lo deja escrito como en Eurovip.destino) y que no se repita el nombre en ese destino. Devuelve el campo y el error, o null.
         /// </summary>
-        private async Task<(string Campo, string Mensaje)?> RevisarAsync(ExcursionGuardarDto dto, ISet<string>? monedas = null)
-        {
-            dto.Nombre = ReglasDatos.Limpiar(dto.Nombre);
-            using var cn = _aud.Conexion();
-            // FASE 38: moneda que exista, proveedor que exista y código interno único entre todos los productos
-            var (moneda, malMoneda) = CatalogoCargas.Moneda(dto.Id_Moneda, monedas ?? await CatalogoCargas.MonedasAsync(cn));
-            if (malMoneda is not null) return ("Id_Moneda", malMoneda);
-            dto.Id_Moneda = moneda;
-            if (await CatalogoCargas.ErrorProveedorAsync(cn, dto.Id_Proveedor) is string malProv) return ("Id_Proveedor", malProv);
-            dto.Codigo = CodigoInterno.Limpiar(dto.Codigo);
-            var anterior = dto.Id_Excursion is int ida ? await cn.ExecuteScalarAsync<string?>("SELECT codigo FROM Eurovip.servicio_excursion WHERE id_Excursion = @ida", new { ida }) : null;
-            if (await CodigoInterno.ErrorAsync(cn, dto.Codigo, "EXCURSION", dto.Id_Excursion?.ToString(), anterior) is string malCodigo) return ("Codigo", malCodigo);
-            if (ReglasDatos.Nombre("nombre de excursión", dto.Nombre, 3) is string malNombre) return ("Nombre", malNombre);
-            var (malDestino, destino) = await _repo.ValidarDestinoAsync(dto.Id_Destino);
-            if (malDestino is not null) return ("Id_Destino", malDestino);
-            dto.Id_Destino = destino!;
-            if (Archivo(dto.Nombre) == "") return ("Nombre", "El nombre tiene que llevar letras o números.");
-            if (await _repo.RepetidaAsync(dto.Nombre, dto.Id_Destino, dto.Id_Excursion) is int otra)
-                return ("Nombre", $"Ya existe la excursión «{dto.Nombre}» en {dto.Id_Destino} (n.º {otra}). No se puede repetir.");
-            return null;
-        }
+        /// <remarks>CAMBIO 140: las reglas viven en GuardadoProductos (las usa también la publicación de las cargas de proveedores).</remarks>
+        private Task<(string Campo, string Mensaje)?> RevisarAsync(ExcursionGuardarDto dto, ISet<string>? monedas = null) =>
+            Guardado.RevisarExcursionAsync(dto, monedas);
+
+        private GuardadoProductos Guardado => HttpContext.RequestServices.GetRequiredService<GuardadoProductos>();
 
         // ================= CARGAR EXCEL (muchas excursiones de una vez) =================
         private static readonly string[] Columnas = new[] { "Nombre", "Destino", "Moneda", "Precio", "Cancelable", "Código interno", "Proveedor", "Descripción", "Prioridad", "Precio proveedor" }.Concat(CargaExcel.NombresInfo).ToArray();

@@ -72,23 +72,15 @@ namespace EuroVip.Controllers
                 return BadRequest(new { mensaje = errores.Values.First(), errores });
             }
             if (await RevisarAsync(dto) is var (campo, mal)) return Mal(campo, mal);
-            using (var cnMin = _aud.Conexion())   // CAMBIO 139: precio mínimo de la vista Traslados (ida y vuelta y solo ida)
-                if (await PreciosMinimos.ObtenerAsync(cnMin, PreciosMinimos.Traslados) is decimal min)
-                {
-                    var bajos = new List<(string?, decimal)>();
-                    if (PreciosMinimos.Bajo(min, dto.Precio_Ida_Vuelta)) bajos.Add(("Precio ida y vuelta", dto.Precio_Ida_Vuelta!.Value));
-                    if (PreciosMinimos.Bajo(min, dto.Precio_Ida)) bajos.Add(("Precio solo ida", dto.Precio_Ida!.Value));
-                    if (bajos.Count > 0) return BadRequest(PreciosMinimos.Rechazo(PreciosMinimos.Traslados, min, bajos,
-                        PreciosMinimos.Bajo(min, dto.Precio_Ida_Vuelta) ? nameof(dto.Precio_Ida_Vuelta) : nameof(dto.Precio_Ida)));
-                }
+            if (await Guardado.MinimoTrasladoAsync(dto) is { } bajo)   // CAMBIO 139: precio mínimo de la vista Traslados (ida y vuelta y solo ida)
+                return BadRequest(bajo.Respuesta());
 
             try
             {
                 var antes = dto.Id_Traslado is int idAntes ? await _repo.ObtenerAsync(idAntes) : null;
                 if (dto.Id_Traslado is not null && antes is null) return NotFound(new { mensaje = "Ese traslado ya no existe. Recarga la página." });
-                var id = await _repo.GuardarAsync(dto, User.Identity?.Name ?? "desconocido");
-                using (var cnInfo = _aud.Conexion()) await InfoCliente.GuardarAsync(cnInfo, "Eurovip.traslado", id, dto.Info);   // CAMBIO 130
-                await PorDefectoAsync(TipoMm, id, dto.Id_Destino, !string.IsNullOrWhiteSpace(antes?.Archivo) && _img.BuscarArchivo("traslados", antes!.Archivo!) is not null);
+                // guardar + información para el cliente (CAMBIO 130) + imagen por defecto: el mismo camino que las cargas de proveedores (CAMBIO 140)
+                var id = await Guardado.GuardarTrasladoAsync(dto, User.Identity?.Name ?? "desconocido", antes);
                 await Auditar(antes is null ? "Traslado_Crear" : "Traslado_Editar", id, new { antes, despues = dto });
                 return Json(new { ok = true, id, traslado = ConImagen((await _repo.ObtenerAsync(id))!, await _mm.PortadasAsync(TipoMm)), mensaje = antes is null ? $"¡Listo! Se creó «{dto.Nombre}»." : "Cambios guardados." });
             }
@@ -104,45 +96,11 @@ namespace EuroVip.Controllers
         /// Reglas para guardar un traslado (las mismas en el formulario y en Cargar Excel). Deja los códigos en mayúsculas y el destino
         /// como está en Eurovip.destino. Devuelve el campo y el error, o null si está bien.
         /// </summary>
-        private async Task<(string Campo, string Mensaje)?> RevisarAsync(TrasladoGuardarDto dto, ISet<string>? monedas = null)
-        {
-            dto.Nombre = ReglasDatos.Limpiar(dto.Nombre);
-            dto.Tipo = (dto.Tipo ?? "").Trim().ToUpperInvariant();
-            dto.Categoria = (dto.Categoria ?? "").Trim().ToUpperInvariant();
-            dto.Vehiculo = (dto.Vehiculo ?? "").Trim().ToUpperInvariant();
-            dto.Cobro = (dto.Cobro ?? "").Trim().ToUpperInvariant();
-            dto.Id_Estacion_Origen = ReglasDatos.Limpiar(dto.Id_Estacion_Origen).ToUpperInvariant();
+        /// <remarks>CAMBIO 140: las reglas viven en GuardadoProductos (las usa también la publicación de las cargas de proveedores).</remarks>
+        private Task<(string Campo, string Mensaje)?> RevisarAsync(TrasladoGuardarDto dto, ISet<string>? monedas = null) =>
+            Guardado.RevisarTrasladoAsync(dto, monedas);
 
-            if (ReglasDatos.Nombre("nombre del traslado", dto.Nombre, 3) is string malNombre) return ("Nombre", malNombre);
-            if (!TrasladoValores.Tipos.ContainsKey(dto.Tipo)) return ("Tipo", "Elige Compartido o Privado.");
-            if (!TrasladoValores.Categorias.ContainsKey(dto.Categoria)) return ("Categoria", "Elige la categoría.");
-            if (!TrasladoValores.Vehiculos.ContainsKey(dto.Vehiculo)) return ("Vehiculo", "Elige el vehículo.");
-            if (!TrasladoValores.Cobros.ContainsKey(dto.Cobro)) return ("Cobro", "Elige cómo se cobra.");
-            if (dto.Pasajeros_Max < dto.Pasajeros_Min) return ("Pasajeros_Max", "El máximo de pasajeros no puede ser menor que el mínimo.");
-            if (dto.Precio_Ida is null && dto.Precio_Ida_Vuelta is null) return ("Precio_Ida_Vuelta", "Escribe al menos un precio: ida y vuelta o solo ida.");
-            if (await _repo.ValidarEstacionAsync(dto.Id_Estacion_Origen) is string malEst) return ("Id_Estacion_Origen", malEst);
-            var (malDestino, destino, _) = await _repo.ValidarDestinoAsync(dto.Id_Destino);
-            if (malDestino is not null) return ("Id_Destino", malDestino);
-            dto.Id_Destino = destino!;
-            if (!dto.Todos_Hoteles)
-            {
-                if (dto.Hoteles.Count == 0) return ("Hoteles", "Elige al menos un hotel o marca «Todos los hoteles del destino».");
-                var fuera = await _repo.HotelesQueNoSonDelDestinoAsync(dto.Hoteles, dto.Id_Destino);
-                if (fuera.Count > 0) return ("Hoteles", $"Estos hoteles no son de {dto.Id_Destino}: {string.Join(", ", fuera)}. Quítalos de la lista.");
-            }
-            if (await _repo.RepetidoAsync(dto) is int otro)
-                return ("Nombre", $"Ya existe ese traslado (n.º {otro}) con la misma ruta, tipo, categoría y vehículo.");
-            // FASE 38: moneda que exista, proveedor que exista y código interno único entre todos los productos
-            using var cn = _aud.Conexion();
-            var (moneda, malMoneda) = CatalogoCargas.Moneda(dto.Id_Moneda, monedas ?? await CatalogoCargas.MonedasAsync(cn));
-            if (malMoneda is not null) return ("Id_Moneda", malMoneda);
-            dto.Id_Moneda = moneda;
-            if (await CatalogoCargas.ErrorProveedorAsync(cn, dto.Id_Proveedor) is string malProv) return ("Id_Proveedor", malProv);
-            dto.Codigo = CodigoInterno.Limpiar(dto.Codigo);
-            var anterior = dto.Id_Traslado is int idt ? await cn.ExecuteScalarAsync<string?>("SELECT codigo FROM Eurovip.traslado WHERE id_traslado = @idt", new { idt }) : null;
-            if (await CodigoInterno.ErrorAsync(cn, dto.Codigo, "TRASLADO", dto.Id_Traslado?.ToString(), anterior) is string malCodigo) return ("Codigo", malCodigo);
-            return null;
-        }
+        private GuardadoProductos Guardado => HttpContext.RequestServices.GetRequiredService<GuardadoProductos>();
 
         // ================= CARGAR EXCEL (muchos traslados de una vez) =================
         private static readonly string[] Columnas = new[]

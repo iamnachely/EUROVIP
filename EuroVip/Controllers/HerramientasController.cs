@@ -231,6 +231,100 @@ namespace EuroVip.Controllers
                                       : $"Se pasaron {total} fotos a multimedia, {r.Itinerario} del itinerario y {r.Slider} archivos del slider." });
         }
 
+        // =====================================================================================================================
+        // CAMBIO 140 · Cargas de PROVEEDORES: bandeja de revisión (aprobar y publicar ahora, programar el alta o rechazar con
+        // motivo e instrucciones) y las cuentas de proveedor (alta/edición, módulos habilitados). Las consultas son
+        // [AccesoEstricto]: sin el módulo de Herramientas no se ve nada (datos de empresas externas).
+        // =====================================================================================================================
+        private ProveedoresCarga Prov => HttpContext.RequestServices.GetRequiredService<ProveedoresCarga>();
+
+        [HttpGet, AccesoEstricto]
+        public async Task<IActionResult> ProveedoresResumen() => Json(new
+        {
+            conteo = await Prov.ConteoAsync(),
+            cuentas = (await Prov.CuentasAsync()).Count,
+            modulos = ProveedorModulos.Todos.Select(m => new { clave = m.Key, nombre = m.Value.Nombre, icono = m.Value.Icono }),
+            publicaProgramadas = ProveedoresCargaWorker.Encendido(HttpContext.RequestServices.GetRequiredService<IConfiguration>(), HttpContext.RequestServices.GetRequiredService<IHostEnvironment>()),
+            ahora = AgenciaProgramador.Ahora(HttpContext.RequestServices.GetRequiredService<IConfiguration>())
+        });
+
+        [HttpGet, AccesoEstricto]
+        public async Task<IActionResult> ProveedoresCuentas()
+        {
+            using var cn = _aud.Conexion();
+            return Json(new { cuentas = await Prov.CuentasAsync(), catalogo = await CatalogoCargas.ProveedoresAsync(cn) });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProveedorCuentaGuardar([FromBody] ProveedorCuentaDto dto)
+        {
+            var antes = dto.Id is int idA ? await Prov.CuentaAsync(idA) : null;
+            var (id, error) = await Prov.GuardarCuentaAsync(dto, User.Identity?.Name ?? "desconocido");
+            if (error is not null) return BadRequest(new { mensaje = error });
+            await _aud.AuditarAsync(antes is null ? "Proveedor_Cuenta_Crear" : "Proveedor_Cuenta_Editar", new[] { id!.Value },
+                new { antes = antes is null ? null : new { antes.Nombre, antes.Email, antes.Id_Proveedor, antes.Modulos, antes.Activo }, despues = dto },
+                User.Identity?.Name ?? "desconocido", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
+            return Json(new { ok = true, id, mensaje = antes is null ? $"Se creó la cuenta de «{dto.Nombre}»." : "Cambios guardados." });
+        }
+
+        [HttpGet, AccesoEstricto]
+        public async Task<IActionResult> ProveedoresCargas([FromQuery] CargaProveedorFiltro f)
+        {
+            var (items, total) = await Prov.CargasAsync(f);
+            return Json(new { items, total, pagina = Math.Max(1, f.Pagina), tam = Math.Clamp(f.Tam, 5, 100), conteo = await Prov.ConteoAsync() });
+        }
+
+        [HttpGet, AccesoEstricto]
+        public async Task<IActionResult> ProveedorCarga(int id) =>
+            await Prov.DetalleAsync(id) is { } d ? Json(d) : NotFound(new { mensaje = "Esa carga ya no existe." });
+
+        public sealed class RevisionCargaDto
+        {
+            public int Id { get; set; }
+            /// <summary>Programar: «yyyy-MM-ddTHH:mm» (hora de República Dominicana).</summary>
+            public DateTime? Fecha { get; set; }
+            public string? Motivo { get; set; }
+            public string? Instrucciones { get; set; }
+        }
+
+        /// <summary>Aprobar y publicar ahora en la web (el mismo guardado de cada pantalla).</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProveedorCargaAprobar([FromBody] RevisionCargaDto dto)
+        {
+            var (ok, mensaje, errores) = await Prov.PublicarAsync(dto.Id, User.Identity?.Name ?? "desconocido");
+            await AuditarCarga("Proveedor_Carga_Aprobar", dto.Id, new { ok, mensaje });
+            return ok ? Json(new { ok, mensaje }) : BadRequest(new { mensaje, errores = errores.Select(e => $"Producto {e.Indice}{(e.Producto is null ? "" : $" ({e.Producto})")}: {e.Mensaje}") });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProveedorCargaProgramar([FromBody] RevisionCargaDto dto)
+        {
+            if (dto.Fecha is not DateTime cuando) return BadRequest(new { mensaje = "Elige la fecha y la hora del alta." });
+            var (error, errores) = await Prov.ProgramarAsync(dto.Id, cuando, User.Identity?.Name ?? "desconocido");
+            if (error is not null) return BadRequest(new { mensaje = error, errores = errores.Select(e => $"Producto {e.Indice}{(e.Producto is null ? "" : $" ({e.Producto})")}: {e.Mensaje}") });
+            await AuditarCarga("Proveedor_Carga_Programar", dto.Id, new { activar_en = cuando });
+            return Json(new { ok = true, mensaje = $"Programada: se publicará el {cuando:dd/MM/yyyy} a las {cuando:HH:mm} (hora de República Dominicana)." });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProveedorCargaRechazar([FromBody] RevisionCargaDto dto)
+        {
+            if (await Prov.RechazarAsync(dto.Id, dto.Motivo, dto.Instrucciones, User.Identity?.Name ?? "desconocido") is string error) return BadRequest(new { mensaje = error });
+            await AuditarCarga("Proveedor_Carga_Rechazar", dto.Id, new { dto.Motivo, dto.Instrucciones });
+            return Json(new { ok = true, mensaje = "Carga rechazada. El proveedor verá el motivo y las instrucciones para corregirla." });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProveedorCargaFlyer([FromBody] RevisionCargaDto dto)
+        {
+            var flyer = await Prov.RegenerarFlyerAsync(dto.Id);
+            return flyer is null ? BadRequest(new { mensaje = "No se pudo generar el flyer (mira el log del servidor)." }) : Json(new { ok = true, flyer, mensaje = "Flyer generado de nuevo." });
+        }
+
+        private Task AuditarCarga(string tipo, int id, object cambios) =>
+            _aud.AuditarAsync(tipo, Array.Empty<int>(), new { carga = id, cambios }, User.Identity?.Name ?? "desconocido",
+                HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
+
         private Task Auditar(string tipo, object cambios) =>
             _aud.AuditarAsync(tipo, Array.Empty<int>(), cambios, User.Identity?.Name ?? "desconocido",
                 HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());

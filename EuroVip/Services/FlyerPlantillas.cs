@@ -71,14 +71,19 @@ namespace EuroVip.Services
             Resalte = SKColor.Parse("F3F4F6");          // fondo gris claro de la fila más barata
 
         private static readonly CultureInfo Es = new("es-ES");
-        /// <summary>Precio en pesos dominicanos: "RD$ 1.089".</summary>
-        private static string Precio(int v) => "RD$ " + v.ToString("N0", Es);
+        /// <summary>Precio con el símbolo de la moneda del flyer (por defecto pesos: "RD$ 1.089"). CAMBIO 140: los flyers de
+        /// las cargas de proveedores pueden ir en otra moneda (FlyerDestino.Moneda); se fija al empezar cada dibujo.</summary>
+        private static string Precio(int v) => _simbolo + " " + v.ToString("N0", Es);
+        [ThreadStatic] private static string? _simboloHilo;
+        private static string _simbolo => _simboloHilo ?? "RD$";
+        private static string Simbolo(string? moneda) => (moneda ?? "").Trim().ToUpperInvariant() switch { "" or "DOP" => "RD$", "USD" => "US$", "EUR" => "€", var m => m };
         private const string Legal = "Precio por persona · sujeto a disponibilidad";
 
         private enum Estilo { Lado, Vertical, Centrado, Marco }
 
         public static SKData Dibujar(string? clave, FlyerDestino d, SKBitmap? foto, FlyerFuentes f, string marca)
         {
+            _simboloHilo = Simbolo(d.Moneda);
             var p = Buscar(clave);
             using var surf = SKSurface.Create(new SKImageInfo(p.Ancho, p.Alto));
             var c = surf.Canvas;
@@ -309,7 +314,8 @@ namespace EuroVip.Services
 
         /// <summary>Frase gancho de la parte de arriba (no se usa el origen: el flyer vende el destino).</summary>
         private static string Gancho(FlyerDestino d) =>
-            d.Hoteles.Count > 0 && d.Hoteles.All(h => (h.Regimen ?? "").Contains("incluido", StringComparison.OrdinalIgnoreCase) || string.Equals(h.Regimen, "TI", StringComparison.OrdinalIgnoreCase))
+            !string.IsNullOrWhiteSpace(d.Gancho) ? d.Gancho.Trim().ToUpperInvariant()   // CAMBIO 140: frase propia (flyer de carga de proveedor)
+            : d.Hoteles.Count > 0 && d.Hoteles.All(h => (h.Regimen ?? "").Contains("incluido", StringComparison.OrdinalIgnoreCase) || string.Equals(h.Regimen, "TI", StringComparison.OrdinalIgnoreCase))
                 ? "VACACIONES TODO INCLUIDO" : "OFERTAS DE LA SEMANA";
 
         // ---------------- piezas de dibujo ----------------

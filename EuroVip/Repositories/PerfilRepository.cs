@@ -85,12 +85,38 @@ namespace EuroVip.Repositories
             // 2) cambios hechos por OTROS usuarios (auditoría)
             var cambios = await cn.QueryAsync<(int Id, string Tipo, string Usuario, DateTime Fecha, int? N)>(@"
                 SELECT TOP 15 id, tipo_mantenimiento, usuario, fecha_hora, cantidad_servicios FROM Eurovip.auditoria_consulta_oferta
-                WHERE usuario <> @userName AND tipo_mantenimiento NOT LIKE 'Perfil[_]%' ORDER BY id DESC", new { userName });
+                WHERE usuario <> @userName AND tipo_mantenimiento NOT LIKE 'Perfil[_]%'
+                  AND NOT (usuario LIKE 'proveedor:%' AND tipo_mantenimiento LIKE 'Proveedor[_]Carga[_]%')   -- CAMBIO 140: ya tienen su aviso propio (2b)
+                ORDER BY id DESC", new { userName });
             foreach (var a in cambios)
             {
                 var (texto, icono, url) = Describir(a.Tipo, a.N ?? 0);
                 lista.Add(new NotificacionDto { Id = $"aud-{a.Id}", Tipo = "cambio", Icono = icono, Titulo = $"{a.Usuario} {texto}", Texto = "", Fecha = a.Fecha, Url = url });
             }
+
+            // 2b) CAMBIO 140: cargas de PROVEEDORES enviadas a revisión (pendientes) y las programadas que no se pudieron publicar.
+            //     Se quedan en la campana mientras estén pendientes (su fecha es la del envío: «leída» como las demás).
+            try
+            {
+                var prov = await cn.QueryAsync<(int Id, string Modulo, string Codigo, string? Titulo, string Cuenta, int Productos, DateTime Fecha, string Estado, string? Error)>(@"
+                    SELECT TOP 15 c.id, c.modulo, c.codigo, c.titulo, pc.nombre, c.productos, ISNULL(c.actualizado_en, ISNULL(c.fecha_solicitud, c.creado_en)), c.estado, c.error
+                    FROM Eurovip.carga_proveedor c JOIN Eurovip.proveedor_cuenta pc ON pc.id = c.id_cuenta
+                    WHERE c.estado = 'PENDIENTE' OR (c.estado IN ('PENDIENTE','PROGRAMADA') AND c.error IS NOT NULL)
+                    ORDER BY ISNULL(c.actualizado_en, c.fecha_solicitud) DESC");
+                foreach (var c in prov)
+                {
+                    var modulo = EuroVip.Services.ProveedorModulos.Todos.TryGetValue(c.Modulo, out var m) ? m.Nombre : c.Modulo;
+                    var conError = c.Error is not null;
+                    lista.Add(new NotificacionDto
+                    {
+                        Id = $"prov-{c.Id}-{c.Fecha:yyyyMMddHHmmss}", Tipo = conError ? "error" : "alerta", Icono = conError ? "bi-exclamation-octagon" : "bi-briefcase",
+                        Titulo = conError ? $"No se pudo publicar la carga {c.Codigo} de {c.Cuenta}" : $"{c.Cuenta} envió una carga a revisión: {modulo}",
+                        Texto = conError ? Corta(c.Error, 110) : $"{c.Codigo}{(string.IsNullOrWhiteSpace(c.Titulo) ? "" : " · " + c.Titulo)} · {c.Productos} producto{(c.Productos == 1 ? "" : "s")}",
+                        Fecha = c.Fecha, Url = $"/Herramientas/Index?tab=htProv&carga={c.Id}"
+                    });
+                }
+            }
+            catch (Exception) { /* sin las tablas del CAMBIO 140 la campana sigue funcionando */ }
 
             // 3) alertas del día (no se acumulan: una por día)
             var hoy = DateTime.Today;
@@ -146,6 +172,15 @@ namespace EuroVip.Repositories
                     _ => ("modificó un circuito", "bi-signpost-split", "/Circuitos/Index")
                 },
                 "Hotel" => ("modificó un hotel de la Home", "bi-building", "/Hoteles/Index"),
+                // CAMBIO 140: cargas y cuentas de proveedores
+                "Proveedor" => (p.ElementAtOrDefault(1) == "Cuenta"
+                                    ? $"{(p.ElementAtOrDefault(2) == "Crear" ? "creó" : "editó")} una cuenta de proveedor"
+                                    : p.ElementAtOrDefault(2) switch
+                                    {
+                                        "Aprobar" => "aprobó una carga de proveedor", "Publicar" => "publicó una carga de proveedor en la web",
+                                        "Programar" => "programó el alta de una carga de proveedor", "Rechazar" => "rechazó una carga de proveedor",
+                                        "Enviar" => "envió una carga a revisión", _ => "cambió una carga de proveedor"
+                                    }, "bi-briefcase", "/Herramientas/Index?tab=htProv"),
                 "Herramienta" => ($"{(p.ElementAtOrDefault(2) switch { "Crear" => "creó", "Eliminar" => "eliminó", _ => "editó" })} en {HrCatalogos.Buscar(p.ElementAtOrDefault(1))?.Titulo ?? "Herramientas"}",
                                   "bi-tools", $"/Herramientas/Catalogo/{p.ElementAtOrDefault(1)}"),
                 _ => ($"hizo un cambio ({tipo})", "bi-activity", "/")

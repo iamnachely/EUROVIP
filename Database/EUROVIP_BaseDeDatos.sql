@@ -6049,6 +6049,85 @@ CREATE TABLE Eurovip.precio_minimo_carga (
 GO
 
 
+/* ---------- CAMBIO 140: cargas de PROVEEDORES (fase 1) ----------
+   Pedido de la usuaria: «usuarios Proveedor (empresas externas) cargan productos en Solo Hotel, Paquetes, Circuitos,
+   Excursiones, Traslados y Cruceros. El personal del BackEurovip crea los proveedores, les habilita qué pueden cargar,
+   revisa, aprueba o rechaza (con motivo e instrucciones) y da de alta en la web al instante o programado. Cada carga se
+   agrupa con un CÓDIGO; al enviarla a revisión se genera siempre un FLYER con los 4 productos más baratos.»
+   - Eurovip.proveedor_cuenta: la cuenta de cada empresa proveedora (correo único), a qué proveedor del catálogo
+     pertenece y qué módulos puede cargar (lista separada por comas).
+   - Eurovip.carga_proveedor: cada carga del proveedor. Lo cargado NO va a las tablas de la web hasta aprobarse: se
+     guarda aquí como JSON (los mismos datos que mandan los formularios) con su estado:
+     BORRADOR → PENDIENTE (enviada a revisión) → RECHAZADA (puede corregir y reenviar) / PROGRAMADA (alta en una fecha)
+     → ACTIVA (ya publicada en la web).
+   - Eurovip.carga_proveedor_item: lo que se creó en la web al publicar (qué tabla y qué número), para el historial. */
+IF OBJECT_ID('Eurovip.proveedor_cuenta') IS NULL
+CREATE TABLE Eurovip.proveedor_cuenta (
+    id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_proveedor_cuenta PRIMARY KEY,
+    nombre nvarchar(150) NOT NULL,
+    email varchar(250) NOT NULL CONSTRAINT UQ_proveedor_cuenta_email UNIQUE,
+    telefono varchar(30) NULL,
+    id_proveedor varchar(10) NOT NULL CONSTRAINT FK_proveedor_cuenta_proveedor REFERENCES Eurovip.proveedor (id_proveedor),
+    modulos varchar(200) NOT NULL CONSTRAINT DF_proveedor_cuenta_modulos DEFAULT (''),
+    activo bit NOT NULL CONSTRAINT DF_proveedor_cuenta_activo DEFAULT (1),
+    id_gestion int NULL,
+    usuario nvarchar(100) NULL,
+    fecha_alta datetime2(0) NOT NULL CONSTRAINT DF_proveedor_cuenta_alta DEFAULT SYSDATETIME(),
+    usuario_modificacion nvarchar(100) NULL,
+    fecha_modificacion datetime2(0) NULL
+);
+GO
+IF OBJECT_ID('Eurovip.carga_proveedor') IS NULL
+CREATE TABLE Eurovip.carga_proveedor (
+    id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_carga_proveedor PRIMARY KEY,
+    id_cuenta int NOT NULL CONSTRAINT FK_carga_proveedor_cuenta REFERENCES Eurovip.proveedor_cuenta (id),
+    modulo varchar(20) NOT NULL CONSTRAINT CK_carga_proveedor_modulo CHECK (modulo IN ('OFERTAS','PAQUETES','CIRCUITOS','EXCURSIONES','TRASLADOS','CRUCEROS')),
+    codigo varchar(30) NOT NULL,
+    titulo nvarchar(150) NULL,
+    datos nvarchar(max) NOT NULL,
+    estado varchar(15) NOT NULL CONSTRAINT DF_carga_proveedor_estado DEFAULT ('BORRADOR')
+        CONSTRAINT CK_carga_proveedor_estado CHECK (estado IN ('BORRADOR','PENDIENTE','RECHAZADA','PROGRAMADA','ACTIVA')),
+    motivo nvarchar(1000) NULL,
+    instrucciones nvarchar(1000) NULL,
+    activar_en datetime2(0) NULL,
+    flyer varchar(300) NULL,
+    productos int NOT NULL CONSTRAINT DF_carga_proveedor_productos DEFAULT (0),
+    precio_desde decimal(18,2) NULL,
+    moneda char(3) NULL,
+    fecha_solicitud datetime2(0) NULL,
+    fecha_revision datetime2(0) NULL,
+    revisado_por nvarchar(100) NULL,
+    fecha_activacion datetime2(0) NULL,
+    error nvarchar(1000) NULL,
+    creado_en datetime2(0) NOT NULL CONSTRAINT DF_carga_proveedor_creado DEFAULT SYSDATETIME(),
+    actualizado_en datetime2(0) NULL,
+    CONSTRAINT UQ_carga_proveedor_codigo UNIQUE (id_cuenta, codigo),
+    CONSTRAINT CK_carga_proveedor_codigo CHECK (codigo NOT LIKE '%[^A-Za-z0-9]%' AND LEN(codigo) > 0)
+);
+GO
+-- publicados: cuántos elementos del JSON ya se pasaron a la web. Si la publicación se corta a la mitad (un error de la
+-- base), al volver a aprobar se sigue desde ahí y no se duplica lo que ya se publicó.
+IF COL_LENGTH('Eurovip.carga_proveedor', 'publicados') IS NULL
+    ALTER TABLE Eurovip.carga_proveedor ADD publicados int NOT NULL CONSTRAINT DF_carga_proveedor_publicados DEFAULT (0);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_carga_proveedor_estado')
+    CREATE INDEX IX_carga_proveedor_estado ON Eurovip.carga_proveedor (estado, activar_en);
+GO
+IF OBJECT_ID('Eurovip.carga_proveedor_item') IS NULL
+CREATE TABLE Eurovip.carga_proveedor_item (
+    id_carga int NOT NULL CONSTRAINT FK_carga_proveedor_item_carga REFERENCES Eurovip.carga_proveedor (id),
+    tabla varchar(20) NOT NULL CONSTRAINT CK_carga_proveedor_item_tabla CHECK (tabla IN ('SERVICIO','EXCURSION','TRASLADO','CRUCERO')),
+    id_registro int NOT NULL,
+    nombre nvarchar(200) NULL,
+    precio decimal(18,2) NULL,
+    moneda char(3) NULL,
+    CONSTRAINT PK_carga_proveedor_item PRIMARY KEY (id_carga, tabla, id_registro)
+);
+GO
+SELECT (SELECT COUNT(*) FROM Eurovip.proveedor_cuenta) AS cuentas, (SELECT COUNT(*) FROM Eurovip.carga_proveedor) AS cargas;
+GO
+
+
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
    (Se anotan aquí para que quede registro. No se guardan contraseñas ni datos cifrados.)
@@ -6631,6 +6710,17 @@ GO
    18/11/2026  CAMBIO 139 aplicado SOLO en el 93: Eurovip.precio_minimo_carga (precio mínimo de carga por vista).
                Prueba: se pusieron mínimos de prueba (Traslados 30, Solo Hotel 500, Circuitos 500, Excursiones 5000, Hoteles 1300)
                y se QUITARON todos: las filas quedaron con precio NULL (= sin mínimo). config_sistema.precio_base_minimo (300) no se tocó.
+   18/11/2026  CAMBIO 140 aplicado SOLO en el 93: Eurovip.proveedor_cuenta, Eurovip.carga_proveedor (con la columna publicados) y
+               Eurovip.carga_proveedor_item (cargas de proveedores, fase 1). Ningún dato existente cambió.
+               Prueba (todo marcado «PRUEBA», queda como evidencia): cuentas #1 «ZZ PRUEBA Claude Proveedor» y #2 «ZZ PRUEBA Claude
+               Proveedor Dos» (correos prueba*.claude.proveedor@example.com, proveedor 001), las dos quedaron DESACTIVADAS.
+               Carga #1 PRUEBACLAUDEEXC1 (5 excursiones): enviada, rechazada, corregida, reenviada y «Aprobar y publicar»: creó las
+               excursiones 341 a 345, que se ELIMINARON enseguida desde Excursiones (quedan sus copias en registro_eliminado).
+               Carga #2 PRUEBACLAUDETRA1 (1 traslado): programada a 3 minutos y publicada por el programador (encendido solo para la
+               prueba con Eurovip:Proveedores:Publicar=true y apagado después): creó el traslado 15, que se ELIMINÓ enseguida.
+               Las dos cargas quedan en estado ACTIVA con sus filas de carga_proveedor_item apuntando a registros ya borrados.
+               Para borrar la prueba: DELETE carga_proveedor_item WHERE id_carga IN (1,2); DELETE carga_proveedor WHERE id IN (1,2);
+               DELETE proveedor_cuenta WHERE id IN (1,2). Flyers de prueba en wwwroot/uploads/flyers/proveedores/ (no van a git).
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

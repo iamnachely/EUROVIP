@@ -18,6 +18,8 @@ namespace EuroVip.Services
         Task<string> GuardarFondoAsync(string nombreDestino, IFormFile archivo, string ext);
         /// <summary>PNG que dibuja el editor del navegador (data:image/png;base64,…) → galería de hoy: flyer_{nombre}_editor_{hora}.png.</summary>
         Task<FlyerImagen> GuardarPngAsync(string dataUrl, string nombre);
+        /// <summary>CAMBIO 140: flyer automático de una carga de proveedor → wwwroot/uploads/flyers/proveedores/{codigo}_{yyyyMMddHHmmss}.png (devuelve la ruta pública).</summary>
+        Task<string> GenerarProveedorAsync(FlyerDestino datos, string? destinoFoto, string codigo);
     }
 
     /// <summary>
@@ -111,6 +113,24 @@ namespace EuroVip.Services
             return png.ToArray();
         }
 
+        /// <summary>
+        /// CAMBIO 140: flyer de una carga de proveedor (los 4 productos más baratos). Plantilla «postal» (centrada, WhatsApp 4:5: el nombre largo del proveedor no choca con el precio),
+        /// foto del destino de los productos (o Punta Cana). Carpeta aparte (proveedores/) para que no se mezcle con la galería de flyers.
+        /// </summary>
+        public async Task<string> GenerarProveedorAsync(FlyerDestino datos, string? destinoFoto, string codigo)
+        {
+            var carpeta = System.IO.Path.Combine(Raiz, CarpetaProveedores);
+            Directory.CreateDirectory(carpeta);
+            var nombre = $"{Seguro(codigo)}_{DateTime.Now:yyyyMMddHHmmss}.png";
+            using var fuentes = new FlyerFuentes();
+            using (var foto = (string.IsNullOrWhiteSpace(destinoFoto) ? null : FotoDe(destinoFoto)) ?? FotoDe("Punta Cana"))
+            using (var png = FlyerPlantillas.Dibujar("postal", datos, foto, fuentes, Web))
+            await using (var fs = File.Create(System.IO.Path.Combine(carpeta, nombre)))
+                png.SaveTo(fs);
+            return $"/{Carpeta}/{CarpetaProveedores}/{Uri.EscapeDataString(nombre)}";
+        }
+        public const string CarpetaProveedores = "proveedores";
+
         public async Task<FlyerImagen> GuardarPngAsync(string dataUrl, string nombre)
         {
             var coma = dataUrl.IndexOf(',');
@@ -133,7 +153,7 @@ namespace EuroVip.Services
         public List<FlyerImagen> Galeria()
         {
             if (!Directory.Exists(Raiz)) return new();
-            return Directory.EnumerateDirectories(Raiz).Where(d => System.IO.Path.GetFileName(d) != "fondos")
+            return Directory.EnumerateDirectories(Raiz).Where(d => System.IO.Path.GetFileName(d) != "fondos" && System.IO.Path.GetFileName(d) != CarpetaProveedores)   // CAMBIO 140: los de proveedores no van a la galería
                 .SelectMany(d => Directory.EnumerateFiles(d, "*.png").Select(f => new FileInfo(f)))
                 .OrderByDescending(f => f.LastWriteTime).Take(300)
                 .Select(f => new FlyerImagen
