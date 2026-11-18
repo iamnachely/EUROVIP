@@ -244,6 +244,10 @@
     #czEditor .ui-db { padding-left: 32px; padding-right: 32px; }
     #czEditor input:not([type=checkbox]):not([type=file]), #czEditor select, #czEditor textarea { font-size: 15px; padding: 10px 12px; border-radius: 12px; }
     #czEditor .cz-pasos .ui-tabs button { padding: 10px 16px; font-size: 14px; }
+    /* etiqueta obligatorio / opcional de cada paso (se va cuando el paso ya tiene datos: lo marca «lleno») */
+    .cz-pasos .ui-tabs button .n.cz-req { background: #FEE4E2; color: #B42318; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; }
+    .cz-pasos .ui-tabs button .n.cz-opc { background: var(--ev-surface-2); color: var(--ev-muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; }
+    .cz-pasos .ui-tabs button.lleno .n.cz-opc, .cz-pasos .ui-tabs button.lleno .n.cz-req { display: none; }
     .cz-c { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
     .cz-c > span { font: 800 12px var(--ev-font); color: var(--ev-text); text-transform: uppercase; letter-spacing: .04em; }
     .cz-c > span .cz-opc { text-transform: none; letter-spacing: 0; }
@@ -385,13 +389,13 @@
     </div>
     <div class="cz-pasos">
         <div class="ui-tabs" id="edTabs">
-            <button type="button" data-tab="eDatos" class="on"><span class="num">1</span> Datos</button>
-            <button type="button" data-tab="eFotos"><span class="num">2</span> Fotos</button>
-            <button type="button" data-tab="eItin"><span class="num">3</span> Itinerario</button>
-            <button type="button" data-tab="eMapa"><span class="num">4</span> Mapa y paradas</button>
-            <button type="button" data-tab="eBordo"><span class="num">5</span> A bordo</button>
-            <button type="button" data-tab="eCabinas"><span class="num">6</span> Cabinas</button>
-            <button type="button" data-tab="ePrecios"><span class="num">7</span> Fechas y precios</button>
+            <button type="button" data-tab="eDatos" class="on"><span class="num">1</span> Datos <span class="n cz-req" title="Aquí está el título, lo único obligatorio">obligatorio</span></button>
+            <button type="button" data-tab="eFotos"><span class="num">2</span> Fotos <span class="n cz-opc">opcional</span></button>
+            <button type="button" data-tab="eItin"><span class="num">3</span> Itinerario <span class="n cz-opc">opcional</span></button>
+            <button type="button" data-tab="eMapa"><span class="num">4</span> Mapa y paradas <span class="n cz-opc">opcional</span></button>
+            <button type="button" data-tab="eBordo"><span class="num">5</span> A bordo <span class="n cz-opc">opcional</span></button>
+            <button type="button" data-tab="eCabinas"><span class="num">6</span> Cabinas <span class="n cz-opc">opcional</span></button>
+            <button type="button" data-tab="ePrecios"><span class="num">7</span> Fechas y precios <span class="n cz-opc">opcional</span></button>
             <button type="button" data-tab="eInfo"><span class="num">8</span> Info. cliente <span class="n" id="czInfoN">opcional</span></button>
             <button type="button" data-tab="eResumen"><span class="num"><i class="bi bi-check2"></i></span> Revisar y guardar</button>
         </div>

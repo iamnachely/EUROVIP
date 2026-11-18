@@ -30,8 +30,7 @@ namespace EuroVip.Repositories
             DateTime? Fecha(ExcelCircuitoParser.Celda c)
             {
                 if (ExcelCircuitoParser.EsFecha(c)) return DateTime.FromOADate(c.Numero!.Value).Date;
-                if (c.Texto is not null && DateTime.TryParseExact(c.Texto.Trim(), new[] { "dd/MM/yyyy", "d/M/yyyy", "dd-MM-yyyy", "yyyy-MM-dd", "dd/MM/yy" },
-                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d.Date;
+                if (c.Texto is not null && ExcelCircuitoParser.TextoFecha(c.Texto) is DateTime d) return d;
                 return null;
             }
 
@@ -65,7 +64,7 @@ namespace EuroVip.Repositories
                 {
                     if (!porPos.TryGetValue((fila.Fila, col), out var c)) continue;
                     decimal? precio = c.Numero is > 0 ? (decimal)c.Numero.Value
-                        : c.Texto is not null && c.Texto.Trim() != "//" && decimal.TryParse(c.Texto.Replace("€", "").Replace("RD$", "").Trim(), NumberStyles.Any, new CultureInfo("es-ES"), out var p) && p > 0 ? p : null;
+                        : c.Texto is not null && c.Texto.Trim() != "//" && ExcelCircuitoParser.TextoPrecio(c.Texto) is decimal p && p > 0 ? p : null;   // «1,290» = 1290 (antes es-ES lo leía 1,29)
                     if (precio is not null && !precios.Any(x => x.Fecha == f!.Value))
                         precios.Add(new ExcelFecha { Fecha = f!.Value, Precio = Math.Round(precio.Value, 2) });
                 }

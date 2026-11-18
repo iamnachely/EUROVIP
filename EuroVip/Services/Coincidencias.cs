@@ -29,6 +29,11 @@ namespace EuroVip.Services
             return mejor;
         }
 
+        /// <summary>Igual letra por letra (con tildes), sin importar mayúsculas ni espacios de más.</summary>
+        public static bool Exacto(string escrito, string? opcion) =>
+            !string.IsNullOrWhiteSpace(opcion) && string.Equals(string.Join(' ', escrito.Split(' ', StringSplitOptions.RemoveEmptyEntries)),
+                string.Join(' ', opcion.Split(' ', StringSplitOptions.RemoveEmptyEntries)), StringComparison.CurrentCultureIgnoreCase);
+
         public static bool Igual(string escrito, CargaExcelOpcion o) =>
             Parecidos.Compacto(escrito) is var e && e != "" && (e == Parecidos.Compacto(o.Valor) || e == Parecidos.Compacto(o.Texto) || e == Parecidos.Compacto(o.Extra));
 
@@ -47,7 +52,12 @@ namespace EuroVip.Services
             var e = Parecidos.Compacto(escrito);
             var iguales = opciones.Where(o => e != "" && Parecidos.Compacto(o.Texto) == e).ToList();
             if (iguales.Count == 1) return (iguales[0], false, new());
-            if (iguales.Count > 1) return (null, false, iguales.Take(15).ToList());
+            if (iguales.Count > 1)
+            {
+                var exactas = iguales.Where(o => Exacto(escrito, o.Texto)).ToList();
+                if (exactas.Count == 1) return (exactas[0], false, new());
+                return (null, false, iguales.Take(15).ToList());
+            }
             var lista = opciones.Select(o => (o, p: Puntos(escrito, o with { Extra = null }))).Where(x => x.p > 0)
                                 .OrderByDescending(x => x.p).ThenBy(x => x.o.Texto.Length).Take(15).ToList();
             if (lista.Count == 0) return (null, false, new());
@@ -64,7 +74,13 @@ namespace EuroVip.Services
         {
             var iguales = opciones.Where(o => Igual(escrito, o)).ToList();
             if (iguales.Count >= 1 && iguales.Select(o => o.Valor).Distinct().Count() == 1) return (iguales[0], new());
-            if (iguales.Count > 1) return (null, iguales.Take(12).ToList());
+            if (iguales.Count > 1)
+            {
+                // «Samaná» cuando existen «Samaná» y «Samana»: si una está escrita EXACTAMENTE igual (con sus tildes), es esa
+                var exactas = iguales.Where(o => Exacto(escrito, o.Valor) || Exacto(escrito, o.Texto)).Select(o => o.Valor).Distinct().ToList();
+                if (exactas.Count == 1) return (iguales.First(o => o.Valor == exactas[0]), new());
+                return (null, iguales.Take(12).ToList());
+            }
             // Varias opciones con el mismo valor (p. ej. una columna y sus otros nombres) cuentan como una sola: la de más puntos
             var lista = Buscar(escrito, opciones, 40).GroupBy(x => x.Opcion.Valor).Select(g => g.First()).Take(12).ToList();
             if (lista.Count == 0) return (null, new());

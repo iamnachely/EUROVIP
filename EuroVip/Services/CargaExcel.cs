@@ -20,7 +20,14 @@ namespace EuroVip.Services
         public List<string> Avisos { get; set; } = new();
         /// <summary>Columna del error (para marcarla en la pantalla), si se sabe.</summary>
         public string? Columna { get; set; }
+        /// <summary>
+        /// TODO lo que hay que corregir en la fila (no solo lo primero): así la usuaria arregla la fila de una vez en vez de
+        /// corregir, revisar y descubrir el siguiente error. Cada uno con su columna para marcarla en rojo.
+        /// </summary>
+        public List<CargaExcelError> Errores { get; set; } = new();
     }
+
+    public sealed record CargaExcelError(string? Columna, string Mensaje);
 
     public sealed record CargaExcelOpcion(string Valor, string Texto, string? Extra = null);
     public sealed record CargaExcelDuda(string Columna, string Escrito, List<CargaExcelOpcion> Sugerencias);
@@ -247,16 +254,16 @@ namespace EuroVip.Services
         {
             r.Plantilla = plantilla;
             // Las listas (miles de destinos) se mandan solo la primera vez: la pantalla las guarda
-            r.Columnas = sinListas ? columnas.Select(c => new CargaExcelColumna { Nombre = c.Nombre, Tipo = c.Tipo }).ToList() : columnas.ToList();
+            r.Columnas = sinListas ? columnas.Select(c => new CargaExcelColumna { Nombre = c.Nombre, Tipo = c.Tipo, Obligatoria = c.Obligatoria }).ToList() : columnas.ToList();
             var porNumero = filas.ToDictionary(f => f.Numero);
             foreach (var fila in r.Filas)
             {
                 if (porNumero.TryGetValue(fila.Fila, out var f))
                     foreach (var c in columnas) fila.Valores[c.Nombre] = f.Texto(c.Nombres);
-                if (!ayuda.TryGetValue(fila.Fila, out var a)) continue;
-                fila.Avisos = a.Avisos;
-                fila.Dudas = a.Dudas;
-                if (fila.Ok || a.Dudas.Count == 0) continue;
+                var a = ayuda.GetValueOrDefault(fila.Fila);
+                if (a is not null) { fila.Avisos = a.Avisos; fila.Dudas = a.Dudas; }
+                if (!fila.Ok) TodosLosErrores(fila, columnas);
+                if (fila.Ok || a is null || a.Dudas.Count == 0) continue;
                 var d = a.Dudas[0];
                 fila.Columna = d.Columna;
                 fila.Mensaje = d.Sugerencias.Count switch
@@ -266,6 +273,31 @@ namespace EuroVip.Services
                     _ => $"{d.Columna}: «{d.Escrito}» se parece a {d.Sugerencias.Count} opciones. Elige la correcta."
                 } + (a.Dudas.Count > 1 ? $" (y {a.Dudas.Count - 1} dato(s) más por elegir)" : "");
             }
+        }
+
+        /// <summary>
+        /// Junta en fila.Errores el error de la revisión, los datos por elegir, las columnas obligatorias vacías y los números mal
+        /// escritos. Si el error de la revisión no traía columna, se le pone la obligatoria vacía (para marcarla en rojo).
+        /// </summary>
+        private static void TodosLosErrores(CargaExcelFila fila, IReadOnlyList<CargaExcelColumna> columnas)
+        {
+            var e = new List<CargaExcelError>();
+            var vacias = columnas.Where(c => c.Obligatoria && string.IsNullOrWhiteSpace(fila.Valores.GetValueOrDefault(c.Nombre))).Select(c => c.Nombre).ToList();
+            if (fila.Columna is null && fila.Mensaje is not null && fila.Dudas.Count == 0 && vacias.Count > 0) fila.Columna = vacias[0];
+            if (!string.IsNullOrWhiteSpace(fila.Mensaje) && fila.Dudas.Count == 0) e.Add(new(fila.Columna, fila.Mensaje!));
+            foreach (var d in fila.Dudas)
+                e.Add(new(d.Columna, d.Sugerencias.Count switch
+                {
+                    0 => $"No encontré «{d.Escrito}»: búscalo en la lista.",
+                    1 => $"¿«{d.Escrito}» es «{d.Sugerencias[0].Valor}»? Confírmalo.",
+                    _ => $"«{d.Escrito}» se parece a {d.Sugerencias.Count} opciones: elige la correcta."
+                }));
+            foreach (var c in vacias)
+                if (!e.Any(x => x.Columna == c)) e.Add(new(c, $"Falta {c} (es obligatorio)."));
+            foreach (var c in columnas.Where(c => c.Tipo == "numero"))
+                if (fila.Valores.GetValueOrDefault(c.Nombre) is { Length: > 0 } v && ExcelTabla.Numero(v) is null && !e.Any(x => x.Columna == c.Nombre))
+                    e.Add(new(c.Nombre, $"«{v}» no es un número: escribe solo cifras (ej.: 1250 o 1,250.50)."));
+            fila.Errores = e;
         }
 
         /// <summary>Marca la columna del error a partir del campo del formulario que devolvió la revisión (Id_Destino → Destino).</summary>

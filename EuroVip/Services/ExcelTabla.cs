@@ -198,7 +198,11 @@ namespace EuroVip.Services
         {
             using var doc = SpreadsheetDocument.Open(archivo, false);
             var wb = doc.WorkbookPart ?? throw new InvalidOperationException("El archivo no es un Excel válido.");
-            var hoja = wb.Workbook.Sheets?.Elements<Sheet>().FirstOrDefault() ?? throw new InvalidOperationException("El Excel no tiene hojas.");
+            // La hoja de datos: la primera visible que no sea de ayuda (si la usuaria movió «Instrucciones» al principio, se salta)
+            var hojas = wb.Workbook.Sheets?.Elements<Sheet>().ToList() ?? new();
+            if (hojas.Count == 0) throw new InvalidOperationException("El Excel no tiene hojas.");
+            static bool DeAyuda(Sheet s) => Clave(s.Name?.Value) is "instrucciones" or "proveedores" or "listas" or "ayuda" || (s.State is not null && s.State.Value != SheetStateValues.Visible);
+            var hoja = hojas.FirstOrDefault(s => !DeAyuda(s)) ?? hojas[0];
             var ws = (WorksheetPart)wb.GetPartById(hoja.Id!);
             var compartidos = wb.SharedStringTablePart?.SharedStringTable.Elements<SharedStringItem>().Select(i => i.InnerText).ToList() ?? new();
             var fechas = FormatosFecha(wb.WorkbookStylesPart?.Stylesheet);
@@ -208,6 +212,7 @@ namespace EuroVip.Services
                 if (c.DataType?.Value == CellValues.SharedString && int.TryParse(c.CellValue?.Text, out var i)) return i < compartidos.Count ? compartidos[i] : null;
                 if (c.DataType?.Value == CellValues.InlineString) return c.InlineString?.InnerText;
                 if (c.DataType?.Value == CellValues.Boolean) return c.CellValue?.Text == "1" ? "Sí" : "No";
+                if (c.DataType?.Value == CellValues.Error) return null;   // #N/A, #REF!… de una fórmula: como vacío
                 var t = c.CellValue?.Text;
                 if (t is null) return null;
                 if (c.StyleIndex is { } si && fechas.Contains(si.Value) && double.TryParse(t, NumberStyles.Any, CultureInfo.InvariantCulture, out var oa))

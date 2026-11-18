@@ -56,7 +56,7 @@ namespace EuroVip.Repositories
 
             r.Aerolinea = ValorDe("aerolinea", "aerolineas", "compania aerea");
             var tasa = ValorDe("tasa", "tasas");
-            if (tasa is not null && decimal.TryParse(tasa.Replace("€", "").Replace("RD$", "").Replace(",", ".").Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var t)) r.Tasa = t;
+            if (tasa is not null && (TextoPrecio(tasa) ?? EuroVip.Services.ExcelTabla.Numero(tasa)) is decimal t) r.Tasa = t;   // «US$ 1,250.00» y «1.250,00» también
             r.Segmento1 = ValorDe("segmento 1", "ida");
             r.Segmento2 = ValorDe("segmento 2", "vuelta");
 
@@ -162,10 +162,54 @@ namespace EuroVip.Repositories
                     if (texto is null && numero is null) continue;
 
                     var esFecha = numero is not null && cell.StyleIndex?.Value is { } si && formatosFecha.Contains((int)si);
+                    // Fechas y precios escritos como TEXTO (pegados de un correo o de otra web): «05/12/2026», «5-dic-2026»,
+                    // «US$ 1,790», «RD$ 1.250,50». Antes se ignoraban (o «1,290» se leía 1.29) y la fecha quedaba sin precio.
+                    // Solo desde la columna B: la A son nombres de hotel.
+                    if (texto is not null && col >= 2)
+                    {
+                        if (TextoFecha(texto) is DateTime tf) { numero = tf.ToOADate(); esFecha = true; texto = null; }
+                        else if (TextoPrecio(texto) is decimal tp) { numero = (double)tp; texto = null; }
+                    }
                     lista.Add(new Celda(fila, col, texto?.Trim(), numero, esFecha));
                 }
             }
             return lista;
+        }
+
+        private static readonly string[] Meses = { "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic" };
+        private static readonly string[] MesesEn = { "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec" };
+
+        /// <summary>
+        /// Una fecha escrita como texto, día primero como en RD: «28/11/2026», «28-11-26», «28.11.2026», «5-dic-2026»,
+        /// «5 de diciembre de 2026», «2026-12-05». Null si no lo es.
+        /// </summary>
+        internal static DateTime? TextoFecha(string texto)
+        {
+            var s = texto.Trim().ToLowerInvariant();
+            if (s.Length is < 6 or > 30 || !s.Any(char.IsDigit)) return null;
+            s = Regex.Replace(s, @"\bde(l)?\b", " ");
+            // nombre del mes (español o inglés, completo o abreviado) → número
+            s = Regex.Replace(s, @"[a-zñ]+\.?", m =>
+            {
+                var p = m.Value.TrimEnd('.');
+                if (p.Length < 3) return m.Value;
+                var k = Array.FindIndex(Meses, x => p.StartsWith(x)); if (k < 0) k = Array.FindIndex(MesesEn, x => p.StartsWith(x));
+                if (p == "set" || p.StartsWith("setiem")) k = 8;
+                return k < 0 ? m.Value : (k + 1).ToString();
+            });
+            if (Regex.IsMatch(s, "[a-z]")) return null;   // queda texto: no es una fecha
+            s = Regex.Replace(s.Trim(), @"[\s./\-]+", "/");
+            if (DateTime.TryParseExact(s, new[] { "d/M/yyyy", "d/M/yy", "yyyy/M/d" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) && d.Year is >= 2000 and <= 2100)
+                return d.Date;
+            return null;
+        }
+
+        /// <summary>Un precio escrito como texto: solo cifras y, como mucho, un símbolo o código de moneda. Null si no lo es.</summary>
+        internal static decimal? TextoPrecio(string texto)
+        {
+            var s = Regex.Replace(texto, @"(?i)RD\$|US\$|USD|DOP|EUR|€|\$|\s", "");
+            if (s.Length == 0 || !Regex.IsMatch(s, @"^-?[\d.,]+$")) return null;
+            return EuroVip.Services.ExcelTabla.Numero(s);
         }
 
         /// <summary>Índices de estilo (cellXfs) cuyo formato numérico es de fecha.</summary>

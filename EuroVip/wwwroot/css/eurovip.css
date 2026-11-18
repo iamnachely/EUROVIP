@@ -552,5 +552,12 @@ details.ui-pleg > .ui-sec-sub { margin-left: 0; margin-top: 0; }
 .ui-guia b { color: var(--ev-text); }
 .ui-guia .ui-req, .ui-guia .ui-opc { margin-right: 4px; }
 .ui-tabs button .n.si, .hx-tabs button .n.si { background: var(--ev-ink); color: var(--ev-aqua); }
-@media (max-width: 640px) { .ui-sec-sub { margin-left: 0; } }
+@media (max-width: 640px) { .ui-sec-sub { margin-left: 0; } .ui-sec-t { flex-wrap: wrap; row-gap: 6px; } .ui-sec-t small { margin-left: 42px; flex-basis: 100%; } }
 .ui-f > label .ui-ast, .hx-f > label .ui-ast { margin-right: auto; margin-left: 3px; }
+
+/* Celular angosto (≤ 420px): la barra de arriba se salía 23px de la pantalla; el buscador se achica y los huecos bajan */
+@media (max-width: 420px) {
+    .ev-topbar { gap: 8px; }
+    .ev-search { min-width: 0; padding: 9px 10px; }
+    .ev-search input { width: 100%; }
+}

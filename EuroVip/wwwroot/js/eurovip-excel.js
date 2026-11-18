@@ -62,7 +62,29 @@ window.EVExcel = (() => {
 .evx-filtro button{border:1px solid var(--ev-line,#E2EFED);background:none;border-radius:999px;padding:5px 12px;font-weight:700;font-size:12.5px;cursor:pointer;color:inherit}
 .evx-filtro button.on{background:var(--ev-ink,#0B1215);color:#fff}
 .evx-spin{width:18px;height:18px;border:3px solid var(--ev-line,#E2EFED);border-top-color:var(--ev-deep,#0E8F86);border-radius:50%;animation:evxg 1s linear infinite;flex:none}
-@keyframes evxg{to{transform:rotate(360deg)}}`;
+@keyframes evxg{to{transform:rotate(360deg)}}
+.evx-paso{display:flex;gap:12px;align-items:flex-start;background:var(--ev-surface,#fff)}
+.evx-paso .n{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;background:var(--ev-surface-2,#F5FBFA);color:var(--ev-deep,#0E8F86);border:2px solid var(--ev-line,#E2EFED)}
+.evx-paso.on{border-color:var(--ev-teal,#2BD4C4);box-shadow:0 0 0 3px rgba(43,212,196,.15)} .evx-paso.on .n{background:var(--ev-teal,#2BD4C4);color:#0B1215;border-color:transparent}
+.evx-paso.ya .n{background:var(--ev-deep,#0E8F86);color:#fff;border-color:transparent}
+.evx-res{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
+.evx-res button{all:unset;cursor:pointer;border:1px solid var(--ev-line,#E2EFED);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;transition:transform .15s,box-shadow .15s;background:var(--ev-surface,#fff)}
+.evx-res button:hover{transform:translateY(-1px);box-shadow:0 8px 20px -14px rgba(11,18,21,.5)}
+.evx-res button.on{outline:2px solid var(--ev-ink,#0B1215);outline-offset:-2px}
+.evx-res b{font-size:24px;font-weight:800;line-height:1.1} .evx-res span{font-size:12.5px;font-weight:700;color:var(--ev-muted,#66807C)}
+.evx-res .ok b{color:var(--ev-deep,#0E8F86)} .evx-res .mal b{color:#C9373C} .evx-res .av b{color:#B07A00}
+.evx-grupo{margin-top:12px} .evx-grupo:first-child{margin-top:0}
+.evx-grupo>h4{margin:0 0 8px;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:8px;color:var(--ev-text,#0B1215)}
+.evx-grupo>h4 small{font-weight:700;text-transform:none;letter-spacing:0;color:var(--ev-muted,#66807C)}
+.evx-grupo.info .evx-campos{grid-template-columns:1fr}
+.evx-grupo.info .evx-campo{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:start}
+.evx-grupo.info .evx-campo label{margin-top:9px}
+.evx-campo .req{color:#C9373C;margin-left:2px}
+.evx-errs{margin:6px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.evx-errs li{font-weight:600;font-size:12.5px;color:#9F2A2E;display:flex;gap:6px}
+.evx-errs li b{color:#C9373C}
+.evx-conf{margin-top:14px;border-radius:16px;padding:14px 16px;background:var(--ev-surface-2,#F5FBFA);border:1px solid var(--ev-line,#E2EFED);display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+@media (max-width:640px){.evx{padding:18px 16px;border-radius:18px}.evx-grupo.info .evx-campo{grid-template-columns:1fr}.evx-grupo.info .evx-campo label{margin-top:0}.evx-tabla th:nth-child(3),.evx-tabla td:nth-child(3){display:none}}`;
         document.head.appendChild(s);
     }
 
@@ -86,9 +108,9 @@ window.EVExcel = (() => {
                 <div class="sub">Carga muchos ${esc(o.varios)} de una vez. Lo que no se reconozca te lo muestro con las coincidencias para elegir: corriges aquí mismo, sin volver a subir el Excel.</div></div>
                 <button type="button" class="x" data-evx="cerrar" title="Cerrar"><i class="bi bi-x-lg"></i></button></div>
             <div class="evx-pasos">
-                <div class="evx-paso"><b>1 · Descarga la plantilla</b>Las columnas con flecha traen las listas de Eurovip de hoy (destinos, proveedores, monedas…).</div>
-                <div class="evx-paso"><b>2 · Llénala y súbela</b>Una fila por ${esc(o.uno)}. Si escribes algo parecido («punta kana»), lo reconozco.</div>
-                <div class="evx-paso"><b>3 · Revisa, corrige y guarda</b>Elige en las listas lo que no reconocí, edita cualquier dato y guarda.</div>
+                <div class="evx-paso on" data-paso="1"><span class="n">1</span><div><b>Descarga la plantilla</b>Las columnas con flecha traen las listas de Eurovip de hoy (destinos, proveedores, monedas…). Las de la hoja «Instrucciones» explican cada columna.</div></div>
+                <div class="evx-paso" data-paso="2"><span class="n">2</span><div><b>Llénala y súbela</b>Una fila por ${esc(o.uno)}. No te preocupes por escribir exacto: «punta kana» o «RD$ 1,250» se entienden.</div></div>
+                <div class="evx-paso" data-paso="3"><span class="n">3</span><div><b>Revisa, corrige y guarda</b>Te digo TODO lo que falta en cada fila. Corriges aquí mismo y guardas: todavía no se guarda nada.</div></div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><a class="evx-btn" href="${esc(o.plantilla)}"><i class="bi bi-download"></i> Descargar plantilla</a></div>
             <label class="evx-drop" data-evx="drop"><i class="bi bi-cloud-arrow-up"></i>
@@ -112,6 +134,7 @@ window.EVExcel = (() => {
         document.addEventListener('keydown', tecla);
         fondo.addEventListener('click', e => { if (e.target === fondo || e.target.closest('[data-evx="cerrar"]')) cerrar(); });
 
+        const paso = n => fondo.querySelectorAll('[data-paso]').forEach(p => { const k = +p.dataset.paso; p.classList.toggle('on', k === n); p.classList.toggle('ya', k < n); });
         const extra = guardar => ({ guardar: guardar ? 'true' : 'false', sinListas: cols ? 'true' : 'false', cambios, mapa, omitir: [...new Set([...omitir, ...hechas.keys()])] });
 
         /** Opciones de una columna como HTML (se arma una vez: hay listas de miles). */
@@ -122,7 +145,8 @@ window.EVExcel = (() => {
         }
 
         function campo(f, col) {
-            const v = f.valores[col.nombre] ?? '', duda = f.dudas.find(d => d.columna === col.nombre), err = !f.ok && f.columna === col.nombre;
+            const errs = (f.errores || []).filter(e => e.columna === col.nombre);
+            const v = f.valores[col.nombre] ?? '', duda = f.dudas.find(d => d.columna === col.nombre), err = !f.ok && (errs.length > 0 || f.columna === col.nombre);
             const cambiado = cambios[f.fila]?.[col.nombre] !== undefined;
             const cls = `evx-campo${err ? ' error' : ''}${duda ? ' duda' : ''}${cambiado ? ' cambiado' : ''}`;
             const id = `evx-${f.fila}-${clave(col.nombre)}`;
@@ -143,13 +167,24 @@ window.EVExcel = (() => {
                 if (sug.length === 1 && !cambiado) (cambios[f.fila] ||= {})[col.nombre] = sug[0].valor;
             } else if (col.tipo === 'largo') control = `<textarea id="${id}" data-fila="${f.fila}" data-col="${esc(col.nombre)}">${esc(v)}</textarea>`;
             else control = `<input id="${id}" data-fila="${f.fila}" data-col="${esc(col.nombre)}" value="${esc(v)}" ${col.tipo === 'numero' ? 'inputmode="decimal"' : ''}>`;
-            if (err && !duda) pista = esc(f.mensaje || '');
-            return `<div class="${cls}"><label for="${id}">${esc(col.nombre)}</label>${control}${pista ? `<span class="pista">${pista}</span>` : ''}</div>`;
+            if (err && !duda) pista = esc(errs.map(e => e.mensaje).join(' ') || f.mensaje || '');
+            return `<div class="${cls}"><label for="${id}">${esc(col.nombre)}${col.obligatoria ? '<span class="req" title="Obligatorio">*</span>' : ''}</label><div>${control}${pista ? `<span class="pista">${pista}</span>` : ''}</div></div>`;
+        }
+
+        const INFO = ['incluye', 'noincluye', 'condiciones', 'documentacion', 'importante', 'ofertaespecial'];
+        /** Los datos de la fila en 3 secciones, para no abrumar: primero lo obligatorio, luego lo opcional y aparte la info para el cliente. */
+        function grupos(f) {
+            const cs = ultimo.columnas, info = cs.filter(c => INFO.includes(clave(c.nombre)));
+            const obl = cs.filter(c => c.obligatoria && !info.includes(c)), opc = cs.filter(c => !c.obligatoria && !info.includes(c));
+            const g = (titulo, sub, lista, cls = '') => lista.length ? `<div class="evx-grupo ${cls}"><h4>${titulo} <small>${sub}</small></h4><div class="evx-campos">${lista.map(c => campo(f, c)).join('')}</div></div>` : '';
+            return g('<i class="bi bi-asterisk" style="color:#C9373C"></i> Obligatorio', 'sin esto no se puede guardar', obl)
+                + g('<i class="bi bi-sliders"></i> Opcional', 'si lo dejas vacío se usa el valor por defecto', opc)
+                + g('<i class="bi bi-info-circle"></i> Información para el cliente', 'opcional · se ve en la web · una cosa por línea', info, 'info');
         }
 
         function editor(f) {
             return `<tr class="evx-ed" data-ed="${f.fila}"><td colspan="5">
-                <div class="evx-campos">${ultimo.columnas.map(c => campo(f, c)).join('')}</div>
+                ${grupos(f)}
                 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">
                     <span style="color:var(--ev-muted,#66807C);font-weight:600;font-size:12.5px;align-self:center">Los cambios se aplican al pulsar «Revisar de nuevo».</span>
                     <button type="button" class="evx-btn sm ama" data-revisar><i class="bi bi-arrow-repeat"></i> Revisar de nuevo</button></div></td></tr>`;
@@ -189,24 +224,28 @@ window.EVExcel = (() => {
             const nAv = visibles.filter(f => f.avisos.length || f.dudas.length).length;
             $('resultado').innerHTML = panelPlantilla(r) + `<div class="evx-nota ${clase}"><i class="bi ${clase === 'mal' ? 'bi-x-circle-fill' : clase === 'ok' ? 'bi-check-circle-fill' : 'bi-info-circle-fill'}"></i><div>${esc(r.mensaje)}</div></div>
                 ${pendientes ? '<div class="evx-nota av"><i class="bi bi-pencil-square"></i><div>Tienes cambios sin revisar: pulsa <b>«Revisar de nuevo»</b> para comprobarlos.</div></div>' : ''}
-                <div class="evx-filtro"><button type="button" data-f="todas" class="${filtro === 'todas' ? 'on' : ''}">Todas (${visibles.length})</button>
-                    <button type="button" data-f="ok" class="${filtro === 'ok' ? 'on' : ''}">Correctas (${r.correctas})</button>
-                    <button type="button" data-f="mal" class="${filtro === 'mal' ? 'on' : ''}">Por corregir (${porCorregir})</button>
-                    <button type="button" data-f="av" class="${filtro === 'av' ? 'on' : ''}">Reconocidas por parecido (${nAv})</button>
-                    ${porCorregir ? `<button type="button" data-abrir-todas style="margin-left:auto"><i class="bi bi-pencil"></i> Corregir todas</button>` : ''}</div>
+                <div class="evx-res">
+                    <button type="button" data-f="todas" class="${filtro === 'todas' ? 'on' : ''}"><b>${visibles.length}</b><span><i class="bi bi-list-ul"></i> Filas del Excel</span></button>
+                    <button type="button" data-f="ok" class="ok ${filtro === 'ok' ? 'on' : ''}"><b>${r.correctas}</b><span><i class="bi bi-check2-circle"></i> Listas para guardar</span></button>
+                    <button type="button" data-f="mal" class="mal ${filtro === 'mal' ? 'on' : ''}"><b>${porCorregir}</b><span><i class="bi bi-exclamation-triangle"></i> Por corregir</span></button>
+                    <button type="button" data-f="av" class="av ${filtro === 'av' ? 'on' : ''}"><b>${nAv}</b><span><i class="bi bi-magic"></i> Reconocidas por parecido</span></button></div>
+                ${porCorregir ? `<div style="display:flex;justify-content:flex-end;margin-top:10px"><button type="button" class="evx-btn sm ama" data-abrir-todas><i class="bi bi-pencil"></i> Abrir todas las filas por corregir</button></div>` : ''}
                 <div class="evx-lista"><table class="evx-tabla"><thead><tr><th style="width:56px">Fila</th><th>${esc(o.uno[0].toUpperCase() + o.uno.slice(1))}</th><th>Datos</th><th style="width:34%">Estado</th><th style="width:170px"></th></tr></thead><tbody>
                 ${filas.map(f => {
                     const off = omitir.has(f.fila), hecho = hechas.has(f.fila);
                     return `<tr class="${hecho ? 'hecho' : off ? 'off' : f.ok ? '' : 'mal'}"><td>${f.fila}</td><td><b>${esc(f.nombre || '—')}</b></td><td>${esc(f.detalle || '')}
                         ${f.avisos.map(a => `<span class="av"><i class="bi bi-magic"></i> ${esc(a)}</span>`).join('')}</td>
                     <td class="est">${hecho ? `<i class="bi bi-check2-all"></i> Guardado n.º ${hechas.get(f.fila)}` : off ? '<i class="bi bi-slash-circle"></i> No se carga'
-                        : f.ok ? '<i class="bi bi-check2"></i> Correcta' : `<i class="bi bi-exclamation-triangle"></i> <span style="font-weight:600">${esc(f.mensaje)}</span>`}</td>
+                        : f.ok ? '<i class="bi bi-check2"></i> Correcta'
+                        : (f.errores?.length > 1
+                            ? `<i class="bi bi-exclamation-triangle"></i> ${f.errores.length} cosas por corregir<ul class="evx-errs">${f.errores.map(e => `<li>${e.columna ? `<b>${esc(e.columna)}:</b>` : ''} ${esc(e.mensaje)}</li>`).join('')}</ul>`
+                            : `<i class="bi bi-exclamation-triangle"></i> <span style="font-weight:600">${esc(f.errores?.[0]?.mensaje || f.mensaje)}</span>`)}</td>
                     <td style="text-align:right;white-space:nowrap">${hecho ? '' : `<button type="button" class="evx-btn sm${!f.ok && !off ? ' ama' : ''}" data-editar="${f.fila}"><i class="bi bi-${abiertas.has(f.fila) ? 'chevron-up' : f.ok ? 'eye' : 'pencil'}"></i> ${abiertas.has(f.fila) ? 'Cerrar' : f.ok ? 'Ver' : 'Corregir'}</button>
                         <button type="button" class="evx-btn sm" data-omitir="${f.fila}" title="${off ? 'Volver a cargar esta fila' : 'No cargar esta fila'}"><i class="bi bi-${off ? 'arrow-counterclockwise' : 'slash-circle'}"></i></button>`}</td></tr>
                     ${abiertas.has(f.fila) && !hecho ? editor(f) : ''}`;
                 }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--ev-muted)">No hay filas con ese filtro.</td></tr>'}
                 </tbody></table></div>`;
-            fondo.querySelectorAll('.evx-filtro [data-f]').forEach(b => b.onclick = () => { filtro = b.dataset.f; pintar(ultimo); });
+            fondo.querySelectorAll('.evx-res [data-f]').forEach(b => b.onclick = () => { filtro = b.dataset.f; pintar(ultimo); });
             fondo.querySelector('[data-abrir-todas]')?.addEventListener('click', () => { r.filas.filter(f => !f.ok && !omitir.has(f.fila)).slice(0, 40).forEach(f => abiertas.add(f.fila)); filtro = 'mal'; pintar(ultimo); });
             fondo.querySelectorAll('[data-editar]').forEach(b => b.onclick = () => { const n = +b.dataset.editar; abiertas.has(n) ? abiertas.delete(n) : abiertas.add(n); pintar(ultimo); });
             fondo.querySelectorAll('[data-omitir]').forEach(b => b.onclick = () => { const n = +b.dataset.omitir; omitir.has(n) ? omitir.delete(n) : omitir.add(n); pendientes = true; pintar(ultimo); });
@@ -221,6 +260,7 @@ window.EVExcel = (() => {
             g.title = pendientes ? 'Primero pulsa «Revisar de nuevo» para comprobar tus cambios.' : '';
             g.innerHTML = `<i class="bi bi-cloud-check"></i> Guardar ${quedan} ${quedan === 1 ? o.uno : o.varios}`;
             $('revisar').hidden = false; $('bajar').hidden = false;
+            paso(3);
             $('revisar').classList.toggle('ama', pendientes);
         }
 
@@ -239,6 +279,20 @@ window.EVExcel = (() => {
             el.closest('.evx-campo')?.classList.add('cambiado');
             const g = $('guardar'); g.disabled = true; g.title = 'Primero pulsa «Revisar de nuevo» para comprobar tus cambios.';
             $('revisar').classList.add('ama');
+        }
+
+        /** Pregunta dentro de la ventana, junto a los botones (se ve mejor que el cuadro del navegador). */
+        function confirmar(texto) {
+            return new Promise(ok => {
+                fondo.querySelector('.evx-conf')?.remove();
+                const d = document.createElement('div'); d.className = 'evx-conf';
+                d.innerHTML = `<i class="bi bi-cloud-check" style="font-size:22px;color:var(--ev-deep,#0E8F86)"></i><div style="flex:1 1 260px">${esc(texto)}</div>
+                    <button type="button" class="evx-btn sm" data-no>Todavía no</button><button type="button" class="evx-btn sm pri" data-si><i class="bi bi-check2"></i> Sí, guardar</button>`;
+                fondo.querySelector('.evx-pie').before(d);
+                d.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                d.querySelector('[data-si]').onclick = () => { d.remove(); ok(true); };
+                d.querySelector('[data-no]').onclick = () => { d.remove(); ok(false); };
+            });
         }
 
         function aviso(t) {
@@ -264,7 +318,7 @@ window.EVExcel = (() => {
 
         async function leer(f) {
             if (!f) return;
-            archivo = f; filtro = 'todas'; cambios = {}; omitir = new Set(); hechas = new Map(); abiertas = new Set(); pendientes = false; mapa = {};
+            paso(2); archivo = f; filtro = 'todas'; cambios = {}; omitir = new Set(); hechas = new Map(); abiertas = new Set(); pendientes = false; mapa = {};
             $('guardar').disabled = true;
             $('resultado').innerHTML = `<div class="evx-nota info"><span class="evx-spin"></span><div>Revisando <b>${esc(f.name)}</b> y buscando coincidencias… (todavía no se guarda nada)</div></div>`;
             try {
@@ -300,7 +354,7 @@ window.EVExcel = (() => {
             const n = ultimo.filas.filter(f => f.ok && !hechas.has(f.fila) && !omitir.has(f.fila)).length;
             if (!n) return;
             const malas = ultimo.filas.filter(f => !f.ok && !omitir.has(f.fila)).length;
-            if (!confirm(`¿Guardar ${n} ${n === 1 ? o.uno : o.varios}?` + (malas ? `\nLas ${malas} fila(s) por corregir NO se guardan (puedes corregirlas después y volver a guardar).` : ''))) return;
+            if (!await confirmar(`¿Guardar ${n} ${n === 1 ? o.uno : o.varios}?` + (malas ? ` Las ${malas} fila(s) por corregir NO se guardan: puedes corregirlas después y volver a guardar.` : ''))) return;
             const g = $('guardar');
             g.disabled = true; g.innerHTML = '<span class="evx-spin"></span> Guardando…';
             try {

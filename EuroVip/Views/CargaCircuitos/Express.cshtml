@@ -30,7 +30,8 @@
     .xp-break { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13.5px; font-weight: 700; padding: 12px 14px; border-radius: 14px; background: var(--ev-surface-2); margin-top: 6px; }
     .xp-break span { padding: 5px 10px; border-radius: 10px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
     .xp-break .eq { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
-        @@media (max-width: 1250px) { .xp { grid-template-columns: 1fr; } .ui-summary { position: static; } }
+        @@media (max-width: 1250px) { .xp { grid-template-columns: minmax(0, 1fr); } .ui-summary { position: static; } }
+    @@media (max-width: 520px) { .xp-gen { grid-template-columns: minmax(0, 1fr); } }
     @@media (max-width: 1500px) { .xp-gen { grid-template-columns: repeat(3, minmax(0, 1fr)); } .xp-gen .ui-f:nth-child(4) { grid-column: 1 / -1; } .xp-gen > .ev-btn { grid-column: 1 / -1; justify-content: center; } }
     @@media (max-width: 900px) { .xp-gen { grid-template-columns: 1fr 1fr; } .xp-notas .nota { grid-template-columns: 1fr; } }
 </style>

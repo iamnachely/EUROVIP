@@ -208,7 +208,8 @@ namespace EuroVip.Controllers
             var monedas = (await _repo.MonedasAsync()).ToList();
             var destinos = (await _repo.DestinosAsync()).ToList();
             var proveedores = await _repo.ProveedoresAsync();
-            var camp = CampanyaPorDefecto(camps)?.Id_Campanya.ToString() ?? camps.FirstOrDefault()?.Id_Campanya.ToString();
+            // Se escribe el NOMBRE (es lo que trae la lista desplegable); antes ponía el número y al subir la plantilla salía «reconocido por parecido»
+            var camp = (CampanyaPorDefecto(camps) ?? camps.FirstOrDefault())?.Nombre?.Trim();
             // Destinos de ejemplo que SÍ existen (si no, la fila de ejemplo saldría con error al subirla)
             string Dest(string quiero, int i) => destinos.FirstOrDefault(x => ExcelTabla.Clave(x) == ExcelTabla.Clave(quiero)) ?? destinos.ElementAtOrDefault(i) ?? quiero;
             var seccion = conts.FirstOrDefault(c => ExcelTabla.Clave(c.Nombre).Contains("hotel"))?.Nombre ?? conts.FirstOrDefault()?.Nombre;
@@ -228,7 +229,7 @@ namespace EuroVip.Controllers
                 new object?[] { "Código hotel", "Obligatorio. Código numérico del hotel (3 a 12 cifras).", null },
                 new object?[] { "Precio / Noches", "Precio «desde» y noches (opcionales).", null },
                 new object?[] { "Moneda", "Código (lista abajo). Vacío = DOP.", null },
-                new object?[] { "Campaña", "Número o nombre (lista abajo)." + (camp is null ? "" : $" Vacío = {camp}."), null },
+                new object?[] { "Campaña", "Elígela en la lista (también se entiende el número de la hoja Instrucciones)." + (camp is null ? "" : $" Vacío = {camp}."), null },
                 new object?[] { "País salida / Ciudad salida", "País en 2 letras (DO, ES…) y ciudad. Vacío = DO · Santo Domingo (lo más común).", null },
                 new object?[] { "País destino", "2 letras. Vacío = DO.", null },
                 new object?[] { "Latitud / Longitud", "Opcionales (para el mapa).", null },

@@ -29,7 +29,8 @@
     .xp-break .eq { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); }
         .xp-add { width: 100%; border: 2px dashed var(--ev-line); border-radius: 20px; background: var(--ev-surface-2); padding: 18px; font: 800 14px var(--ev-font); color: var(--ev-text); cursor: pointer; transition: all .25s var(--ev-ease); }
     .xp-add:hover { border-color: var(--ev-teal); background: var(--ev-grad-soft); }
-    @@media (max-width: 1250px) { .xp { grid-template-columns: 1fr; } .ui-summary { position: static; } }
+    @@media (max-width: 1250px) { .xp { grid-template-columns: minmax(0, 1fr); } .ui-summary { position: static; } }
+    @@media (max-width: 520px) { .xp-gen { grid-template-columns: minmax(0, 1fr); } }
     @@media (max-width: 1500px) { .xp-gen { grid-template-columns: repeat(3, minmax(0, 1fr)); } .xp-gen .ui-f:nth-child(5) { grid-column: 1 / -1; } .xp-gen > .ev-btn { grid-column: 1 / -1; justify-content: center; } }
     @@media (max-width: 900px) { .xp-gen { grid-template-columns: 1fr 1fr; } .xp-notas .nota { grid-template-columns: 1fr; } }
 </style>
