@@ -95,8 +95,14 @@ namespace EuroVip.Controllers
         [HttpGet]
         public async Task<IActionResult> Plantilla()
         {
-            List<EuroVip.Services.EstadosOferta.Estado> estados;   // CAMBIO 131: columna opcional «Estado» con su lista
-            using (var cnE = _aud.Conexion()) estados = await EuroVip.Services.EstadosOferta.ListarAsync(cnE);
+            using var cn = _aud.Conexion();
+            return File(await PlantillaXlsxAsync(cn), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Eurovip-plantilla-carga-manual.xlsx");
+        }
+
+        /// <summary>El archivo de la plantilla (fase 2 de proveedores: la misma la descarga el proveedor desde Gestión).</summary>
+        public static async Task<byte[]> PlantillaXlsxAsync(System.Data.IDbConnection cnE)
+        {
+            var estados = await EuroVip.Services.EstadosOferta.ListarAsync(cnE);   // CAMBIO 131: columna opcional «Estado» con su lista
             using var ms = new MemoryStream();
             using (var doc = SpreadsheetDocument.Create(ms, SpreadsheetDocumentType.Workbook))
             {
@@ -153,7 +159,7 @@ namespace EuroVip.Controllers
                     }) { Count = 1 });
                 wb.Workbook.Save();
             }
-            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Eurovip-plantilla-carga-manual.xlsx");
+            return ms.ToArray();
         }
 
         private List<string> ErroresModelo() =>

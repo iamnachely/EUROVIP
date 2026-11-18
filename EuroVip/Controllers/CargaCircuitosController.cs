@@ -46,10 +46,16 @@ namespace EuroVip.Controllers
         [HttpGet]
         public async Task<IActionResult> Plantilla()
         {
+            using var cn = _repo.Conexion();
+            return File(await PlantillaXlsxAsync(cn), CargaExcel.TipoXlsx, "Eurovip-plantilla-circuito.xlsx");
+        }
+
+        /// <summary>El archivo de la plantilla (fase 2 de proveedores: la misma la descarga el proveedor desde Gestión).</summary>
+        public static async Task<byte[]> PlantillaXlsxAsync(System.Data.IDbConnection cn)
+        {
             // Hoteles de ejemplo que SÍ existen en Eurovip (así el ejemplo se reconoce al subirlo); si no hay, nombres de muestra
             List<string> hoteles;
-            using (var cn = _repo.Conexion())
-                hoteles = (await Dapper.SqlMapper.QueryAsync<string>(cn, @"SELECT TOP 3 a.nombre FROM Eurovip.alojamiento a
+            hoteles = (await Dapper.SqlMapper.QueryAsync<string>(cn, @"SELECT TOP 3 a.nombre FROM Eurovip.alojamiento a
                     WHERE a.id_idioma = 'ES' AND a.activo = 1 AND a.id_alojamiento IN (SELECT x.id_alojamiento FROM Eurovip.servicio_circuito_alojamiento x) ORDER BY a.nombre")).ToList();
             hoteles.AddRange(new[] { "Hotel Riu Plaza España", "Hotel Ilunion Pío XII", "Hotel Meliá Sevilla" }.Skip(hoteles.Count));
             var primera = DateTime.Today.AddDays(((int)DayOfWeek.Saturday - (int)DateTime.Today.DayOfWeek + 7) % 7 + 14);
@@ -79,7 +85,7 @@ namespace EuroVip.Controllers
                 new object?[] { "Segmento 1 / 2", "Opcional. Horario del vuelo de ida y de vuelta (salida - llegada)." },
                 new object?[] { "Importante", "Solo se lee la primera hoja (Circuito). Los datos del circuito (nombre, noches, campañas…) se ponen en la pantalla." },
             }, new double[] { 18, 110 });
-            return File(ExcelTabla.Crear(circuito, ayuda), CargaExcel.TipoXlsx, "Eurovip-plantilla-circuito.xlsx");
+            return ExcelTabla.Crear(circuito, ayuda);
         }
 
         [HttpGet]

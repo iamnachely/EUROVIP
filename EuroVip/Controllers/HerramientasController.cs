@@ -321,6 +321,41 @@ namespace EuroVip.Controllers
             return flyer is null ? BadRequest(new { mensaje = "No se pudo generar el flyer (mira el log del servidor)." }) : Json(new { ok = true, flyer, mensaje = "Flyer generado de nuevo." });
         }
 
+        // ================= CAMBIO 141: pantalla propia de revisión, conversación y «devolver al proveedor» =================
+
+        /// <summary>
+        /// Pantalla propia para revisar las cargas de proveedores y sus flyers (menú Cargas › Cargas de proveedores y la campana).
+        /// Pedido de la usuaria: «una vista nueva para revisar las cargas de proveedores y sus flyers». Herramientas conserva su
+        /// pestaña con un acceso directo. Mismo módulo (herramientas) que el resto de este controlador.
+        /// </summary>
+        [HttpGet]
+        public IActionResult CargasProveedores() => View();
+
+        /// <summary>Devolver al proveedor para que cambie algo (con instrucciones): queda DEVUELTA y la puede corregir y reenviar.</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProveedorCargaDevolver([FromBody] RevisionCargaDto dto)
+        {
+            if (await Prov.DevolverAsync(dto.Id, dto.Instrucciones, User.Identity?.Name ?? "desconocido") is string error) return BadRequest(new { mensaje = error });
+            await AuditarCarga("Proveedor_Carga_Devolver", dto.Id, new { dto.Instrucciones });
+            return Json(new { ok = true, mensaje = "Se la devolviste al proveedor. Verá tus instrucciones y la podrá corregir y volver a enviar." });
+        }
+
+        public sealed class ComentarioRevisionDto
+        {
+            public int Id { get; set; }
+            public string? Texto { get; set; }
+        }
+
+        /// <summary>Comentario de Eurovip en la conversación de la carga (lo ve el proveedor en Gestión).</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProveedorCargaComentar([FromBody] ComentarioRevisionDto dto)
+        {
+            if (await Prov.CargaAsync(dto.Id) is null) return NotFound(new { mensaje = "Esa carga ya no existe." });
+            if (await Prov.ComentarAsync(dto.Id, "EUROVIP", User.Identity?.Name ?? "Eurovip", dto.Texto) is string error) return BadRequest(new { mensaje = error });
+            await AuditarCarga("Proveedor_Carga_Comentar", dto.Id, new { });
+            return Json(new { ok = true, mensaje = "Comentario enviado: el proveedor lo verá en su carga.", comentarios = await Prov.ComentariosAsync(dto.Id) });
+        }
+
         private Task AuditarCarga(string tipo, int id, object cambios) =>
             _aud.AuditarAsync(tipo, Array.Empty<int>(), new { carga = id, cambios }, User.Identity?.Name ?? "desconocido",
                 HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());

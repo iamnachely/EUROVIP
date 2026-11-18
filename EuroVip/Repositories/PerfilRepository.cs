@@ -112,7 +112,7 @@ namespace EuroVip.Repositories
                         Id = $"prov-{c.Id}-{c.Fecha:yyyyMMddHHmmss}", Tipo = conError ? "error" : "alerta", Icono = conError ? "bi-exclamation-octagon" : "bi-briefcase",
                         Titulo = conError ? $"No se pudo publicar la carga {c.Codigo} de {c.Cuenta}" : $"{c.Cuenta} envió una carga a revisión: {modulo}",
                         Texto = conError ? Corta(c.Error, 110) : $"{c.Codigo}{(string.IsNullOrWhiteSpace(c.Titulo) ? "" : " · " + c.Titulo)} · {c.Productos} producto{(c.Productos == 1 ? "" : "s")}",
-                        Fecha = c.Fecha, Url = $"/Herramientas/Index?tab=htProv&carga={c.Id}"
+                        Fecha = c.Fecha, Url = $"/Herramientas/CargasProveedores?carga={c.Id}"   // CAMBIO 141: su pantalla propia
                     });
                 }
             }
@@ -179,8 +179,8 @@ namespace EuroVip.Repositories
                                     {
                                         "Aprobar" => "aprobó una carga de proveedor", "Publicar" => "publicó una carga de proveedor en la web",
                                         "Programar" => "programó el alta de una carga de proveedor", "Rechazar" => "rechazó una carga de proveedor",
-                                        "Enviar" => "envió una carga a revisión", _ => "cambió una carga de proveedor"
-                                    }, "bi-briefcase", "/Herramientas/Index?tab=htProv"),
+                                        "Enviar" => "envió una carga a revisión", "Devolver" => "devolvió una carga al proveedor", "Comentar" => "comentó una carga de proveedor", _ => "cambió una carga de proveedor"
+                                    }, "bi-briefcase", "/Herramientas/CargasProveedores"),
                 "Herramienta" => ($"{(p.ElementAtOrDefault(2) switch { "Crear" => "creó", "Eliminar" => "eliminó", _ => "editó" })} en {HrCatalogos.Buscar(p.ElementAtOrDefault(1))?.Titulo ?? "Herramientas"}",
                                   "bi-tools", $"/Herramientas/Catalogo/{p.ElementAtOrDefault(1)}"),
                 _ => ($"hizo un cambio ({tipo})", "bi-activity", "/")

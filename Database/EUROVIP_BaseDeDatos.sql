@@ -6127,6 +6127,46 @@ GO
 SELECT (SELECT COUNT(*) FROM Eurovip.proveedor_cuenta) AS cuentas, (SELECT COUNT(*) FROM Eurovip.carga_proveedor) AS cargas;
 GO
 
+/* ---------- CAMBIO 141: cargas de PROVEEDORES (fases 2 y 3 + pedidos extra, 19/11/2026) ----------
+   Pedido de la usuaria: «una vista nueva para revisar las cargas de proveedores y sus flyers; el personal puede comentar
+   (conversación que ve el proveedor), aprobar, rechazar con motivo, devolver al proveedor para que cambie algo (con
+   instrucciones), aprobar y programar con fecha y hora, o aprobar y activar ya. El proveedor puede sugerir la fecha y la
+   hora de activación al enviar; el personal la acepta o pone otra. El proveedor puede editar su flyer antes de enviarlo.»
+   - carga_proveedor.activar_sugerido: fecha y hora (de República Dominicana) que propone el proveedor para salir en la web.
+     Solo es una sugerencia: la fecha real la pone el personal (activar_en) al aprobar.
+   - carga_proveedor.flyer_datos: el flyer que editó el proveedor (JSON: frase de arriba, título, los 4 productos con el
+     nombre y el precio que se ven, foto de fondo y plantilla). NULL = el automático (los 4 más baratos de la carga).
+   - Estado nuevo DEVUELTA: el personal se la devuelve al proveedor para que cambie algo (con instrucciones); como
+     RECHAZADA, el proveedor la puede editar y volver a enviar.
+   - Eurovip.carga_proveedor_comentario: la conversación de cada carga entre el proveedor y Eurovip (autor PROVEEDOR o
+     EUROVIP, quién y qué dijo). */
+IF COL_LENGTH('Eurovip.carga_proveedor', 'activar_sugerido') IS NULL
+    ALTER TABLE Eurovip.carga_proveedor ADD activar_sugerido datetime2(0) NULL;
+GO
+IF COL_LENGTH('Eurovip.carga_proveedor', 'flyer_datos') IS NULL
+    ALTER TABLE Eurovip.carga_proveedor ADD flyer_datos nvarchar(max) NULL;
+GO
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_carga_proveedor_estado' AND definition NOT LIKE '%DEVUELTA%')
+    ALTER TABLE Eurovip.carga_proveedor DROP CONSTRAINT CK_carga_proveedor_estado;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_carga_proveedor_estado')
+    ALTER TABLE Eurovip.carga_proveedor ADD CONSTRAINT CK_carga_proveedor_estado
+        CHECK (estado IN ('BORRADOR','PENDIENTE','RECHAZADA','DEVUELTA','PROGRAMADA','ACTIVA'));
+GO
+IF OBJECT_ID('Eurovip.carga_proveedor_comentario') IS NULL
+CREATE TABLE Eurovip.carga_proveedor_comentario (
+    id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_carga_proveedor_comentario PRIMARY KEY,
+    id_carga int NOT NULL CONSTRAINT FK_carga_proveedor_comentario_carga REFERENCES Eurovip.carga_proveedor (id) ON DELETE CASCADE,
+    autor varchar(10) NOT NULL CONSTRAINT CK_carga_proveedor_comentario_autor CHECK (autor IN ('PROVEEDOR','EUROVIP')),
+    nombre nvarchar(150) NOT NULL,
+    texto nvarchar(2000) NOT NULL,
+    fecha datetime2(0) NOT NULL CONSTRAINT DF_carga_proveedor_comentario_fecha DEFAULT SYSDATETIME()
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_carga_proveedor_comentario_carga')
+    CREATE INDEX IX_carga_proveedor_comentario_carga ON Eurovip.carga_proveedor_comentario (id_carga, id);
+GO
+
 
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
@@ -6721,6 +6761,18 @@ GO
                Las dos cargas quedan en estado ACTIVA con sus filas de carga_proveedor_item apuntando a registros ya borrados.
                Para borrar la prueba: DELETE carga_proveedor_item WHERE id_carga IN (1,2); DELETE carga_proveedor WHERE id IN (1,2);
                DELETE proveedor_cuenta WHERE id IN (1,2). Flyers de prueba en wwwroot/uploads/flyers/proveedores/ (no van a git).
+   19/11/2026  CAMBIO 141 aplicado SOLO en el 93: carga_proveedor.activar_sugerido y .flyer_datos, estado DEVUELTA en
+               CK_carga_proveedor_estado y la tabla Eurovip.carga_proveedor_comentario (conversación). Ningún dato existente cambió.
+               Fases 2 y 3 (pantallas del proveedor y alta desde Gestión, repo EuroVip): el usuario de entrada del proveedor está en
+               VDTDESA.Eurovip.usuario_admin con rol PROVEEDOR (migración db/vdtdesa/056 y SP spGestionProveedor*/spProveedorCambiarClave
+               del repo EuroVip, aplicados en el 93). Prueba (todo «ZZ PRUEBA», queda como evidencia, NADA se publicó en la web):
+               cuenta #3 «ZZ PRUEBA Proveedor Gestion» (proveedor@eurovip-prueba.test, proveedor 001, los 6 módulos, ACTIVA) creada
+               desde Gestión › Proveedores; carga #3 EXC261119KW (2 excursiones, por formulario): enviada, programada y DEVUELTA;
+               carga #4 TRA261119XJ (2 traslados, por Excel): enviada, devuelta con comentario, corregida con flyer editado y fecha
+               sugerida 15/12/2026 09:00, programada y RECHAZADA («limpieza de la prueba»). La cuenta #2 «ZZ PRUEBA Claude Proveedor
+               Dos» (sin cargas) se ELIMINÓ desde Gestión (prueba del borrado). Para borrar la prueba: DELETE carga_proveedor WHERE id IN (3,4)
+               (los comentarios se borran solos); DELETE proveedor_cuenta WHERE id = 3; y en VDTDESA DELETE Eurovip.usuario_admin
+               WHERE email = 'proveedor@eurovip-prueba.test'.
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

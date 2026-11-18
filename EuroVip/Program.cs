@@ -77,6 +77,7 @@ builder.Services.AddHostedService<EuroVip.Services.AgenciaProgramadorWorker>();
 // CAMBIO 140: cargas de proveedores (revisión, publicación con el mismo guardado de cada pantalla y alta programada)
 builder.Services.AddScoped<EuroVip.Services.GuardadoProductos>();
 builder.Services.AddScoped<EuroVip.Services.ProveedoresCarga>();
+builder.Services.AddScoped<EuroVip.Services.ProveedoresExcel>();   // fase 2: plantillas y lectura de Excel del proveedor (sin guardar)
 builder.Services.AddHostedService<EuroVip.Services.ProveedoresCargaWorker>();
 builder.Services.AddSingleton<EuroVip.Services.IProgresoCargas, EuroVip.Services.ProgresoCargas>();   // barra de progreso de las cargas
 builder.Services.AddHttpClient("whatsapp");

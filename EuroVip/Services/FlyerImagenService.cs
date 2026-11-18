@@ -19,7 +19,9 @@ namespace EuroVip.Services
         /// <summary>PNG que dibuja el editor del navegador (data:image/png;base64,…) → galería de hoy: flyer_{nombre}_editor_{hora}.png.</summary>
         Task<FlyerImagen> GuardarPngAsync(string dataUrl, string nombre);
         /// <summary>CAMBIO 140: flyer automático de una carga de proveedor → wwwroot/uploads/flyers/proveedores/{codigo}_{yyyyMMddHHmmss}.png (devuelve la ruta pública).</summary>
-        Task<string> GenerarProveedorAsync(FlyerDestino datos, string? destinoFoto, string codigo);
+        Task<string> GenerarProveedorAsync(FlyerDestino datos, string? destinoFoto, string codigo, string? plantilla = null);
+        /// <summary>CAMBIO 141: nombres de las fotos de fondo que hay (Punta Cana, Samaná…), para el editor del flyer del proveedor.</summary>
+        List<string> FondosDisponibles();
     }
 
     /// <summary>
@@ -117,19 +119,22 @@ namespace EuroVip.Services
         /// CAMBIO 140: flyer de una carga de proveedor (los 4 productos más baratos). Plantilla «postal» (centrada, WhatsApp 4:5: el nombre largo del proveedor no choca con el precio),
         /// foto del destino de los productos (o Punta Cana). Carpeta aparte (proveedores/) para que no se mezcle con la galería de flyers.
         /// </summary>
-        public async Task<string> GenerarProveedorAsync(FlyerDestino datos, string? destinoFoto, string codigo)
+        public async Task<string> GenerarProveedorAsync(FlyerDestino datos, string? destinoFoto, string codigo, string? plantilla = null)
         {
             var carpeta = System.IO.Path.Combine(Raiz, CarpetaProveedores);
             Directory.CreateDirectory(carpeta);
             var nombre = $"{Seguro(codigo)}_{DateTime.Now:yyyyMMddHHmmss}.png";
             using var fuentes = new FlyerFuentes();
             using (var foto = (string.IsNullOrWhiteSpace(destinoFoto) ? null : FotoDe(destinoFoto)) ?? FotoDe("Punta Cana"))
-            using (var png = FlyerPlantillas.Dibujar("postal", datos, foto, fuentes, Web))
+            using (var png = FlyerPlantillas.Dibujar(string.IsNullOrWhiteSpace(plantilla) ? "postal" : plantilla, datos, foto, fuentes, Web))
             await using (var fs = File.Create(System.IO.Path.Combine(carpeta, nombre)))
                 png.SaveTo(fs);
             return $"/{Carpeta}/{CarpetaProveedores}/{Uri.EscapeDataString(nombre)}";
         }
         public const string CarpetaProveedores = "proveedores";
+
+        public List<string> FondosDisponibles() => Directory.Exists(Fondos)
+            ? Directory.EnumerateFiles(Fondos).Select(f => System.IO.Path.GetFileNameWithoutExtension(f)).OrderBy(x => x).ToList() : new();
 
         public async Task<FlyerImagen> GuardarPngAsync(string dataUrl, string nombre)
         {

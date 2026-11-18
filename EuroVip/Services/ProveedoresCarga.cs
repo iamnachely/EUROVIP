@@ -51,7 +51,11 @@ namespace EuroVip.Services
     public static class EstadosCargaProveedor
     {
         public const string Borrador = "BORRADOR", Pendiente = "PENDIENTE", Rechazada = "RECHAZADA", Programada = "PROGRAMADA", Activa = "ACTIVA";
-        public static readonly string[] Todos = { Borrador, Pendiente, Rechazada, Programada, Activa };
+        /// <summary>CAMBIO 141: Eurovip se la devuelve al proveedor para que cambie algo (con instrucciones).</summary>
+        public const string Devuelta = "DEVUELTA";
+        public static readonly string[] Todos = { Borrador, Pendiente, Rechazada, Devuelta, Programada, Activa };
+        /// <summary>El proveedor solo cambia (y puede borrar) lo que está en borrador, rechazado o devuelto.</summary>
+        public static bool Editable(string? e) => e is Borrador or Rechazada or Devuelta;
         public static string? Normalizar(string? e) => e?.Trim().ToUpperInvariant() is { } x && Todos.Contains(x) ? x : null;
     }
 
@@ -89,6 +93,8 @@ namespace EuroVip.Services
         [Required(ErrorMessage = "Elige el proveedor del catálogo"), StringLength(10)] public string Id_Proveedor { get; set; } = "";
         public List<string> Modulos { get; set; } = new();
         public bool Activo { get; set; } = true;
+        /// <summary>Fase 3: id del usuario del proveedor en Gestión (VDTDESA.Eurovip.usuario_admin). Null = no se cambia.</summary>
+        public int? Id_Gestion { get; set; }
     }
 
     /// <summary>Una carga de proveedor (Eurovip.carga_proveedor) con el nombre de su cuenta y proveedor.</summary>
@@ -116,6 +122,10 @@ namespace EuroVip.Services
         public string? Revisado_Por { get; set; }
         public DateTime? Fecha_Activacion { get; set; }
         public string? Error { get; set; }
+        /// <summary>CAMBIO 141: fecha y hora que sugiere el proveedor para salir en la web (la real la pone Eurovip).</summary>
+        public DateTime? Activar_Sugerido { get; set; }
+        /// <summary>CAMBIO 141: el flyer editado por el proveedor (JSON de FlyerProveedorDatos). Null = el automático.</summary>
+        public string? Flyer_Datos { get; set; }
         public DateTime Creado_En { get; set; }
         public DateTime? Actualizado_En { get; set; }
         public int Publicados { get; set; }
@@ -146,6 +156,9 @@ namespace EuroVip.Services
         public bool? Activo { get; set; }
         public string? Codigo { get; set; }
         public string? Modulo { get; set; }
+        /// <summary>Fase 2: destino del producto en la web (excursión y traslado) para enlazar su ficha; fecha en que se publicó.</summary>
+        public string? Destino { get; set; }
+        public DateTime? Fecha_Activacion { get; set; }
     }
 
     /// <summary>Crear o editar una carga (proveedor). Datos = lista JSON de los DTO del módulo.</summary>
@@ -156,6 +169,41 @@ namespace EuroVip.Services
         public string Codigo { get; set; } = "";
         [StringLength(150, ErrorMessage = "El título admite como máximo 150 caracteres")] public string? Titulo { get; set; }
         public JsonElement Datos { get; set; }
+    }
+
+    /// <summary>CAMBIO 141: el flyer que edita el proveedor (lo que se ve en el PNG).</summary>
+    public class FlyerProveedorDatos
+    {
+        /// <summary>Frase de arriba (p. ej. «Excursiones · Caribe Tours»).</summary>
+        public string? Gancho { get; set; }
+        /// <summary>Título grande (el nombre del proveedor o lo que quiera).</summary>
+        public string? Titulo { get; set; }
+        public string? Moneda { get; set; }
+        /// <summary>Foto de fondo: el nombre de un fondo de wwwroot/uploads/flyers/fondos (Punta Cana, Samaná…).</summary>
+        public string? Foto { get; set; }
+        /// <summary>Plantilla de Flyers (postal, tropical, ola45, clasica, historia).</summary>
+        public string? Plantilla { get; set; }
+        public List<FlyerProveedorProducto> Productos { get; set; } = new();
+    }
+
+    public class FlyerProveedorProducto
+    {
+        /// <summary>Producto de la carga del que sale (1..); solo informativo.</summary>
+        public int? Indice { get; set; }
+        public string? Nombre { get; set; }
+        public string? Detalle { get; set; }
+        public decimal? Precio { get; set; }
+    }
+
+    /// <summary>CAMBIO 141: un comentario de la conversación de una carga.</summary>
+    public class CargaComentario
+    {
+        public int Id { get; set; }
+        public int Id_Carga { get; set; }
+        public string Autor { get; set; } = "";
+        public string Nombre { get; set; } = "";
+        public string Texto { get; set; } = "";
+        public DateTime Fecha { get; set; }
     }
 
     public class CargaProveedorFiltro
@@ -234,22 +282,78 @@ namespace EuroVip.Services
             if (await CatalogoCargas.ErrorProveedorAsync(cn, d.Id_Proveedor) is string malProv) return (null, malProv);
             if (await cn.ExecuteScalarAsync<int?>("SELECT id FROM Eurovip.proveedor_cuenta WHERE email = @Email AND (@Id IS NULL OR id <> @Id)", new { d.Email, d.Id }) is int otra)
                 return (null, $"Ya hay otra cuenta de proveedor con el correo «{d.Email}» (n.º {otra}).");
-            var p = new { d.Id, d.Nombre, d.Email, d.Telefono, d.Id_Proveedor, modulos = string.Join(",", modulos), d.Activo, usuario };
+            var p = new { d.Id, d.Nombre, d.Email, d.Telefono, d.Id_Proveedor, modulos = string.Join(",", modulos), d.Activo, usuario, d.Id_Gestion };
             if (d.Id is int id)
             {
                 var n = await cn.ExecuteAsync(@"UPDATE Eurovip.proveedor_cuenta SET nombre = @Nombre, email = @Email, telefono = @Telefono, id_proveedor = @Id_Proveedor,
-                    modulos = @modulos, activo = @Activo, usuario_modificacion = @usuario, fecha_modificacion = SYSDATETIME() WHERE id = @Id", p);
+                    modulos = @modulos, activo = @Activo, id_gestion = ISNULL(@Id_Gestion, id_gestion), usuario_modificacion = @usuario, fecha_modificacion = SYSDATETIME() WHERE id = @Id", p);
                 return n == 0 ? (null, "Esa cuenta ya no existe. Recarga la página.") : (id, null);
             }
-            return (await cn.ExecuteScalarAsync<int>(@"INSERT INTO Eurovip.proveedor_cuenta (nombre, email, telefono, id_proveedor, modulos, activo, usuario)
-                VALUES (@Nombre, @Email, @Telefono, @Id_Proveedor, @modulos, @Activo, @usuario); SELECT CAST(SCOPE_IDENTITY() AS int);", p), null);
+            return (await cn.ExecuteScalarAsync<int>(@"INSERT INTO Eurovip.proveedor_cuenta (nombre, email, telefono, id_proveedor, modulos, activo, usuario, id_gestion)
+                VALUES (@Nombre, @Email, @Telefono, @Id_Proveedor, @modulos, @Activo, @usuario, @Id_Gestion); SELECT CAST(SCOPE_IDENTITY() AS int);", p), null);
+        }
+
+        /// <summary>
+        /// Fase 3 (Gestión › Proveedores): quitar una cuenta. Si ya cargó algo se DESACTIVA (borrado lógico: sus cargas y lo
+        /// publicado siguen con su nombre); si nunca cargó nada se borra. Devuelve "borrada", "desactivada" o null si no existe.
+        /// </summary>
+        public async Task<string?> BorrarCuentaAsync(int id, string usuario)
+        {
+            using var cn = _db.Conexion();
+            var cargas = await cn.ExecuteScalarAsync<int?>("SELECT (SELECT COUNT(*) FROM Eurovip.carga_proveedor c WHERE c.id_cuenta = pc.id) FROM Eurovip.proveedor_cuenta pc WHERE pc.id = @id", new { id });
+            if (cargas is null) return null;
+            if (cargas > 0)
+            {
+                await cn.ExecuteAsync("UPDATE Eurovip.proveedor_cuenta SET activo = 0, usuario_modificacion = @usuario, fecha_modificacion = SYSDATETIME() WHERE id = @id", new { id, usuario });
+                return "desactivada";
+            }
+            await cn.ExecuteAsync("DELETE FROM Eurovip.proveedor_cuenta WHERE id = @id AND NOT EXISTS (SELECT 1 FROM Eurovip.carga_proveedor WHERE id_cuenta = @id)", new { id });
+            return "borrada";
+        }
+
+        /// <summary>Fase 3: activar o desactivar una cuenta (Gestión › Proveedores). false si no existe.</summary>
+        public async Task<bool> ActivarCuentaAsync(int id, bool activo, string usuario)
+        {
+            using var cn = _db.Conexion();
+            return await cn.ExecuteAsync("UPDATE Eurovip.proveedor_cuenta SET activo = @activo, usuario_modificacion = @usuario, fecha_modificacion = SYSDATETIME() WHERE id = @id",
+                new { id, activo, usuario }) > 0;
+        }
+
+        /// <summary>
+        /// Fase 2: lo que el proveedor no sabe y decide Eurovip, con un valor por defecto (el personal lo ajusta al revisar):
+        /// la campaña de Solo Hotel / Paquetes / Circuitos. Si el proveedor no trae ninguna, la de configuración
+        /// (Eurovip:Proveedores:Campanya:{MODULO}) o la primera de ese tipo en Eurovip.campanya.
+        /// </summary>
+        public async Task CompletarAsync(string modulo, List<object> lista)
+        {
+            var sinCampanya = lista.OfType<CargaOfertaDto>().Any(o => o.Campanyas.Count == 0) || lista.OfType<CargaCircuitoDto>().Any(c => c.Campanyas.Count == 0);
+            if (!sinCampanya) return;
+            short? id = short.TryParse(_cfg[$"Eurovip:Proveedores:Campanya:{modulo}"], out var conf) ? conf : null;
+            if (id is null)
+            {
+                var tipo = modulo == ProveedorModulos.Circuitos ? "CIRCUITO" : "OFERTA";
+                using var cn = _db.Conexion();
+                id = await cn.ExecuteScalarAsync<short?>(@"SELECT TOP 1 id_campanya FROM Eurovip.campanya WHERE id_idioma = 'ES'
+                    ORDER BY CASE WHEN UPPER(LTRIM(RTRIM(id_tipo_servicio))) = @tipo THEN 0 ELSE 1 END, id_campanya", new { tipo });
+            }
+            if (id is not short c) return;   // sin campañas: la validación del módulo lo dirá
+            foreach (var o in lista.OfType<CargaOfertaDto>().Where(o => o.Campanyas.Count == 0)) o.Campanyas.Add(new CargaCampanyaDto { Id_Campanya = c });
+            foreach (var ci in lista.OfType<CargaCircuitoDto>().Where(x => x.Campanyas.Count == 0)) ci.Campanyas.Add(new CargaCampanyaDto { Id_Campanya = c });
+        }
+
+        /// <summary>Fase 2: el proveedor borra un borrador suyo (lo enviado, rechazado o publicado queda en el historial). null = hecho.</summary>
+        public async Task<string?> BorrarCargaAsync(ProveedorCuenta cuenta, int id)
+        {
+            using var cn = _db.Conexion();
+            var n = await cn.ExecuteAsync("DELETE FROM Eurovip.carga_proveedor WHERE id = @id AND id_cuenta = @cuenta AND estado IN ('BORRADOR','RECHAZADA','DEVUELTA') AND publicados = 0", new { id, cuenta = cuenta.Id });
+            return n > 0 ? null : "Solo se pueden borrar las cargas que no se enviaron o que Eurovip te devolvió o rechazó (lo publicado nunca se borra).";
         }
 
         // ============================================ CARGAS: LECTURA ============================================
 
         private const string SelCarga = @"SELECT c.id, c.id_cuenta, pc.nombre AS Cuenta, pc.email AS Email, pc.id_proveedor AS Id_Proveedor, LTRIM(RTRIM(p.nombre)) AS Proveedor,
                 c.modulo, c.codigo, c.titulo, c.estado, c.motivo, c.instrucciones, c.activar_en, c.flyer, c.productos, c.precio_desde, c.moneda,
-                c.fecha_solicitud, c.fecha_revision, c.revisado_por, c.fecha_activacion, c.error, c.creado_en, c.actualizado_en, c.publicados, c.datos
+                c.fecha_solicitud, c.fecha_revision, c.revisado_por, c.fecha_activacion, c.error, c.creado_en, c.actualizado_en, c.publicados, c.datos, c.activar_sugerido, c.flyer_datos
             FROM Eurovip.carga_proveedor c JOIN Eurovip.proveedor_cuenta pc ON pc.id = c.id_cuenta LEFT JOIN Eurovip.proveedor p ON p.id_proveedor = pc.id_proveedor";
 
         public async Task<(List<CargaProveedor> Items, int Total)> CargasAsync(CargaProveedorFiltro f)
@@ -290,7 +394,10 @@ namespace EuroVip.Services
         {
             using var cn = _db.Conexion();
             return (await cn.QueryAsync<CargaProveedorItem>(@"
-                SELECT i.id_carga, i.tabla, i.id_registro, i.nombre, i.precio, i.moneda, c.codigo, c.modulo,
+                SELECT i.id_carga, i.tabla, i.id_registro, i.nombre, i.precio, i.moneda, c.codigo, c.modulo, c.fecha_activacion,
+                       CASE i.tabla
+                            WHEN 'EXCURSION' THEN (SELECT TOP 1 LTRIM(RTRIM(e.id_destino)) FROM Eurovip.servicio_excursion e WITH (NOLOCK) WHERE e.id_Excursion = i.id_registro)
+                            WHEN 'TRASLADO' THEN (SELECT TOP 1 LTRIM(RTRIM(t.id_destino)) FROM Eurovip.traslado t WITH (NOLOCK) WHERE t.id_traslado = i.id_registro) END AS Destino,
                        CAST(CASE i.tabla
                             WHEN 'SERVICIO' THEN (SELECT TOP 1 CAST(s.activo AS int) FROM Eurovip.servicio s WITH (NOLOCK) WHERE s.id_servicio = i.id_registro)
                             WHEN 'EXCURSION' THEN (SELECT TOP 1 1 FROM Eurovip.servicio_excursion e WITH (NOLOCK) WHERE e.id_Excursion = i.id_registro)
@@ -311,7 +418,7 @@ namespace EuroVip.Services
             catch (Exception ex) { _log.LogWarning(ex, "Carga de proveedor {Id}: no se pudo leer el JSON", id); productos = new(); }
             return new
             {
-                carga = c, productos, items = await ItemsAsync(id),
+                carga = c, productos, items = await ItemsAsync(id), comentarios = await ComentariosAsync(id),
                 datos = JsonDocument.Parse(string.IsNullOrWhiteSpace(c.Datos) ? "[]" : c.Datos).RootElement,
                 modulo = new { clave = c.Modulo, nombre = ProveedorModulos.Todos[c.Modulo].Nombre, icono = ProveedorModulos.Todos[c.Modulo].Icono }
             };
@@ -413,7 +520,11 @@ namespace EuroVip.Services
             for (var i = desde; i < copia.Count; i++)
             {
                 var dto = copia[i];
-                foreach (var m in ErroresModelo(dto)) Mal(i, null, m);
+                // Fase 2: con el campo (Nombre, Id_Destino, Precio…) para marcarlo en rojo en el formulario del proveedor
+                var directos = new List<ValidationResult>();
+                Validator.TryValidateObject(dto, new ValidationContext(dto), directos, validateAllProperties: true);
+                foreach (var v in directos) Mal(i, v.MemberNames.FirstOrDefault(), v.ErrorMessage ?? "Hay un dato inválido.");
+                foreach (var m in ErroresModelo(dto).Where(m => !directos.Any(v => v.ErrorMessage == m))) Mal(i, null, m);
                 if (errores.Any(e => e.Indice == i + 1)) continue;
                 switch (dto)
                 {
@@ -577,6 +688,7 @@ namespace EuroVip.Services
             var (lista, malos) = Leer(modulo, d.Datos);
             if (malos.Count > 0) return (null, malos);
             foreach (var x in lista) Forzar(modulo, x, cuenta.Id_Proveedor, codigo);
+            await CompletarAsync(modulo, lista);   // fase 2: campaña por defecto (el proveedor no la conoce)
             var productos = await ProductosAsync(modulo, lista);
             var (desde, moneda) = Desde(productos);
 
@@ -589,7 +701,7 @@ namespace EuroVip.Services
             {
                 var actual = await cn.QueryFirstOrDefaultAsync<(int Cuenta, string Estado)>("SELECT id_cuenta, estado FROM Eurovip.carga_proveedor WHERE id = @id", new { id });
                 if (actual == default || actual.Cuenta != cuenta.Id) return (null, new() { Mal("id", "Esa carga no existe.") });
-                if (actual.Estado is not (EstadosCargaProveedor.Borrador or EstadosCargaProveedor.Rechazada))
+                if (!EstadosCargaProveedor.Editable(actual.Estado))
                     return (null, new() { Mal("estado", $"La carga está {actual.Estado}: solo se puede cambiar en borrador o si fue rechazada.") });
                 await cn.ExecuteAsync(@"UPDATE Eurovip.carga_proveedor SET modulo = @modulo, codigo = @codigo, titulo = @titulo, datos = @datos, productos = @productos,
                     precio_desde = @desde, moneda = @moneda, actualizado_en = SYSDATETIME() WHERE id = @id", p);
@@ -609,6 +721,7 @@ namespace EuroVip.Services
             var (lista, malos) = Leer(modulo, datos);
             if (malos.Count > 0) return (new(), malos);
             foreach (var x in lista) Forzar(modulo, x, cuenta.Id_Proveedor, cod);
+            await CompletarAsync(modulo, lista);
             var productos = await ProductosAsync(modulo, lista);
             var errores = await ValidarAsync(modulo, lista, cod);
             if (!string.IsNullOrWhiteSpace(codigo) && !CodigoValido.IsMatch(cod)) errores.Insert(0, new(0, null, "codigo", "El código de la carga: solo letras y números, hasta 30."));
@@ -616,24 +729,32 @@ namespace EuroVip.Services
         }
 
         /// <summary>Enviar a revisión: se revisa todo; si está bien pasa a PENDIENTE y se genera el flyer (siempre, cada vez).</summary>
-        public async Task<(bool Ok, string Mensaje, List<ErrorProducto> Errores)> EnviarAsync(ProveedorCuenta cuenta, int id)
+        public async Task<(bool Ok, string Mensaje, List<ErrorProducto> Errores)> EnviarAsync(ProveedorCuenta cuenta, int id, DateTime? activarSugerido = null)
         {
             var c = await CargaAsync(id);
             if (c is null || c.Id_Cuenta != cuenta.Id) return (false, "Esa carga no existe.", new());
-            if (c.Estado is not (EstadosCargaProveedor.Borrador or EstadosCargaProveedor.Rechazada))
+            if (!EstadosCargaProveedor.Editable(c.Estado))
                 return (false, $"La carga ya está {c.Estado}: no se puede volver a enviar.", new());
             if (!cuenta.ListaModulos.Contains(c.Modulo)) return (false, $"Tu cuenta ya no tiene habilitado {ProveedorModulos.Todos[c.Modulo].Nombre}.", new());
             var lista = Leer(c.Modulo, c.Datos);
             foreach (var x in lista) Forzar(c.Modulo, x, cuenta.Id_Proveedor, c.Codigo);
+            await CompletarAsync(c.Modulo, lista);
             var errores = await ValidarAsync(c.Modulo, lista, c.Codigo, c.Id);
             if (errores.Count > 0) return (false, $"La carga tiene {errores.Count} problema{(errores.Count == 1 ? "" : "s")}: corrígelos y vuelve a enviarla.", errores);
+            // CAMBIO 141: fecha sugerida por el proveedor (hora de República Dominicana), en el futuro y como mucho a 2 años
+            if (activarSugerido is DateTime sug)
+            {
+                var ahora = AgenciaProgramador.Ahora(_cfg);
+                if (sug <= ahora) return (false, $"La fecha que sugieres para salir en la web tiene que ser en el futuro (ahora en República Dominicana son las {ahora:dd/MM/yyyy HH:mm}).", new());
+                if (sug > ahora.AddYears(2)) return (false, "La fecha que sugieres no puede ser a más de 2 años.", new());
+            }
             var flyer = await FlyerAsync(c, cuenta, lista);
             var productos = await ProductosAsync(c.Modulo, lista);
             var (desde, moneda) = Desde(productos);
             using var cn = _db.Conexion();
             await cn.ExecuteAsync(@"UPDATE Eurovip.carga_proveedor SET estado = 'PENDIENTE', fecha_solicitud = SYSDATETIME(), flyer = @flyer, productos = @n, precio_desde = @desde,
-                moneda = @moneda, error = NULL, activar_en = NULL, actualizado_en = SYSDATETIME() WHERE id = @id AND estado IN ('BORRADOR','RECHAZADA')",
-                new { id, flyer, n = productos.Count, desde, moneda });
+                moneda = @moneda, error = NULL, activar_en = NULL, activar_sugerido = @sug, actualizado_en = SYSDATETIME() WHERE id = @id AND estado IN ('BORRADOR','RECHAZADA','DEVUELTA')",
+                new { id, flyer, n = productos.Count, desde, moneda, sug = activarSugerido });
             return (true, "¡Listo! La carga se envió a revisión. Eurovip te avisará cuando esté aprobada.", new());
         }
 
@@ -645,26 +766,11 @@ namespace EuroVip.Services
         /// </summary>
         public async Task<string?> FlyerAsync(CargaProveedor c, ProveedorCuenta cuenta, List<object>? lista = null)
         {
+            // CAMBIO 141: si el proveedor editó su flyer, se dibuja con lo que eligió; si no, el automático (4 más baratos)
             try
             {
-                var productos = await ProductosAsync(c.Modulo, lista ?? Leer(c.Modulo, c.Datos));
-                var (_, moneda) = Desde(productos);
-                var top = productos.Where(p => p.Precio is > 0 && p.Moneda == moneda).OrderBy(p => p.Precio).Take(4).ToList();
-                if (top.Count == 0) top = productos.Take(4).ToList();
-                var (_, plural, _) = ProveedorModulos.Todos[c.Modulo];
-                var datos = new FlyerDestino
-                {
-                    Id_Destino = cuenta.Nombre, Nombre_Destino = cuenta.Nombre, Moneda = moneda, Gancho = $"{plural} · {cuenta.Nombre}",
-                    Hoteles = top.Select((p, k) => new FlyerHotel
-                    {
-                        Nombre_Hotel = p.Nombre, Nombre_Habitacion = string.Join(" · ", new[] { p.Destino, p.Detalle }.Where(s => !string.IsNullOrWhiteSpace(s))),
-                        Precio_Final = (int)Math.Round(p.Precio ?? 0), Posicion = k + 1
-                    }).ToList()
-                };
-                // Foto: el destino que más se repite entre los productos del flyer (si tiene fondo de flyer), si no Punta Cana
-                var destino = top.Where(p => !string.IsNullOrWhiteSpace(p.Destino)).GroupBy(p => p.Destino!.Trim(), StringComparer.OrdinalIgnoreCase)
-                                 .OrderByDescending(g => g.Count()).FirstOrDefault()?.Key;
-                return await _flyer.GenerarProveedorAsync(datos, destino, c.Codigo);
+                var datos = LeerFlyerDatos(c.Flyer_Datos) ?? await FlyerPorDefectoAsync(c, cuenta, lista);
+                return await DibujarFlyerAsync(datos, c.Codigo);
             }
             catch (Exception ex)
             {
@@ -672,6 +778,131 @@ namespace EuroVip.Services
                 _log.LogError(ex, "No se pudo generar el flyer de la carga de proveedor {Id}", c.Id);
                 return null;
             }
+        }
+
+        /// <summary>El flyer automático: los 4 productos más baratos (en la moneda con más productos), título = proveedor + tipo.</summary>
+        public async Task<FlyerProveedorDatos> FlyerPorDefectoAsync(CargaProveedor c, ProveedorCuenta cuenta, List<object>? lista = null)
+        {
+            var productos = await ProductosAsync(c.Modulo, lista ?? Leer(c.Modulo, c.Datos));
+            var (_, moneda) = Desde(productos);
+            var top = productos.Where(p => p.Precio is > 0 && p.Moneda == moneda).OrderBy(p => p.Precio).Take(4).ToList();
+            if (top.Count == 0) top = productos.Take(4).ToList();
+            var (_, plural, _) = ProveedorModulos.Todos[c.Modulo];
+            // Foto: el destino que más se repite entre los productos del flyer (si tiene fondo de flyer), si no Punta Cana
+            var destino = top.Where(p => !string.IsNullOrWhiteSpace(p.Destino)).GroupBy(p => p.Destino!.Trim(), StringComparer.OrdinalIgnoreCase)
+                             .OrderByDescending(g => g.Count()).FirstOrDefault()?.Key;
+            var fotos = _flyer.FondosDisponibles();
+            return new FlyerProveedorDatos
+            {
+                Gancho = $"{plural} · {cuenta.Nombre}", Titulo = cuenta.Nombre, Moneda = moneda, Plantilla = "postal",
+                Foto = fotos.FirstOrDefault(f => string.Equals(FlyerImagenService.Seguro(f), FlyerImagenService.Seguro(destino ?? ""), StringComparison.OrdinalIgnoreCase)),
+                Productos = top.Select(p => new FlyerProveedorProducto
+                {
+                    Indice = p.Indice, Nombre = p.Nombre, Detalle = string.Join(" · ", new[] { p.Destino, p.Detalle }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                    Precio = Math.Round(p.Precio ?? 0)
+                }).ToList()
+            };
+        }
+
+        private static readonly JsonSerializerOptions JsonFlyer = new(JsonSerializerDefaults.Web);
+        public static FlyerProveedorDatos? LeerFlyerDatos(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return null;
+            try { return JsonSerializer.Deserialize<FlyerProveedorDatos>(json, JsonFlyer); } catch (JsonException) { return null; }
+        }
+
+        /// <summary>Dibuja el PNG (FlyerImagenService, las plantillas de Flyers) y devuelve su ruta pública.</summary>
+        private Task<string> DibujarFlyerAsync(FlyerProveedorDatos d, string codigo)
+        {
+            var datos = new FlyerDestino
+            {
+                Id_Destino = d.Titulo ?? "", Nombre_Destino = d.Titulo ?? "", Moneda = d.Moneda, Gancho = d.Gancho,
+                Hoteles = d.Productos.Take(4).Select((p, k) => new FlyerHotel
+                {
+                    Nombre_Hotel = p.Nombre ?? "", Nombre_Habitacion = p.Detalle ?? "", Precio_Final = (int)Math.Round(p.Precio ?? 0), Posicion = k + 1
+                }).ToList()
+            };
+            return _flyer.GenerarProveedorAsync(datos, d.Foto, codigo, d.Plantilla);
+        }
+
+        /// <summary>
+        /// CAMBIO 141 · el editor del flyer del proveedor: lo que tiene ahora (editado o el automático) y las opciones: todos los
+        /// productos de la carga (para elegir los 4), las fotos de fondo y las plantillas.
+        /// </summary>
+        public async Task<object?> FlyerEditorAsync(ProveedorCuenta cuenta, int id)
+        {
+            var c = await CargaAsync(id);
+            if (c is null || c.Id_Cuenta != cuenta.Id) return null;
+            var lista = Leer(c.Modulo, c.Datos);
+            var productos = await ProductosAsync(c.Modulo, lista);
+            return new
+            {
+                datos = LeerFlyerDatos(c.Flyer_Datos) ?? await FlyerPorDefectoAsync(c, cuenta, lista),
+                editado = c.Flyer_Datos is not null,
+                flyer = c.Flyer,
+                productos,
+                fotos = _flyer.FondosDisponibles(),
+                plantillas = FlyerPlantillas.Todas.Select(p => new { clave = p.Clave, nombre = p.Nombre, descripcion = p.Descripcion })
+            };
+        }
+
+        /// <summary>
+        /// Guarda el flyer editado y dibuja el PNG (para verlo antes de enviar). null en datos = volver al automático.
+        /// Solo en cargas que el proveedor puede cambiar. Devuelve (ruta del PNG, error).
+        /// </summary>
+        public async Task<(string? Flyer, string? Error)> GuardarFlyerAsync(ProveedorCuenta cuenta, int id, FlyerProveedorDatos? d)
+        {
+            var c = await CargaAsync(id);
+            if (c is null || c.Id_Cuenta != cuenta.Id) return (null, "Esa carga no existe.");
+            if (!EstadosCargaProveedor.Editable(c.Estado)) return (null, "El flyer solo se cambia mientras la carga no está enviada (o si Eurovip te la devolvió).");
+            string? json = null;
+            if (d is not null)
+            {
+                d.Gancho = Corta(ReglasDatos.Limpiar(d.Gancho ?? ""), 80); d.Titulo = Corta(ReglasDatos.Limpiar(d.Titulo ?? ""), 60);
+                if (string.IsNullOrWhiteSpace(d.Titulo)) return (null, "Escribe el título del flyer.");
+                d.Productos = d.Productos.Where(p => !string.IsNullOrWhiteSpace(p.Nombre)).Take(4).ToList();
+                if (d.Productos.Count == 0) return (null, "Elige al menos un producto para el flyer.");
+                foreach (var p in d.Productos)
+                {
+                    p.Nombre = Corta(ReglasDatos.Limpiar(p.Nombre ?? ""), 70); p.Detalle = Corta(ReglasDatos.Limpiar(p.Detalle ?? ""), 90);
+                    if (p.Precio is < 0 or > 100_000_000) return (null, $"Revisa el precio de «{p.Nombre}».");
+                }
+                d.Moneda = (d.Moneda ?? "DOP").Trim().ToUpperInvariant();
+                if (d.Moneda is not ("DOP" or "USD" or "EUR")) return (null, "La moneda del flyer tiene que ser DOP, USD o EUR.");
+                d.Plantilla = FlyerPlantillas.Buscar(d.Plantilla).Clave;
+                if (d.Foto is not null && !_flyer.FondosDisponibles().Contains(d.Foto, StringComparer.OrdinalIgnoreCase)) d.Foto = null;
+                json = JsonSerializer.Serialize(d, JsonFlyer);
+            }
+            c.Flyer_Datos = json;
+            var flyer = await FlyerAsync(c, cuenta);
+            using var cn = _db.Conexion();
+            await cn.ExecuteAsync("UPDATE Eurovip.carga_proveedor SET flyer_datos = @json, flyer = ISNULL(@flyer, flyer), actualizado_en = SYSDATETIME() WHERE id = @id", new { id, json, flyer });
+            return flyer is null ? (null, "No se pudo dibujar el flyer. Inténtalo de nuevo.") : (flyer, null);
+        }
+
+        // ============================================ COMENTARIOS (CAMBIO 141) ============================================
+
+        public async Task<List<CargaComentario>> ComentariosAsync(int idCarga)
+        {
+            using var cn = _db.Conexion();
+            try
+            {
+                return (await cn.QueryAsync<CargaComentario>("SELECT id, id_carga, autor, nombre, texto, fecha FROM Eurovip.carga_proveedor_comentario WHERE id_carga = @idCarga ORDER BY id", new { idCarga })).ToList();
+            }
+            catch (System.Data.SqlClient.SqlException) { return new(); }   // sin el CAMBIO 141 la carga se sigue viendo
+        }
+
+        /// <summary>Agrega un comentario a la conversación de la carga (autor PROVEEDOR o EUROVIP). Devuelve el error o null.</summary>
+        public async Task<string?> ComentarAsync(int idCarga, string autor, string nombre, string? texto)
+        {
+            texto = (texto ?? "").Trim();
+            if (texto.Length == 0) return "Escribe el comentario.";
+            if (texto.Length > 2000) return "El comentario admite como máximo 2000 caracteres.";
+            using var cn = _db.Conexion();
+            await cn.ExecuteAsync("INSERT INTO Eurovip.carga_proveedor_comentario (id_carga, autor, nombre, texto) VALUES (@idCarga, @autor, @nombre, @texto)",
+                new { idCarga, autor, nombre = Corta(string.IsNullOrWhiteSpace(nombre) ? autor : nombre.Trim(), 150), texto });
+            await cn.ExecuteAsync("UPDATE Eurovip.carga_proveedor SET actualizado_en = SYSDATETIME() WHERE id = @idCarga", new { idCarga });
+            return null;
         }
 
         /// <summary>Vuelve a generar el flyer de una carga (botón de la revisión).</summary>
@@ -702,7 +933,27 @@ namespace EuroVip.Services
             var n = await cn.ExecuteAsync(@"UPDATE Eurovip.carga_proveedor SET estado = 'RECHAZADA', motivo = @motivo, instrucciones = @instrucciones, activar_en = NULL,
                 revisado_por = @usuario, fecha_revision = SYSDATETIME(), error = NULL, actualizado_en = SYSDATETIME() WHERE id = @id AND estado IN ('PENDIENTE','PROGRAMADA')",
                 new { id, motivo, instrucciones, usuario });
-            return n == 0 ? "Solo se rechazan cargas pendientes o programadas (recarga la página: quizá ya la revisó otra persona)." : null;
+            if (n == 0) return "Solo se rechazan cargas pendientes o programadas (recarga la página: quizá ya la revisó otra persona).";
+            await ComentarAsync(id, "EUROVIP", usuario, $"Rechazada. Motivo: {motivo}" + (instrucciones is null ? "" : $"\nQué hacer: {instrucciones}"));
+            return null;
+        }
+
+        /// <summary>
+        /// CAMBIO 141 · «Devolver a revisión»: se la devuelve al proveedor para que cambie algo (con instrucciones). Queda DEVUELTA:
+        /// el proveedor la corrige y la vuelve a enviar. Distinto de rechazar (que es por un problema, con motivo).
+        /// </summary>
+        public async Task<string?> DevolverAsync(int id, string? instrucciones, string usuario)
+        {
+            instrucciones = string.IsNullOrWhiteSpace(instrucciones) ? null : instrucciones.Trim();
+            if (instrucciones is null) return "Escribe qué tiene que cambiar el proveedor.";
+            if (instrucciones.Length > 1000) return "Las instrucciones admiten como máximo 1000 caracteres.";
+            using var cn = _db.Conexion();
+            var n = await cn.ExecuteAsync(@"UPDATE Eurovip.carga_proveedor SET estado = 'DEVUELTA', motivo = NULL, instrucciones = @instrucciones, activar_en = NULL,
+                revisado_por = @usuario, fecha_revision = SYSDATETIME(), error = NULL, actualizado_en = SYSDATETIME() WHERE id = @id AND estado IN ('PENDIENTE','PROGRAMADA')",
+                new { id, instrucciones, usuario });
+            if (n == 0) return "Solo se devuelven cargas pendientes o programadas (recarga la página: quizá ya la revisó otra persona).";
+            await ComentarAsync(id, "EUROVIP", usuario, $"Te la devolvimos para que cambies algo: {instrucciones}");
+            return null;
         }
 
         /// <summary>Programar el alta en la web (fecha y hora de República Dominicana). Antes se revisa todo otra vez.</summary>

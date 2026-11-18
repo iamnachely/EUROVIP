@@ -1,0 +1,283 @@
+@{
+    // CAMBIO 141 · Pantalla propia para revisar las cargas de PROVEEDORES y sus flyers (antes solo era una pestaña de Herramientas).
+    // Pedido de la usuaria: «una vista nueva para revisar las cargas de proveedores y sus flyers […] comentar (conversación
+    // que ve el proveedor), aprobar, rechazar con motivo, devolver al proveedor para que cambie algo con instrucciones,
+    // aprobar y programar con fecha y hora de un calendario, o aprobar y activar ya. Solo los usuarios del BackEurovip
+    // activan en la web. El proveedor puede sugerir la fecha; aquí se acepta o se pone otra».
+    // Misma bandeja que Herramientas (estilos compartidos en wwwroot/css/eurovip-proveedores.css) y los mismos endpoints
+    // de HerramientasController (/Herramientas/Proveedor*), más ProveedorCargaDevolver y ProveedorCargaComentar.
+    ViewData["Title"] = "Cargas de proveedores";
+}
+
+@section Styles {
+<link rel="stylesheet" href="~/css/eurovip-ui.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/eurovip-proveedores.css" asp-append-version="true" />
+<style>
+    .hp-est.DEVUELTA { background: #FCE7F3; color: #9D174D; }
+    .hp-sug { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 16px; background: #F0FDF4; border: 1.5px solid #86EFAC; margin-bottom: 12px; font-weight: 700; font-size: 13.5px; }
+    .hp-sug i { font-size: 20px; color: #16A34A; }
+    .hp-acciones { display: grid; gap: 10px; }
+    .hp-accion { border: 1px solid var(--ev-line); border-radius: 18px; background: var(--ev-surface); overflow: hidden; }
+    .hp-accion > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px; font-weight: 800; font-size: 14px; }
+    .hp-accion > summary::-webkit-details-marker { display: none; }
+    .hp-accion > summary i:first-child { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--ev-surface-2); font-size: 16px; }
+    .hp-accion > summary small { display: block; color: var(--ev-muted); font-weight: 600; font-size: 12px; }
+    .hp-accion[open] > summary { border-bottom: 1px solid var(--ev-line); }
+    .hp-accion .cuerpo { padding: 12px 14px 14px; display: grid; gap: 10px; }
+    .hp-accion.verde > summary i:first-child { background: #DCFCE7; color: #166534; }
+    .hp-accion.azul > summary i:first-child { background: #E0E7FF; color: #3730A3; }
+    .hp-accion.rosa > summary i:first-child { background: #FCE7F3; color: #9D174D; }
+    .hp-accion.rojo > summary i:first-child { background: #FEE4E2; color: #B42318; }
+    .hp-chat { display: grid; gap: 10px; max-height: 380px; overflow: auto; padding: 4px 2px; }
+    .hp-msg { max-width: 88%; padding: 10px 12px; border-radius: 16px; font-size: 13.5px; line-height: 1.45; white-space: pre-line; }
+    .hp-msg small { display: block; font-size: 11.5px; font-weight: 800; opacity: .75; margin-bottom: 3px; white-space: normal; }
+    .hp-msg.EUROVIP { justify-self: end; background: var(--ev-ink); color: #fff; border-bottom-right-radius: 4px; }
+    .hp-msg.PROVEEDOR { justify-self: start; background: var(--ev-surface-2); border: 1px solid var(--ev-line); border-bottom-left-radius: 4px; }
+    .hp-escribir { display: flex; gap: 8px; align-items: flex-end; margin-top: 10px; }
+    .hp-escribir textarea { flex: 1; min-height: 44px; }
+    .hp-sec { margin: 18px 0 8px; font-weight: 800; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+</style>
+}
+
+<div class="hp-cab ev-rise">
+    <img src="/img/ava/robot-escritorio.jpg" alt="">
+    <div>
+        <h2>Cargas de proveedores</h2>
+        <p>Lo que cargan las empresas proveedoras NO sale en la web hasta que tú lo apruebas. Abre una carga para ver sus productos y su
+           flyer, hablar con el proveedor, <b>aprobarla y activarla ya</b>, <b>programarla</b> (con la fecha que sugiere o la tuya),
+           <b>devolvérsela</b> para que cambie algo o <b>rechazarla</b>.</p>
+    </div>
+    <div class="acc">
+        <a class="ev-btn ghost sm" href="/Herramientas/Index?tab=htCuentas"><i class="bi bi-briefcase"></i> Cuentas de proveedores</a>
+        <button type="button" class="ev-btn ghost sm" id="hpRecargar"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+    </div>
+</div>
+<div class="hp-kpis ev-rise" id="hpKpis" style="grid-template-columns:repeat(7,minmax(0,1fr))"></div>
+<div class="hp-fil">
+    <input class="ui-input q" id="hpQ" type="search" placeholder="Buscar por código, título, proveedor o correo…" aria-label="Buscar cargas">
+    <select class="ui-input" id="hpModulo" aria-label="Módulo"><option value="">Todos los módulos</option></select>
+    <select class="ui-input" id="hpCuenta" aria-label="Proveedor"><option value="">Todos los proveedores</option></select>
+</div>
+<div id="hpProgramador" class="hp-aviso azul" hidden></div>
+<div class="hp-lista" id="hpLista"><div class="ui-skel" style="height:140px"></div><div class="ui-skel" style="height:140px"></div></div>
+<div class="hp-mas"><button type="button" class="ev-btn ghost sm" id="hpMas" hidden><i class="bi bi-chevron-down"></i> Ver más</button></div>
+
+<aside class="ui-drawer" id="hpVer" aria-hidden="true" style="width:min(1100px, calc(100vw - 24px))">
+    <div class="ui-dh">
+        <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-inboxes" id="hpVerIco"></i></div>
+        <div style="min-width:0"><h2 id="hpVerTitulo">Carga</h2><small id="hpVerSub"></small></div>
+        <button class="ui-ibtn x" type="button" id="hpVerCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ui-db" id="hpVerCuerpo"></div>
+</aside>
+
+@section Scripts {
+<script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
+<script>
+(() => {
+    const $ = s => document.querySelector(s), esc = EV.esc;
+    const EST = {
+        PENDIENTE: ['Por revisar', 'bi-hourglass-split'], PROGRAMADA: ['Programadas', 'bi-calendar-check'], DEVUELTA: ['Devueltas', 'bi-arrow-return-left'],
+        RECHAZADA: ['Rechazadas', 'bi-x-octagon'], ACTIVA: ['En la web', 'bi-globe2'], BORRADOR: ['Borradores', 'bi-pencil'], '': ['Todas', 'bi-collection']
+    };
+    const UNO = { PENDIENTE: 'Por revisar', PROGRAMADA: 'Programada', DEVUELTA: 'Devuelta', RECHAZADA: 'Rechazada', ACTIVA: 'En la web', BORRADOR: 'Borrador' };
+    const TABLAS = { SERVICIO: 'Oferta / salida', EXCURSION: 'Excursión', TRASLADO: 'Traslado', CRUCERO: 'Crucero' };
+    // Las fechas del BackEurovip ya son hora de República Dominicana (sin zona): se muestran tal cual
+    const fh = d => d ? new Date(d).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    const local = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const params = new URLSearchParams(location.search);
+    let modulos = {}, conteo = {}, filtro = 'PENDIENTE', pagina = 1, total = 0, items = [], actual = null;
+
+    const resumen = EV.api('/Herramientas/ProveedoresResumen').then(r => {
+        modulos = Object.fromEntries(r.modulos.map(m => [m.clave, m]));
+        $('#hpModulo').insertAdjacentHTML('beforeend', r.modulos.map(m => `<option value="${esc(m.clave)}">${esc(m.nombre)}</option>`).join(''));
+        pintarConteo(r.conteo);
+        const pr = $('#hpProgramador');
+        pr.hidden = r.publicaProgramadas;
+        pr.innerHTML = '<i class="bi bi-info-circle"></i><span>En esta copia el <b>alta programada está apagada</b> (Eurovip:Proveedores:Publicar): las programadas se activan solas solo en el servidor. Aquí puedes activarlas a mano.</span>';
+        return r;
+    }).catch(() => ({ modulos: [] }));
+    EV.api('/Herramientas/ProveedoresCuentas').then(r => {
+        $('#hpCuenta').insertAdjacentHTML('beforeend', r.cuentas.map(x => `<option value="${x.id}">${esc(x.nombre)}</option>`).join(''));
+    }).catch(() => {});
+
+    function pintarConteo(c) {
+        conteo = c || {};
+        const todas = Object.values(conteo).reduce((s, x) => s + x, 0);
+        $('#hpKpis').innerHTML = ['PENDIENTE', 'PROGRAMADA', 'DEVUELTA', 'RECHAZADA', 'ACTIVA', 'BORRADOR', ''].map(e =>
+            `<button type="button" class="hp-kpi ${filtro === e ? 'on' : ''}" data-est="${e}"><b>${EV.fmt(e ? conteo[e] || 0 : todas)}</b><small><i class="bi ${EST[e][1]}"></i> ${EST[e][0]}</small></button>`).join('');
+    }
+    $('#hpKpis').addEventListener('click', e => { const b = e.target.closest('[data-est]'); if (!b) return; filtro = b.dataset.est; pintarConteo(conteo); listar(true); });
+
+    async function listar(reset) {
+        if (reset) { pagina = 1; items = []; }
+        const q = new URLSearchParams({ estado: filtro, modulo: $('#hpModulo').value, cuenta: $('#hpCuenta').value, q: $('#hpQ').value.trim(), pagina, tam: 24 });
+        try {
+            const r = await EV.api('/Herramientas/ProveedoresCargas?' + q);
+            items = items.concat(r.items); total = r.total;
+            pintarConteo(r.conteo); pintarLista();
+        } catch (er) { $('#hpLista').innerHTML = `<div class="ui-empty" style="grid-column:1/-1"><h3>No se pudo cargar</h3><p>${esc(er.message)}</p></div>`; }
+    }
+    const fechaDe = c => c.estado === 'PENDIENTE' ? `Enviada ${fh(c.fecha_Solicitud)}` : c.estado === 'PROGRAMADA' ? `Sale ${fh(c.activar_En)}`
+        : c.estado === 'ACTIVA' ? `En la web ${fh(c.fecha_Activacion)}` : c.estado === 'RECHAZADA' || c.estado === 'DEVUELTA' ? `Revisada ${fh(c.fecha_Revision)}` : `Creada ${fh(c.creado_En)}`;
+
+    function pintarLista() {
+        if (!items.length) {
+            $('#hpLista').innerHTML = `<div class="ui-empty" style="grid-column:1/-1"><i class="bi bi-inbox big"></i><h3>${filtro === 'PENDIENTE' ? '¡Nada por revisar!' : 'No hay cargas'}</h3>
+                <p>${filtro === 'PENDIENTE' ? 'Cuando un proveedor envíe una carga a revisión aparecerá aquí y te avisará la campana.' : 'Prueba con otro filtro.'}</p></div>`;
+        } else {
+            $('#hpLista').innerHTML = items.map((c, k) => {
+                const m = modulos[c.modulo] || { nombre: c.modulo, icono: 'bi-box' };
+                return `<button type="button" class="hp-card" data-id="${c.id}" style="animation-delay:${Math.min(k, 12) * 35}ms">
+                    <span class="fl" style="${c.flyer ? `background-image:url('${esc(c.flyer)}')` : ''}">${c.flyer ? '' : `<i class="bi ${esc(m.icono)}"></i>`}</span>
+                    <div style="min-width:0;padding-right:74px">
+                        <h4>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''}</h4>
+                        <div class="sub"><i class="bi ${esc(m.icono)}"></i> ${esc(m.nombre)} · ${esc(c.cuenta || '')}</div>
+                        <div class="meta"><span>${EV.fmt(c.productos)} producto${c.productos === 1 ? '' : 's'}</span>${c.precio_Desde ? `<span>desde ${EV.dinero(c.precio_Desde, c.moneda)}</span>` : ''}<span>${fechaDe(c)}</span>
+                            ${c.activar_Sugerido && c.estado === 'PENDIENTE' ? `<span title="Fecha que sugiere el proveedor"><i class="bi bi-calendar-heart"></i> sugiere ${fh(c.activar_Sugerido)}</span>` : ''}</div>
+                        ${c.error ? `<div class="err"><i class="bi bi-exclamation-octagon"></i> ${esc(c.error.length > 120 ? c.error.slice(0, 120) + '…' : c.error)}</div>` : ''}
+                    </div>
+                    <span class="hp-est ${esc(c.estado)}">${UNO[c.estado] || esc(c.estado)}</span></button>`;
+            }).join('');
+        }
+        $('#hpMas').hidden = items.length >= total;
+    }
+    $('#hpLista').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) abrir(+b.dataset.id); });
+    $('#hpMas').addEventListener('click', () => { pagina++; listar(false); });
+    $('#hpQ').addEventListener('input', EV.debounce(() => listar(true), 300));
+    $('#hpModulo').addEventListener('change', () => listar(true));
+    $('#hpCuenta').addEventListener('change', () => listar(true));
+    $('#hpRecargar').addEventListener('click', () => listar(true));
+
+    // ---------------- detalle ----------------
+    const visor = EV.drawer($('#hpVer'));
+    $('#hpVerCerrar').addEventListener('click', () => visor.cerrar());
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && visor.abierto()) visor.cerrar(); });
+
+    async function abrir(id) {
+        try { actual = await EV.api('/Herramientas/ProveedorCarga?id=' + id); }
+        catch (er) { EV.toast(er.message, 'err'); return; }
+        pintarDetalle(); visor.abrir();
+        const u = new URL(location.href); u.searchParams.set('carga', id); history.replaceState(null, '', u);
+    }
+
+    function chat(lista) {
+        return lista.length ? lista.map(x => `<div class="hp-msg ${esc(x.autor)}"><small>${x.autor === 'EUROVIP' ? 'Eurovip · ' : ''}${esc(x.nombre)} · ${fh(x.fecha)}</small>${esc(x.texto)}</div>`).join('')
+            : '<p style="color:var(--ev-muted);font-weight:600;font-size:13px;margin:0">Todavía no hay mensajes. Escribe al proveedor si necesitas algo: lo verá en su carga.</p>';
+    }
+
+    function pintarDetalle() {
+        const { carga: c, productos, items: pub, datos, comentarios = [] } = actual;
+        const m = modulos[c.modulo] || { nombre: c.modulo, icono: 'bi-box' };
+        $('#hpVerIco').className = 'bi ' + m.icono;
+        $('#hpVerTitulo').innerHTML = `Carga ${esc(c.codigo)} <span class="hp-est ${esc(c.estado)}" style="vertical-align:middle">${UNO[c.estado] || esc(c.estado)}</span>`;
+        $('#hpVerSub').textContent = `${m.nombre} · ${c.cuenta || ''} (${c.email || ''}) · proveedor ${c.proveedor || c.id_Proveedor || ''}${c.titulo ? ' · ' + c.titulo : ''}`;
+        const avisos = [];
+        if (c.error) avisos.push(`<div class="hp-aviso rojo"><i class="bi bi-exclamation-octagon"></i><span><b>No se pudo publicar:</b> ${esc(c.error)}</span></div>`);
+        if (c.estado === 'RECHAZADA') avisos.push(`<div class="hp-aviso ama"><i class="bi bi-x-octagon"></i><span><b>Rechazada</b> por ${esc(c.revisado_Por || '')} el ${fh(c.fecha_Revision)}. <b>Motivo:</b> ${esc(c.motivo || '')}${c.instrucciones ? ` · <b>Qué hacer:</b> ${esc(c.instrucciones)}` : ''}</span></div>`);
+        if (c.estado === 'DEVUELTA') avisos.push(`<div class="hp-aviso ama"><i class="bi bi-arrow-return-left"></i><span><b>Devuelta al proveedor</b> por ${esc(c.revisado_Por || '')} el ${fh(c.fecha_Revision)}: ${esc(c.instrucciones || '')}</span></div>`);
+        if (c.estado === 'PROGRAMADA') avisos.push(`<div class="hp-aviso azul"><i class="bi bi-calendar-check"></i><span>Se activa sola en la web el <b>${fh(c.activar_En)}</b> (hora de República Dominicana). Programada por ${esc(c.revisado_Por || '')}.</span></div>`);
+        if (c.estado === 'ACTIVA') avisos.push(`<div class="hp-aviso verde"><i class="bi bi-globe2"></i><span>En la web desde el <b>${fh(c.fecha_Activacion)}</b>. Revisó: ${esc(c.revisado_Por || '')}.</span></div>`);
+        const paso = (ok, t, d) => `<div class="${ok ? 'ok' : ''}"><b>${t}</b>${d}</div>`;
+        const linea = `<div class="hp-linea">${paso(true, 'Creada', fh(c.creado_En))}${paso(!!c.fecha_Solicitud, 'Enviada a revisión', fh(c.fecha_Solicitud))}${paso(!!c.fecha_Revision, 'Revisada', c.fecha_Revision ? `${fh(c.fecha_Revision)} · ${esc(c.revisado_Por || '')}` : '—')}${paso(!!c.fecha_Activacion, 'En la web', fh(c.fecha_Activacion))}</div>`;
+        const tablaProd = productos.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Producto</th><th>Destino</th><th>Detalle</th><th class="num">Desde</th></tr></thead><tbody>${
+            productos.map(p => `<tr><td>${p.indice}</td><td><b>${esc(p.nombre)}</b></td><td>${esc(p.destino || '—')}</td><td>${esc(p.detalle || '')}</td><td class="num">${p.precio != null ? EV.dinero(p.precio, p.moneda) : '—'}</td></tr>`).join('')
+        }</tbody></table></div>` : '<div class="ui-empty"><p>La carga no tiene productos que se puedan leer.</p></div>';
+        const tablaPub = pub.length ? `<div class="hp-sec"><i class="bi bi-globe2"></i> Publicado en la web (${pub.length})</div><div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Tipo</th><th>N.º</th><th>Nombre</th><th class="num">Precio</th><th>A la venta</th></tr></thead><tbody>${
+            pub.map(x => `<tr><td>${TABLAS[x.tabla] || esc(x.tabla)}</td><td>${x.id_Registro}</td><td>${esc(x.nombre || '')}</td><td class="num">${x.precio != null ? EV.dinero(x.precio, x.moneda) : '—'}</td><td>${x.activo === true ? '<i class="bi bi-check-circle-fill" style="color:#16A34A"></i> Sí' : x.activo === false ? 'Desactivado' : 'Ya no existe'}</td></tr>`).join('')
+        }</tbody></table></div>` : '';
+        const flyer = c.flyer ? `<div class="hp-flyer"><a href="${esc(c.flyer)}" target="_blank" rel="noopener"><img src="${esc(c.flyer)}?v=${encodeURIComponent(c.actualizado_En || '')}" alt="Flyer de la carga ${esc(c.codigo)}"></a>
+            <div class="acc"><a class="ev-btn ghost sm" href="${esc(c.flyer)}" target="_blank" rel="noopener"><i class="bi bi-arrows-fullscreen"></i> Verlo grande</a><a class="ev-btn ghost sm" href="${esc(c.flyer)}" download><i class="bi bi-download"></i> Descargar</a><button type="button" class="ev-btn ghost sm" data-acc="flyer"><i class="bi bi-arrow-repeat"></i> Regenerar</button></div>
+            ${c.flyer_Datos ? '<div style="padding:0 10px 10px;font-size:12px;font-weight:700;color:var(--ev-muted)"><i class="bi bi-pencil"></i> El proveedor editó este flyer.</div>' : ''}</div>`
+            : `<div class="ui-empty"><i class="bi bi-image big"></i><p>${c.estado === 'BORRADOR' ? 'El flyer se genera cuando el proveedor envía la carga a revisión.' : 'Sin flyer.'}</p>${c.estado !== 'BORRADOR' ? '<button type="button" class="ev-btn ghost sm" data-acc="flyer"><i class="bi bi-magic"></i> Generar flyer</button>' : ''}</div>`;
+
+        const revisar = c.estado === 'PENDIENTE' || c.estado === 'PROGRAMADA';
+        const manana = new Date(Date.now() + 86400000); manana.setHours(9, 0, 0, 0);
+        const sug = c.activar_Sugerido ? new Date(c.activar_Sugerido) : null;
+        const sugFutura = sug && sug > new Date();
+        const fechaIni = c.activar_En ? String(c.activar_En).slice(0, 16) : sugFutura ? local(sug) : local(manana);
+        const sugerencia = sug ? `<div class="hp-sug"><i class="bi bi-calendar-heart"></i><span>El proveedor sugiere salir en la web el <b>${fh(c.activar_Sugerido)}</b>${sugFutura ? '' : ' <em>(esa fecha ya pasó)</em>'}.</span></div>` : '';
+        const acciones = revisar ? `<div class="hp-sec"><i class="bi bi-clipboard-check"></i> Revisión</div>${sugerencia}<div class="hp-acciones">
+            ${sugFutura && c.estado === 'PENDIENTE' ? `<details class="hp-accion verde" open><summary><i class="bi bi-hand-thumbs-up"></i><span>Aprobar con su fecha<small>Se activa sola el ${fh(c.activar_Sugerido)}</small></span></summary>
+                <div class="cuerpo"><button type="button" class="ev-btn" data-acc="aprobar-sug" style="justify-content:center"><i class="bi bi-check2-circle"></i> Aprobar para el ${fh(c.activar_Sugerido)}</button></div></details>` : ''}
+            <details class="hp-accion verde" ${sugFutura && c.estado === 'PENDIENTE' ? '' : 'open'}><summary><i class="bi bi-rocket-takeoff"></i><span>Aprobar y activar ya<small>Se crea en la web en este momento</small></span></summary>
+                <div class="cuerpo"><button type="button" class="ev-btn" data-acc="aprobar" style="justify-content:center"><i class="bi bi-check2-circle"></i> Aprobar y activar ya</button></div></details>
+            <details class="hp-accion azul"><summary><i class="bi bi-calendar-event"></i><span>Aprobar y programar<small>Elige la fecha y la hora en el calendario</small></span></summary>
+                <div class="cuerpo"><div class="ui-f"><label for="hpFecha">Fecha y hora <em>República Dominicana</em></label><input class="ui-input" type="datetime-local" id="hpFecha" min="${local(new Date())}" value="${fechaIni}"></div>
+                ${sug ? `<button type="button" class="ev-btn ghost sm" data-acc="usar-sug"><i class="bi bi-calendar-heart"></i> Usar la que sugiere</button>` : ''}
+                <button type="button" class="ev-btn" data-acc="programar" style="justify-content:center"><i class="bi bi-calendar-check"></i> ${c.estado === 'PROGRAMADA' ? 'Cambiar la fecha' : 'Aprobar y programar'}</button></div></details>
+            <details class="hp-accion rosa"><summary><i class="bi bi-arrow-return-left"></i><span>Devolver al proveedor<small>Para que cambie algo y la vuelva a enviar</small></span></summary>
+                <div class="cuerpo"><div class="ui-f"><label for="hpDev">Qué tiene que cambiar *</label><textarea class="ui-input" id="hpDev" rows="3" maxlength="1000" placeholder="Ej.: sube el precio del traslado privado a 95 USD y agrega cuántas maletas incluye"></textarea></div>
+                <button type="button" class="ev-btn ghost" data-acc="devolver" style="justify-content:center"><i class="bi bi-arrow-return-left"></i> Devolver</button></div></details>
+            <details class="hp-accion rojo"><summary><i class="bi bi-x-octagon"></i><span>Rechazar<small>Hay un problema: con el motivo</small></span></summary>
+                <div class="cuerpo"><div class="ui-f"><label for="hpMotivo">Motivo *</label><textarea class="ui-input" id="hpMotivo" rows="3" maxlength="1000" placeholder="Qué está mal (lo verá el proveedor)"></textarea></div>
+                <div class="ui-f"><label for="hpInstr">Qué hacer <em>opcional</em></label><textarea class="ui-input" id="hpInstr" rows="2" maxlength="1000"></textarea></div>
+                <button type="button" class="ev-btn red" data-acc="rechazar" style="justify-content:center"><i class="bi bi-x-lg"></i> Rechazar</button></div></details>
+            </div>` : (c.estado === 'PROGRAMADA' ? '' : sugerencia);
+
+        $('#hpVerCuerpo').innerHTML = `${avisos.join('')}${linea}
+            <div class="hp-det">
+                <div style="min-width:0">
+                    <div class="hp-sec" style="margin-top:0"><i class="bi bi-box-seam"></i> Productos (${productos.length})</div>${tablaProd}${tablaPub}
+                    <div class="hp-sec"><i class="bi bi-chat-left-text"></i> Conversación con el proveedor</div>
+                    <div class="hp-chat" id="hpChat">${chat(comentarios)}</div>
+                    <div class="hp-escribir"><textarea class="ui-input" id="hpTexto" rows="2" maxlength="2000" placeholder="Escribe al proveedor (lo verá en su carga)…"></textarea>
+                        <button type="button" class="ev-btn" data-acc="comentar"><i class="bi bi-send"></i> Enviar</button></div>
+                    <details style="margin-top:16px"><summary style="cursor:pointer;font-weight:700;color:var(--ev-muted)">Ver los datos tal como los envió el proveedor (JSON)</summary>
+                        <pre style="max-height:360px;overflow:auto;background:var(--ev-surface-2);border:1px solid var(--ev-line);border-radius:14px;padding:12px;font-size:12px">${esc(JSON.stringify(datos, null, 2))}</pre></details>
+                </div>
+                <div>${flyer}${acciones}</div>
+            </div>`;
+        const ch = $('#hpChat'); ch.scrollTop = ch.scrollHeight;
+    }
+
+    $('#hpVerCuerpo').addEventListener('click', async e => {
+        const b = e.target.closest('[data-acc]'); if (!b || !actual) return;
+        const c = actual.carga, acc = b.dataset.acc;
+        try {
+            if (acc === 'usar-sug') { $('#hpFecha').value = String(c.activar_Sugerido).slice(0, 16); return; }
+            if (acc === 'comentar') {
+                const texto = $('#hpTexto').value.trim();
+                if (!texto) { $('#hpTexto').focus(); return; }
+                const r = await EV.post('/Herramientas/ProveedorCargaComentar', { id: c.id, texto });
+                actual.comentarios = r.comentarios; $('#hpChat').innerHTML = chat(r.comentarios); $('#hpChat').scrollTop = 1e9; $('#hpTexto').value = '';
+                EV.toast(r.mensaje); return;
+            }
+            if (acc === 'aprobar') {
+                if (!await EV.confirmar({ titulo: '¿Aprobar y activar ya?', si: 'Sí, activar', icono: 'rocket-takeoff',
+                    texto: `Los ${c.productos} producto(s) de la carga <b>${esc(c.codigo)}</b> de <b>${esc(c.cuenta || '')}</b> se crean en la web en este momento.` })) return;
+                const r = await EV.post('/Herramientas/ProveedorCargaAprobar', { id: c.id });
+                EV.toast(r.mensaje); EV.confeti();
+            } else if (acc === 'aprobar-sug' || acc === 'programar') {
+                const f = acc === 'aprobar-sug' ? String(c.activar_Sugerido).slice(0, 16) : $('#hpFecha').value;
+                if (!f) { EV.toast('Elige la fecha y la hora del alta.', 'err'); return; }
+                const r = await EV.post('/Herramientas/ProveedorCargaProgramar', { id: c.id, fecha: f });
+                EV.toast(r.mensaje);
+            } else if (acc === 'devolver') {
+                const instrucciones = $('#hpDev').value.trim();
+                if (!instrucciones) { EV.toast('Escribe qué tiene que cambiar el proveedor.', 'err'); $('#hpDev').focus(); return; }
+                const r = await EV.post('/Herramientas/ProveedorCargaDevolver', { id: c.id, instrucciones });
+                EV.toast(r.mensaje);
+            } else if (acc === 'rechazar') {
+                const motivo = $('#hpMotivo').value.trim();
+                if (!motivo) { EV.toast('Escribe el motivo del rechazo.', 'err'); $('#hpMotivo').focus(); return; }
+                if (!await EV.confirmar({ titulo: '¿Rechazar la carga?', si: 'Sí, rechazar', peligro: true, icono: 'x-octagon',
+                    texto: 'El proveedor verá el motivo y lo que tiene que hacer, y podrá corregirla y volver a enviarla.' })) return;
+                const r = await EV.post('/Herramientas/ProveedorCargaRechazar', { id: c.id, motivo, instrucciones: $('#hpInstr').value.trim() });
+                EV.toast(r.mensaje);
+            } else if (acc === 'flyer') {
+                const r = await EV.post('/Herramientas/ProveedorCargaFlyer', { id: c.id });
+                EV.toast(r.mensaje);
+            }
+        } catch { /* EV.api ya mostró el aviso */ }
+        try { actual = await EV.api('/Herramientas/ProveedorCarga?id=' + c.id); pintarDetalle(); } catch { }
+        listar(true);
+    });
+
+    // Abrir directo (campana: /Herramientas/CargasProveedores?carga=12)
+    const carga = +params.get('carga');
+    listar(true);
+    if (carga) resumen.then(() => abrir(carga));
+})();
+</script>
+}

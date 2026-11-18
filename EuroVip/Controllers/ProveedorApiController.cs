@@ -30,8 +30,18 @@ namespace EuroVip.Controllers
     ///   GET  /api/proveedor/cargas/{id}                → una carga mía: datos, productos, motivo/instrucciones del rechazo, flyer
     ///   POST /api/proveedor/cargas                     → crear borrador { modulo, codigo, titulo?, datos: [...] }
     ///   PUT  /api/proveedor/cargas/{id}                → editar (solo BORRADOR o RECHAZADA)
-    ///   POST /api/proveedor/cargas/{id}/enviar         → enviar a revisión (se revisa todo; genera el flyer; pasa a PENDIENTE)
+    ///   POST /api/proveedor/cargas/{id}/enviar         → enviar a revisión (se revisa todo; genera el flyer; pasa a PENDIENTE).
+    ///        CAMBIO 141: cuerpo opcional { activarSugerido: "2026-12-01T09:00", comentario } (fecha que sugiere el proveedor)
+    ///   GET/POST /api/proveedor/cargas/{id}/comentarios → (CAMBIO 141) la conversación con Eurovip y agregar { texto }
+    ///   GET/POST /api/proveedor/cargas/{id}/flyer       → (CAMBIO 141) editor del flyer y guardar { datos } (null = el automático)
     ///   GET  /api/proveedor/activas                    → lo publicado en la web desde mis cargas (con si sigue activo)
+    ///   DELETE /api/proveedor/cargas/{id}              → (fase 2) borrar un borrador mío
+    ///   GET  /api/proveedor/plantilla/{modulo}         → (fase 2) la plantilla Excel del módulo (.xlsx)
+    ///   POST /api/proveedor/excel/{modulo}             → (fase 2) multipart «archivo» (+ «mapa» opcional): lee el Excel SIN guardar y
+    ///        devuelve los DTO y los errores por fila (Excursiones/Traslados), la matriz hotel × fecha (Solo Hotel/Paquetes) o
+    ///        las salidas con su precio (Circuitos). Ver Services/ProveedoresExcel.cs.
+    /// Lo que el proveedor no sabe (la campaña) lo completa el BackEurovip al guardar (ProveedoresCarga.CompletarAsync).
+    /// La administración de las cuentas (Gestión › Proveedores, fase 3) está en ProveedorAdminApiController (/api/proveedor-admin).
     /// Los DTO de «datos» son los mismos de los formularios: OFERTAS/PAQUETES = CargaOfertaDto, CIRCUITOS = CargaCircuitoDto,
     /// EXCURSIONES = ExcursionGuardarDto, TRASLADOS = TrasladoGuardarDto, CRUCEROS = CruceroDto (Id_Proveedor y el código de la
     /// carga los pone siempre el BackEurovip).
@@ -124,16 +134,85 @@ namespace EuroVip.Controllers
         }
 
         [HttpPost("cargas/{id:int}/enviar")]
-        public async Task<IActionResult> Enviar(int id)
+        public async Task<IActionResult> Enviar(int id, [FromBody] EnviarDto? dto)
         {
-            var (ok, mensaje, errores) = await _srv.EnviarAsync(Cuenta, id);
+            var (ok, mensaje, errores) = await _srv.EnviarAsync(Cuenta, id, dto?.ActivarSugerido);
             if (!ok) return BadRequest(new { mensaje, errores });
-            await Auditar("Proveedor_Carga_Enviar", new { id });
+            if (!string.IsNullOrWhiteSpace(dto?.Comentario)) await _srv.ComentarAsync(id, "PROVEEDOR", Cuenta.Nombre, dto.Comentario);
+            await Auditar("Proveedor_Carga_Enviar", new { id, sugerido = dto?.ActivarSugerido });
             return Json(new { ok, mensaje, carga = (await _srv.CargaAsync(id)) });
         }
 
+        /// <summary>CAMBIO 141: enviar a revisión con la fecha y hora (RD) que sugiere el proveedor y un comentario opcional.</summary>
+        public sealed class EnviarDto
+        {
+            public DateTime? ActivarSugerido { get; set; }
+            public string? Comentario { get; set; }
+        }
+
+        public sealed class ComentarioDto { public string? Texto { get; set; } }
+
+        /// <summary>CAMBIO 141: la conversación de una carga suya con Eurovip.</summary>
+        [HttpGet("cargas/{id:int}/comentarios")]
+        public async Task<IActionResult> Comentarios(int id) =>
+            (await _srv.CargaAsync(id))?.Id_Cuenta == Cuenta.Id ? Json(await _srv.ComentariosAsync(id)) : NotFound(new { mensaje = "Esa carga no existe." });
+
+        [HttpPost("cargas/{id:int}/comentarios")]
+        public async Task<IActionResult> Comentar(int id, [FromBody] ComentarioDto dto)
+        {
+            if ((await _srv.CargaAsync(id))?.Id_Cuenta != Cuenta.Id) return NotFound(new { mensaje = "Esa carga no existe." });
+            if (await _srv.ComentarAsync(id, "PROVEEDOR", Cuenta.Nombre, dto.Texto) is string mal) return BadRequest(new { mensaje = mal });
+            await Auditar("Proveedor_Carga_Comentar", new { id });
+            return Json(new { ok = true, comentarios = await _srv.ComentariosAsync(id) });
+        }
+
+        /// <summary>CAMBIO 141: el editor del flyer (lo que tiene, los productos para elegir, fotos de fondo y plantillas).</summary>
+        [HttpGet("cargas/{id:int}/flyer")]
+        public async Task<IActionResult> FlyerEditor(int id) =>
+            await _srv.FlyerEditorAsync(Cuenta, id) is { } r ? Json(r) : NotFound(new { mensaje = "Esa carga no existe." });
+
+        /// <summary>CAMBIO 141: guarda el flyer editado y dibuja el PNG ({ datos: null } = volver al automático).</summary>
+        [HttpPost("cargas/{id:int}/flyer")]
+        public async Task<IActionResult> FlyerGuardar(int id, [FromBody] FlyerGuardarDto dto)
+        {
+            var (flyer, error) = await _srv.GuardarFlyerAsync(Cuenta, id, dto.Datos);
+            if (error is not null) return BadRequest(new { mensaje = error });
+            await Auditar("Proveedor_Carga_Flyer", new { id });
+            return Json(new { ok = true, flyer });
+        }
+
+        public sealed class FlyerGuardarDto { public FlyerProveedorDatos? Datos { get; set; } }
+
         [HttpGet("activas")]
         public async Task<IActionResult> Activas() => Json(await _srv.ItemsAsync(null, Cuenta.Id));
+
+        [HttpDelete("cargas/{id:int}")]
+        public async Task<IActionResult> Borrar(int id)
+        {
+            if (await _srv.BorrarCargaAsync(Cuenta, id) is string mal) return BadRequest(new { mensaje = mal });
+            await Auditar("Proveedor_Carga_Borrar", new { id });
+            return Json(new { ok = true, mensaje = "Borrador eliminado." });
+        }
+
+        /// <summary>Fase 2: plantilla Excel del módulo (solo de los módulos habilitados en su cuenta).</summary>
+        [HttpGet("plantilla/{modulo}")]
+        public async Task<IActionResult> Plantilla(string modulo, [FromServices] ProveedoresExcel excel)
+        {
+            var m = ProveedorModulos.Normalizar(modulo);
+            if (m is null || !Cuenta.ListaModulos.Contains(m)) return NotFound(new { mensaje = "Tu cuenta no tiene habilitado ese tipo de producto." });
+            return await excel.PlantillaAsync(m) is var (archivo, nombre) ? File(archivo, CargaExcel.TipoXlsx, nombre) : NotFound(new { mensaje = "Este tipo de producto no tiene plantilla Excel: usa el formulario." });
+        }
+
+        /// <summary>Fase 2: lee el Excel del proveedor SIN guardar (la pantalla pasa las filas al formulario para corregirlas).</summary>
+        [HttpPost("excel/{modulo}")]
+        [RequestSizeLimit(CargaExcel.MaxBytes + 100_000)]
+        public async Task<IActionResult> Excel(string modulo, IFormFile? archivo, [FromForm] string? mapa, [FromServices] ProveedoresExcel excel)
+        {
+            var m = ProveedorModulos.Normalizar(modulo);
+            if (m is null || !Cuenta.ListaModulos.Contains(m)) return NotFound(new { mensaje = "Tu cuenta no tiene habilitado ese tipo de producto." });
+            var (r, error) = await excel.LeerAsync(Cuenta, m, archivo, mapa);
+            return error is not null ? BadRequest(new { mensaje = error }) : Json(r);
+        }
 
         private Task Auditar(string tipo, object cambios) =>
             _repo.AuditarAsync(tipo, Array.Empty<int>(), cambios, $"proveedor:{Cuenta.Email}", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
@@ -148,20 +227,25 @@ namespace EuroVip.Controllers
     {
         public const string ClaveCuenta = "ev:cuentaProveedor";
 
-        public async Task OnActionExecutionAsync(ActionExecutingContext ctx, ActionExecutionDelegate next)
+        /// <summary>Comprueba la clave compartida (X-Eurovip-Clave). Devuelve la respuesta de error o null si es correcta.</summary>
+        public static IActionResult? RevisarClave(HttpContext http)
         {
-            var http = ctx.HttpContext;
             var cfg = http.RequestServices.GetRequiredService<IConfiguration>();
             var clave = cfg["Eurovip:Proveedores:ClaveApi"];
             if (string.IsNullOrWhiteSpace(clave) || clave.Length < 16)
-            {
-                ctx.Result = new ObjectResult(new { mensaje = "La API de proveedores no está configurada en este servidor." }) { StatusCode = 503 };
-                return;
-            }
+                return new ObjectResult(new { mensaje = "La API de proveedores no está configurada en este servidor." }) { StatusCode = 503 };
             var enviada = http.Request.Headers["X-Eurovip-Clave"].ToString();
             if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(enviada), Encoding.UTF8.GetBytes(clave)))
+                return new ObjectResult(new { mensaje = "Clave de la API incorrecta." }) { StatusCode = 401 };
+            return null;
+        }
+
+        public async Task OnActionExecutionAsync(ActionExecutingContext ctx, ActionExecutionDelegate next)
+        {
+            var http = ctx.HttpContext;
+            if (RevisarClave(http) is { } mal)
             {
-                ctx.Result = new ObjectResult(new { mensaje = "Clave de la API incorrecta." }) { StatusCode = 401 };
+                ctx.Result = mal;
                 return;
             }
             var cuenta = await http.RequestServices.GetRequiredService<ProveedoresCarga>().CuentaPorEmailAsync(http.Request.Headers["X-Proveedor-Email"].ToString());
