@@ -76,13 +76,26 @@ namespace EuroVip.Repositories
             s.activo AS Activo, s.codigo AS Codigo, s.codigo_interno AS Codigo_Interno, s.usuario AS Usuario, p.nombre AS Proveedor, s.peso AS Peso, s.precio_proveedor AS Precio_Proveedor,
             s.id_estado_oferta AS Id_Estado, eo.nombre AS Estado_Oferta";
 
+        /// <summary>
+        /// Pedido de la usuaria: «si se busca por destino, organiza los hoteles por prioridad; si no hay prioridad, no hagas nada».
+        /// Con un destino elegido y el orden por defecto (fecha), si alguna oferta del destino tiene prioridad (peso) se ordena como la web
+        /// (prioridad 1, 2, 3… y luego precio). Si ninguna tiene, queda el orden de siempre. Un orden elegido a propósito no se toca.
+        /// </summary>
+        private static async Task<string?> OrdenEfectivoAsync(SqlConnection cn, OfertaFiltro f, string filtro, DynamicParameters p)
+        {
+            if (string.IsNullOrWhiteSpace(f.Destino) || !(string.IsNullOrEmpty(f.Orden) || f.Orden == "fecha")) return f.Orden;
+            var hay = await cn.ExecuteScalarAsync<int?>($"SELECT TOP 1 1 {Base} {filtro} AND s.peso IS NOT NULL", p);
+            return hay == 1 ? "prioridad" : f.Orden;
+        }
+
         public async Task<(IEnumerable<OfertaItem> Items, int Total)> ListarAsync(OfertaFiltro f)
         {
             var tam = Math.Clamp(f.Tam, 10, 100);
             var pagina = Math.Max(1, f.Pagina);
             var p = new DynamicParameters();
             var filtro = Filtro(f, p);
-            var orden = f.Orden switch
+            using var cn = _db.Conexion();
+            var orden = (await OrdenEfectivoAsync(cn, f, filtro, p)) switch
             {
                 "precio" => "Eurovip.fnPrecioWeb(s.id_servicio), sd.desde",
                 "hotel" => "a.nombre, sd.desde",
@@ -93,7 +106,6 @@ namespace EuroVip.Repositories
             };
             p.Add("offset", (pagina - 1) * tam); p.Add("tam", tam);
 
-            using var cn = _db.Conexion();
             using var m = await cn.QueryMultipleAsync($@"
                 SELECT COUNT(*) {Base} {filtro};
                 SELECT {Columnas} {Base} {filtro} ORDER BY {orden} OFFSET @offset ROWS FETCH NEXT @tam ROWS ONLY;", p);
@@ -115,7 +127,8 @@ namespace EuroVip.Repositories
         {
             var p = new DynamicParameters();
             var filtro = Filtro(f, p);
-            var orden = f.Orden switch
+            using var cn = _db.Conexion();
+            var orden = (await OrdenEfectivoAsync(cn, f, filtro, p)) switch
             {
                 "precio" => "MIN(Eurovip.fnPrecioWeb(s.id_servicio))",
                 "recientes" => "MAX(s.id_servicio) DESC",
@@ -123,7 +136,6 @@ namespace EuroVip.Repositories
                 "fecha" => "MIN(sd.desde), MAX(a.nombre)",
                 _ => "MAX(a.nombre)"
             };
-            using var cn = _db.Conexion();
             return await cn.QueryAsync<OfertaHotel>($@"
                 SELECT TOP 500 a.id_alojamiento AS Id_Alojamiento, MAX(a.nombre) AS Hotel, MAX(a.caratula) AS Caratula,
                        MAX(COALESCE(sdx.destino, a.id_destino)) AS Destino, COUNT(*) AS Ofertas,
