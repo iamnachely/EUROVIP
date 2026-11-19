@@ -80,7 +80,8 @@ namespace EuroVip.Models
         [Required(ErrorMessage = "Elige el aeropuerto de salida"), StringLength(10)]
         public string Id_Estacion_Origen { get; set; } = "";
 
-        [Required(ErrorMessage = "Elige el destino"), StringLength(50)]
+        [StringLength(50)]   // 20/11/2026: ya no se pide: sale del hotel elegido (aeropuerto → hotel)
+        
         public string Id_Destino { get; set; } = "";
 
         [Range(0, 50, ErrorMessage = "Maletas: de 0 a 50")] public short Maletas { get; set; } = 2;

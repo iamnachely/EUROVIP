@@ -111,12 +111,22 @@ namespace EuroVip.Services
             if (dto.Pasajeros_Max < dto.Pasajeros_Min) return ("Pasajeros_Max", "El máximo de pasajeros no puede ser menor que el mínimo.");
             if (dto.Precio_Ida is null && dto.Precio_Ida_Vuelta is null) return ("Precio_Ida_Vuelta", "Escribe al menos un precio: ida y vuelta o solo ida.");
             if (await _traslados.ValidarEstacionAsync(dto.Id_Estacion_Origen) is string malEst) return ("Id_Estacion_Origen", malEst);
-            var (malDestino, destino, _) = await _traslados.ValidarDestinoAsync(dto.Id_Destino);
+            // 20/11/2026: de aeropuerto a HOTEL. Con hoteles elegidos el destino sale de ellos (no se pide); sin hoteles sigue valiendo el de antes
+            // (cargas de proveedores: destino + «todos los hoteles del destino»).
+            if (!dto.Todos_Hoteles && dto.Hoteles.Count > 0)
+            {
+                var (destinosH, hallados) = await _traslados.DestinosDeHotelesAsync(dto.Hoteles);
+                if (hallados < dto.Hoteles.Distinct().Count()) return ("Hoteles", "Alguno de los hoteles elegidos ya no existe. Quítalo de la lista.");
+                if (destinosH.Count > 1) { var lista = string.Join(" y ", destinosH); return ("Hoteles", $"Los hoteles tienen que ser del mismo destino (hay de {lista}). Haz un traslado por cada destino."); }
+                if (destinosH.Count == 1) dto.Id_Destino = destinosH[0];
+            }
+            else if (string.IsNullOrWhiteSpace(dto.Id_Destino) && !dto.Todos_Hoteles) return ("Hoteles", "Elige el hotel al que llega el traslado.");
+            var (malDestino, destino, _) = await _traslados.ValidarDestinoAsync(dto.Id_Destino ?? "");
             if (malDestino is not null) return ("Id_Destino", malDestino);
             dto.Id_Destino = destino!;
             if (!dto.Todos_Hoteles)
             {
-                if (dto.Hoteles.Count == 0) return ("Hoteles", "Elige al menos un hotel o marca «Todos los hoteles del destino».");
+                if (dto.Hoteles.Count == 0) return ("Hoteles", "Elige el hotel al que llega el traslado.");
                 var fuera = await _traslados.HotelesQueNoSonDelDestinoAsync(dto.Hoteles, dto.Id_Destino);
                 if (fuera.Count > 0) return ("Hoteles", $"Estos hoteles no son de {dto.Id_Destino}: {string.Join(", ", fuera)}. Quítalos de la lista.");
             }

@@ -19,7 +19,9 @@ namespace EuroVip.Repositories
         Task<string?> ValidarEstacionAsync(string codigo);
         Task<IEnumerable<Opcion>> DestinosAsync(string? q);
         Task<IEnumerable<Opcion>> AeropuertosAsync(string? q);
-        Task<IEnumerable<Opcion>> HotelesAsync(string? destino, string? q);
+        Task<IEnumerable<Opcion>> HotelesAsync(string? destino, string? q, string? preferido = null);
+        /// <summary>Destinos de los hoteles elegidos (sin repetir). Un hotel que no existe no aparece: se compara la cantidad.</summary>
+        Task<(List<string> Destinos, int Encontrados)> DestinosDeHotelesAsync(IEnumerable<int> ids);
         Task<List<int>> HotelesQueNoSonDelDestinoAsync(IEnumerable<int> ids, string destino);
     }
 
@@ -168,9 +170,13 @@ namespace EuroVip.Repositories
         public async Task<int?> RepetidoAsync(TrasladoGuardarDto d)
         {
             using var cn = _db.Conexion();
-            return await cn.ExecuteScalarAsync<int?>(@"SELECT TOP 1 id_traslado FROM Eurovip.traslado
-                WHERE id_estacion_origen = @Id_Estacion_Origen AND id_destino = @Id_Destino AND tipo = @Tipo AND categoria = @Categoria
-                  AND vehiculo = @Vehiculo AND nombre = @Nombre AND (@Id_Traslado IS NULL OR id_traslado <> @Id_Traslado)", d);
+            var hoteles = d.Todos_Hoteles ? new List<int>() : d.Hoteles.Distinct().ToList();
+            // Con hotel (aeropuerto → hotel): repetido si ya hay uno igual que llegue a alguno de esos hoteles
+            return await cn.ExecuteScalarAsync<int?>(@"SELECT TOP 1 t.id_traslado FROM Eurovip.traslado t
+                WHERE t.id_estacion_origen = @Id_Estacion_Origen AND t.id_destino = @Id_Destino AND t.tipo = @Tipo AND t.categoria = @Categoria
+                  AND t.vehiculo = @Vehiculo AND t.nombre = @Nombre AND (@Id_Traslado IS NULL OR t.id_traslado <> @Id_Traslado)
+                  AND (@nHoteles = 0 OR t.todos_hoteles = 1 OR EXISTS (SELECT 1 FROM Eurovip.traslado_alojamiento ta WHERE ta.id_traslado = t.id_traslado AND ta.id_alojamiento IN @hoteles))",
+                new { d.Id_Estacion_Origen, d.Id_Destino, d.Tipo, d.Categoria, d.Vehiculo, d.Nombre, d.Id_Traslado, nHoteles = hoteles.Count, hoteles = hoteles.Count == 0 ? new List<int> { -1 } : hoteles });
         }
 
         public async Task<(string? Error, string? Destino, string? Pais)> ValidarDestinoAsync(string destino)
@@ -219,7 +225,8 @@ namespace EuroVip.Repositories
         }
 
         /// <summary>Hoteles de un destino (para elegir a cuáles llega el traslado).</summary>
-        public async Task<IEnumerable<Opcion>> HotelesAsync(string? destino, string? q)
+        // 20/11/2026: el traslado va de un aeropuerto a un HOTEL. Sin destino se buscan todos los hoteles; los del destino del aeropuerto salen primero.
+        public async Task<IEnumerable<Opcion>> HotelesAsync(string? destino, string? q, string? preferido = null)
         {
             using var cn = _db.Conexion();
             return await cn.QueryAsync<Opcion>(@"
@@ -229,8 +236,17 @@ namespace EuroVip.Repositories
                   AND (@destino IS NULL OR LTRIM(RTRIM(a.id_destino)) = @destino)
                   AND (@q IS NULL OR a.nombre LIKE '%' + @q + '%' OR CAST(a.id_alojamiento AS varchar(20)) = @q)
                 GROUP BY a.id_alojamiento
-                ORDER BY Texto",
-                new { destino = string.IsNullOrWhiteSpace(destino) ? null : destino.Trim(), q = string.IsNullOrWhiteSpace(q) ? null : q.Trim() });
+                ORDER BY CASE WHEN @preferido IS NOT NULL AND LTRIM(RTRIM(MIN(a.id_destino))) = @preferido THEN 0 ELSE 1 END, Texto",
+                new { destino = string.IsNullOrWhiteSpace(destino) ? null : destino.Trim(), q = string.IsNullOrWhiteSpace(q) ? null : q.Trim(), preferido = string.IsNullOrWhiteSpace(preferido) ? null : preferido.Trim() });
+        }
+
+        public async Task<(List<string> Destinos, int Encontrados)> DestinosDeHotelesAsync(IEnumerable<int> ids)
+        {
+            var l = ids.Distinct().ToList();
+            if (l.Count == 0) return (new List<string>(), 0);
+            using var cn = _db.Conexion();
+            var filas = (await cn.QueryAsync<(int Id, string? Destino)>("SELECT id_alojamiento, LTRIM(RTRIM(id_destino)) FROM Eurovip.alojamiento WHERE id_alojamiento IN @l", new { l })).ToList();
+            return (filas.Select(f => f.Destino).Where(d => !string.IsNullOrWhiteSpace(d)).Select(d => d!).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), filas.Select(f => f.Id).Distinct().Count());
         }
 
         public async Task<List<int>> HotelesQueNoSonDelDestinoAsync(IEnumerable<int> ids, string destino)

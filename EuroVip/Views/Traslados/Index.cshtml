@@ -129,7 +129,7 @@
     <div>
         <span class="ev-chip dark"><i class="bi bi-bus-front"></i> Catálogo · Traslados</span>
         <h1>Traslados</h1>
-        <p>Carga los traslados del aeropuerto al hotel como en el tour operador: desde qué aeropuerto, a qué destino u hoteles, si es compartido o privado, el vehículo, maletas, pasajeros, precio y foto.</p>
+        <p>Carga los traslados del aeropuerto al hotel como en el tour operador: desde qué aeropuerto y a qué hotel, si es compartido o privado, el vehículo, maletas, pasajeros, precio y foto.</p>
     </div>
     <div class="ui-hero-acts" style="align-items:center">
         <span data-precio-minimo="TRASLADOS"></span>   @* CAMBIO 139: precio mínimo de esta vista *@
@@ -150,7 +150,7 @@
         <li>La web le muestra todos los traslados <b>activos</b> de ese aeropuerto al destino del hotel, del más barato al más caro (como en el tour operador).</li>
         <li>Cada traslado es una <b>opción</b>: Compartido (con otros pasajeros, en autobús) o Privado (solo ellos, en van o coche), con su categoría (Estándar, Premium…).</li>
         <li>El precio puede ser <b>para todos los viajeros</b> (un precio por el vehículo) o <b>por persona</b> (se multiplica por los viajeros). Carga el de ida y vuelta, el de solo ida, o los dos.</li>
-        <li>Por defecto sirve para <b>todos los hoteles del destino</b>; si un traslado solo llega a algunos hoteles, elígelos.</li>
+        <li>Cada traslado va de un <b>aeropuerto a un hotel</b>: el destino se toma del hotel (los hoteles del destino del aeropuerto salen primero al buscar). Si llega a varios hoteles del mismo destino, añádelos todos.</li>
         <li><b>Desactivar</b> lo quita de la web sin borrarlo. La foto es la del vehículo.</li>
     </ol>
 </details>
@@ -182,22 +182,17 @@
     <div class="ui-db">
         <div class="ui-guia"><span><b class="ui-req">Obligatorio</b> pasos 1 a 4 (lo que tiene <b class="ui-ast">*</b>)</span><span><b class="ui-opc">Opcional</b> pasos 5 a 8: fotos, textos para el cliente y datos internos</span></div>
 
-        <section class="tr-paso"><h3><span class="n">1</span> Ruta <b class="ui-req">Obligatorio</b><small>Desde → A</small></h3>
-            <p class="tr-sub">De qué aeropuerto sale y a qué destino llega. Por defecto sirve para todos los hoteles del destino.</p>
+        <section class="tr-paso"><h3><span class="n">1</span> Ruta <b class="ui-req">Obligatorio</b><small>Aeropuerto → Hotel</small></h3>
+            <p class="tr-sub">De qué aeropuerto sale y a qué hotel llega. El destino se toma del hotel; si llega a varios hoteles del mismo destino, añádelos todos.</p>
             <div class="ui-row">
                 <div class="ui-f" style="position:relative"><label for="edOrigen">Desde (aeropuerto) <b class="ui-ast">*</b></label>
                     <input id="edOrigen" maxlength="60" placeholder="Código o nombre… ej. PUJ" autocomplete="off" role="combobox" aria-expanded="false">
                     <div class="tr-busc" id="edOrigenBusc" hidden role="listbox"></div><span class="msg"></span></div>
-                <div class="ui-f" style="position:relative"><label for="edDestino">A (destino de los hoteles) <b class="ui-ast">*</b></label>
-                    <input id="edDestino" maxlength="50" placeholder="Escribe para buscar… ej. Punta Cana" autocomplete="off" role="combobox" aria-expanded="false">
-                    <div class="tr-busc" id="edDestinoBusc" hidden role="listbox"></div><span class="msg"></span></div>
+                <div class="ui-f" id="edHotelesF" style="position:relative"><label for="edHotelQ">A (hotel) <b class="ui-ast">*</b></label>
+                    <input id="edHotelQ" placeholder="Escribe el nombre del hotel… ej. Riu Palace" autocomplete="off" role="combobox" aria-expanded="false">
+                    <div class="tr-busc" id="edHotelBusc" hidden role="listbox"></div><span class="msg"></span></div>
             </div>
-            <div class="ui-f" id="edHotelesF"><label class="ui-switch"><input type="checkbox" id="edTodos" checked><span class="tr"></span> Sirve para todos los hoteles del destino</label>
-                <div id="edHotelesCaja" hidden style="position:relative;margin-top:8px">
-                    <input id="edHotelQ" placeholder="Busca un hotel del destino y pulsa para añadirlo…" autocomplete="off">
-                    <div class="tr-busc" id="edHotelBusc" hidden role="listbox"></div>
-                    <div class="tr-hoteles" id="edHoteles"></div>
-                </div><span class="msg"></span></div>
+            <div class="tr-hoteles" id="edHoteles" style="margin-top:2px"></div>
         </section>
 
         <section class="tr-paso"><h3><span class="n">2</span> Opción de traslado <b class="ui-req">Obligatorio</b></h3>
@@ -326,7 +321,8 @@
     let tabInfo;          // volver al tab «Datos» al abrir el editor
     let todos = [], V = { tipos: {}, categorias: {}, vehiculos: {}, cobros: {} };
     let actual = null, fotoNueva = null, quitarFoto = false, verId = null, nombreTocado = false;
-    let hoteles = [];                  // [{valor, texto}] elegidos en el editor
+    let hoteles = [];                  // [{valor, texto, extra: destino}] elegidos en el editor
+    let destinoAeropuerto = '';        // destino del aeropuerto elegido: los hoteles de ese destino salen primero
     let origenNombre = '';             // nombre del aeropuerto elegido (para el nombre y la vista)
     const st = { q: '', origen: '', destino: '', filtro: '', orden: 'prioridad' };
     let plegadas = new Set();
@@ -406,7 +402,7 @@
                     ${t.cancelable ? `<span class="tr-chip ok"><i class="bi bi-check2"></i> Cancelable${t.horas_Cancelacion != null ? ` hasta ${t.horas_Cancelacion} h antes` : ''}</span>` : '<span class="tr-chip no"><i class="bi bi-x"></i> No cancelable</span>'}
                     ${t.codigo ? `<span class="tr-chip" title="Código interno"><i class="bi bi-upc"></i> ${esc(t.codigo)}</span>` : ''}
                     ${t.proveedor ? `<span class="tr-chip" title="Proveedor"><i class="bi bi-briefcase"></i> ${esc(t.proveedor)}</span>` : ''}
-                    <span class="tr-chip"><i class="bi bi-building"></i> ${t.todos_Hoteles ? `Todos los hoteles de ${esc(t.id_Destino)}` : `${t.hoteles.length} hotel${t.hoteles.length === 1 ? '' : 'es'}`}</span>
+                    <span class="tr-chip"><i class="bi bi-building"></i> ${t.todos_Hoteles ? `Todos los hoteles de ${esc(t.id_Destino)}` : t.hoteles.length === 1 ? esc(t.hoteles[0].texto) : `${t.hoteles.length} hotel${t.hoteles.length === 1 ? '' : 'es'}`}</span>
                 </div>
             </div>
             <div class="tr-der">
@@ -474,7 +470,7 @@
                     <div class="total" id="simTotal"></div>
                 </div></section>
             <section class="tr-paso"><h3><i class="bi bi-info-circle"></i> Detalles</h3>
-                <p style="margin:0 0 8px"><b>Desde:</b> ${esc(t.id_Estacion_Origen)} · ${esc(t.origen_Nombre || '')}<br><b>A:</b> ${esc(t.id_Destino)} — ${t.todos_Hoteles ? 'todos los hoteles del destino' : t.hoteles.map(h => esc(h.texto)).join(', ')}<br>
+                <p style="margin:0 0 8px"><b>Desde:</b> ${esc(t.id_Estacion_Origen)} · ${esc(t.origen_Nombre || '')}<br><b>A:</b> ${t.todos_Hoteles ? `todos los hoteles de ${esc(t.id_Destino)}` : t.hoteles.map(h => esc(h.texto)).join(', ')} <small style="color:var(--ev-muted)">(${esc(t.id_Destino)})</small><br>
                    <b>Vehículo:</b> ${esc(V.vehiculos[t.vehiculo] || t.vehiculo)} · <b>Cobro:</b> ${esc(V.cobros[t.cobro] || t.cobro)}</p>
                 <div style="white-space:pre-line;color:var(--ev-muted);font-weight:600;margin-bottom:10px">${t.descripcion ? esc(t.descripcion) : 'Sin descripción.'}</div>
                 <small style="color:var(--ev-muted)">Cargado por ${esc(t.usuario || '—')} el ${new Date(t.fecha_Alta).toLocaleDateString('es')}${t.fecha_Modificacion ? ` · modificado el ${new Date(t.fecha_Modificacion).toLocaleDateString('es')}` : ''}</small>
@@ -502,13 +498,12 @@
     }
 
     function pintarHoteles() {
-        $('#edHotelesCaja').hidden = $('#edTodos').checked;
         $('#edHoteles').innerHTML = hoteles.length ? hoteles.map(h => `<span>${esc(h.texto)}<button type="button" data-quitar="${esc(h.valor)}" aria-label="Quitar ${esc(h.texto)}">×</button></span>`).join('')
-            : '<small style="color:var(--ev-muted);font-weight:600">Todavía no elegiste hoteles.</small>';
+            : '<small style="color:var(--ev-muted);font-weight:600">Todavía no elegiste el hotel.</small>';
     }
 
     function nombreSugerido() {
-        const o = $('#edOrigen').value.trim().split(' ')[0].toUpperCase(), d = $('#edDestino').value.trim();
+        const o = $('#edOrigen').value.trim().split(' ')[0].toUpperCase(), d = hoteles.length > 1 ? `${hoteles[0].texto} y ${hoteles.length - 1} más` : hoteles[0]?.texto;
         return `${V.tipos[segVal('#edTipo')] || ''} ${V.categorias[$('#edCategoria').value] || ''} ${o || '…'} a ${d || '…'}`.replace(/\s+/g, ' ').trim();
     }
 
@@ -516,12 +511,12 @@
         return {
             Id_Traslado: actual?.id_Traslado ?? null,
             Nombre: $('#edNombre').value.trim(), Tipo: segVal('#edTipo'), Categoria: $('#edCategoria').value, Vehiculo: $('#edVehiculo').value,
-            Id_Estacion_Origen: $('#edOrigen').value.trim().split(' ')[0].toUpperCase(), Id_Destino: $('#edDestino').value.trim(),
+            Id_Estacion_Origen: $('#edOrigen').value.trim().split(' ')[0].toUpperCase(), Id_Destino: '',   // el destino lo toma el servidor del hotel
             Maletas: num('#edMaletas') ?? 0, Duracion_Min: num('#edDuracion'), Pasajeros_Min: num('#edPmin') ?? 1, Pasajeros_Max: num('#edPmax') ?? 1,
             Cobro: segVal('#edCobro'), Precio_Ida_Vuelta: num('#edPrecioIV'), Precio_Ida: num('#edPrecioI'),
             Id_Moneda: $('#edMoneda').value || 'DOP', Codigo: $('#edCodigo').value.trim() || null, Id_Proveedor: $('#edProveedor').value || null,
             Cancelable: $('#edCancelable').checked, Horas_Cancelacion: $('#edCancelable').checked ? num('#edHoras') : null,
-            Descripcion: $('#edDesc').value.trim() || null, Info: EVCodigo.leerInfo($('#edInfo')), Todos_Hoteles: $('#edTodos').checked, Hoteles: hoteles.map(h => +h.valor), Activo: $('#edActivo').checked,
+            Descripcion: $('#edDesc').value.trim() || null, Info: EVCodigo.leerInfo($('#edInfo')), Todos_Hoteles: false, Hoteles: hoteles.map(h => +h.valor), Activo: $('#edActivo').checked,
             ...EVPrioridad.leer($('#trEditor'))
         };
     }
@@ -531,10 +526,10 @@
         $('#edHorasF').hidden = !$('#edCancelable').checked;
         const d = leer();
         const t = {
-            id_Traslado: actual?.id_Traslado, nombre: d.Nombre, tipo: d.Tipo, categoria: d.Categoria, vehiculo: d.Vehiculo, id_Destino: d.Id_Destino || 'el destino',
+            id_Traslado: actual?.id_Traslado, nombre: d.Nombre, tipo: d.Tipo, categoria: d.Categoria, vehiculo: d.Vehiculo, id_Destino: hoteles[0]?.extra || destinoAeropuerto || 'el destino',
             maletas: d.Maletas, duracion_Min: d.Duracion_Min, pasajeros_Min: d.Pasajeros_Min, pasajeros_Max: d.Pasajeros_Max, cobro: d.Cobro,
             precio_Ida: d.Precio_Ida, precio_Ida_Vuelta: d.Precio_Ida_Vuelta, id_Moneda: d.Id_Moneda, cancelable: d.Cancelable, horas_Cancelacion: d.Horas_Cancelacion,
-            todos_Hoteles: d.Todos_Hoteles, hoteles, activo: true, imagen: $('#edPrev img')?.src
+            todos_Hoteles: false, hoteles, activo: true, imagen: $('#edPrev img')?.src
         };
         $('#edVista').innerHTML = tarjeta(t, false);
     }
@@ -544,9 +539,9 @@
         $('#edTitulo').textContent = t ? 'Editar traslado' : 'Nuevo traslado';
         $('#edSub').textContent = t ? `n.º ${t.id_Traslado} · los cambios se guardan al pulsar Guardar` : 'Los campos con * son obligatorios.';
         if (t?.id_Traslado) EVQuien.pintar($('#edSub'), 'traslado', t.id_Traslado); else EVQuien.quitar($('#edSub'));
-        const [o, d] = (ruta || '').split('|');
+        const [o] = (ruta || '').split('|');
+        destinoAeropuerto = '';
         $('#edOrigen').value = t ? `${t.id_Estacion_Origen} · ${t.origen_Nombre || ''}` : (o ? `${o} · ${todos.find(x => x.id_Estacion_Origen === o)?.origen_Nombre || ''}` : '');
-        $('#edDestino').value = t?.id_Destino || d || '';
         seg('#edTipo', t?.tipo || 'COMPARTIDO');
         $('#edCategoria').value = t?.categoria || 'ESTANDAR';
         $('#edVehiculo').value = t?.vehiculo || 'BUS';
@@ -574,14 +569,16 @@
         (tabInfo ??= EVCodigo.tabsInfo($('#trEditor .ui-db'), $('#edInfo').closest('.tr-paso'), { datos: 'Datos del traslado' }))?.();
         $('#edInternos').open = !!(t && (t.codigo || t.id_Proveedor || t.peso || t.precio_Proveedor));   // al editar se abre si ya tiene algo
         $('#edActivo').checked = t ? t.activo : true;
-        $('#edTodos').checked = t ? t.todos_Hoteles : true;
-        hoteles = (t?.hoteles || []).map(h => ({ valor: h.valor, texto: h.texto }));
+        hoteles = (t?.hoteles || []).map(h => ({ valor: h.valor, texto: h.texto, extra: h.extra }));
+        $('#edHotelQ').value = '';
         nombreTocado = !!t;
         $('#edNombre').value = t?.nombre || '';
         $('#edEliminar').hidden = !t;
         $$('#trEditor .ui-f').forEach(f => f.classList.remove('err'));
         $$('#trEditor .msg').forEach(m => m.textContent = '');
         pintarFoto(t?.imagen); pintarHoteles(); vistaPrevia();
+        // Un traslado de antes que servía a «todos los hoteles del destino»: ahora hay que elegir el hotel (o los hoteles)
+        if (t?.todos_Hoteles) { const m = $('#edHotelesF .msg'); if (m) m.textContent = `Este traslado servía a todos los hoteles de ${t.id_Destino}: elige el hotel (o los hoteles) para guardarlo.`; }
         galeria ??= EVMultimedia.montar($('#edGaleria'), { tipo: 'TRASLADO', portada: false, nombre: 'el traslado' });
         galeria.cambiar(t?.id_Traslado ?? null);
         editor.abrir();
@@ -589,9 +586,9 @@
     }
 
     function marcar(campo, msg) {
-        const el = { Nombre: '#edNombre', Id_Estacion_Origen: '#edOrigen', Id_Destino: '#edDestino', Tipo: '#edTipo', Categoria: '#edCategoria', Vehiculo: '#edVehiculo',
+        const el = { Nombre: '#edNombre', Id_Estacion_Origen: '#edOrigen', Id_Destino: '#edHotelQ', Tipo: '#edTipo', Categoria: '#edCategoria', Vehiculo: '#edVehiculo',
                      Maletas: '#edMaletas', Duracion_Min: '#edDuracion', Pasajeros_Min: '#edPmin', Pasajeros_Max: '#edPmax', Precio_Ida_Vuelta: '#edPrecioIV',
-                     Precio_Ida: '#edPrecioI', Horas_Cancelacion: '#edHoras', Hoteles: '#edTodos', Id_Moneda: '#edMoneda', Codigo: '#edCodigo', Id_Proveedor: '#edProveedor' }[campo.replace(/^\$\./, '')];
+                     Precio_Ida: '#edPrecioI', Horas_Cancelacion: '#edHoras', Hoteles: '#edHotelQ', Id_Moneda: '#edMoneda', Codigo: '#edCodigo', Id_Proveedor: '#edProveedor' }[campo.replace(/^\$\./, '')];
         if (!el) return;
         const f = $(el).closest('.ui-f'); f.classList.add('err'); $('.msg', f).textContent = msg;
     }
@@ -613,11 +610,10 @@
         const dto = leer();
         const faltan = [];
         if (!dto.Id_Estacion_Origen) faltan.push(['Id_Estacion_Origen', 'Elige el aeropuerto']);
-        if (!dto.Id_Destino) faltan.push(['Id_Destino', 'Elige el destino']);
         if (!dto.Nombre) faltan.push(['Nombre', 'Escribe el nombre']);
         if (dto.Pasajeros_Max < dto.Pasajeros_Min) faltan.push(['Pasajeros_Max', 'No puede ser menor que el mínimo']);
         if (dto.Precio_Ida_Vuelta == null && dto.Precio_Ida == null) faltan.push(['Precio_Ida_Vuelta', 'Escribe al menos un precio']);
-        if (!dto.Todos_Hoteles && !dto.Hoteles.length) faltan.push(['Hoteles', 'Elige al menos un hotel']);
+        if (!dto.Hoteles.length) faltan.push(['Hoteles', 'Elige el hotel al que llega el traslado']);
         if (dto.Codigo && !(await EVCodigo.validar($('#edCodigo')))) faltan.push(['Codigo', $('#edCodigo').nextElementSibling?.textContent?.trim() || 'Revisa el código']);
         if (faltan.length) { faltan.forEach(([c, m]) => marcar(c, m)); EV.toast('Revisa los campos marcados.', 'err'); return; }
 
@@ -679,7 +675,7 @@
             const k = ++n; let l = [];
             try { l = await EV.api(url()); } catch { }
             if (k !== n) return;
-            $(caja).innerHTML = l.map(o => `<button type="button" role="option" data-v="${esc(o.valor)}" data-t="${esc(o.texto)}">${esc(o.texto)}<small>${esc([o.valor !== o.texto ? o.valor : '', o.extra].filter(Boolean).join(' · '))}</small></button>`).join('')
+            $(caja).innerHTML = l.map(o => `<button type="button" role="option" data-v="${esc(o.valor)}" data-t="${esc(o.texto)}" data-e="${esc(o.extra || '')}">${esc(o.texto)}<small>${esc([o.valor !== o.texto ? o.valor : '', o.extra].filter(Boolean).join(' · '))}</small></button>`).join('')
                 || '<div style="padding:10px 12px;color:var(--ev-muted);font-weight:600">Sin resultados</div>';
             $(caja).hidden = document.activeElement !== $(input);
             $(input).setAttribute('aria-expanded', String(!$(caja).hidden));
@@ -687,7 +683,7 @@
         $(input).addEventListener('input', buscar);
         $(input).addEventListener('focus', buscar);
         $(input).addEventListener('blur', () => setTimeout(() => { $(caja).hidden = true; $(input).setAttribute('aria-expanded', 'false'); }, 150));
-        $(caja).addEventListener('mousedown', e => { const o = e.target.closest('[data-v]'); if (!o) return; e.preventDefault(); elegir(o.dataset.v, o.dataset.t); $(caja).hidden = true; vistaPrevia(); $('#trEditor').dispatchEvent(new Event('ev-cambio')); });
+        $(caja).addEventListener('mousedown', e => { const o = e.target.closest('[data-v]'); if (!o) return; e.preventDefault(); elegir(o.dataset.v, o.dataset.t, o.dataset.e); $(caja).hidden = true; vistaPrevia(); $('#trEditor').dispatchEvent(new Event('ev-cambio')); });
     }
 
     // ---------------- inicio ----------------
@@ -728,13 +724,11 @@
 
         // Editor
         buscador('#edOrigen', '#edOrigenBusc', () => '/Traslados/Aeropuertos?q=' + encodeURIComponent($('#edOrigen').value.trim().split(' ')[0]),
-            (v, t) => $('#edOrigen').value = `${v} · ${t}`);
-        buscador('#edDestino', '#edDestinoBusc', () => '/Traslados/Destinos?q=' + encodeURIComponent($('#edDestino').value.trim()),
-            v => { if ($('#edDestino').value !== v) hoteles = []; $('#edDestino').value = v; pintarHoteles(); });
-        buscador('#edHotelQ', '#edHotelBusc', () => `/Traslados/Hoteles?destino=${encodeURIComponent($('#edDestino').value.trim())}&q=${encodeURIComponent($('#edHotelQ').value.trim())}`,
-            (v, t) => { if (!hoteles.some(h => h.valor === v)) hoteles.push({ valor: v, texto: t }); $('#edHotelQ').value = ''; pintarHoteles(); });
+            (v, t, e) => { $('#edOrigen').value = `${v} · ${t}`; destinoAeropuerto = e || ''; });
+        // De aeropuerto a HOTEL: se buscan todos los hoteles y los del destino del aeropuerto salen primero. El destino lo toma el servidor del hotel.
+        buscador('#edHotelQ', '#edHotelBusc', () => `/Traslados/Hoteles?preferido=${encodeURIComponent(destinoAeropuerto)}&q=${encodeURIComponent($('#edHotelQ').value.trim())}`,
+            (v, t, e) => { if (!hoteles.some(h => h.valor === v)) hoteles.push({ valor: v, texto: t, extra: e }); $('#edHotelQ').value = ''; $('#edHotelesF .msg').textContent = ''; pintarHoteles(); });
         $('#edHoteles').addEventListener('click', e => { const q = e.target.closest('[data-quitar]'); if (!q) return; hoteles = hoteles.filter(h => h.valor !== q.dataset.quitar); pintarHoteles(); vistaPrevia(); });
-        $('#edTodos').onchange = () => { pintarHoteles(); vistaPrevia(); };
         $$('#edTipo button, #edCobro button').forEach(b => b.onclick = () => {
             seg('#' + b.parentElement.id, b.dataset.v);
             // Sugerencia: privado → van; compartido → autobús
