@@ -84,6 +84,7 @@ builder.Services.AddHttpClient("whatsapp");
 builder.Services.AddHttpClient("fotos", c => c.Timeout = TimeSpan.FromSeconds(10));   // imagen por defecto: comprobar fotos de antes en el servidor
 builder.Services.AddHttpClient<EuroVip.Services.ICircuitosMundo, EuroVip.Services.CircuitosMundo>(c => c.Timeout = TimeSpan.FromSeconds(90));   // CAMBIO 133: Circuitos por el mundo (Yourttoo)
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<EuroVip.Services.IBookingMotor, EuroVip.Services.BookingMotor>(c => c.Timeout = TimeSpan.FromSeconds(30));   // Hoteles: elegir país/destino/hotel desde Booking Motor
 // /health para el despliegue (Deploy.ps1): la app arrancó y llega a la base
 builder.Services.AddHealthChecks().AddCheck<EuroVip.Services.BaseDatosHealthCheck>("base_de_datos");
 builder.Services.AddSingleton<EuroVip.Repositories.IAccesoService, EuroVip.Repositories.AccesoService>();

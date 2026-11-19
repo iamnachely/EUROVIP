@@ -25,6 +25,8 @@ namespace EuroVip.Repositories
         Task<IEnumerable<CodigoNombre>> MonedasAsync();
         Task<IEnumerable<string>> DestinosAsync();
         Task<List<string>> NombresAsync();
+        /// <summary>Códigos de hotel ya cargados (lo que va después del último «-» de la descripción, en minúsculas).</summary>
+        Task<HashSet<string>> CodigosCargadosAsync();
         /// <summary>Todas las tarjetas HOTEL: número (id_servicio) y nombre.</summary>
         Task<List<(int Id, string Nombre)>> TarjetasAsync();
         Task<IEnumerable<Campanya>> CampanyasAsync(string idioma);
@@ -243,6 +245,14 @@ namespace EuroVip.Repositories
             using var cn = Conexion();
             return (await cn.QueryAsync<(int, string)>("SELECT id_servicio, LTRIM(RTRIM(id_destino)) FROM Eurovip.inicio WHERE tipo_servicio = @TipoHotel ORDER BY 2",
                 new { TipoHotel })).ToList();
+        }
+
+        public async Task<HashSet<string>> CodigosCargadosAsync()
+        {
+            using var cn = Conexion();
+            var d = await cn.QueryAsync<string?>("SELECT descripcion FROM Eurovip.inicio WHERE tipo_servicio = @tipo", new { tipo = TipoHotel });
+            return d.Select(x => x ?? "").Select(x => { var i = x.LastIndexOf('-'); return i >= 0 ? x[(i + 1)..].Trim().ToLowerInvariant() : ""; })
+                    .Where(x => x.Length > 0).ToHashSet();
         }
 
         public async Task<List<string>> NombresAsync()

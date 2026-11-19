@@ -252,6 +252,117 @@
     @@keyframes hxBlink { 50% { opacity: .2; } }
 
     /* Secciones del formulario */
+    /* Pestañas de la página y pestaña Booking Motor */
+    .hx-ptabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 20px 0 18px; }
+    .hx-ptabs button { position: relative; display: flex; align-items: center; gap: 14px; text-align: left; border: 2px solid var(--ev-line); background: #fff; border-radius: 20px; padding: 14px 18px; font: inherit; cursor: pointer; transition: transform .15s, box-shadow .15s, border-color .15s; }
+    .hx-ptabs button:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(15, 26, 51, .10); }
+    .hx-ptabs .ic { flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 21px; background: #eef4f5; color: var(--ev-ink); transition: .15s; }
+    .hx-ptabs .tx { display: grid; gap: 2px; }
+    .hx-ptabs .tx b { font-size: 16px; font-weight: 800; }
+    .hx-ptabs .tx small { color: var(--ev-muted); font-weight: 600; font-size: 12.5px; line-height: 1.3; }
+    .hx-ptabs .nuevo { position: absolute; top: -9px; right: 16px; background: var(--ev-aqua); color: var(--ev-ink); font-style: normal; font-weight: 800; font-size: 11px; padding: 2px 10px; border-radius: 99px; }
+    .hx-ptabs button.on { border-color: var(--ev-ink); background: var(--ev-ink); color: #fff; box-shadow: 0 12px 30px rgba(15, 26, 51, .22); }
+    .hx-ptabs button.on .ic { background: var(--ev-aqua); color: var(--ev-ink); }
+    .hx-ptabs button.on .tx small { color: rgba(255, 255, 255, .72); }
+
+    .bmx-hero { display: flex; gap: 16px; align-items: center; padding: 18px 24px; border-radius: 22px; background: linear-gradient(120deg, #e3fbf7, #eaf1ff); margin-bottom: 14px; }
+    .bmx-hero-ic { flex: none; width: 50px; height: 50px; border-radius: 16px; display: grid; place-items: center; background: var(--ev-ink); color: var(--ev-aqua); font-size: 24px; }
+    .bmx-hero h2 { margin: 0 0 2px; font-size: 20px; letter-spacing: -.4px; }
+    .bmx-hero p { margin: 0; color: var(--ev-muted); font-weight: 600; max-width: 75ch; font-size: 14px; }
+    .bmx-pasos { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .bmx-paso { display: flex; gap: 12px; background: #fff; border: 1px solid var(--ev-line); border-radius: 18px; padding: 14px 16px; }
+    .bmx-n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+    .bmx-paso-c { flex: 1; min-width: 0; display: grid; gap: 8px; align-content: start; }
+    .bmx-paso-c h3 { margin: 4px 0 0; font-size: 15px; }
+    .bmx-pasos .bmx-paso select, .bmx-pasos .bmx-paso input:not([type=checkbox]) {
+        appearance: none; -webkit-appearance: none; width: 100%; box-sizing: border-box; background-color: #f1f6f7; border: 2px solid transparent; border-radius: 14px;
+        padding: 11px 14px; font: inherit; font-weight: 600; color: var(--ev-ink); outline: 0; transition: .15s; min-height: 0; height: auto; box-shadow: none; }
+    .bmx-pasos .bmx-paso select { padding-right: 38px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='%236b7a8c'%3E%3Cpath d='M1.6 5.2a1 1 0 0 1 1.4 0L8 10.2l5-5a1 1 0 1 1 1.4 1.4l-5.7 5.7a1 1 0 0 1-1.4 0L1.6 6.6a1 1 0 0 1 0-1.4z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; cursor: pointer; }
+    .bmx-pasos .bmx-paso select:focus, .bmx-pasos .bmx-paso input:focus { border-color: var(--ev-aqua); background-color: #fff; }
+    .bmx-pasos .bmx-paso select:disabled, .bmx-pasos .bmx-paso input:disabled { opacity: .55; cursor: not-allowed; }
+    .bmx-sw { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; cursor: pointer; margin-top: 2px; }
+    .bmx-sw input { position: absolute; opacity: 0; pointer-events: none; }
+    .bmx-sw i { position: relative; width: 44px; height: 26px; border-radius: 99px; background: #cfd9db; transition: .2s; flex: none; }
+    .bmx-sw i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: .2s; }
+    .bmx-sw input:checked + i { background: var(--ev-aqua); }
+    .bmx-sw input:checked + i::after { transform: translateX(18px); }
+    .bmx-cols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+    .bmx-izq { background: #fff; border: 1px solid var(--ev-line); border-radius: 22px; padding: 16px; min-height: 260px; }
+    .bmx-buscador { display: flex; align-items: center; gap: 10px; background: #f1f6f7; border: 2px solid transparent; border-radius: 16px; padding: 5px 5px 5px 16px; transition: .15s; }
+    .bmx-buscador:focus-within { border-color: var(--ev-aqua); background: #fff; }
+    .bmx-buscador > i { color: var(--ev-muted); font-size: 18px; }
+    .bmx-buscador input { flex: 1; border: 0 !important; background: transparent !important; font: inherit; font-size: 15px; outline: 0; min-width: 0; box-shadow: none !important; }
+    .bmx-estado { display: flex; align-items: center; gap: 14px; margin: 12px 2px; min-height: 22px; color: var(--ev-muted); font-weight: 700; }
+    .bmx-barra { flex: 1; max-width: 260px; height: 8px; border-radius: 9px; background: #e5ecee; overflow: hidden; }
+    .bmx-barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ev-aqua), #6ee7d6); transition: width .4s; }
+    .bmx-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+    .bmx-h { position: relative; display: block; border: 2px solid var(--ev-line); background: #fff; border-radius: 18px; overflow: hidden; cursor: pointer; text-align: left; font: inherit; padding: 0; transition: transform .15s, box-shadow .15s, border-color .15s; }
+    .bmx-h:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(15, 26, 51, .14); }
+    .bmx-h.sel { border-color: var(--ev-aqua); box-shadow: 0 0 0 4px rgba(0, 214, 190, .22); }
+    .bmx-h.ya { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; filter: grayscale(.4); }
+    .bmx-h .foto { position: relative; display: block; height: 130px; background: linear-gradient(135deg, #dff3f1, #e8eefb); }
+    .bmx-h .foto img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .bmx-h .info { display: grid; gap: 3px; padding: 10px 12px 12px; }
+    .bmx-h b { font-size: 14px; line-height: 1.25; }
+    .bmx-h small { color: var(--ev-muted); font-size: 12px; font-weight: 600; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .bmx-h .est { position: absolute; left: 8px; bottom: 8px; background: rgba(15, 26, 51, .78); color: #ffd25a; font-style: normal; font-weight: 800; font-size: 12px; padding: 2px 9px; border-radius: 99px; }
+    .bmx-h .ck { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: rgba(255, 255, 255, .92); border: 2px solid var(--ev-line); display: grid; place-items: center; color: transparent; font-size: 15px; transition: .15s; }
+    .bmx-h.sel .ck { background: var(--ev-ink); border-color: var(--ev-ink); color: var(--ev-aqua); transform: scale(1.1); }
+    .bmx-h .ya-t { position: absolute; top: 8px; left: 8px; background: var(--ev-ink); color: #fff; border-radius: 99px; padding: 3px 10px; font-size: 11px; font-weight: 800; }
+    .bmx-h.sk { pointer-events: none; height: 215px; background: linear-gradient(100deg, #eef3f4 30%, #f8fbfb 50%, #eef3f4 70%); background-size: 200% 100%; animation: bmxSk 1.2s linear infinite; border-color: transparent; }
+    @@keyframes bmxSk { to { background-position: -200% 0; } }
+    .bmx-pie { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 16px 0 2px; color: var(--ev-muted); font-weight: 700; }
+    .bmx-vacio { display: none; place-items: center; gap: 6px; text-align: center; padding: 40px 10px; color: var(--ev-muted); font-weight: 600; }
+    .bmx-vacio i { font-size: 44px; color: var(--ev-aqua); }
+    .bmx-vacio b { color: var(--ev-ink); font-size: 17px; }
+    #bxBuscarCaja[hidden] + .bmx-vacio { display: grid; }
+    /* Tu selección (el carrito) */
+    .bmx-cart { position: sticky; top: 86px; background: #fff; border: 2px solid var(--ev-ink); border-radius: 22px; padding: 16px; display: grid; gap: 12px; box-shadow: 0 14px 34px rgba(15, 26, 51, .12); }
+    .bmx-cart header { display: flex; align-items: center; justify-content: space-between; }
+    .bmx-cart h3 { margin: 0; font-size: 17px; display: flex; gap: 8px; align-items: center; }
+    .bmx-cnt { min-width: 30px; height: 30px; padding: 0 9px; border-radius: 99px; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-weight: 800; }
+    .bmx-cart-vacio { display: grid; place-items: center; gap: 6px; text-align: center; padding: 18px 8px; color: var(--ev-muted); font-weight: 600; font-size: 13.5px; border: 2px dashed var(--ev-line); border-radius: 16px; }
+    .bmx-cart-vacio i { font-size: 28px; color: var(--ev-aqua); }
+    .bmx-cart-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 320px; overflow: auto; }
+    .bmx-cart-l li { display: flex; gap: 10px; align-items: center; background: #f1f6f7; border-radius: 14px; padding: 6px 8px 6px 6px; animation: bmxUp .2s both; }
+    .bmx-cart-l img { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; flex: none; background: #dfe9ea; }
+    .bmx-cart-l .t { flex: 1; min-width: 0; display: grid; }
+    .bmx-cart-l .t b { font-size: 13px; line-height: 1.2; }
+    .bmx-cart-l .t small { color: var(--ev-muted); font-size: 11.5px; font-weight: 600; }
+    .bmx-cart-l button { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 0; background: #fff; cursor: pointer; display: grid; place-items: center; color: #b42318; }
+    .bmx-cart-l button:hover { background: #fee4e2; }
+    @@keyframes bmxUp { from { transform: translateY(8px); opacity: 0; } }
+    .bmx-cart-res { font-size: 13px; font-weight: 600; color: var(--ev-muted); line-height: 1.45; }
+    .bmx-cart-res b { color: var(--ev-ink); }
+    .bmx-cart-res .aviso { color: #b45309; }
+    .bmx-go { width: 100%; justify-content: center; padding: 14px; font-size: 15px; }
+    .bmx-go:disabled { opacity: .45; cursor: not-allowed; }
+    .bmx-link { border: 0; background: none; color: var(--ev-muted); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; justify-self: center; }
+    .bmx-res { margin-top: 16px; padding: 20px 24px; }
+    .bmx-res h3 { margin: 0 0 10px; font-size: 17px; }
+    .bmx-res ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+    .bmx-res li { display: flex; gap: 8px; align-items: baseline; }
+    .bmx-res .ok { color: #0b7a57; } .bmx-res .mal { color: #b42318; }
+    @@media (max-width: 980px) { .bmx-cols { grid-template-columns: 1fr; } .bmx-cart { position: static; } }
+    @@media (max-width: 640px) { .bmx-hero { flex-direction: column; align-items: flex-start; } }
+
+    /* Elegir desde Booking Motor */
+    .hx-bm { background: linear-gradient(180deg, #f3fbfa, transparent); border: 1px solid var(--ev-line); border-radius: 18px; padding: 18px 18px 8px; margin-bottom: 22px; }
+    .hx-bm + .hx-sec { border-top: 0; padding-top: 0; }
+    .hx-bm select { width: 100%; }
+    .hx-bm #bmDestinoQ { margin-bottom: 6px; }
+    .hx-bm-buscar { display: flex; gap: 8px; }
+    .hx-bm-buscar input { flex: 1; }
+    .hx-bm-btn { border: 1px solid var(--ev-line); background: #fff; border-radius: 12px; padding: 0 14px; font: inherit; font-weight: 700; cursor: pointer; min-height: 40px; }
+    .hx-bm-btn:hover { border-color: var(--ev-ink); }
+    .hx-bm-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-top: 10px; max-height: 330px; overflow: auto; }
+    .hx-bm-h { display: flex; gap: 10px; align-items: center; text-align: left; border: 1px solid var(--ev-line); background: #fff; border-radius: 14px; padding: 8px; cursor: pointer; font: inherit; }
+    .hx-bm-h:hover, .hx-bm-h.on { border-color: var(--ev-ink); box-shadow: 0 0 0 2px var(--ev-aqua); }
+    .hx-bm-h img { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex: none; background: #e8eef0; }
+    .hx-bm-h b { display: block; font-size: 13.5px; line-height: 1.25; }
+    .hx-bm-h small { color: var(--ev-muted); font-size: 12px; }
+    .hx-bm-pie { display: flex; align-items: center; gap: 12px; margin: 10px 0 8px; }
+    .hx-bm-elegido { display: flex; gap: 8px; align-items: center; margin: 4px 0 10px; padding: 10px 14px; border-radius: 12px; background: #e6fbf3; color: #0b5d43; font-weight: 700; font-size: 14px; }
     .hx-sec { margin-bottom: 26px; padding-bottom: 6px; }
     .hx-sec + .hx-sec { border-top: 1px dashed var(--ev-line); padding-top: 22px; }
     .hx-sec-t { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 16px; margin-bottom: 16px; }
@@ -380,6 +491,20 @@
     </svg>
 </section>
 
+<!-- ===================== PESTAÑAS: manual/Excel · Booking Motor ===================== -->
+<div class="hx-ptabs" role="tablist" id="hxTabs">
+    <button type="button" class="on" role="tab" data-tab="manual">
+        <span class="ic"><i class="bi bi-pencil-square"></i></span>
+        <span class="tx"><b>Manual y Excel</b><small>Crea o edita hoteles uno por uno o con un archivo</small></span>
+    </button>
+    <button type="button" role="tab" data-tab="bm">
+        <span class="ic"><i class="bi bi-cloud-download"></i></span>
+        <span class="tx"><b>Booking Motor</b><small>Elige hoteles de la integración y súbelos a la Home</small></span>
+        <em class="nuevo">Nuevo</em>
+    </button>
+</div>
+
+<div id="hxTabManual">
 <section class="hx-stats">
     <div class="ev-card hx-stat ev-rise d1"><i class="bi bi-buildings"></i><div><b id="stTotal">@Model.Estadisticas.Total</b><small>Hoteles cargados</small></div></div>
     <div class="ev-card hx-stat ev-rise d2"><i class="bi bi-eye"></i><div><b id="stVis">@Model.Estadisticas.Visibles</b><small>Visibles en la web</small></div></div>
@@ -431,6 +556,75 @@
     <small id="hxRango"></small>
     <div class="hx-pages" id="hxPages"></div>
 </div>
+</div>
+
+<!-- ===================== BOOKING MOTOR: elegir hoteles de la integración y cargarlos a la Home ===================== -->
+<div id="hxTabBm" hidden>
+    <section class="bmx-hero ev-rise">
+        <span class="bmx-hero-ic"><i class="bi bi-buildings"></i></span>
+        <div>
+            <h2>Hoteles de Booking Motor</h2>
+            <p>Busca los hoteles, márcalos y mira a la derecha lo que llevas elegido. Al final, un solo botón los sube a la web con su nombre, código y foto.</p>
+        </div>
+    </section>
+
+    <div class="bmx-pasos">
+        <section class="bmx-paso">
+            <span class="bmx-n">1</span>
+            <div class="bmx-paso-c">
+                <h3>País</h3>
+                <select id="bxPais" aria-label="País"><option value="">Cargando países…</option></select>
+            </div>
+        </section>
+        <section class="bmx-paso">
+            <span class="bmx-n">2</span>
+            <div class="bmx-paso-c">
+                <h3>Destino</h3>
+                <input id="bxDestinoQ" placeholder="Filtrar… (ej. Punta Cana)" autocomplete="off" disabled aria-label="Filtrar destinos" />
+                <select id="bxDestino" disabled aria-label="Destino"><option value="">Primero elige el país</option></select>
+            </div>
+        </section>
+        <section class="bmx-paso">
+            <span class="bmx-n">3</span>
+            <div class="bmx-paso-c">
+                <h3>Cómo sale en la web</h3>
+                <input id="bxHome" list="dlDestinos" placeholder="Destino en la web (ej. Punta Cana)" maxlength="300" autocomplete="off" aria-label="Destino en la web" />
+                <select id="bxReg" aria-label="Régimen">@foreach (var r in regimenes) { <option value="@r">@r</option> }</select>
+                <label class="bmx-sw"><input type="checkbox" id="bxVis" checked /><i></i><span>Mostrar en la web</span></label>
+            </div>
+        </section>
+    </div>
+
+    <div class="bmx-cols">
+        <div class="bmx-izq">
+            <div class="bmx-buscador">
+                <i class="bi bi-search"></i>
+                <input id="bxQ" placeholder="Busca un hotel por nombre… (ej. Catalonia)" autocomplete="off" aria-label="Buscar hotel" disabled />
+                <button type="button" class="ev-btn" id="bxBuscar">Buscar</button>
+            </div>
+            <div id="bxBuscarCaja" hidden>
+                <div class="bmx-estado"><small id="bxInfo"></small><div class="bmx-barra" id="bxBarra" hidden><i></i></div></div>
+                <div id="bxLista" class="bmx-lista" aria-live="polite"></div>
+                <div class="bmx-pie"><button type="button" class="hx-bm-btn" id="bxAnt" hidden><i class="bi bi-chevron-left"></i> Anteriores</button><small id="bxPag"></small><button type="button" class="hx-bm-btn" id="bxSig" hidden>Siguientes <i class="bi bi-chevron-right"></i></button></div>
+            </div>
+            <div class="bmx-vacio" id="bxVacio">
+                <i class="bi bi-map"></i>
+                <b>Elige un país y un destino</b>
+                <span>Aquí aparecerán los hoteles para que marques los que quieras.</span>
+            </div>
+        </div>
+
+        <aside class="bmx-cart" aria-label="Tu selección">
+            <header><h3><i class="bi bi-bag-check"></i> Tu selección</h3><span class="bmx-cnt" id="bxN">0</span></header>
+            <div id="bxSelVacio" class="bmx-cart-vacio"><i class="bi bi-hand-index-thumb"></i><span>Marca hoteles de la lista y aparecerán aquí.</span></div>
+            <ul id="bxSelLista" class="bmx-cart-l"></ul>
+            <div class="bmx-cart-res" id="bxResumen"></div>
+            <button type="button" class="ev-btn bmx-go" id="bxCargar" disabled><i class="bi bi-cloud-upload"></i> Cargar a la web</button>
+            <button type="button" class="bmx-link" id="bxLimpiar" hidden>Quitar todo</button>
+        </aside>
+    </div>
+    <div id="bxResultado" class="ev-card bmx-res" hidden></div>
+</div>
 
 <!-- ===================== DRAWER: FORMULARIO ===================== -->
 <div class="hx-backdrop" id="hxBackdrop"></div>
@@ -465,6 +659,22 @@
         </div>
         <div class="hx-pane on" data-pane="principal">
         <div class="ui-guia"><span><b class="ui-req">Obligatorio</b> lo que dice «obligatorio»</span><span><b class="ui-opc">Opcional</b> foto, prioridad, «Más datos» e «Info. cliente»</span><span>Para guardar basta con esta pestaña.</span></div>
+        <!-- 0. Elegir desde Booking Motor: país → destino → hotel, y rellena el formulario -->
+        <div class="hx-sec hx-bm" id="bmCaja">
+            <div class="hx-sec-t"><span><i class="bi bi-cloud-download"></i></span> Elegir desde Booking Motor <b class="ui-opc">Opcional</b></div>
+            <p class="hx-sec-sub">Elige el país, el destino y el hotel en la lista de Booking Motor y el formulario se completa solo (nombre, destino y código). Después solo falta el régimen.</p>
+            <div class="hx-row">
+                <div class="hx-f"><label for="bmPais">País</label><select id="bmPais"><option value="">Cargando países…</option></select></div>
+                <div class="hx-f"><label for="bmDestino">Destino</label><input id="bmDestinoQ" placeholder="Escribe para filtrar…" autocomplete="off" disabled /><select id="bmDestino" size="1" disabled><option value="">Primero elige el país</option></select></div>
+            </div>
+            <div class="hx-f" id="bmHotelesCaja" hidden>
+                <label for="bmQ">Hotel</label>
+                <div class="hx-bm-buscar"><input id="bmQ" placeholder="Buscar un hotel por nombre…" autocomplete="off" /><button type="button" class="hx-bm-btn" id="bmBuscar"><i class="bi bi-search"></i> Buscar</button></div>
+                <div id="bmLista" class="hx-bm-lista" aria-live="polite"></div>
+                <div class="hx-bm-pie"><button type="button" class="hx-bm-btn" id="bmMas" hidden>Ver más hoteles</button><small id="bmInfo"></small></div>
+            </div>
+            <div id="bmElegido" class="hx-bm-elegido" hidden></div>
+        </div>
         <!-- 1. Hotel: se guarda igual que ViajeVDT.dbo.inicio (tipo_servicio = Hotel) -->
         <div class="hx-sec">
             <div class="hx-sec-t"><span>1</span> El hotel <b class="ui-req">Obligatorio</b></div>
@@ -522,8 +732,8 @@
                 </div>
                 <div class="hx-f">
                     <label for="CodigoHotel">Código del hotel <em>obligatorio</em></label>
-                    <input id="CodigoHotel" name="CodigoHotel" maxlength="12" inputmode="numeric" placeholder="Ej. 603258" />
-                    <small class="hx-ayuda">El número del hotel en el proveedor. Solo números.</small>
+                    <input id="CodigoHotel" name="CodigoHotel" maxlength="12" placeholder="Ej. 603258 o 6luf" />
+                    <small class="hx-ayuda">El código del hotel en el proveedor (si lo eliges de Booking Motor, se rellena solo).</small>
                     <span class="msg"></span>
                 </div>
             </div>
@@ -1090,6 +1300,194 @@ const HX = (() => {
     const frm = $('#frm');
     const campo = n => frm.elements[n];
 
+
+    // ---------------- PESTAÑAS DE LA PÁGINA + BOOKING MOTOR (elegir y cargar a la Home) ----------------
+    const bx = { pais: '', destino: '', destinos: [], q: '', pagina: 1, sel: new Map(), timer: null, hoteles: [] };
+    const normT = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    function bxTab(n) {
+        $$('#hxTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === n));
+        $('#hxTabManual').hidden = n !== 'manual'; $('#hxTabBm').hidden = n !== 'bm';
+        if (n === 'bm' && !bx.cargadoPaises) { bx.cargadoPaises = true; bxPaises(); }
+    }
+    async function bxPaises() {
+        try { const l = await api('/Hoteles/BmPaises'); const s = $('#bxPais');
+              s.innerHTML = '<option value="">Elige el país…</option>' + l.map(p => `<option value="${esc(p.codigo)}">${esc(p.nombre)}</option>`).join('');
+              const rd = l.find(p => p.codigo === 'DO'); if (rd) { s.value = 'DO'; bxElegirPais(); } }
+        catch (e) { $('#bxPais').innerHTML = '<option value="">No disponible</option>'; toast(e.message, 'err'); }
+    }
+    function bxPintarDestinos() {
+        const t = normT($('#bxDestinoQ').value);
+        const l = bx.destinos.filter(d => !t || normT(d.nombre).includes(t));
+        $('#bxDestino').innerHTML = '<option value="">' + (l.length ? 'Elige el destino…' : 'Ningún destino coincide') + '</option>' +
+            l.slice(0, 400).map(d => `<option value="${d.id}">${esc(d.nombre)}${d.tipo === 'Point Of Interest' ? ' (punto de interés)' : ''}</option>`).join('');
+    }
+    async function bxElegirPais() {
+        bx.pais = $('#bxPais').value; bx.destino = ''; bx.destinos = []; $('#bxBuscarCaja').hidden = true; $('#bxLista').innerHTML = ''; $('#bxQ').disabled = true;
+        const q = $('#bxDestinoQ'), s = $('#bxDestino'); q.value = '';
+        if (!bx.pais) { q.disabled = s.disabled = true; s.innerHTML = '<option value="">Primero elige el país</option>'; return; }
+        s.innerHTML = '<option value="">Cargando destinos…</option>';
+        try { bx.destinos = await api('/Hoteles/BmDestinos?pais=' + encodeURIComponent(bx.pais)); q.disabled = s.disabled = false; bxPintarDestinos(); }
+        catch (e) { s.innerHTML = '<option value="">No se pudo cargar</option>'; toast(e.message, 'err'); }
+    }
+    function bxElegirDestino() {
+        bx.destino = $('#bxDestino').value || ''; bx.q = ''; bx.pagina = 1; $('#bxQ').value = ''; $('#bxQ').disabled = !bx.destino;
+        $('#bxBuscarCaja').hidden = !bx.destino; $('#bxLista').innerHTML = bx.destino ? '<div class="bmx-h sk"></div>'.repeat(6) : ''; $('#bxInfo').textContent = bx.destino ? 'Buscando hoteles…' : '';
+        const d = bx.destinos.find(x => x.id === bx.destino);
+        // el destino de la web se propone igual que el de Booking Motor, si existe uno con ese nombre
+        if (d) { const op = [...$('#dlDestinos').options].find(o => normT(o.value) === normT(d.corto)); if (op) $('#bxHome').value = op.value; else if (!$('#bxHome').value) $('#bxHome').value = d.corto; }
+        bxResumen();
+        if (bx.destino) bxBuscar();
+    }
+    async function bxBuscar() {
+        clearTimeout(bx.timer);
+        if (!bx.destino) return;
+        try {
+            const r = await api(`/Hoteles/BmBuscar?destino=${bx.destino}&pagina=${bx.pagina}&q=${encodeURIComponent(bx.q)}`);
+            bx.hoteles = r.hoteles;
+            $('#bxLista').innerHTML = r.hoteles.map(h => `<button type="button" class="bmx-h${h.cargado ? ' ya' : ''}${bx.sel.has(h.codigo) ? ' sel' : ''}" data-c="${esc(h.codigo)}" ${h.cargado ? 'disabled' : ''}>
+                <span class="foto"><img src="${esc(h.imagen || '')}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+                ${h.estrellas ? `<em class="est">★ ${h.estrellas}</em>` : ''}<span class="ck"><i class="bi bi-check-lg"></i></span>${h.cargado ? '<span class="ya-t">Ya en la web</span>' : ''}</span>
+                <span class="info"><b>${esc(h.nombre)}</b><small>${esc(h.direccion || '')}</small></span></button>`).join('');
+            const barra = $('#bxBarra');
+            barra.hidden = r.listo; barra.firstElementChild.style.width = (r.totalDestino ? Math.round(100 * r.cargados / r.totalDestino) : 0) + '%';
+            $('#bxInfo').textContent = r.error ? r.error : r.listo
+                ? (r.total ? `${r.total} hotel(es)${bx.q ? ' encontrados' : ' en este destino'}` : (bx.q ? 'Ningún hotel coincide con esa búsqueda.' : 'Este destino no tiene hoteles.'))
+                : `Leyendo los hoteles del destino… ${r.cargados} de ${r.totalDestino}. Ya puedes buscar entre los leídos.`;
+            $('#bxPag').textContent = r.paginas > 1 ? `Página ${r.pagina} de ${r.paginas}` : '';
+            $('#bxAnt').hidden = r.pagina <= 1; $('#bxSig').hidden = r.pagina >= r.paginas;
+            if (!r.listo && !r.error) bx.timer = setTimeout(bxBuscar, 2500);
+        } catch (e) { $('#bxInfo').textContent = e.message; }
+    }
+    // «Tu selección»: lo que llevas elegido, con su foto, y un resumen de cómo saldrá en la web
+    function bxResumen() {
+        const home = $('#bxHome').value.trim(), reg = $('#bxReg').value, vis = $('#bxVis').checked;
+        $('#bxResumen').innerHTML = bx.sel.size
+            ? (home ? `Saldrán en <b>${esc(home)}</b> con régimen <b>${esc(reg)}</b> · <b>${vis ? 'visibles' : 'ocultos'}</b>.` : '<span class="aviso"><i class="bi bi-exclamation-triangle"></i> Falta el destino de la web (paso 3).</span>') + (vis ? '' : ' <span class="aviso">Ocultos no se ven en la web hasta que los muestres.</span>')
+            : '';
+        $('#bxCargar').disabled = !bx.sel.size || !home;
+    }
+    function bxPintarSeleccion() {
+        $('#bxN').textContent = bx.sel.size;
+        $('#bxSelVacio').hidden = bx.sel.size > 0; $('#bxLimpiar').hidden = bx.sel.size === 0;
+        $('#bxSelLista').innerHTML = [...bx.sel.values()].map(h => `<li><img src="${esc(h.imagen || '')}" alt="" onerror="this.style.visibility='hidden'"><span class="t"><b>${esc(h.nombre)}</b><small>${h.estrellas ? '★ ' + h.estrellas + ' · ' : ''}${esc(h.codigo)}</small></span><button type="button" data-q="${esc(h.codigo)}" title="Quitar" aria-label="Quitar ${esc(h.nombre)}"><i class="bi bi-x-lg"></i></button></li>`).join('');
+        bxResumen();
+    }
+    function bxAlternar(c) {
+        if (bx.sel.has(c)) bx.sel.delete(c);
+        else { const h = bx.hoteles.find(x => x.codigo === c); if (h) bx.sel.set(c, h); }
+        $$('#bxLista .bmx-h').forEach(b => b.classList.toggle('sel', bx.sel.has(b.dataset.c)));
+        bxPintarSeleccion();
+    }
+    async function bxCargar() {
+        const home = $('#bxHome').value.trim();
+        if (!home) { toast('Escribe el destino de la web donde saldrán los hoteles (paso 3).', 'err'); $('#bxHome').focus(); return; }
+        const btn = $('#bxCargar'); btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Cargando…';
+        try {
+            const r = await api('/Hoteles/BmCargar', { method: 'POST', body: JSON.stringify({ codigos: [...bx.sel.keys()], destino: home, pais: bx.pais, regimen: $('#bxReg').value, visible: $('#bxVis').checked }) });
+            bxMostrarResultado(r);
+            toast(r.mensaje, r.guardados === r.total ? 'ok' : 'err');
+            r.resultado.filter(x => x.ok).forEach(x => bx.sel.delete(x.codigo));
+            bxPintarSeleccion(); bxBuscar();
+            if (typeof HX !== 'undefined' && HX.recargar) HX.recargar();
+        } catch (e) {
+            if (e.data?.resultado) bxMostrarResultado(e.data);
+            toast(e.message, 'err');
+        } finally { btn.innerHTML = '<i class="bi bi-cloud-upload"></i> Cargar a la web'; bxResumen(); }
+    }
+    function bxMostrarResultado(r) {
+        const c = $('#bxResultado'); c.hidden = false;
+        c.innerHTML = `<h3>${esc(r.mensaje)}</h3><ul>` + r.resultado.map(x => `<li class="${x.ok ? 'ok' : 'mal'}"><i class="bi bi-${x.ok ? 'check-circle-fill' : 'x-circle-fill'}"></i><b>${esc(x.nombre || x.codigo)}</b> — ${esc(x.mensaje)}</li>`).join('') + '</ul>';
+        c.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    function bxIniciar() {
+        $$('#hxTabs button').forEach(b => b.addEventListener('click', () => bxTab(b.dataset.tab)));
+        $('#bxPais').addEventListener('change', bxElegirPais);
+        $('#bxDestinoQ').addEventListener('input', bxPintarDestinos);
+        $('#bxDestino').addEventListener('change', bxElegirDestino);
+        $('#bxBuscar').addEventListener('click', () => { bx.q = $('#bxQ').value.trim(); bx.pagina = 1; bxBuscar(); });
+        $('#bxQ').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#bxBuscar').click(); } });
+        $('#bxAnt').addEventListener('click', () => { bx.pagina--; bxBuscar(); });
+        $('#bxSig').addEventListener('click', () => { bx.pagina++; bxBuscar(); });
+        $('#bxLista').addEventListener('click', e => {
+            const b = e.target.closest('.bmx-h'); if (!b || b.disabled || b.classList.contains('sk')) return;
+            bxAlternar(b.dataset.c);
+        });
+        $('#bxSelLista').addEventListener('click', e => { const q = e.target.closest('[data-q]'); if (q) bxAlternar(q.dataset.q); });
+        $('#bxLimpiar').addEventListener('click', () => { bx.sel.clear(); $$('#bxLista .bmx-h.sel').forEach(b => b.classList.remove('sel')); bxPintarSeleccion(); });
+        $('#bxCargar').addEventListener('click', bxCargar);
+        ['bxHome', 'bxReg', 'bxVis'].forEach(id => $('#' + id).addEventListener('input', bxResumen));
+        $('#bxVis').addEventListener('change', bxResumen);
+        bxPintarSeleccion();
+    }
+
+    // ---------------- BOOKING MOTOR (elegir país → destino → hotel) ----------------
+    const bm = { pais: '', destino: '', destinos: [], q: '', pagina: 1, paginas: 1 };
+    async function bmGet(url) { return api(url, { method: 'GET' }); }
+    async function bmPaises() {
+        const sel = $('#bmPais');
+        try {
+            const l = await bmGet('/Hoteles/BmPaises');
+            sel.innerHTML = '<option value="">Elige el país…</option>' + l.map(p => `<option value="${esc(p.codigo)}">${esc(p.nombre)}</option>`).join('');
+        } catch (e) { sel.innerHTML = '<option value="">No disponible</option>'; $('#bmInfo').textContent = e.message; $('#bmHotelesCaja').hidden = false; }
+    }
+    function bmPintarDestinos() {
+        const t = ($('#bmDestinoQ').value || '').trim().toLowerCase();
+        const l = bm.destinos.filter(d => !t || d.nombre.toLowerCase().includes(t));
+        $('#bmDestino').innerHTML = '<option value="">' + (l.length ? 'Elige el destino…' : 'Ningún destino coincide') + '</option>' +
+            l.slice(0, 300).map(d => `<option value="${d.id}">${esc(d.nombre)}${d.tipo === 'Point Of Interest' ? ' (punto de interés)' : ''}</option>`).join('');
+    }
+    async function bmElegirPais() {
+        bm.pais = $('#bmPais').value; bm.destino = ''; bm.destinos = [];
+        $('#bmHotelesCaja').hidden = true; $('#bmLista').innerHTML = '';
+        const q = $('#bmDestinoQ'), s = $('#bmDestino'); q.value = '';
+        if (!bm.pais) { q.disabled = s.disabled = true; s.innerHTML = '<option value="">Primero elige el país</option>'; return; }
+        s.innerHTML = '<option value="">Cargando destinos…</option>';
+        try { bm.destinos = await bmGet('/Hoteles/BmDestinos?pais=' + encodeURIComponent(bm.pais)); q.disabled = s.disabled = false; bmPintarDestinos(); }
+        catch (e) { s.innerHTML = '<option value="">No se pudo cargar</option>'; toast(e.message, 'err'); }
+    }
+    async function bmCargarHoteles(nueva) {
+        const lista = $('#bmLista'), info = $('#bmInfo'), mas = $('#bmMas');
+        if (nueva) { bm.pagina = 1; lista.innerHTML = ''; }
+        info.textContent = 'Buscando hoteles…'; mas.hidden = true;
+        try {
+            const r = await bmGet(`/Hoteles/BmHoteles?destino=${bm.destino}&pagina=${bm.pagina}&q=${encodeURIComponent(bm.q)}`);
+            bm.paginas = r.paginas;
+            lista.insertAdjacentHTML('beforeend', r.hoteles.map(h => `<button type="button" class="hx-bm-h" data-bm='${esc(JSON.stringify(h))}'>
+                <img src="${esc(h.imagen || '')}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+                <span><b>${esc(h.nombre)}</b><small>${h.estrellas ? '★'.repeat(Math.min(5, h.estrellas)) + ' · ' : ''}código ${esc(h.codigo)}</small></span></button>`).join(''));
+            const hay = lista.children.length;
+            info.textContent = !hay ? (bm.q ? 'Ningún hotel coincide con esa búsqueda.' : 'Este destino no tiene hoteles.') : bm.q ? hay + ' encontrados' : `${hay} de ${r.total} hoteles`;
+            mas.hidden = !(!bm.q && bm.pagina < bm.paginas);
+        } catch (e) { info.textContent = e.message; }
+    }
+    function bmAplicar(h) {
+        const dest = bm.destinos.find(d => d.id === bm.destino);
+        const poner = (n, v) => { const el = campo(n); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+        poner('Id_Destino', h.nombre);
+        if (dest) poner('CaratulaDestino', dest.corto);
+        poner('CodigoHotel', h.codigo);
+        frm.dispatchEvent(new Event('change', { bubbles: true }));
+        $$('.hx-bm-h').forEach(b => b.classList.toggle('on', JSON.parse(b.dataset.bm).codigo === h.codigo));
+        const el = $('#bmElegido'); el.hidden = false;
+        el.innerHTML = `<i class="bi bi-check-circle-fill"></i> Completado con «${esc(h.nombre)}» (código ${esc(h.codigo)}${dest ? ', destino ' + esc(dest.corto) : ''}). Falta elegir el régimen.`;
+        campo('Regimen').focus();
+    }
+    function bmIniciar() {
+        if (!$('#bmCaja')) return;
+        bmPaises();
+        $('#bmPais').addEventListener('change', bmElegirPais);
+        $('#bmDestinoQ').addEventListener('input', bmPintarDestinos);
+        $('#bmDestino').addEventListener('change', () => {
+            bm.destino = $('#bmDestino').value || ''; bm.q = ''; $('#bmQ').value = '';
+            $('#bmHotelesCaja').hidden = !bm.destino;
+            if (bm.destino) bmCargarHoteles(true);
+        });
+        $('#bmBuscar').addEventListener('click', () => { bm.q = $('#bmQ').value.trim(); bmCargarHoteles(true); });
+        $('#bmQ').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#bmBuscar').click(); } });
+        $('#bmMas').addEventListener('click', () => { bm.pagina++; bmCargarHoteles(false); });
+        $('#bmLista').addEventListener('click', e => { const b = e.target.closest('.hx-bm-h'); if (b) bmAplicar(JSON.parse(b.dataset.bm)); });
+    }
+
     async function cargarCombos(campanya, contenedor) {
         const [camps, conts] = await Promise.all([api('/Hoteles/Campanyas'), api('/Hoteles/Contenedores')]);
         campo('Id_Campanya').innerHTML = camps.length
@@ -1165,6 +1563,7 @@ const HX = (() => {
     const formAbierto = () => $('#hxForm').classList.contains('open');
 
     function abrir(id) {
+        { const e = document.getElementById("bmElegido"); if (e) e.hidden = true; }
         if (id === 'hxForm') formSucio = false;
         $('#hxBackdrop').classList.add('open');
         const d = $('#' + id); d.classList.add('open'); d.setAttribute('aria-hidden', 'false');
@@ -1281,7 +1680,7 @@ const HX = (() => {
         if (!dto.CaratulaDestino) faltan.push(['CaratulaDestino', 'Escribe el destino (ej. Costa del Sol)']);
         else if (esUrl(dto.CaratulaDestino)) faltan.push(['CaratulaDestino', 'Aquí va el nombre del destino, no una dirección web']);
         if (!v('Regimen')) faltan.push(['Regimen', 'Elige el régimen']);
-        if (!/^\d{3,12}$/.test(v('CodigoHotel'))) faltan.push(['CodigoHotel', 'Escribe el código del hotel (solo números)']);
+        if (!/^[A-Za-z0-9]{3,12}$/.test(v('CodigoHotel'))) faltan.push(['CodigoHotel', 'Escribe el código del hotel (letras y números, sin espacios)']);
         if (!dto.Id_Campanya) faltan.push(['Id_Campanya', 'Elige la campaña']);
         if (!dto.Origen) faltan.push(['Origen', 'Escribe la ciudad de salida']);
         if (dto.PrecioWeb != null && dto.PrecioWeb < 0) faltan.push(['PrecioWeb', 'El precio no puede ser negativo']);
@@ -1445,6 +1844,8 @@ const HX = (() => {
         ['input', 'change'].forEach(t => frm.addEventListener(t, e => { if (e.isTrusted && formAbierto()) formSucio = true; }));
         window.addEventListener('beforeunload', e => { if (formSucio && formAbierto()) { e.preventDefault(); e.returnValue = ''; } });
         frm.addEventListener('change', preview);
+        bmIniciar();
+        bxIniciar();
         $$('[data-reg]').forEach(b => b.addEventListener('click', () => {
             const r = campo('Regimen');
             r.value = b.dataset.reg;

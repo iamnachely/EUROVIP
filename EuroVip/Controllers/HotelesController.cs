@@ -19,10 +19,12 @@ namespace EuroVip.Controllers
         private readonly IImagenesLocales _img;
         private readonly ILogger<HotelesController> _logger;
         private readonly IMultimedia _mm;
+        private readonly IBookingMotor _bm;
         private const string TipoMm = "HOTEL";
 
-        public HotelesController(IHotelRepository repo, IImagenesLocales img, ILogger<HotelesController> logger, IMultimedia mm)
+        public HotelesController(IHotelRepository repo, IImagenesLocales img, ILogger<HotelesController> logger, IMultimedia mm, IBookingMotor bm)
         {
+            _bm = bm;
             _mm = mm;
             _repo = repo;
             _img = img;
@@ -50,6 +52,112 @@ namespace EuroVip.Controllers
             var stats = await _repo.EstadisticasAsync();
             return Json(new { resultado.Items, resultado.Total, resultado.Pagina, resultado.Tam, resultado.Paginas, stats });
         }
+
+        // ---- Booking Motor (API de maestros): elegir país → destino → hotel para completar el formulario ----
+        private async Task<IActionResult> BM(Func<Task<object?>> f)
+        {
+            if (!_bm.Configurado) return StatusCode(503, new { mensaje = "Booking Motor no está configurado en este servidor (falta la clave BookingMotor:Token)." });
+            try { return Json(await f()); }
+            catch (OperationCanceledException) { return StatusCode(499); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Booking Motor"); return StatusCode(502, new { mensaje = "No se pudo consultar Booking Motor. Prueba de nuevo en un momento." }); }
+        }
+        [HttpGet] public Task<IActionResult> BmPaises(CancellationToken ct) => BM(async () => await _bm.PaisesAsync(ct));
+        [HttpGet] public Task<IActionResult> BmDestinos(string pais, CancellationToken ct) => BM(async () => await _bm.DestinosAsync(pais, ct));
+        /// <summary>Busca por nombre en todos los hoteles de un destino de Booking Motor y marca los que ya están cargados.</summary>
+        [HttpGet]
+        public Task<IActionResult> BmBuscar(string destino, string? q, int pagina) => BM(async () =>
+        {
+            var b = _bm.Buscar(destino, q, pagina);
+            var cargados = await _repo.CodigosCargadosAsync();
+            return new { b.Listo, b.Cargados, b.TotalDestino, b.Total, b.Pagina, b.Paginas, b.Error,
+                         hoteles = b.Hoteles.Select(h => new { h.Codigo, h.Nombre, h.Imagen, h.Estrellas, h.Direccion, cargado = cargados.Contains(h.Codigo.ToLowerInvariant()) }) };
+        });
+
+        public sealed class BmCargarDto
+        {
+            public List<string>? Codigos { get; set; }
+            /// <summary>Destino de la Home donde salen (uno que exista en Herramientas › Destinos).</summary>
+            public string? Destino { get; set; }
+            public string? Pais { get; set; }
+            public string? Regimen { get; set; }
+            public bool Visible { get; set; } = true;
+        }
+
+        /// <summary>
+        /// Carga a la Home los hoteles elegidos de Booking Motor: el nombre, el código y la foto salen de Booking Motor; el resto con lo
+        /// habitual del formulario (campaña General-DT, sección HOTELES BOOKINGMOTOR, salida desde Santo Domingo, 1 noche, DOP).
+        /// Pasa por las mismas reglas que el formulario y el Excel. Devuelve el resultado de cada hotel.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BmCargar([FromBody] BmCargarDto d)
+        {
+            if (!_bm.Configurado) return StatusCode(503, new { mensaje = "Booking Motor no está configurado en este servidor." });
+            var codigos = (d.Codigos ?? new()).Select(c => (c ?? "").Trim().ToLowerInvariant()).Where(c => c.Length > 0).Distinct().Take(60).ToList();
+            if (codigos.Count == 0) return BadRequest(new { mensaje = "Elige al menos un hotel." });
+            var destino = ReglasDatos.Limpiar(d.Destino);
+            if (string.IsNullOrWhiteSpace(destino)) return BadRequest(new { mensaje = "Elige el destino de la Home donde saldrán los hoteles." });
+            var regimen = Regimenes.FirstOrDefault(r => r.Equals((d.Regimen ?? "").Trim(), StringComparison.OrdinalIgnoreCase)) ?? "Solo Habitación";
+            var pais = (d.Pais ?? "DO").Trim().ToUpperInvariant();
+            if (pais.Length != 2) pais = "DO";
+
+            var camps = (await _repo.CampanyasAsync(HotelRepository.IdiomaHotel)).ToList();
+            var conts = (await _repo.ContenedoresAsync(HotelRepository.IdiomaHotel)).ToList();
+            var camp = camps.FirstOrDefault(c => c.Id_Campanya == 99) ?? camps.FirstOrDefault(c => (c.Nombre ?? "").Contains("general", StringComparison.OrdinalIgnoreCase));
+            var cont = conts.FirstOrDefault(c => (c.Nombre ?? "").Contains("BOOKINGMOTOR", StringComparison.OrdinalIgnoreCase))
+                    ?? conts.FirstOrDefault(c => (c.Nombre ?? "").Trim().Equals("HOTEL", StringComparison.OrdinalIgnoreCase));
+            if (camp is null) return BadRequest(new { mensaje = "No hay una campaña General en español. Créala primero." });
+
+            var existentes = (await _repo.NombresAsync()).Select(ExcelTabla.Clave).ToHashSet();
+            var yaCodigos = await _repo.CodigosCargadosAsync();
+            var resultado = new List<object>();
+            var guardados = 0;
+            foreach (var codigo in codigos)
+            {
+                var h = await _bm.HotelAsync(codigo);
+                if (h is null) { resultado.Add(new { codigo, ok = false, mensaje = "Booking Motor no tiene ese hotel." }); continue; }
+                if (yaCodigos.Contains(codigo)) { resultado.Add(new { codigo, nombre = h.Nombre, ok = false, mensaje = "Ya está cargado (mismo código)." }); continue; }
+                var dto = new HotelGuardarDto
+                {
+                    Id_Destino = h.Nombre, CaratulaDestino = destino, Descripcion = $"{regimen} -{h.Codigo}", Id_Idioma = HotelRepository.IdiomaHotel,
+                    Id_Campanya = camp.Id_Campanya, Id_Moneda = "DOP", Noches = 1, Id_Pais_Origen = "DO", Origen = "Santo Domingo",
+                    Id_PaisDestino = pais, Id_Contenedor = cont?.Id_Contenedor, Posicion_Destino = 1, Estado = d.Visible
+                };
+                Preparar(dto);
+                var mal = CargaExcel.ErrorModelo(dto);
+                if (mal is null && await RevisarAsync(dto) is var (_, m)) mal = m;
+                if (mal is null && existentes.Contains(ExcelTabla.Clave(dto.Id_Destino))) mal = $"Ya hay un hotel llamado «{dto.Id_Destino}»: edítalo en la lista.";
+                if (mal is not null) { resultado.Add(new { codigo, nombre = h.Nombre, ok = false, mensaje = mal }); continue; }
+                try
+                {
+                    var id = await _repo.CrearAsync(dto);
+                    var foto = false;
+                    try
+                    {
+                        if (await _bm.FotoAsync(codigo) is { } f)
+                        {
+                            await using var ms = new MemoryStream(f.Bytes);
+                            await _mm.SubirAsync(TipoMm, id.ToString(), "PORTADA", ms, f.Nombre);
+                            foto = true;
+                        }
+                    }
+                    catch (Exception ex) { _logger.LogInformation(ex, "Booking Motor: foto del hotel {Codigo} no guardada", codigo); }
+                    await PorDefectoAsync(TipoMm, id, dto.CaratulaDestino, foto || _img.Buscar(TipoImagen, dto.Id_Destino) is not null);
+                    await Auditar("Hotel_Crear", id, new { dto, origen = "BookingMotor", codigo });
+                    existentes.Add(ExcelTabla.Clave(dto.Id_Destino)); yaCodigos.Add(codigo); guardados++;
+                    resultado.Add(new { codigo, nombre = h.Nombre, ok = true, id, foto, mensaje = foto ? "Cargado con su foto." : "Cargado (sin foto)." });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Booking Motor: no se pudo guardar el hotel {Codigo}", codigo);
+                    resultado.Add(new { codigo, nombre = h.Nombre, ok = false, mensaje = "No se pudo guardar. Intenta de nuevo." });
+                }
+            }
+            return Json(new { ok = guardados > 0, guardados, total = codigos.Count, resultado,
+                mensaje = guardados == codigos.Count ? $"¡Listo! {guardados} hotel(es) cargados a la Home." : $"{guardados} de {codigos.Count} cargados. Mira el detalle." });
+        }
+
+        [HttpGet] public Task<IActionResult> BmHoteles(string destino, string? q, int pagina, CancellationToken ct) => BM(async () => await _bm.HotelesAsync(destino, q, pagina, ct));
 
         [HttpGet]
         public async Task<IActionResult> Estadisticas() => Json(await _repo.EstadisticasAsync());
@@ -131,7 +239,7 @@ namespace EuroVip.Controllers
         {
             dto.Id_Destino = dto.Id_Destino?.Trim() ?? "";
             dto.CaratulaDestino = dto.CaratulaDestino?.Trim();
-            var d = System.Text.RegularExpressions.Regex.Match(dto.Descripcion ?? "", @"^(.+?)\s*-\s*(\d+)\s*$");
+            var d = System.Text.RegularExpressions.Regex.Match(dto.Descripcion ?? "", @"^(.+?)\s*-\s*([A-Za-z0-9]+)\s*$");
             if (d.Success) dto.Descripcion = $"{d.Groups[1].Value.Trim()} -{d.Groups[2].Value}";
         }
 

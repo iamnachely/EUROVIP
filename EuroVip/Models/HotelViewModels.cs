@@ -75,7 +75,7 @@ namespace EuroVip.Models
         //   Id_Destino = nombre del hotel · CaratulaDestino = nombre del destino · Descripcion = "Régimen -CódigoHotel"
         [Required(ErrorMessage = "Elige el régimen y escribe el código del hotel")]
         [StringLength(2000, ErrorMessage = "Máximo 2000 caracteres")]
-        [RegularExpression(@"^.+?\s*-\s*\d{3,12}\s*$", ErrorMessage = "La descripción debe ser «Régimen -Código» (ej. Solo Habitación -603258)")]
+        [RegularExpression(@"^.+?\s*-\s*[A-Za-z0-9]{3,12}\s*$", ErrorMessage = "La descripción debe ser «Régimen -Código» (ej. Solo Habitación -603258 o Solo Habitación -6luf)")]
         public string Descripcion { get; set; } = "";
 
         [Required(ErrorMessage = "Escribe el destino (ej. Costa del Sol)")]
