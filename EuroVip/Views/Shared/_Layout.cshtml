@@ -58,7 +58,7 @@
                         @if (Ve("traslados")) { <li><a asp-controller="Traslados" asp-action="Index" class="@Activo("Traslados")"><i class="bi bi-bus-front"></i> Traslados</a></li> }
                         @if (Ve("cruceros")) { <li><a asp-controller="Cruceros" asp-action="Index" class="@Activo("Cruceros")"><i class="bi bi-water"></i> Cruceros</a></li> }
                         @* CAMBIO 141: revisión de las cargas de proveedores (módulo Herramientas) *@
-                        @if (Ve("herramientas")) { <li><a asp-controller="Herramientas" asp-action="CargasProveedores" class="@(string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), "CargasProveedores", StringComparison.OrdinalIgnoreCase) ? "active" : "")"><i class="bi bi-inboxes"></i> Cargas de proveedores</a></li> }
+                        @if (Ve("cargas_proveedores")) { <li><a asp-controller="Herramientas" asp-action="CargasProveedores" class="@(string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), "CargasProveedores", StringComparison.OrdinalIgnoreCase) ? "active" : "")"><i class="bi bi-inboxes"></i> Cargas de proveedores</a></li> }
                     </ul>
                 </div>
 

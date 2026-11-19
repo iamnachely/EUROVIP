@@ -238,7 +238,7 @@ namespace EuroVip.Controllers
         // =====================================================================================================================
         private ProveedoresCarga Prov => HttpContext.RequestServices.GetRequiredService<ProveedoresCarga>();
 
-        [HttpGet, AccesoEstricto]
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedoresResumen() => Json(new
         {
             conteo = await Prov.ConteoAsync(),
@@ -248,14 +248,14 @@ namespace EuroVip.Controllers
             ahora = AgenciaProgramador.Ahora(HttpContext.RequestServices.GetRequiredService<IConfiguration>())
         });
 
-        [HttpGet, AccesoEstricto]
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedoresCuentas()
         {
             using var cn = _aud.Conexion();
             return Json(new { cuentas = await Prov.CuentasAsync(), catalogo = await CatalogoCargas.ProveedoresAsync(cn) });
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedorCuentaGuardar([FromBody] ProveedorCuentaDto dto)
         {
             var antes = dto.Id is int idA ? await Prov.CuentaAsync(idA) : null;
@@ -267,14 +267,14 @@ namespace EuroVip.Controllers
             return Json(new { ok = true, id, mensaje = antes is null ? $"Se creó la cuenta de «{dto.Nombre}»." : "Cambios guardados." });
         }
 
-        [HttpGet, AccesoEstricto]
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedoresCargas([FromQuery] CargaProveedorFiltro f)
         {
             var (items, total) = await Prov.CargasAsync(f);
             return Json(new { items, total, pagina = Math.Max(1, f.Pagina), tam = Math.Clamp(f.Tam, 5, 100), conteo = await Prov.ConteoAsync() });
         }
 
-        [HttpGet, AccesoEstricto]
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedorCarga(int id) =>
             await Prov.DetalleAsync(id) is { } d ? Json(d) : NotFound(new { mensaje = "Esa carga ya no existe." });
 
@@ -288,7 +288,7 @@ namespace EuroVip.Controllers
         }
 
         /// <summary>Aprobar y publicar ahora en la web (el mismo guardado de cada pantalla).</summary>
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedorCargaAprobar([FromBody] RevisionCargaDto dto)
         {
             var (ok, mensaje, errores) = await Prov.PublicarAsync(dto.Id, User.Identity?.Name ?? "desconocido");
@@ -296,7 +296,7 @@ namespace EuroVip.Controllers
             return ok ? Json(new { ok, mensaje }) : BadRequest(new { mensaje, errores = errores.Select(e => $"Producto {e.Indice}{(e.Producto is null ? "" : $" ({e.Producto})")}: {e.Mensaje}") });
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedorCargaProgramar([FromBody] RevisionCargaDto dto)
         {
             if (dto.Fecha is not DateTime cuando) return BadRequest(new { mensaje = "Elige la fecha y la hora del alta." });
@@ -306,7 +306,7 @@ namespace EuroVip.Controllers
             return Json(new { ok = true, mensaje = $"Programada: se publicará el {cuando:dd/MM/yyyy} a las {cuando:HH:mm} (hora de República Dominicana)." });
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedorCargaRechazar([FromBody] RevisionCargaDto dto)
         {
             if (await Prov.RechazarAsync(dto.Id, dto.Motivo, dto.Instrucciones, User.Identity?.Name ?? "desconocido") is string error) return BadRequest(new { mensaje = error });
@@ -314,7 +314,7 @@ namespace EuroVip.Controllers
             return Json(new { ok = true, mensaje = "Carga rechazada. El proveedor verá el motivo y las instrucciones para corregirla." });
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedorCargaFlyer([FromBody] RevisionCargaDto dto)
         {
             var flyer = await Prov.RegenerarFlyerAsync(dto.Id);
@@ -328,11 +328,11 @@ namespace EuroVip.Controllers
         /// Pedido de la usuaria: «una vista nueva para revisar las cargas de proveedores y sus flyers». Herramientas conserva su
         /// pestaña con un acceso directo. Mismo módulo (herramientas) que el resto de este controlador.
         /// </summary>
-        [HttpGet]
+        [HttpGet, ModuloAccion(Modulos.CargasProveedores)]
         public IActionResult CargasProveedores() => View();
 
         /// <summary>Devolver al proveedor para que cambie algo (con instrucciones): queda DEVUELTA y la puede corregir y reenviar.</summary>
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedorCargaDevolver([FromBody] RevisionCargaDto dto)
         {
             if (await Prov.DevolverAsync(dto.Id, dto.Instrucciones, User.Identity?.Name ?? "desconocido") is string error) return BadRequest(new { mensaje = error });
@@ -347,7 +347,7 @@ namespace EuroVip.Controllers
         }
 
         /// <summary>Comentario de Eurovip en la conversación de la carga (lo ve el proveedor en Gestión).</summary>
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedorCargaComentar([FromBody] ComentarioRevisionDto dto)
         {
             if (await Prov.CargaAsync(dto.Id) is null) return NotFound(new { mensaje = "Esa carga ya no existe." });

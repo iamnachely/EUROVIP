@@ -6167,6 +6167,17 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_carga_proveedor_coment
     CREATE INDEX IX_carga_proveedor_comentario_carga ON Eurovip.carga_proveedor_comentario (id_carga, id);
 GO
 
+/* ---------- CAMBIO 142: módulo «Cargas de proveedores» en Usuarios y accesos (19/11/2026) ----------
+   Pedido de la usuaria: «agrega /Herramientas/CargasProveedores en /Usuarios/Index para que no todos lo usen».
+   Antes esa pantalla y su bandeja iban con el módulo «Herramientas»: quien tenía Herramientas la veía. Ahora es un módulo propio
+   (clave cargas_proveedores, categoría Cargas, sin controlador: lo piden sus acciones con [ModuloAccion]). El Superadministrador
+   entra siempre; a los demás se les da (o no) desde Usuarios y accesos. También controla la alerta de la campana. */
+IF NOT EXISTS (SELECT 1 FROM Eurovip.UsuarioAcceso WHERE clave = 'cargas_proveedores')
+    INSERT INTO Eurovip.UsuarioAcceso (nombre_modulo, Categoria, clave, controladores, icono, descripcion, orden)
+    VALUES (N'Cargas de proveedores', N'Cargas', 'cargas_proveedores', NULL, 'bi-briefcase',
+            N'Revisar lo que cargan los proveedores: comentar, aprobar, programar, devolver o rechazar, y ver sus flyers.', 45);
+GO
+
 
 /* ##########################################################################################
    BITÁCORA — cambios de datos puntuales
@@ -6773,6 +6784,10 @@ GO
                Dos» (sin cargas) se ELIMINÓ desde Gestión (prueba del borrado). Para borrar la prueba: DELETE carga_proveedor WHERE id IN (3,4)
                (los comentarios se borran solos); DELETE proveedor_cuenta WHERE id = 3; y en VDTDESA DELETE Eurovip.usuario_admin
                WHERE email = 'proveedor@eurovip-prueba.test'.
+   19/11/2026  CAMBIO 142 aplicado SOLO en el 93: fila nueva en Eurovip.UsuarioAcceso (clave cargas_proveedores, «Cargas de
+               proveedores»). Ningún dato existente cambió. Nadie la tiene dada todavía (solo el Superadministrador entra): se da desde
+               Usuarios y accesos. Para quitarla: DELETE FROM Eurovip.UsuarioModulos WHERE id_modulo = (SELECT id_modulo FROM
+               Eurovip.UsuarioAcceso WHERE clave = 'cargas_proveedores'); DELETE FROM Eurovip.UsuarioAcceso WHERE clave = 'cargas_proveedores'.
    PENDIENTE   Copiar los demás usuarios de ViajeVDT (23). Los módulos y permisos de BackTiTan
                NO se copian (son otras pantallas): Eurovip tiene los suyos (CAMBIO 43) y los
                accesos se dan desde "Usuarios y accesos".

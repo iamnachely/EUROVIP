@@ -8,7 +8,7 @@ namespace EuroVip.Repositories
         Task<PerfilDto?> PerfilAsync(string userName);
         Task<bool> GuardarAsync(string userName, PerfilEditarDto dto);
         Task<string?> CambiarFotoAsync(string userName, string? ruta);
-        Task<NotificacionesDto> NotificacionesAsync(string userName);
+        Task<NotificacionesDto> NotificacionesAsync(string userName, bool verProveedores = true);
         Task MarcarLeidasAsync(string userName);
     }
 
@@ -59,7 +59,7 @@ namespace EuroVip.Repositories
             await cn.ExecuteAsync("UPDATE Eurovip.usuario SET notif_leidas_hasta = GETDATE() WHERE userName = @userName", new { userName });
         }
 
-        public async Task<NotificacionesDto> NotificacionesAsync(string userName)
+        public async Task<NotificacionesDto> NotificacionesAsync(string userName, bool verProveedores = true)
         {
             using var cn = _db.Conexion();
             var leidas = await cn.ExecuteScalarAsync<DateTime?>("SELECT notif_leidas_hasta FROM Eurovip.usuario WHERE userName = @userName", new { userName });
@@ -167,6 +167,8 @@ namespace EuroVip.Repositories
                     Fecha = hoy, Url = "/"
                 });
 
+            // CAMBIO 142: los avisos de cargas de proveedores solo los ve quien tiene ese módulo
+            if (!verProveedores) lista.RemoveAll(n => n.Id.StartsWith("prov-") || n.Id.StartsWith("provmsg-"));
             var orden = lista.OrderByDescending(n => n.Fecha).Take(25).ToList();
             foreach (var n in orden) n.Leida = leidas is not null && n.Fecha <= leidas;
             return new NotificacionesDto { Items = orden, NoLeidas = orden.Count(n => !n.Leida), LeidasHasta = leidas };

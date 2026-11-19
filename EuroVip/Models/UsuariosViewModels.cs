@@ -13,6 +13,8 @@ namespace EuroVip.Models
     {
         public const string Usuarios = "usuarios";
         public const string FlyersEnviar = "flyers_enviar";
+        /// <summary>CAMBIO 142: revisar las cargas de proveedores (antes iba con «herramientas»).</summary>
+        public const string CargasProveedores = "cargas_proveedores";
     }
 
     public class ModuloDto

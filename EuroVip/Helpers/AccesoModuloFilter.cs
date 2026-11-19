@@ -43,7 +43,8 @@ namespace EuroVip.Helpers
             http.Items[ClavePermisos] = p;
 
             var controlador = ctx.RouteData.Values["controller"]?.ToString() ?? "";
-            var modulo = await _accesos.ModuloDeAsync(controlador);
+            // CAMBIO 142: una acción puede pertenecer a su propio módulo (p. ej. las cargas de proveedores, dentro del controlador Herramientas)
+            var modulo = ctx.ActionDescriptor.EndpointMetadata.OfType<ModuloAccionAttribute>().FirstOrDefault()?.Clave ?? await _accesos.ModuloDeAsync(controlador);
             if (modulo is null || p.Puede(modulo)) { await next(); return; }
 
             if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
@@ -78,4 +79,11 @@ namespace EuroVip.Helpers
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class AccesoEstrictoAttribute : Attribute { }
+}
+
+namespace EuroVip.Helpers
+{
+    /// <summary>La acción pide este módulo (clave de [Eurovip].[UsuarioAcceso]) en vez del módulo de su controlador.</summary>
+    [AttributeUsage(AttributeTargets.Method)]
+    public class ModuloAccionAttribute : Attribute { public string Clave { get; } public ModuloAccionAttribute(string clave) => Clave = clave; }
 }

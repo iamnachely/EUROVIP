@@ -98,7 +98,8 @@ namespace EuroVip.Controllers
 
         // ---------------- notificaciones ----------------
         [HttpGet]
-        public async Task<IActionResult> Notificaciones() => Json(await _repo.NotificacionesAsync(Yo));
+        public async Task<IActionResult> Notificaciones() => Json(await _repo.NotificacionesAsync(Yo,
+            (HttpContext.Items[EuroVip.Helpers.AccesoModuloFilter.ClavePermisos] as PermisosUsuario)?.Puede(Modulos.CargasProveedores) ?? true));
 
         [HttpPost]
         [ValidateAntiForgeryToken]
