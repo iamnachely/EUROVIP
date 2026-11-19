@@ -77,11 +77,11 @@
     .tr-paso > h3 { margin: 0 0 12px; font-size: 14.5px; font-weight: 800; display: flex; gap: 8px; align-items: center; }
     .tr-paso > h3 .n { width: 24px; height: 24px; border-radius: 50%; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-size: 12px; }
     .tr-sub { margin: -6px 0 12px 32px; color: var(--ev-muted); font-size: 12.5px; font-weight: 600; }
-    details.tr-pleg > summary { list-style: none; cursor: pointer; }
-    details.tr-pleg > summary::-webkit-details-marker { display: none; }
-    details.tr-pleg > summary h3::after { content: "\F282"; font-family: "bootstrap-icons"; font-weight: 400; color: var(--ev-muted); transition: transform .2s; }
-    details.tr-pleg[open] > summary h3::after { transform: rotate(180deg); }
-    details.tr-pleg:not([open]) { padding-bottom: 2px; }
+    details.tr-detalle > summary { list-style: none; cursor: pointer; }
+    details.tr-detalle > summary::-webkit-details-marker { display: none; }
+    details.tr-detalle > summary h3::after { content: "\F282"; font-family: "bootstrap-icons"; font-weight: 400; color: var(--ev-muted); transition: transform .2s; }
+    details.tr-detalle[open] > summary h3::after { transform: rotate(180deg); }
+    details.tr-detalle:not([open]) { padding-bottom: 2px; }
     .tr-paso > h3 .ui-req, .tr-paso > h3 .ui-opc { margin-left: 2px; }
     .tr-paso > h3 small { margin-left: auto; color: var(--ev-muted); font-weight: 600; font-size: 12px; }
     .tr-seg { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -267,7 +267,7 @@
             <div id="edInfo"></div>
         </section>
 
-        <details class="tr-paso tr-pleg" id="edInternos" data-pleg data-siempre>
+        <details class="tr-paso tr-detalle" id="edInternos" data-pleg data-siempre>
             <summary><h3><span class="n">8</span> Proveedor, código y prioridad <b class="ui-opc">Opcional</b><small>solo para el equipo · no se ve en la web</small></h3></summary>
             <div class="ui-row">
                 <div class="ui-f"><label for="edCodigo">Código interno <em>letras y números · único en todo el sistema</em></label>
