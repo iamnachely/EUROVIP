@@ -24,13 +24,8 @@
 # ============================================================
 
 param(
-    # Nombre de la CARPETA en C:inetpubwwwroot (con Blue y Green)
     [Parameter(Mandatory = $true)]
     [string]$ProjectName,
-
-    # Nombre del SITIO (y del application pool) en IIS, si es distinto al de la carpeta (Eurovip: carpeta EurovipBACK, sitio bktitaneurovip)
-    [Parameter(Mandatory = $false)]
-    [string]$SiteName = "",
 
     [Parameter(Mandatory = $true)]
     [string]$ArtifactsPath,
@@ -57,7 +52,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$siteName    = if ($SiteName) { $SiteName } else { $ProjectName }
+$siteName    = $ProjectName
 $basePath    = "C:\inetpub\wwwroot"
 $projectRoot = "$basePath\$ProjectName"
 $bluePath    = "$projectRoot\Blue"

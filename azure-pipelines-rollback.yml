@@ -25,8 +25,8 @@ parameters:
     default: ''
 
 variables:
-  projectName: 'bktitaneurovip'                    # NOMBRE del sitio en IIS
-  basePath:    'C:\inetpub\wwwroot\EurovipBACK'    # CARPETA con Blue y Green (no se llama igual que el sitio)
+  projectName: 'bktitaneurovip'
+  basePath:    'C:\inetpub\wwwroot\bktitaneurovip'
 
 stages:
   - stage: Rollback

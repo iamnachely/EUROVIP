@@ -54,7 +54,7 @@ Todas las fotos se guardan en la carpeta del sitio de fotos y se ven desde `foto
 
 - Los nombres de archivo son un código aleatorio (`3f2a9c1e….webp`): nunca se pisa una foto. El slider conserva el nombre que se le da al cargarlo.
 - Se configura en `appsettings.json`: `Multimedia:CarpetaFisica`, `Multimedia:Url` y `Eurovip:Slider` (con `Anterior` = la carpeta de antes del slider).
-- **Permisos:** la identidad `IIS AppPool\bktitaneurovip` (el application pool del sitio) necesita **Modificar** en `C:\inetpub\wwwroot\photosVacacionalparce\eurovip`.
+- **Permisos:** la identidad `IIS AppPool\bktitaneurovip` necesita **Modificar** en `C:\inetpub\wwwroot\photosVacacionalparce\eurovip`.
 - **Primera vez:** en la app del servidor, **Herramientas → Fotos → Pasar las fotos de antes** (Superadministrador): copia a la
   carpeta nueva las fotos que estaban en `wwwroot\imagenes` y los archivos del slider de la carpeta anterior. No borra nada.
 - La base es la misma para la app del servidor y la de cada computadora, pero la carpeta `C:\inetpub\…` está en el servidor:
@@ -84,7 +84,7 @@ icacls C:\inetpub\wwwroot\eurovip /grant "IIS AppPool\eurovip:(OI)(CI)M"
 `appsettings.Local.json` (cadena de conexión, WhatsApp…) **no viaja en el pipeline**. Vive en el servidor, en la carpeta
 del sitio, y `Deploy.ps1` la conserva de un despliegue al siguiente.
 - **Primera vez:** copiar `appsettings.Local.json` (el de producción) a las carpetas `Blue` y `Green` del sitio
-  (`C:\inetpub\wwwroot\EurovipBACK\Blue` y `C:\inetpub\wwwroot\EurovipBACK\Green`). La carpeta se llama `EurovipBACK`, pero el sitio en IIS se llama `bktitaneurovip`. El log del deploy avisa con «ACCION REQUERIDA» si falta.
+  (`C:\inetpub\wwwroot\bktitaneurovip\Blue` y `C:\inetpub\wwwroot\bktitaneurovip\Green`; la carpeta y el sitio de IIS se llaman igual). El log del deploy avisa con «ACCION REQUERIDA» si falta.
 - **Después:** no hay que tocar nada; cada deploy restaura el archivo que ya tenía ese slot.
 
 ## Publicar una versión

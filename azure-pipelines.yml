@@ -33,15 +33,14 @@ variables:
   buildConfiguration: 'Release'
   dotnetVersion:      '8.0.x'
   projectPath:        'EuroVip/EuroVip.csproj'
-  projectName:        'EurovipBACK'      # CARPETA C:\inetpub\wwwroot\EurovipBACK (Blue/Green)
+  projectName:        'bktitaneurovip'   # nombre del sitio IIS y de C:\inetpub\wwwroot\bktitaneurovip (Blue/Green)
   # Solo se usan si el sitio IIS no existe (primer deploy: Deploy.ps1 lo crea)
   eurovipPuerto:      '8090'
   eurovipHost:        ''
   # PRODUCCIÓN (bktitan.eurovip.com.do): mismo servidor y agente que BackTiTan en producción
   prodAgentPool:      'Prod-Agents'
   prodAgentName:      'prod-agent-srvweb2'
-  prodProjectName:    'EurovipBACK'      # CARPETA C:\inetpub\wwwroot\EurovipBACK (con Blue y Green)
-  prodSiteName:       'bktitaneurovip'   # NOMBRE del sitio en IIS (no es el mismo que el de la carpeta)
+  prodProjectName:    'bktitaneurovip'   # sitio IIS con carpetas Blue/Green en C:\inetpub\wwwroot\bktitaneurovip
   prodPuerto:         '8090'
   prodHost:           ''                 # vacío en el primer deploy: el sitio nuevo no le quita el dominio al actual
 
@@ -138,7 +137,6 @@ stages:
                     filePath: '$(Pipeline.Workspace)/drop/scripts/Deploy.ps1'
                     arguments: >-
                       -ProjectName "$(prodProjectName)"
-                      -SiteName "$(prodSiteName)"
                       -ArtifactsPath "$(Pipeline.Workspace)/drop/app"
                       -HealthCheckPath "/health"
                       -Puerto $(prodPuerto)
