@@ -266,6 +266,7 @@ const EX = (() => {
     const esc = EV.esc;
     const editor = EV.drawer($('#exEditor'));
     let galeria = null;   // fotos extra (Eurovip.multimedia, uso GALERIA)
+    let tabInfo;          // volver al tab «Datos» al abrir el editor
     const visor = EV.drawer($('#exVer'));
     let todas = [], infoDest = {}, actual = null, fotoNueva = null, quitarFoto = false, verId = null;
     // Destinos plegados (se recuerda en este navegador)
@@ -478,7 +479,9 @@ const EX = (() => {
         $('#edDestino').onchange = () => EVPrioridad.contexto($('#pPeso'), { que: 'excursion', id: x?.id_Excursion, destino: $('#edDestino').value });   // los puestos son por destino
         EVPrioridad.vivo($('#edPrio'), () => $('#edPrecio').value);
         $('#edDesc').value = x?.descripcion || '';
-        $('#edInfo').innerHTML = EVCodigo.info(x || {}, { plano: true, titulo: '' });   // CAMBIO 130: una fila por texto
+        $('#edInfo').innerHTML = EVCodigo.info(x || {}, { plano: true, titulo: '' });   // CAMBIO 130: una fila por texto, con barra de formato
+        // Pedido: «Información para el cliente» siempre en un tab aparte (al crear y al editar); cada vez que se abre empieza en «Datos»
+        (tabInfo ??= EVCodigo.tabsInfo($('#exEditor .ui-db'), $('#edInfo').closest('.ui-sec'), { datos: 'Datos de la excursión' }))?.();
         $('#edInternos').open = !!(x && (x.codigo || x.id_Proveedor || x.peso || x.precio_Proveedor));   // al editar se abre si ya tiene algo
         $('#edEliminar').hidden = !x;
         $$('#exEditor .ui-f').forEach(f => f.classList.remove('err'));

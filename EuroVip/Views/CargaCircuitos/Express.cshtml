@@ -536,7 +536,7 @@ const XP = (() => {
         }));
 
         // eventos paso 5
-        $('#xpInfo').innerHTML = EVCodigo.info({});   // Información para el cliente: desplegable, opcional, una fila por texto
+        $('#xpInfo').innerHTML = EVCodigo.info({}, { plano: true, titulo: "" });   // Información para el cliente: siempre visible, opcional, una fila por texto con barra de formato
         $('#xpRevisar').onclick = revisar;
         $('#xpCargar').onclick = cargarTodo;
 
@@ -586,7 +586,7 @@ const XP = (() => {
         quitarDestino: i => { S.nuevo.destinos.splice(i, 1); pintarNuevo(); },
         quitarHotel: i => { S.nuevo.hoteles.splice(i, 1); pintarNuevo(); },
         // XP.nota('Incluye') abre el bloque y pone el cursor en esa fila
-        nota: t => { const d = $('#xpInfo details'); if (d) d.open = true; $(`#xpInfo [data-info="${NOTA_TIPO.find(x => x[1] === t)?.[0] || 'Incluye'}"]`)?.focus(); }
+        nota: t => { const d = $('#xpInfo details'); if (d) d.open = true; $(`#xpInfo [data-info="${NOTA_TIPO.find(x => x[1] === t)?.[0] || 'Incluye'}"]`)?.closest('.fila')?.querySelector('.ev-rt-ed')?.focus(); }
     };
 })();
 </script>

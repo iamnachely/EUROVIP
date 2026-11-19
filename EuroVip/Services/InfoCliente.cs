@@ -1,5 +1,8 @@
 using System.Data;
+using System.Net;
+using System.Text.RegularExpressions;
 using Dapper;
+using Ganss.Xss;
 
 namespace EuroVip.Services
 {
@@ -22,7 +25,61 @@ namespace EuroVip.Services
 
     public static class InfoCliente
     {
-        private static string? N(string? x) => string.IsNullOrWhiteSpace(x) ? null : x.Trim();
+        // Pedido de la usuaria: «que cada sección tenga barra de formato (tamaño, negrita, colores, viñetas, numeración); se guarda
+        // como HTML, pero siempre se ve con sus efectos en el BackOffice y en la web». Todo lo que se guarda pasa por Limpiar.
+        private static string? N(string? x) => Limpiar(x);
+
+        // ---------------- HTML de «Información para el cliente» ----------------
+        // ¿Es HTML? Una etiqueta de verdad (<p>, </li>, <br/>, <!-- …). «niños < 12» o «<100 €» siguen siendo texto plano.
+        private static readonly Regex Etiqueta = new(@"<\s*/?\s*[a-zA-Z][a-zA-Z0-9]*(\s[^<>]*)?/?\s*>|<!--", RegexOptions.Compiled);
+        public static bool EsHtml(string? x) => !string.IsNullOrEmpty(x) && Etiqueta.IsMatch(x);
+
+        // Lista blanca: lo que produce la barra de formato y nada más. Sin enlaces, imágenes, iframes, scripts ni on*.
+        private static readonly string[] EtiquetasPermitidas = { "p", "br", "strong", "b", "em", "i", "u", "span", "ul", "ol", "li", "div" };
+        private static readonly string[] CssPermitido = { "color", "background-color", "font-size", "font-weight" };
+        // Estas se borran CON su contenido (el texto de un <script> no debe quedar como texto visible).
+        private static readonly HashSet<string> ConContenido = new(StringComparer.OrdinalIgnoreCase)
+            { "script", "style", "iframe", "object", "embed", "noscript", "template", "svg", "math", "textarea", "select", "button", "title", "head", "img", "video", "audio", "form", "input", "link", "meta" };
+        private static readonly ThreadLocal<HtmlSanitizer> Saneador = new(() =>
+        {
+            var h = new HtmlSanitizer(new HtmlSanitizerOptions
+            {
+                AllowedTags = new HashSet<string>(EtiquetasPermitidas, StringComparer.OrdinalIgnoreCase),
+                AllowedAttributes = new HashSet<string>(new[] { "style" }, StringComparer.OrdinalIgnoreCase),
+                AllowedCssProperties = new HashSet<string>(CssPermitido, StringComparer.OrdinalIgnoreCase),
+                AllowedSchemes = new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                UriAttributes = new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            })
+            { KeepChildNodes = true };   // <font>, <a>, <h2>… se quitan pero su texto queda
+            h.RemovingTag += (_, e) => { if (ConContenido.Contains(e.Tag.LocalName)) e.Tag.InnerHtml = ""; };
+            return h;
+        });
+
+        /// <summary>
+        /// Lo que se guarda de cada texto: vacío → null; texto plano (Excel, cargas viejas) → tal cual; HTML → saneado con la lista
+        /// blanca y en una sola línea (los saltos los dan &lt;p&gt;, &lt;br&gt; y &lt;li&gt;; así «nota» se sigue separando por línea en blanco).
+        /// </summary>
+        public static string? Limpiar(string? x)
+        {
+            if (string.IsNullOrWhiteSpace(x)) return null;
+            if (!EsHtml(x)) return x.Trim();
+            var html = Regex.Replace(Saneador.Value!.Sanitize(x), @"[\r\n]+", " ").Trim();
+            return string.IsNullOrWhiteSpace(TextoPlano(html)) ? null : html;
+        }
+
+        /// <summary>HTML → texto plano con saltos de línea (para Excel, WhatsApp o donde se lea como texto). Texto plano → igual.</summary>
+        public static string? TextoPlano(string? x)
+        {
+            if (string.IsNullOrWhiteSpace(x)) return null;
+            if (!EsHtml(x)) return x.Trim();
+            var t = Regex.Replace(x, @"[\r\n]+", " ");
+            t = Regex.Replace(t, @"<\s*li\b[^>]*>", "\n• ", RegexOptions.IgnoreCase);
+            t = Regex.Replace(t, @"<\s*(br|/p|/div|/ul|/ol)\s*/?\s*>", "\n", RegexOptions.IgnoreCase);
+            t = WebUtility.HtmlDecode(Regex.Replace(t, @"<[^>]*>", ""));
+            t = Regex.Replace(t, @"[ \t ]+", " ");
+            t = Regex.Replace(string.Join("\n", t.Split('\n').Select(l => l.Trim())), @"\n{3,}", "\n\n").Trim();
+            return t.Length == 0 ? null : t;
+        }
 
         /// <summary>Tablas con las 6 columnas (nombre → tabla y condición por la clave @id). Solo estas: van en el SQL.</summary>
         private static readonly IReadOnlyDictionary<string, (string Tabla, string Donde)> Tablas = new Dictionary<string, (string, string)>

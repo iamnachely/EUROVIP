@@ -434,7 +434,9 @@ namespace EuroVip.Repositories
         /// </summary>
         internal static async Task GuardarDescripcionAsync(SqlConnection cn, SqlTransaction tx, string codigo, IEnumerable<CargaNotaDto> notas)
         {
-            var l = notas.Where(n => !string.IsNullOrWhiteSpace(n.Texto)).Select(n => (Tipo: (n.Tipo ?? "").Trim(), Texto: n.Texto.Trim())).ToList();
+            // Pedido de la usuaria (info para el cliente con formato): el HTML de la barra de formato se sanea aquí (lista blanca)
+            var l = notas.Select(n => (Tipo: (n.Tipo ?? "").Trim(), Texto: EuroVip.Services.InfoCliente.Limpiar(n.Texto)))
+                .Where(n => n.Texto is not null).Select(n => (n.Tipo, Texto: n.Texto!)).ToList();
             if (l.Count == 0) return;
             static bool Es(string tipo, string valor) => tipo.Equals(valor, StringComparison.OrdinalIgnoreCase);
             string? Juntar(Func<string, bool> cual, bool conTitulo = false)

@@ -177,7 +177,7 @@ namespace EuroVip.Repositories
             var p = new
             {
                 id = d.Id_Crucero, Titulo = d.Titulo.Trim(), Subtitulo = Nulo(d.Subtitulo), Id_Barco = idBarco, Puerto_Salida = Nulo(d.Puerto_Salida), Puerto_Llegada = Nulo(d.Puerto_Llegada),
-                d.Noches, Codigo = Nulo(d.Codigo), Descripcion = Nulo(d.Descripcion), Incluye = Nulo(d.Incluye), No_Incluye = Nulo(d.No_Incluye),
+                d.Noches, Codigo = Nulo(d.Codigo), Descripcion = Nulo(d.Descripcion), Incluye = EuroVip.Services.InfoCliente.Limpiar(d.Incluye), No_Incluye = EuroVip.Services.InfoCliente.Limpiar(d.No_Incluye),
                 Titulo_Seccion = Nulo(d.Titulo_Seccion), d.Activo, usuario, d.Peso, d.Precio_Proveedor,
                 Codigo_Interno = EuroVip.Services.CodigoInterno.Limpiar(d.Codigo_Interno), Id_Proveedor = string.IsNullOrWhiteSpace(d.Id_Proveedor) ? null : d.Id_Proveedor.Trim(), Id_Moneda = string.IsNullOrWhiteSpace(d.Id_Moneda) ? "DOP" : d.Id_Moneda.Trim().ToUpperInvariant()
             };

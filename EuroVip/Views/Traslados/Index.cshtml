@@ -323,6 +323,7 @@
     const editor = EV.drawer($('#trEditor'));
     const visor = EV.drawer($('#trVer'));
     let galeria = null;   // fotos extra (Eurovip.multimedia, uso GALERIA)
+    let tabInfo;          // volver al tab «Datos» al abrir el editor
     let todos = [], V = { tipos: {}, categorias: {}, vehiculos: {}, cobros: {} };
     let actual = null, fotoNueva = null, quitarFoto = false, verId = null, nombreTocado = false;
     let hoteles = [];                  // [{valor, texto}] elegidos en el editor
@@ -568,7 +569,9 @@
         EVPrioridad.vivo($('#edPrio'), () => $('#edPrecioIV').value || $('#edPrecioI').value);
         $('#edHoras').value = t?.horas_Cancelacion ?? '';
         $('#edDesc').value = t?.descripcion || '';
-        $('#edInfo').innerHTML = EVCodigo.info(t || {}, { plano: true, titulo: '' });   // CAMBIO 130: una fila por texto
+        $('#edInfo').innerHTML = EVCodigo.info(t || {}, { plano: true, titulo: '' });   // CAMBIO 130: una fila por texto, con barra de formato
+        // Pedido: «Información para el cliente» siempre en un tab aparte (al crear y al editar); cada vez que se abre empieza en «Datos»
+        (tabInfo ??= EVCodigo.tabsInfo($('#trEditor .ui-db'), $('#edInfo').closest('.tr-paso'), { datos: 'Datos del traslado' }))?.();
         $('#edInternos').open = !!(t && (t.codigo || t.id_Proveedor || t.peso || t.precio_Proveedor));   // al editar se abre si ya tiene algo
         $('#edActivo').checked = t ? t.activo : true;
         $('#edTodos').checked = t ? t.todos_Hoteles : true;

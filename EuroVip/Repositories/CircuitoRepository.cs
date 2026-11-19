@@ -391,7 +391,7 @@ namespace EuroVip.Repositories
 
         public async Task GuardarTextosAsync(CargaTextosCircuito t)
         {
-            static string? N(string? x) => string.IsNullOrWhiteSpace(x) ? null : x.Trim();
+            static string? N(string? x) => EuroVip.Services.InfoCliente.Limpiar(x);   // HTML de la barra de formato: saneado (lista blanca)
             var partes = new[] { N(t.Condiciones), N(t.Documentacion) is string dd ? "Documentación: " + dd : null, N(t.Importante) is string ii ? "Importante: " + ii : null }
                 .Where(x => x is not null).ToList();
             var nota = partes.Count == 0 ? null : string.Join("\n\n", partes);

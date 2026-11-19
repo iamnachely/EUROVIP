@@ -420,7 +420,7 @@ const XP = (() => {
             resumen();
         }));
 
-        $('#xpInfo').innerHTML = EVCodigo.info({});   // Información para el cliente: desplegable, opcional, una fila por texto
+        $('#xpInfo').innerHTML = EVCodigo.info({}, { plano: true, titulo: "" });   // Información para el cliente: siempre visible, opcional, una fila por texto con barra de formato
         $('#xpRevisar').onclick = revisar;
         $('#xpCargar').onclick = cargarTodo;
 
@@ -457,7 +457,7 @@ const XP = (() => {
         precioTodas: () => { const p = parseFloat($('#xpTodas').value); if (!(p > 0)) { EV.toast('Escribe el precio.', 'err'); return; } mx.todas(p); },
         limpiarFechas: async () => { if (!mx.fechas().length) return; if (await EV.confirmar({ titulo: '¿Quitar todas las fechas?', texto: `Se quitarán ${mx.fechas().length} fechas de esta carga (no afecta lo ya guardado).`, si: 'Quitar todas', peligro: true })) mx.limpiar(); },
         // XP.nota('Incluye') abre el bloque y pone el cursor en esa fila
-        nota: t => { const d = $('#xpInfo details'); if (d) d.open = true; $(`#xpInfo [data-info="${NOTA_TIPO.find(x => x[1] === t)?.[0] || 'Incluye'}"]`)?.focus(); }
+        nota: t => { const d = $('#xpInfo details'); if (d) d.open = true; $(`#xpInfo [data-info="${NOTA_TIPO.find(x => x[1] === t)?.[0] || 'Incluye'}"]`)?.closest('.fila')?.querySelector('.ev-rt-ed')?.focus(); }
     };
 })();
 </script>

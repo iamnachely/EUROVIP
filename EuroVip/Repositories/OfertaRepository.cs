@@ -346,7 +346,7 @@ namespace EuroVip.Repositories
         /// <summary>Textos de una carga (una fila de servicio_descripcion por código): crea o reemplaza los 4 textos.</summary>
         internal static async Task GuardarTextosAsync(SqlConnection cn, SqlTransaction tx, string codigo, CargaTextosDto t)
         {
-            static string? N(string? x) => string.IsNullOrWhiteSpace(x) ? null : x.Trim();
+            static string? N(string? x) => EuroVip.Services.InfoCliente.Limpiar(x);   // HTML de la barra de formato: saneado (lista blanca)
             await cn.ExecuteAsync(@"
                 IF EXISTS (SELECT 1 FROM Eurovip.servicio_descripcion WHERE codigo = @codigo AND id_idioma = 'ES')
                     UPDATE Eurovip.servicio_descripcion SET incluye = @inc, no_incluye = @noinc, nota = @nota, oferta_especial = @ofe

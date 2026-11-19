@@ -149,7 +149,7 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
     //   EVCodigo.contarInfo(raiz) → cuántos de los 6 tienen texto · EVCodigo.infoContador(elemento, raiz) pinta ese número en vivo
     //   (en un tab, por ejemplo). Los nombres que se mandan al servidor NO cambian: data-info="Incluye" … "Oferta_Especial".
     const INFO = [
-        ['Incluye', 'Incluye', 'Lo que entra en el precio', 'Ej.: Traslado ida y vuelta, desayuno buffet (una cosa por línea)', 'bi-check2-circle'],
+        ['Incluye', 'Incluye', 'Lo que entra en el precio', 'Ej.: Traslado ida y vuelta, desayuno buffet (con viñetas: una cosa por línea)', 'bi-check2-circle'],
         ['No_Incluye', 'No incluye', 'Lo que se paga aparte', 'Ej.: Propinas, bebidas premium, tasas locales', 'bi-x-circle'],
         ['Condiciones', 'Condiciones', 'Cancelación, cambios, edades', 'Ej.: Cancelación gratis hasta 7 días antes de la salida', 'bi-file-text'],
         ['Documentacion', 'Documentación', 'Papeles para viajar', 'Ej.: Pasaporte con 6 meses de vigencia', 'bi-passport'],
@@ -187,7 +187,31 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
 .ev-info textarea{width:100%;min-height:40px;border:1.5px solid var(--ev-line,#E2EFED);border-radius:11px;padding:8px 11px;font:500 14px var(--ev-font,inherit);line-height:1.45;background:var(--ev-surface,#fff);color:var(--ev-text,inherit);resize:vertical;outline:0;overflow:hidden}
 .ev-info textarea:focus{border-color:var(--ev-teal,#2BD4C4);box-shadow:0 0 0 4px rgba(116,242,230,.3)}
 .ev-info textarea::placeholder{color:var(--ev-muted,#66807C);opacity:.75}
-@media (max-width:640px){.ev-info .fila{grid-template-columns:1fr;gap:4px}.ev-info .fila>label{padding-top:2px}}`;
+.ev-info textarea[data-ev-rt]{display:none}
+.ev-rt{min-width:0;border:1.5px solid var(--ev-line,#E2EFED);border-radius:11px;background:var(--ev-surface,#fff);transition:border-color .2s,box-shadow .2s}
+.ev-rt:focus-within{border-color:var(--ev-teal,#2BD4C4);box-shadow:0 0 0 4px rgba(116,242,230,.3)}
+.ev-rt-barra{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:4px 6px;border-bottom:1px solid var(--ev-line,#E2EFED);opacity:.7;transition:opacity .2s;position:relative}
+.ev-rt:focus-within .ev-rt-barra,.ev-rt:hover .ev-rt-barra{opacity:1}
+.ev-rt-barra button{border:0;background:none;min-width:28px;height:28px;padding:0 6px;border-radius:7px;font-size:14px;color:var(--ev-text,#0B1215);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.ev-rt-barra button:hover{background:var(--ev-surface-2,#F4F8F7)}
+.ev-rt-barra button.on{background:var(--ev-ink,#0B1215);color:var(--ev-aqua,#74F2E6)}
+.ev-rt-barra select{height:28px;border:1px solid var(--ev-line,#E2EFED);border-radius:7px;padding:0 4px;font:600 12px var(--ev-font,inherit);background:var(--ev-surface,#fff);color:var(--ev-text,inherit);max-width:110px}
+.ev-rt-barra .sep{width:1px;height:18px;background:var(--ev-line,#E2EFED);margin:0 3px}
+.ev-rt-barra .muestra{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.15);background:#B42318}
+.ev-rt-pop{position:absolute;z-index:30;top:34px;left:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:250px;padding:8px;border-radius:12px;background:var(--ev-surface,#fff);border:1px solid var(--ev-line,#E2EFED);box-shadow:0 12px 30px -12px rgba(11,18,21,.35)}
+.ev-rt-pop[hidden]{display:none}
+.ev-rt-pop button.c{width:24px;height:24px;min-width:0;padding:0;border-radius:7px;border:1px solid rgba(0,0,0,.12)}
+.ev-rt-pop label{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;cursor:pointer}
+.ev-rt-pop input[type=color]{width:28px;height:24px;padding:0;border:0;background:none;cursor:pointer}
+.ev-rt-ed{min-height:40px;max-height:320px;overflow:auto;resize:vertical;padding:8px 11px;font:500 14px var(--ev-font,inherit);line-height:1.45;color:var(--ev-text,inherit);outline:0;word-break:break-word}
+.ev-rt-ed:empty::before{content:attr(data-ph);color:var(--ev-muted,#66807C);opacity:.75;pointer-events:none}
+.ev-rt-ed p,.ev-rt-ver p{margin:0 0 4px}.ev-rt-ed ul,.ev-rt-ed ol,.ev-rt-ver ul,.ev-rt-ver ol{margin:0 0 4px;padding-left:22px}
+.ev-rt-ed ul,.ev-rt-ver ul{list-style:disc}.ev-rt-ed ol,.ev-rt-ver ol{list-style:decimal}
+.ev-rt-ver{line-height:1.45;word-break:break-word}
+.ev-tabs-info>.ev-info-tabs{margin:0 0 14px}
+.ev-tabs-info[data-ev-tab="datos"]>[data-ev-pane-info]{display:none !important}
+.ev-tabs-info[data-ev-tab="info"]>:not(.ev-info-tabs):not([data-ev-pane-info]){display:none !important}
+@media (max-width:640px){.ev-info .fila{grid-template-columns:1fr;gap:4px}.ev-info .fila>label{padding-top:2px}.ev-rt-barra select{max-width:92px}}`;
         document.head.appendChild(s);
     }
     // Filas visibles al pintar (1 si está vacío; crece con el texto, hasta 8)
@@ -201,16 +225,135 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
         const cuenta = `<span class="n ${llenos ? 'si' : ''}" data-ev-info-n>${textoN(llenos)}</span>`;
         // titulo vacío = la sección de la pantalla ya tiene su propio título: solo «se ve en la web» y el contador
         const cab = titulo ? `<i class="bi bi-info-circle"></i> ${esc(titulo)} <span class="opc">Opcional</span> <em>se ve en la web</em>${cuenta}` : `<em><i class="bi bi-globe2"></i> Se ve en la web, en la ficha del producto.</em>${cuenta}`;
+        // Pedido de la usuaria: cada sección en UNA fila (etiqueta a la izquierda, editor a la derecha) con su barra de formato.
+        // El <textarea data-info> sigue existiendo (oculto) y guarda el HTML: así las pantallas lo leen y lo ponen igual que antes.
         const filas = INFO.map(([k, t, ayuda, ph, ico]) => {
             const id = ids[k] || `evi_${k}_${Math.random().toString(36).slice(2, 8)}`;
             return `<div class="fila ${String(val(k)).trim() ? 'llena' : ''}"><label for="${esc(id)}"><i class="bi ${ico}"></i><span>${esc(t)}<small>${esc(ayuda)}</small></span></label>`
-                + `<textarea id="${esc(id)}" data-info="${k}" ${attrs[k] || ''} rows="${filasDe(val(k))}" placeholder="${esc(ph)}">${esc(val(k))}</textarea></div>`;
+                + `<div class="ev-rt">${barraRt()}<div class="ev-rt-ed" contenteditable="true" role="textbox" aria-multiline="true" aria-label="${esc(t)}" data-ph="${esc(ph)}" spellcheck="true"></div>`
+                + `<textarea id="${esc(id)}" data-info="${k}" data-ev-rt ${attrs[k] || ''} rows="1" hidden>${esc(val(k))}</textarea></div></div>`;
         }).join('');
-        const cuerpo = `<p class="ayu">Nada aquí es obligatorio: escribe solo lo que quieras que el cliente lea. En «Incluye» y «No incluye» pon una cosa por línea (Enter).</p><div class="filas">${filas}</div>`;
+        const cuerpo = `<p class="ayu">Nada aquí es obligatorio: escribe solo lo que quieras que el cliente lea. Usa la barra de cada texto para el tamaño, la negrita, los colores, las viñetas o la numeración: en la web se ve igual.</p><div class="filas">${filas}</div>`;
         return plano
             ? `<div class="ev-info plano" data-ev-info data-siempre><div class="cab">${cab}</div>${cuerpo}</div>`
             : `<details class="ev-info" data-ev-info data-siempre ${llenos ? 'open' : ''}><summary>${cab}<i class="bi bi-chevron-down chev"></i></summary>${cuerpo}</details>`;
     }
+    // ---------- Editor con formato (barra: tamaño, negrita, cursiva, subrayado, colores, viñetas, numeración, limpiar) ----------
+    // El <textarea data-info> oculto guarda el HTML (es lo que leen las pantallas y se manda al servidor, que lo sanea otra vez).
+    // El <div contenteditable> es lo que ve la usuaria: siempre con sus efectos, nunca las etiquetas.
+    const COLORES = ['#0B1215', '#B42318', '#E8590C', '#B54708', '#067647', '#0E9384', '#1570EF', '#5925DC', '#C11574', '#66807C'];
+    const RT_TAGS = new Set(['P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'SPAN', 'UL', 'OL', 'LI', 'DIV']);
+    const RT_CSS = new Set(['color', 'background-color', 'font-size', 'font-weight']);
+    const RT_TAM = { 1: '10px', 2: '12px', 3: '14px', 4: '16px', 5: '18px', 6: '24px', 7: '24px' };
+    const nativoValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+    const esHtmlRt = v => /<\s*\/?\s*[a-zA-Z][a-zA-Z0-9]*(\s[^<>]*)?\/?\s*>/.test(v || '');
+    const rtBtn = (c, html, tit) => `<button type="button" data-rt="${c}" title="${tit}" aria-label="${tit}">${html}</button>`;
+    const barraRt = () => `<div class="ev-rt-barra" role="toolbar" aria-label="Formato del texto">`
+        + `<select data-rt="tam" title="Tamaño de letra" aria-label="Tamaño de letra"><option value="">Tamaño</option><option value="12px">Pequeña</option><option value="14px">Normal</option><option value="18px">Grande</option><option value="24px">Muy grande</option></select>`
+        + `<span class="sep"></span>` + rtBtn('bold', '<b>N</b>', 'Negrita') + rtBtn('italic', '<i>K</i>', 'Cursiva') + rtBtn('underline', '<u>S</u>', 'Subrayado')
+        + `<span class="sep"></span>` + rtBtn('color', '<b style="color:#B42318">A</b>', 'Color de letra') + rtBtn('resaltar', '<span class="muestra" style="background:#FEF0C7"></span>', 'Resaltar')
+        + `<span class="sep"></span>` + rtBtn('ul', '<i class="bi bi-list-ul"></i>', 'Viñetas') + rtBtn('ol', '<i class="bi bi-list-ol"></i>', 'Numeración')
+        + `<span class="sep"></span>` + rtBtn('limpiar', '<i class="bi bi-eraser"></i>', 'Quitar formato')
+        + `<div class="ev-rt-pop" hidden></div></div>`;
+    // HTML → HTML solo con la lista blanca (el mismo criterio del servidor): para lo que viene de la base antes de mostrarlo
+    function rtLimpio(v) {
+        if (!esHtmlRt(v)) return String(v || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => `<p>${esc(l)}</p>`).join('');
+        const t = document.createElement('template'); t.innerHTML = v;
+        const pasa = n => {
+            [...n.childNodes].forEach(h => {
+                if (h.nodeType === 3) return;
+                if (h.nodeType !== 1) { h.remove(); return; }
+                if (/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|NOSCRIPT|TEMPLATE|SVG|MATH|TEXTAREA|SELECT|BUTTON|TITLE|HEAD|IMG|VIDEO|AUDIO|FORM|INPUT|LINK|META)$/.test(h.tagName)) { h.remove(); return; }
+                pasa(h);
+                if (!RT_TAGS.has(h.tagName)) { h.replaceWith(...h.childNodes); return; }
+                const st = h.getAttribute('style');
+                [...h.attributes].forEach(a => h.removeAttribute(a.name));
+                if (st) {
+                    const ok = st.split(';').map(s => s.trim()).filter(s => RT_CSS.has((s.split(':')[0] || '').trim().toLowerCase()) && !/url\s*\(|expression|javascript/i.test(s)).join(';');
+                    if (ok) h.setAttribute('style', ok);
+                }
+            });
+        };
+        pasa(t.content);
+        return t.innerHTML;
+    }
+    function rtSync(ed) {
+        // <font size=7> (lo que crea el navegador al cambiar el tamaño) → <span style="font-size:…">
+        ed.querySelectorAll('font').forEach(f => {
+            const s = document.createElement('span');
+            const px = f.dataset.px || RT_TAM[f.getAttribute('size')];
+            if (px) s.style.fontSize = px;
+            s.append(...f.childNodes); f.replaceWith(s);
+        });
+        const ta = ed.parentNode.querySelector('textarea[data-info]');
+        const vacio = !ed.textContent.replace(/​/g, '').trim() && !ed.querySelector('li');
+        ta._rtLock = true; ta.value = vacio ? '' : ed.innerHTML.replace(/​/g, ''); ta._rtLock = false;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function rtEstado(ed) {
+        const barra = ed.parentNode.querySelector('.ev-rt-barra');
+        [['bold', 'bold'], ['italic', 'italic'], ['underline', 'underline'], ['ul', 'insertUnorderedList'], ['ol', 'insertOrderedList']].forEach(([k, c]) => {
+            let on = false; try { on = document.queryCommandState(c); } catch { }
+            barra.querySelector(`[data-rt="${k}"]`)?.classList.toggle('on', on && ed.contains(document.getSelection()?.anchorNode));
+        });
+    }
+    function rtIniciar(rt) {
+        if (rt.dataset.ok) return;
+        rt.dataset.ok = '1';
+        const ed = rt.querySelector('.ev-rt-ed'), ta = rt.querySelector('textarea[data-info]'), barra = rt.querySelector('.ev-rt-barra'), pop = rt.querySelector('.ev-rt-pop');
+        const pinta = v => { ed.innerHTML = rtLimpio(v); };
+        pinta(nativoValue.get.call(ta));
+        // quien ponga .value por código (al editar un producto) también refresca lo que se ve
+        Object.defineProperty(ta, 'value', { configurable: true, get() { return nativoValue.get.call(ta); }, set(v) { nativoValue.set.call(ta, v); if (!ta._rtLock) pinta(v); } });
+        let rango = null;
+        const guardar = () => { const s = document.getSelection(); if (s.rangeCount && ed.contains(s.anchorNode)) { rango = s.getRangeAt(0).cloneRange(); rtEstado(ed); } };
+        const volver = () => { ed.focus(); if (rango) { const s = document.getSelection(); s.removeAllRanges(); s.addRange(rango); } };
+        document.addEventListener('selectionchange', () => { if (ed.contains(document.getSelection()?.anchorNode)) guardar(); });
+        try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch { }
+        ed.addEventListener('input', () => rtSync(ed));
+        ed.addEventListener('blur', () => rtSync(ed));
+        ed.addEventListener('paste', e => { e.preventDefault(); const t = (e.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });
+        const ejecutar = (c, v, css) => { volver(); document.execCommand('styleWithCSS', false, !!css); document.execCommand(c, false, v); guardar(); rtSync(ed); };
+        const abrirPop = modo => {
+            if (!pop.hidden && pop.dataset.modo === modo) { pop.hidden = true; return; }
+            pop.dataset.modo = modo; pop.hidden = false;
+            pop.innerHTML = COLORES.map(c => `<button type="button" class="c" data-c="${c}" style="background:${c}" title="${c}" aria-label="Color ${c}"></button>`).join('')
+                + (modo === 'resaltar' ? ['#FEF0C7', '#D1FADF', '#D1E9FF', '#FCE7F6'].map(c => `<button type="button" class="c" data-c="${c}" style="background:${c}" aria-label="Resaltado ${c}"></button>`).join('') : '')
+                + `<label>Otro <input type="color" data-c-otro value="#1570EF"></label><button type="button" data-c="" title="Quitar">Quitar</button>`;
+        };
+        const aplicarColor = c => {
+            const modo = pop.dataset.modo; pop.hidden = true;
+            if (modo === 'color') ejecutar('foreColor', c || '#0B1215', true); else ejecutar('hiliteColor', c || 'transparent', true);
+        };
+        barra.addEventListener('mousedown', e => { if (!e.target.closest('select, input')) e.preventDefault(); });
+        barra.addEventListener('click', e => {
+            const b = e.target.closest('button'); if (!b) return;
+            const c = b.dataset.c;
+            if (c !== undefined) { aplicarColor(c); return; }
+            switch (b.dataset.rt) {
+                case 'bold': ejecutar('bold'); break;
+                case 'italic': ejecutar('italic'); break;
+                case 'underline': ejecutar('underline'); break;
+                case 'ul': ejecutar('insertUnorderedList'); break;
+                case 'ol': ejecutar('insertOrderedList'); break;
+                case 'limpiar': ejecutar('removeFormat'); break;
+                case 'color': case 'resaltar': guardar(); abrirPop(b.dataset.rt); break;
+            }
+        });
+        barra.addEventListener('change', e => {
+            if (e.target.matches('[data-c-otro]')) { aplicarColor(e.target.value); return; }
+            if (e.target.dataset.rt !== 'tam' || !e.target.value) return;
+            volver(); document.execCommand('styleWithCSS', false, false); document.execCommand('fontSize', false, '7');
+            ed.querySelectorAll('font[size="7"]').forEach(f => { f.dataset.px = e.target.value; });
+            e.target.value = ''; rtSync(ed);
+        });
+        document.addEventListener('mousedown', e => { if (!pop.hidden && !e.target.closest('.ev-rt-barra') ) pop.hidden = true; });
+        ed.addEventListener('keydown', e => { if (e.key === 'Escape' && !pop.hidden) { pop.hidden = true; e.stopPropagation(); } });
+    }
+    function rtBuscar(raiz) { (raiz.nodeType === 1 ? [...(raiz.matches('.ev-rt') ? [raiz] : []), ...raiz.querySelectorAll('.ev-rt')] : []).forEach(rtIniciar); }
+    const rtVigilar = () => { rtBuscar(document.body); new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && rtBuscar(n)))).observe(document.body, { childList: true, subtree: true }); };
+    if (document.body) rtVigilar(); else document.addEventListener('DOMContentLoaded', rtVigilar);
+
     const bloqueInfo = raiz => raiz?.matches?.('[data-ev-info]') ? raiz : raiz?.querySelector?.('[data-ev-info]');
     function contarInfo(raiz) {
         const b = bloqueInfo(raiz);
@@ -229,9 +372,10 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
     document.addEventListener('input', e => {
         const t = e.target;
         if (!t?.matches?.('[data-ev-info] textarea[data-info]')) return;
-        crecer(t); refrescarInfo(t.closest('[data-ev-info]'));
+        if (!t.hasAttribute('data-ev-rt')) crecer(t);
+        refrescarInfo(t.closest('[data-ev-info]'));
     });
-    document.addEventListener('focusin', e => { if (e.target?.matches?.('[data-ev-info] textarea[data-info]')) crecer(e.target); });
+    document.addEventListener('focusin', e => { if (e.target?.matches?.('[data-ev-info] textarea[data-info]:not([data-ev-rt])')) crecer(e.target); });
     // Contador para un tab o un título: «Información para el cliente (2)». Sigue al bloque aunque se vuelva a pintar.
     function infoContador(el, raiz) {
         if (!el || !raiz) return;
@@ -240,6 +384,28 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
         new MutationObserver(pinta).observe(raiz, { childList: true, subtree: true });
         pinta();
         return pinta;
+    }
+    // EVCodigo.tabsInfo(cuerpo, panelInfo, { datos }) → pone dos tabs arriba de un editor (cajón): «Datos» (todo lo demás) y
+    // «Información para el cliente» (solo panelInfo). Pedido de la usuaria: esa información SIEMPRE en un tab aparte, al crear y al editar.
+    function tabsInfo(cuerpo, panel, { datos = 'Datos del producto', contador } = {}) {
+        cssDeInfo();
+        if (!cuerpo || !panel || cuerpo.querySelector(':scope > .ev-info-tabs')) return;
+        cuerpo.classList.add('ev-tabs-info'); cuerpo.dataset.evTab = 'datos'; panel.setAttribute('data-ev-pane-info', '');
+        const barra = document.createElement('div');
+        barra.className = 'ui-tabs ev-info-tabs'; barra.setAttribute('role', 'tablist');
+        barra.innerHTML = `<button type="button" class="on" data-t="datos" role="tab"><i class="bi bi-ui-checks"></i> ${esc(datos)}</button>`
+            + `<button type="button" data-t="info" role="tab"><i class="bi bi-info-circle"></i> Información para el cliente <span class="n" data-ev-tab-n>opcional</span></button>`;
+        barra.addEventListener('click', e => {
+            const b = e.target.closest('button[data-t]'); if (!b) return;
+            cuerpo.dataset.evTab = b.dataset.t;
+            barra.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+            cuerpo.scrollTop = 0;
+        });
+        cuerpo.prepend(barra);
+        infoContador(barra.querySelector('[data-ev-tab-n]'), panel);
+        // al volver a abrir el editor siempre empieza en «Datos»
+        const volver = () => { cuerpo.dataset.evTab = 'datos'; barra.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.t === 'datos')); };
+        return volver;
     }
     // ---------- Secciones plegables de las cargas (<details class="ui-pleg">) ----------
     // • Si un campo de adentro se marca con error, la sección se abre sola (para que se vea qué falta).
@@ -310,5 +476,5 @@ input.ev-cod-mal{border-color:#F04438 !important;background:#FFFBFA !important}i
         q('nombre').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); crear(); } });
     }
 
-    return { campo, validar, proveedores, monedas, simbolo, limpiar, nombreProveedor, origen, ORIGEN, info, leerInfo, contarInfo, refrescarInfo, infoContador, abrirConDatos, estados, estadosLista };
+    return { tabsInfo, campo, validar, proveedores, monedas, simbolo, limpiar, nombreProveedor, origen, ORIGEN, info, leerInfo, contarInfo, refrescarInfo, infoContador, abrirConDatos, estados, estadosLista };
 })();

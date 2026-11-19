@@ -231,6 +231,11 @@
             <label class="ui-switch" style="margin-bottom:14px"><input type="checkbox" id="eActivo"><span class="tr"></span> Activa (se vende)</label>
             <div id="eInfo"></div>
         </div>
+        <!-- Información para el cliente: tab propio, con barra de formato (se guarda como HTML) -->
+        <div class="ui-sec" id="eInfoPane">
+            <div class="ui-sec-t"><span><i class="bi bi-info-circle"></i></span> Información para el cliente <b class="ui-opc">Opcional</b><small>es de toda la carga · se ve en la web</small></div>
+            <div id="eInfoCli"></div>
+        </div>
     </div>
     <div class="ui-df">
         <button class="ev-btn ghost" type="button" id="eEliminar"><i class="bi bi-trash3"></i> Eliminar</button>
@@ -265,6 +270,7 @@ const OF = (() => {
     const sel = new Set();
     let items = [], cat, actual = null, sups = null;
     const drawer = EV.drawer($('#ofEditor'));
+    let tabInfo;   // volver al tab «Datos» al abrir el editor
     const calDrawer = EV.drawer($('#ofCal'));
     let cal = null, volverCal = null;   // calendario abierto { hotel, ofertas, mes, dia } y a dónde volver tras editar
 
@@ -505,26 +511,16 @@ const OF = (() => {
                     <div class="ui-f"><label for="ePaisOrigen">País de origen <em>opcional en Solo Hotel</em></label><select id="ePaisOrigen"><option value="">— Sin origen —</option>${cat.paises.map(x => `<option value="${esc(x.valor)}">${esc(x.texto)}</option>`).join('')}</select></div>
                     <div class="ui-f"><label for="eOrigen">Ciudad de origen</label><input id="eOrigen" maxlength="50" value="${esc(o.origen || '')}" placeholder="Ej. Madrid"></div>
                 </div>
-                <details class="ui-sec" style="margin:4px 0 12px" ${o.notas.length ? 'open' : ''}><summary style="cursor:pointer;font-weight:800"><i class="bi bi-journal-text"></i> Información para el cliente <em style="font-weight:600;color:var(--ev-muted)">· es de toda la carga</em></summary>
-                    <div class="ui-row" style="margin-top:10px">
-                        <div class="ui-f"><label for="eIncluye">Incluye</label><textarea id="eIncluye" rows="3">${esc(nota('Incluye'))}</textarea></div>
-                        <div class="ui-f"><label for="eNoIncluye">No incluye</label><textarea id="eNoIncluye" rows="3">${esc(nota('No incluye'))}</textarea></div>
-                    </div>
-                    <div class="ui-row">
-                        <div class="ui-f"><label for="eCondiciones">Condiciones</label><textarea id="eCondiciones" rows="3">${esc(np.c)}</textarea></div>
-                        <div class="ui-f"><label for="eDocs">Documentación</label><textarea id="eDocs" rows="3" placeholder="Pasaporte, visado, vacunas…">${esc(np.d)}</textarea></div>
-                    </div>
-                    <div class="ui-row">
-                        <div class="ui-f"><label for="eImportante">Importante</label><textarea id="eImportante" rows="3" placeholder="Lo que el cliente tiene que saber sí o sí">${esc(np.i)}</textarea></div>
-                        <div class="ui-f"><label for="eOfertaEsp">Oferta especial</label><textarea id="eOfertaEsp" rows="3">${esc(nota('Oferta'))}</textarea></div>
-                    </div>
-                </details>
                 <div class="ui-f"><label>Cargada por</label><input value="${esc(o.usuario || '—')}" readonly tabindex="-1"></div>
                 ${vuelos.length ? `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>#</th><th>Vuelo</th><th>Ruta</th><th>Sale</th><th>Llega</th></tr></thead><tbody>
                     ${vuelos.map(v => `<tr><td>${v.segmento}</td><td>${esc(v.id_Proveedor)} ${esc(v.vuelo || '')}</td><td>${esc(v.id_Estacion_Origen)} → ${esc(v.id_Estacion_Destino)}</td>
                     <td>${EV.fecha(v.fecha_Salida.slice(0, 10))} ${esc(v.hora_Salida)}</td><td>${EV.fecha(v.fecha_Regreso.slice(0, 10))} ${esc(v.hora_Regreso)}</td></tr>`).join('')}</tbody></table></div>
                     <div class="ui-help" style="margin-top:8px">Si cambias la fecha de entrada, los vuelos se mueven los mismos días.</div>` : '<div class="ui-chip ghost"><i class="bi bi-bus-front"></i> ' + OF1M + ' sin vuelo</div>'}
                 `;
+            // Información para el cliente: mismos ids de antes (eIncluye…), ahora con barra de formato y en su propio tab
+            $('#eInfoCli').innerHTML = EVCodigo.info({ Incluye: nota('Incluye'), No_Incluye: nota('No incluye'), Condiciones: np.c, Documentacion: np.d, Importante: np.i, Oferta_Especial: nota('Oferta') },
+                { plano: true, titulo: '', ids: { Incluye: 'eIncluye', No_Incluye: 'eNoIncluye', Condiciones: 'eCondiciones', Documentacion: 'eDocs', Importante: 'eImportante', Oferta_Especial: 'eOfertaEsp' } });
+            (tabInfo ??= EVCodigo.tabsInfo($('#ofEditor .ui-db'), $('#eInfoPane'), { datos: '@(esPaq ? "Datos del paquete" : "Datos de la oferta")' }))?.();
             EVCodigo.monedas($('#eMoneda'), (o.id_Moneda || 'DOP').trim()).catch(() => { });
             EVCodigo.proveedores($('#eProveedor'), (o.id_Proveedor || '').trim(), { vacio: '— Elige el proveedor —' }).catch(() => { });
             EVCodigo.estados($('#eEstado'), o.id_Estado ?? '').catch(() => { });   // CAMBIO 131
