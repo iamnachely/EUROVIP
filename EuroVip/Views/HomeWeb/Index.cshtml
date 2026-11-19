@@ -183,6 +183,40 @@
     .cr-nuevo { border: 2px dashed var(--ev-line); border-radius: 22px; background: transparent; min-height: 230px; display: grid; place-items: center; color: var(--ev-muted); font: 800 14px var(--ev-font); cursor: pointer; }
     .cr-nuevo:hover { border-color: var(--ev-teal); color: var(--ev-deep); background: var(--ev-grad-soft); }
     .cr-nuevo i { font-size: 30px; display: block; margin-bottom: 6px; }
+    /* Visor grande del slide: la imagen tal cual se guardó (sin recomprimir) y su ficha */
+    .hw-slider img, .cr-img, .cr-vista .im { cursor: zoom-in; }
+    dialog.hw-visor { border: 0; padding: 0; border-radius: 26px; width: min(1280px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); background: var(--ev-surface); color: var(--ev-text); box-shadow: var(--ev-shadow-lg); overflow: hidden; }
+    dialog.hw-visor[open] { display: flex; flex-direction: column; animation: evRise .3s var(--ev-ease) both; }
+    dialog.hw-visor::backdrop { background: rgba(6,23,51,.7); backdrop-filter: blur(4px); }
+    .hw-visor header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 22px; border-bottom: 1px solid var(--ev-line); }
+    .hw-visor header h2 { margin: 0; font-size: 18px; font-weight: 800; overflow-wrap: anywhere; }
+    .hw-visor header small { color: var(--ev-muted); font-weight: 600; }
+    .vs-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 0; min-height: 0; overflow: hidden; }
+    .vs-img { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #0B1220; }
+    .vs-tabs { display: flex; gap: 6px; padding: 10px 12px; background: #0F172A; }
+    .vs-tabs button { border: 0; border-radius: 999px; padding: 7px 14px; font: 700 13px var(--ev-font); background: rgba(255,255,255,.1); color: #fff; cursor: pointer; }
+    .vs-tabs button.on { background: #fff; color: #0B1220; }
+    .vs-tabs button:disabled { opacity: .35; cursor: not-allowed; }
+    .vs-tabs .sp { flex: 1; }
+    .vs-tabs a, .vs-tabs .zoom { border-radius: 999px; padding: 7px 12px; font: 700 13px var(--ev-font); background: rgba(255,255,255,.1); color: #fff; text-decoration: none; border: 0; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+    .vs-lienzo { flex: 1; min-height: 240px; max-height: calc(100dvh - 190px); overflow: auto; display: grid; place-items: center; padding: 14px; }
+    .vs-lienzo img { display: block; max-width: 100%; max-height: calc(100dvh - 230px); width: auto; height: auto; object-fit: contain; border-radius: 6px; cursor: zoom-in; image-rendering: auto; }
+    .vs-lienzo.real { place-items: start; }
+    .vs-lienzo.real img { max-width: none; max-height: none; cursor: zoom-out; border-radius: 0; }
+    .vs-ficha { padding: 18px 20px; overflow: auto; max-height: calc(100dvh - 90px); border-left: 1px solid var(--ev-line); }
+    .vs-ficha h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--ev-muted); }
+    .vs-datos { display: grid; gap: 8px; margin: 0 0 16px; }
+    .vs-datos div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border-radius: 12px; background: var(--ev-surface-2); font-size: 13.5px; }
+    .vs-datos dt { color: var(--ev-muted); font-weight: 700; }
+    .vs-datos dd { margin: 0; font-weight: 800; text-align: right; overflow-wrap: anywhere; }
+    .vs-edit { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+    .vs-edit.si { background: #FEF0C7; color: #93370D; } .vs-edit.no { background: #DCFCE7; color: #166534; }
+    .vs-hist summary { cursor: pointer; font-weight: 800; padding: 8px 0; }
+    .vs-hist ol { list-style: none; margin: 8px 0 0; padding: 0 0 0 14px; border-left: 2px solid var(--ev-line); display: grid; gap: 12px; }
+    .vs-hist li { position: relative; font-size: 13px; }
+    .vs-hist li::before { content: ''; position: absolute; left: -20px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--ev-teal); }
+    .vs-hist li b { display: block; } .vs-hist li small { color: var(--ev-muted); display: block; } .vs-hist li ul { margin: 4px 0 0; padding-left: 16px; color: var(--ev-text); }
+    @@media (max-width: 860px) { .vs-cuerpo { grid-template-columns: 1fr; overflow: auto; } .vs-ficha { border-left: 0; border-top: 1px solid var(--ev-line); max-height: none; } .vs-lienzo { max-height: 60dvh; } }
     .cr-vistas { display: grid; grid-template-columns: 2fr 1.2fr .8fr; gap: 10px; align-items: end; }
     .cr-vista { text-align: center; }
     .cr-vista .im { border-radius: 14px; overflow: hidden; background: var(--ev-surface-2); border: 1px solid var(--ev-line); display: grid; place-items: center; color: var(--ev-muted); font-size: 12px; font-weight: 700; position: relative; }
@@ -306,6 +340,15 @@
     </div>
 </aside>
 
+<!-- ============ VISOR GRANDE DEL SLIDE (imagen sin perder calidad + ficha con tamaño, fechas e historial) ============ -->
+<dialog class="hw-visor" id="hwVisor" aria-label="Ver el slide en grande">
+    <header>
+        <div><h2 id="vsTitulo">Slide</h2><small id="vsSub"></small></div>
+        <button class="ui-ibtn x" type="button" id="vsCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </header>
+    <div class="vs-cuerpo" id="vsCuerpo"></div>
+</dialog>
+
 @section Scripts {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script src="~/js/eurovip-buscador.js" asp-append-version="true"></script>
@@ -403,7 +446,7 @@ const HW = (() => {
         // Flechas y puntos: van al slide y el paso automático vuelve a empezar desde ahí
         s.onclick = e => {
             const p = e.target.closest('[data-paso]'), d = e.target.closest('[data-ir]');
-            if (!p && !d) return tabs.ir('pCarrusel');
+            if (!p && !d) { if (e.target.closest('.editar') || !act[i]) return tabs.ir('pCarrusel'); return verSlide(act[i].id_Carrusel, 'web'); }
             e.stopPropagation();
             i = p ? (i + +p.dataset.paso + act.length) % act.length : +d.dataset.ir;
             mostrar(i); automatico();
@@ -586,6 +629,59 @@ const HW = (() => {
         } catch (e) { EV.toast(e.message, 'err'); }
     }
 
+    // ---- Visor grande del slide: la imagen tal cual está guardada (sin recomprimir), con su tamaño real, fechas y cambios ----
+    const VS_NOMBRES = { web: 'Web', tablet: 'Tablet', movil: 'Móvil' };
+    const vsFecha = x => x ? new Date(x).toLocaleString('es-DO', { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+    const vsPeso = b => b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+    const vsRazon = (w, h) => { const g = (a, b) => b ? g(b, a % b) : a, d = g(w, h) || 1; return `${w / d}:${h / d}`; };
+    async function verSlide(id, disp = 'web') {
+        const dlg = $('#hwVisor'), cuerpo = $('#vsCuerpo');
+        cuerpo.innerHTML = '<div class="ui-skel" style="height:420px;grid-column:1/-1"></div>';
+        $('#vsTitulo').textContent = 'Slide'; $('#vsSub').textContent = '';
+        if (!dlg.open) dlg.showModal();
+        let f;
+        try { f = await EV.api('/HomeWeb/FichaSlide?id=' + id); }
+        catch (e) { EV.toast(e.message, 'err'); dlg.close(); return; }
+        $('#vsTitulo').textContent = f.ruta;
+        $('#vsSub').textContent = `${f.activo ? 'Activo' : 'Inactivo'} · posición ${f.orden} · ${f.orientacion === 'V' ? 'vertical' : 'horizontal'}`;
+        const pintar = d => {
+            const im = f.imagenes.find(x => x.dispositivo === d) || f.imagenes[0];
+            const real = cuerpo.querySelector('.vs-lienzo')?.classList.contains('real');
+            cuerpo.innerHTML = `<div class="vs-img">
+                    <div class="vs-tabs">${f.imagenes.map(x => `<button type="button" data-d="${x.dispositivo}" class="${x.dispositivo === im.dispositivo ? 'on' : ''}" ${x.existe ? '' : 'disabled'}>${VS_NOMBRES[x.dispositivo]}${x.existe ? ` · ${x.ancho}×${x.alto}` : ' · sin imagen'}</button>`).join('')}
+                        <span class="sp"></span>
+                        ${im.existe ? `<button type="button" class="zoom" data-zoom><i class="bi bi-arrows-fullscreen"></i> Tamaño real</button><a href="${esc(im.url)}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Abrir original</a>` : ''}</div>
+                    <div class="vs-lienzo ${real ? 'real' : ''}">${im.existe ? `<img src="${esc(im.url)}" alt="${esc(f.ruta)} (${VS_NOMBRES[im.dispositivo]})" data-zoom>` : '<div class="ui-empty">No hay imagen para este tamaño.</div>'}</div>
+                </div>
+                <aside class="vs-ficha">
+                    <h3>Imagen ${VS_NOMBRES[im.dispositivo].toLowerCase()}</h3>
+                    <dl class="vs-datos">
+                        <div><dt>Dimensiones</dt><dd>${im.existe ? `${im.ancho} × ${im.alto} px` : '—'}</dd></div>
+                        <div><dt>Proporción</dt><dd>${im.existe && im.ancho ? vsRazon(im.ancho, im.alto) : '—'}</dd></div>
+                        <div><dt>Peso</dt><dd>${im.existe ? vsPeso(im.bytes) : '—'}</dd></div>
+                        <div><dt>Formato</dt><dd>${im.formato || '—'}</dd></div>
+                    </dl>
+                    <h3>Subida y cambios</h3>
+                    <dl class="vs-datos">
+                        <div><dt>Subida el</dt><dd>${vsFecha(f.subidoEl)}</dd></div>
+                        <div><dt>Subida por</dt><dd>${esc(f.subidoPor || '—')}</dd></div>
+                        <div><dt>¿Editado?</dt><dd><span class="vs-edit ${f.editado ? 'si' : 'no'}"><i class="bi ${f.editado ? 'bi-pencil' : 'bi-check2'}"></i> ${f.editado ? 'Sí' : 'No, es la original'}</span></dd></div>
+                        ${f.editado ? `<div><dt>Último cambio</dt><dd>${vsFecha(im.existe ? im.modificada : f.ultimoCambio)}</dd></div>` : ''}
+                    </dl>
+                    <details class="vs-hist" ${f.editado ? 'open' : ''}><summary><i class="bi bi-clock-history"></i> Historial de cambios (${f.historial.length})</summary>
+                        ${f.historial.length ? `<ol>${f.historial.map(h => `<li><b>${esc(h.que)}</b><small>${vsFecha(h.fecha)} · ${esc(h.usuario)}</small>${h.detalle.length ? `<ul>${h.detalle.map(x => `<li style="list-style:disc">${esc(x)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ol>` : '<p class="ui-help">No hay cambios registrados (los de antes de esta función no quedaron anotados).</p>'}
+                    </details>
+                </aside>`;
+        };
+        cuerpo.onclick = e => {
+            const t = e.target.closest('[data-d]'); if (t && !t.disabled) return pintar(t.dataset.d);
+            if (e.target.closest('[data-zoom]')) cuerpo.querySelector('.vs-lienzo')?.classList.toggle('real');
+        };
+        pintar(f.imagenes.find(x => x.dispositivo === disp && x.existe) ? disp : (f.imagenes.find(x => x.existe)?.dispositivo || 'web'));
+    }
+    $('#vsCerrar').onclick = () => $('#hwVisor').close();
+    $('#hwVisor').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+
     async function abrirSlide(id) {
         const s = D.slides.find(x => x.id_Carrusel === id); if (!s) return;
         slideActual = s; cat ??= await EVC.catalogos();
@@ -632,6 +728,7 @@ const HW = (() => {
             try { const r = await EV.post('/HomeWeb/SlideDestino', dto); s.destinos.push({ ...dto, id: r.id, origen: dto.Origen, destino: dto.Destino, precio: dto.Precio, id_Campanya: dto.Id_Campanya, regimen: dto.Regimen }); pintarPrecios(); pintarCarrusel(); EV.toast(r.mensaje); $('#pPre').value = ''; }
             catch (e) { EV.toast(e.message, 'err'); }
         };
+        $$('.cr-vista .im', $('#sdForm')).forEach((el, k) => { el.title = 'Ver en grande'; el.onclick = () => verSlide(s.id_Carrusel, ['web', 'tablet', 'movil'][k]); });
         $$('[data-rep]', $('#sdForm')).forEach(inp => inp.onchange = async () => {
             const f = inp.files[0]; if (!f) return;
             const fd = new FormData(); fd.append('id', s.id_Carrusel); fd.append(inp.dataset.rep, f);
@@ -869,6 +966,7 @@ const HW = (() => {
             const add = e.target.closest('[data-addsec]'); if (add) return abrirTarjeta(null, +add.dataset.addsec);
             const card = e.target.closest('.hw-card'); if (card) return abrirTarjeta(todas().find(t => t.id === +card.dataset.t), null, !!e.target.closest('[data-foto]'));
             const tr = e.target.closest('[data-tt]'); if (tr) return abrirTarjeta(todas().find(t => t.id === +tr.dataset.tt));
+            const imc = e.target.closest('.cr-img'); if (imc && imc.closest('.cr-card')) return verSlide(+imc.closest('.cr-card').dataset.s, 'web');
             const sed = e.target.closest('[data-sed]'); if (sed) return abrirSlide(+sed.dataset.sed);
             const mov = e.target.closest('[data-smover]'); if (mov) return moverSlide(+mov.dataset.smover, +mov.dataset.paso);
             const so = e.target.closest('[data-secojo]');

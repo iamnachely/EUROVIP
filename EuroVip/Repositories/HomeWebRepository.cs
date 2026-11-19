@@ -23,6 +23,8 @@ namespace EuroVip.Repositories
 
         Task OrdenSlidesAsync(List<int> ids);
         Task<bool> EditarSlideAsync(HwSlideDto dto);
+        /// <summary>Historial de un slide (Carrusel_Crear/Imagenes/Editar/Precio de la auditoría), del más nuevo al más viejo.</summary>
+        Task<List<HwCambioSlide>> HistorialSlideAsync(int id, string ruta);
         Task<int> CrearSlideAsync(string ruta, string orientacion, string? url, bool activo);
         Task<string?> EliminarSlideAsync(int id);
         Task<bool> ExisteRutaAsync(string ruta);
@@ -506,5 +508,65 @@ namespace EuroVip.Repositories
         }
 
         private static string? Vacio(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+        public async Task<List<HwCambioSlide>> HistorialSlideAsync(int id, string ruta)
+        {
+            using var cn = _db.Conexion();
+            var filas = await cn.QueryAsync<(DateTime Fecha, string Tipo, string Usuario, string? Cambios)>(@"
+                SELECT TOP 600 fecha_hora, tipo_mantenimiento, usuario, cambios_realizados
+                  FROM Eurovip.auditoria_consulta_oferta
+                 WHERE tipo_mantenimiento IN ('Carrusel_Crear','Carrusel_Imagenes','Carrusel_Editar','Carrusel_Precio')
+                 ORDER BY fecha_hora DESC, id DESC");
+            var r = new List<HwCambioSlide>();
+            foreach (var f in filas)
+            {
+                System.Text.Json.JsonElement j;
+                try { j = System.Text.Json.JsonDocument.Parse(f.Cambios ?? "{}").RootElement; } catch { continue; }
+                if (j.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+                var esteId = Txt(j, "Id_Carrusel", "id");
+                var estaRuta = Txt(j, "Ruta");
+                if (!(esteId == id.ToString() || string.Equals(estaRuta, ruta, StringComparison.OrdinalIgnoreCase))) continue;
+                var c = new HwCambioSlide { Fecha = f.Fecha, Usuario = f.Usuario };
+                switch (f.Tipo)
+                {
+                    case "Carrusel_Crear":
+                        c.Que = "Slide creado";
+                        c.Detalle.Add($"Archivo: {Txt(j, "ruta")}");
+                        c.Detalle.Add($"Orientación: {(Txt(j, "orientacion") == "V" ? "vertical" : "horizontal")}");
+                        if (!string.IsNullOrWhiteSpace(Txt(j, "url"))) c.Detalle.Add($"Enlace: {Txt(j, "url")}");
+                        if (Txt(j, "tablet") == "True") c.Detalle.Add("Con imagen propia para tablet");
+                        if (Txt(j, "movil") == "True") c.Detalle.Add("Con imagen propia para móvil");
+                        break;
+                    case "Carrusel_Imagenes":
+                        c.Que = "Imágenes reemplazadas";
+                        foreach (var (k, et) in new[] { ("web", "web"), ("tablet", "tablet"), ("movil", "móvil") })
+                            if (Txt(j, k) == "True") c.Detalle.Add($"Se cambió la imagen {et}");
+                        break;
+                    case "Carrusel_Editar":
+                        c.Que = "Datos del slide editados";
+                        c.Detalle.Add($"Orientación: {(Txt(j, "Orientacion") == "V" ? "vertical" : "horizontal")}");
+                        c.Detalle.Add($"Enlace: {(string.IsNullOrWhiteSpace(Txt(j, "Url")) ? "(sin enlace)" : Txt(j, "Url"))}");
+                        c.Detalle.Add($"Activo: {(Txt(j, "Activo") == "True" ? "sí" : "no")}");
+                        break;
+                    default:
+                        c.Que = "Precio de un destino guardado";
+                        c.Detalle.Add($"{Txt(j, "Origen")} → {Txt(j, "Destino")}: {Txt(j, "Precio")}");
+                        break;
+                }
+                r.Add(c);
+                if (r.Count >= 60) break;
+            }
+            return r;
+        }
+
+        /// <summary>Lee una propiedad del JSON de la auditoría sin importar mayúsculas (el primer nombre que exista).</summary>
+        private static string? Txt(System.Text.Json.JsonElement e, params string[] nombres)
+        {
+            foreach (var n in nombres)
+                foreach (var p in e.EnumerateObject())
+                    if (string.Equals(p.Name, n, StringComparison.OrdinalIgnoreCase))
+                        return p.Value.ValueKind == System.Text.Json.JsonValueKind.Null ? null : p.Value.ToString();
+            return null;
+        }
     }
 }

@@ -342,6 +342,51 @@ namespace EuroVip.Controllers
         /// Versión del slide = hora más reciente de sus 3 imágenes. La web de fotos dice al navegador que guarde cada imagen UN AÑO;
         /// como al reemplazar se usa el mismo nombre, sin ?v= el back seguía mostrando la imagen de antes.
         /// </summary>
+        /// <summary>
+        /// Ficha de un slide para el visor grande: de cada imagen (web, tablet, móvil) su tamaño real en píxeles, peso, formato, cuándo se subió
+        /// y cuándo se cambió por última vez, más el historial de cambios de la auditoría (quién y qué). Las imágenes se ven tal cual están guardadas.
+        /// </summary>
+        [HttpGet, ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> FichaSlide(int id)
+        {
+            var s = await _repo.SlideAsync(id);
+            if (s is null) return NotFound(new { mensaje = "No encontramos ese slide." });
+            var version = VersionSlide(s.Ruta);
+            var imagenes = new List<HwImagenFicha>();
+            foreach (var (disp, carpeta, url) in new[] { ("web", "Fisico", "Url"), ("tablet", "FisicoMd", "UrlMd"), ("movil", "FisicoSm", "UrlSm") })
+            {
+                var f = new HwImagenFicha { Dispositivo = disp };
+                try
+                {
+                    var ruta = Path.Combine(Slider(carpeta), s.Ruta);
+                    if (System.IO.File.Exists(ruta))
+                    {
+                        var fi = new FileInfo(ruta);
+                        f.Existe = true; f.Bytes = fi.Length; f.Formato = fi.Extension.TrimStart('.').ToUpperInvariant();
+                        f.Subida = fi.CreationTime; f.Modificada = fi.LastWriteTime;
+                        f.Url = $"{Slider(url)}/{Uri.EscapeDataString(s.Ruta)}?v={version}";
+                        using var codec = SkiaSharp.SKCodec.Create(ruta);
+                        if (codec is not null) { f.Ancho = codec.Info.Width; f.Alto = codec.Info.Height; }
+                    }
+                }
+                catch { /* carpeta sin configurar o archivo que no se puede leer: la imagen sale como «sin imagen» */ }
+                imagenes.Add(f);
+            }
+            var historial = await _repo.HistorialSlideAsync(s.Id_Carrusel, s.Ruta);
+            var creado = historial.LastOrDefault(h => h.Que == "Slide creado");
+            var editado = historial.Any(h => h.Que != "Slide creado" && h.Que != "Precio de un destino guardado")
+                          || imagenes.Any(i => i.Existe && i.Modificada - i.Subida > TimeSpan.FromSeconds(3));
+            return Json(new
+            {
+                id = s.Id_Carrusel, s.Ruta, s.Activo, s.Orden, s.Orientacion, s.Url,
+                subidoPor = creado?.Usuario,
+                subidoEl = creado?.Fecha ?? imagenes.Where(i => i.Subida is not null).Select(i => i.Subida).Min(),
+                editado,
+                ultimoCambio = imagenes.Where(i => i.Modificada is not null).Select(i => i.Modificada).Max(),
+                imagenes, historial
+            });
+        }
+
         private string VersionSlide(string ruta)
         {
             long max = 0;

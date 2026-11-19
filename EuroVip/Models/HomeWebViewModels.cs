@@ -83,6 +83,29 @@ namespace EuroVip.Models
         public List<HwSlideDestino> Destinos { get; set; } = new();
     }
 
+    /// <summary>Una imagen del slide (web, tablet o móvil) tal como está guardada: tamaño real, peso y fechas del archivo.</summary>
+    public class HwImagenFicha
+    {
+        public string Dispositivo { get; set; } = "";
+        public bool Existe { get; set; }
+        public string? Url { get; set; }
+        public int Ancho { get; set; }
+        public int Alto { get; set; }
+        public long Bytes { get; set; }
+        public string? Formato { get; set; }
+        public DateTime? Subida { get; set; }
+        public DateTime? Modificada { get; set; }
+    }
+
+    /// <summary>Un cambio hecho al slide (de la auditoría): quién, cuándo y qué.</summary>
+    public class HwCambioSlide
+    {
+        public DateTime Fecha { get; set; }
+        public string Usuario { get; set; } = "";
+        public string Que { get; set; } = "";
+        public List<string> Detalle { get; set; } = new();
+    }
+
     public class HwImagenes
     {
         public string Web { get; set; } = "";
