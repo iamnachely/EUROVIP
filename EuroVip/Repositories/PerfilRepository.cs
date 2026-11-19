@@ -118,6 +118,26 @@ namespace EuroVip.Repositories
             }
             catch (Exception) { /* sin las tablas del CAMBIO 140 la campana sigue funcionando */ }
 
+            // 2c) CAMBIO 141: respuestas del PROVEEDOR en la conversación de una carga (las últimas 10 de los últimos 15 días)
+            try
+            {
+                var resp = await cn.QueryAsync<(int Id, int IdCarga, string Codigo, string Cuenta, string Nombre, string Texto, DateTime Fecha)>(@"
+                    SELECT TOP 10 k.id, c.id, c.codigo, pc.nombre, k.nombre, k.texto, k.fecha
+                    FROM Eurovip.carga_proveedor_comentario k
+                        JOIN Eurovip.carga_proveedor c ON c.id = k.id_carga
+                        JOIN Eurovip.proveedor_cuenta pc ON pc.id = c.id_cuenta
+                    WHERE k.autor = 'PROVEEDOR' AND k.fecha >= DATEADD(DAY, -15, SYSDATETIME())
+                    ORDER BY k.fecha DESC");
+                foreach (var k in resp)
+                    lista.Add(new NotificacionDto
+                    {
+                        Id = $"provmsg-{k.Id}", Tipo = "alerta", Icono = "bi-chat-dots",
+                        Titulo = $"{k.Cuenta} respondió en la carga {k.Codigo}", Texto = Corta(k.Texto, 110),
+                        Fecha = k.Fecha, Url = $"/Herramientas/CargasProveedores?carga={k.IdCarga}"
+                    });
+            }
+            catch (Exception) { /* sin la tabla del CAMBIO 141 la campana sigue funcionando */ }
+
             // 3) alertas del día (no se acumulan: una por día)
             var hoy = DateTime.Today;
             var semana = await cn.ExecuteScalarAsync<int>(@"
