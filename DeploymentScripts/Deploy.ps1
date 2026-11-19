@@ -51,6 +51,9 @@ param(
 # (EurovipAppSettingsLocal, el JSON en base64) en la variable de entorno EUROVIP_APPSETTINGS_LOCAL.
 # Si viene, se escribe en el slot; si no, se conserva la que ya tenga el servidor.
 $appSettingsLocalB64 = $env:EUROVIP_APPSETTINGS_LOCAL
+# Producción: si el pipeline trae la variable de producción (EurovipAppSettingsLocalProd), gana. Si no está
+# definida, Azure DevOps deja el texto "$(EurovipAppSettingsLocalProd)" tal cual: se ignora.
+if ($env:EUROVIP_APPSETTINGS_LOCAL_PROD -and -not $env:EUROVIP_APPSETTINGS_LOCAL_PROD.StartsWith('$(')) { $appSettingsLocalB64 = $env:EUROVIP_APPSETTINGS_LOCAL_PROD }
 
 $ErrorActionPreference = "Stop"
 

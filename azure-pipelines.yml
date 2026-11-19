@@ -3,22 +3,34 @@
 # Copiado de BackTiTan (azure-pipelines.yml) y adaptado a Eurovip.
 # Estrategia: Blue-Green Deployment en IIS on-premise (DeploymentScripts/Deploy.ps1).
 #
-# Flujo: Build → Deploy al servidor de Eurovip (aprobación manual en el Environment).
-#
-# IMPORTANTE: el despliegue es MANUAL (trigger: none). En Eurovip se sube a main
-# después de cada tarea; publicar en el servidor es otra decisión:
-#   Azure DevOps → Pipelines → EurovipBack → Run pipeline.
+# Flujo (igual que BackTiTan, pedido de la usuaria 19/11/2026: «que el BackOffice Eurovip se suba
+# automático como el BackTitan»):
+#   cada push a main → Build → Deploy DESARROLLO (automático) → Deploy PRODUCCIÓN (espera aprobación manual
+#   en el Environment «Produccion»: Pipelines → Environments → Produccion → Approvals and checks).
+# También se puede lanzar a mano: Azure DevOps → Pipelines → EurovipBack → Run pipeline.
 #
 # Requisitos en Azure DevOps (proyecto EurovipBack):
 #   - Pool de agentes "Dev-Agents" (el mismo de BackTropi/BackTiTan en DESARROLLO, agente dev-agent-srvweb1)
 #     autorizado para el proyecto EurovipBack (Project settings → Agent pools → Add pool → Existing)
 #     (el que tiene el IIS donde vive el sitio "eurovip").
 #   - Environment "Desarrollo" (sin aprobación) en el proyecto EurovipBack
+#   - Pool "Prod-Agents" (agente prod-agent-srvweb2, el de BackTiTan en PRODUCCIÓN) autorizado para EurovipBack
+#   - Environment "Produccion" CON aprobación manual en el proyecto EurovipBack
+#   - Variable secreta EurovipAppSettingsLocalProd (appsettings.Local.json de producción en base64; si no se
+#     define, se usa la de desarrollo)
 #
 # Requisitos en el servidor: ver DeploymentScripts/README-DESPLIEGUE.md
 # ============================================================
 
-trigger: none
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - '**.md'
+      - Docs/**
+      - Database/**
 
 variables:
   buildConfiguration: 'Release'
@@ -31,6 +43,12 @@ variables:
   # Pool del agente instalado en el servidor de Eurovip
   agentPool:          'Dev-Agents'
   agentName:          'dev-agent-srvweb1'
+  # PRODUCCIÓN (bktitan.eurovip.com.do): mismo servidor y agente que BackTiTan en producción
+  prodAgentPool:      'Prod-Agents'
+  prodAgentName:      'prod-agent-srvweb2'
+  prodProjectName:    'eurovipBack'      # sitio IIS con carpetas Blue/Green en C:\inetpub\wwwroot\eurovipBack
+  prodPuerto:         '8090'
+  prodHost:           ''                 # vacío en el primer deploy: el sitio nuevo no le quita el dominio al actual
   # Variable SECRETA que se define en el pipeline (NO en este archivo):
   #   EurovipAppSettingsLocal = appsettings.Local.json en base64 (cadena de conexión, WhatsApp…)
 
@@ -136,3 +154,44 @@ stages:
                   # Las variables secretas no llegan solas a los scripts: se pasan de forma explícita.
                   env:
                     EUROVIP_APPSETTINGS_LOCAL: $(EurovipAppSettingsLocal)
+
+  # ============================================================
+  # STAGE 3: DEPLOY A PRODUCCIÓN (bktitan.eurovip.com.do)
+  # Solo desde main y si DESARROLLO salió bien. Espera la aprobación del Environment «Produccion».
+  # El MISMO artifact del Build (no se recompila). Agente prod-agent-srvweb2, como BackTiTan.
+  # ============================================================
+  - stage: DeployProd
+    displayName: 'Deploy → PRODUCCIÓN'
+    dependsOn: Deploy
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+
+    jobs:
+      - deployment: DeployProdJob
+        displayName: 'Deploy Eurovip a producción'
+        environment: 'Produccion'
+        pool:
+          name: ${{ variables.prodAgentPool }}
+          demands:
+            - Agent.Name -equals ${{ variables.prodAgentName }}
+
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: drop
+
+                - task: PowerShell@2
+                  displayName: 'Blue-Green Deploy'
+                  inputs:
+                    filePath: '$(Pipeline.Workspace)/drop/scripts/Deploy.ps1'
+                    arguments: >-
+                      -ProjectName "$(prodProjectName)"
+                      -ArtifactsPath "$(Pipeline.Workspace)/drop/app"
+                      -HealthCheckPath "/health"
+                      -Puerto $(prodPuerto)
+                      -NombreHost "$(prodHost)"
+                    errorActionPreference: 'stop'
+                  env:
+                    EUROVIP_APPSETTINGS_LOCAL: $(EurovipAppSettingsLocal)
+                    EUROVIP_APPSETTINGS_LOCAL_PROD: $(EurovipAppSettingsLocalProd)   # si existe, Deploy.ps1 la prefiere

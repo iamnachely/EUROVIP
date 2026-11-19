@@ -12,6 +12,13 @@
 trigger: none
 
 parameters:
+  - name: servidor
+    displayName: 'Servidor'
+    type: string
+    default: 'Desarrollo'
+    values:
+      - Desarrollo
+      - Produccion
   - name: confirm
     displayName: 'Escribir ROLLBACK para confirmar'
     type: string
@@ -27,11 +34,16 @@ stages:
     jobs:
       - deployment: RollbackJob
         displayName: 'Rollback Eurovip'
-        environment: 'Desarrollo'
+        environment: ${{ parameters.servidor }}
         pool:
-          name: 'Dev-Agents'
-          demands:
-            - Agent.Name -equals dev-agent-srvweb1
+          ${{ if eq(parameters.servidor, 'Produccion') }}:
+            name: 'Prod-Agents'
+            demands:
+              - Agent.Name -equals prod-agent-srvweb2
+          ${{ else }}:
+            name: 'Dev-Agents'
+            demands:
+              - Agent.Name -equals dev-agent-srvweb1
         strategy:
           runOnce:
             deploy:
