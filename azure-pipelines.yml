@@ -13,8 +13,8 @@
 # Requisitos en Azure DevOps (proyecto EurovipBack):
 #   - Pool "Prod-Agents" (agente prod-agent-srvweb2, el de BackTiTan en PRODUCCIÓN) autorizado para EurovipBack
 #   - Environment "Produccion" CON aprobación manual en el proyecto EurovipBack
-#   - Variable secreta EurovipAppSettingsLocalProd (appsettings.Local.json de producción en base64; si no se
-#     define, se usa EurovipAppSettingsLocal)
+#   - NO hace falta ninguna variable: como BackTiTan, appsettings.Local.json vive en el servidor y se preserva en cada deploy
+#     (solo la primera vez se copia a mano al sitio; ver README-DESPLIEGUE.md)
 #
 # Requisitos en el servidor: ver DeploymentScripts/README-DESPLIEGUE.md
 # ============================================================
@@ -43,8 +43,6 @@ variables:
   prodProjectName:    'eurovipBack'      # sitio IIS con carpetas Blue/Green en C:\inetpub\wwwroot\eurovipBack
   prodPuerto:         '8090'
   prodHost:           ''                 # vacío en el primer deploy: el sitio nuevo no le quita el dominio al actual
-  # Variable SECRETA que se define en el pipeline (NO en este archivo):
-  #   EurovipAppSettingsLocal = appsettings.Local.json en base64 (cadena de conexión, WhatsApp…)
 
 stages:
 
@@ -144,6 +142,3 @@ stages:
                       -Puerto $(prodPuerto)
                       -NombreHost "$(prodHost)"
                     errorActionPreference: 'stop'
-                  env:
-                    EUROVIP_APPSETTINGS_LOCAL: $(EurovipAppSettingsLocal)
-                    EUROVIP_APPSETTINGS_LOCAL_PROD: $(EurovipAppSettingsLocalProd)   # si existe, Deploy.ps1 la prefiere

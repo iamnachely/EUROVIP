@@ -47,13 +47,8 @@ param(
     [string]$NombreHost = ""
 )
 
-# Eurovip: la configuración real (appsettings.Local.json) llega del pipeline como variable SECRETA
-# (EurovipAppSettingsLocal, el JSON en base64) en la variable de entorno EUROVIP_APPSETTINGS_LOCAL.
-# Si viene, se escribe en el slot; si no, se conserva la que ya tenga el servidor.
-$appSettingsLocalB64 = $env:EUROVIP_APPSETTINGS_LOCAL
-# Producción: si el pipeline trae la variable de producción (EurovipAppSettingsLocalProd), gana. Si no está
-# definida, Azure DevOps deja el texto "$(EurovipAppSettingsLocalProd)" tal cual: se ignora.
-if ($env:EUROVIP_APPSETTINGS_LOCAL_PROD -and -not $env:EUROVIP_APPSETTINGS_LOCAL_PROD.StartsWith('$(')) { $appSettingsLocalB64 = $env:EUROVIP_APPSETTINGS_LOCAL_PROD }
+# Eurovip: como BackTiTan, la configuración real (appsettings.Local.json con la cadena de conexión) NO viaja en el pipeline: vive
+# en el servidor y se preserva en memoria de un deploy al siguiente (sección 3). No hace falta ninguna variable en Azure DevOps.
 
 $ErrorActionPreference = "Stop"
 
@@ -246,13 +241,10 @@ if ($configInMemory.Count -gt 0) {
         Write-OK "Restaurado: $fileName"
     }
 }
-# Eurovip: la configuración real del pipeline (variable secreta) manda sobre la guardada.
-if ($appSettingsLocalB64) {
-    [IO.File]::WriteAllBytes("$targetPath\appsettings.Local.json", [Convert]::FromBase64String($appSettingsLocalB64))
-    Write-OK "appsettings.Local.json escrito desde la variable secreta del pipeline"
-} elseif (-not (Test-Path "$targetPath\appsettings.Local.json")) {
-    Write-Warn "ACCION REQUERIDA: falta appsettings.Local.json (cadena de conexión real) en $targetPath."
-    Write-Warn "Cargar la variable secreta EurovipAppSettingsLocal en el pipeline o copiar el archivo a mano."
+# Eurovip: primer deploy de un slot sin configuración (igual que BackTiTan: se copia a mano una vez).
+if (-not (Test-Path "$targetPathappsettings.Local.json")) {
+    Write-Warn "ACCION REQUERIDA (solo la primera vez): falta appsettings.Local.json (cadena de conexión real) en $targetPath."
+    Write-Warn "Copiar ese archivo al slot a mano (ver README-DESPLIEGUE.md); los deploys siguientes lo conservan solos."
     Write-Warn "Sin ese archivo el /health falla (no llega a la base) y el deploy vuelve atrás."
 }
 
