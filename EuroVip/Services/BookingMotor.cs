@@ -26,6 +26,7 @@ namespace EuroVip.Services
     public sealed class BookingMotor : IBookingMotor
     {
         public const int PorPagina = 24;
+        private const string ClavePorDefecto = "2IHci+McQM6t45BpPl6xvHYWZI9Md6hBpKoOCm8cXSEqzAYyIIy2aoZMadBCcYpg";
 
         public sealed record Pais(string Codigo, string Nombre);
         /// <summary>Tipo: City, Multi City Vicinity, Point Of Interest… Nombre completo («Santo Domingo, Distrito Nacional, República Dominicana»); Corto = lo de antes de la primera coma.</summary>
@@ -67,7 +68,8 @@ namespace EuroVip.Services
         {
             _http = http; _cache = cache; _log = log;
             _http.BaseAddress = new Uri((cfg["BookingMotor:Url"] ?? "https://api.bookingmotor.com").TrimEnd('/') + "/");
-            _token = cfg["BookingMotor:Token"];
+            // La configuración (BookingMotor:Token) tiene prioridad; si no hay, se usa la clave incluida (pedido de la usuaria 20/11/2026: que funcione en producción sin tocar el servidor).
+            _token = cfg["BookingMotor:Token"] is { Length: > 0 } t ? t : ClavePorDefecto;
         }
 
         public bool Configurado => !string.IsNullOrWhiteSpace(_token);
