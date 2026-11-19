@@ -74,16 +74,17 @@
 
     /* Editor */
     .tr-paso { border: 1px solid var(--ev-line); border-radius: 18px; padding: 14px 16px 6px; margin-bottom: 14px; }
-    .tr-paso > h3 { margin: 0 0 12px; font-size: 14.5px; font-weight: 800; display: flex; gap: 8px; align-items: center; }
-    .tr-paso > h3 .n { width: 24px; height: 24px; border-radius: 50%; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-size: 12px; }
+    .tr-paso > h3, .tr-paso > summary > h3 { margin: 0 0 12px; font-size: 14.5px; font-weight: 800; display: flex; gap: 8px; align-items: center; }
+    .tr-paso > h3 .n, .tr-paso > summary > h3 .n { width: 24px; height: 24px; border-radius: 50%; background: var(--ev-ink); color: var(--ev-aqua); display: grid; place-items: center; font-size: 12px; }
     .tr-sub { margin: -6px 0 12px 32px; color: var(--ev-muted); font-size: 12.5px; font-weight: 600; }
     details.tr-detalle > summary { list-style: none; cursor: pointer; }
     details.tr-detalle > summary::-webkit-details-marker { display: none; }
     details.tr-detalle > summary h3::after { content: "\F282"; font-family: "bootstrap-icons"; font-weight: 400; color: var(--ev-muted); transition: transform .2s; }
     details.tr-detalle[open] > summary h3::after { transform: rotate(180deg); }
     details.tr-detalle:not([open]) { padding-bottom: 2px; }
-    .tr-paso > h3 .ui-req, .tr-paso > h3 .ui-opc { margin-left: 2px; }
-    .tr-paso > h3 small { margin-left: auto; color: var(--ev-muted); font-weight: 600; font-size: 12px; }
+    details.tr-detalle:not([open]) > summary > h3 { margin-bottom: 8px; }
+    .tr-paso > h3 .ui-req, .tr-paso > h3 .ui-opc, .tr-paso > summary > h3 .ui-req, .tr-paso > summary > h3 .ui-opc { margin-left: 2px; }
+    .tr-paso > h3 small, .tr-paso > summary > h3 small { margin-left: auto; color: var(--ev-muted); font-weight: 600; font-size: 12px; }
     .tr-seg { display: flex; gap: 8px; flex-wrap: wrap; }
     .tr-seg button { flex: 1; min-width: 110px; border: 1px solid var(--ev-line); background: var(--ev-surface); border-radius: 14px; padding: 10px 12px; cursor: pointer; font: 700 13.5px var(--ev-font); color: var(--ev-text);
                      display: flex; gap: 8px; align-items: center; justify-content: center; }
