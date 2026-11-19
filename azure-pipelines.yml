@@ -5,19 +5,16 @@
 #
 # Flujo (igual que BackTiTan, pedido de la usuaria 19/11/2026: «que el BackOffice Eurovip se suba
 # automático como el BackTitan»):
-#   cada push a main → Build → Deploy DESARROLLO (automático) → Deploy PRODUCCIÓN (espera aprobación manual
-#   en el Environment «Produccion»: Pipelines → Environments → Produccion → Approvals and checks).
+#   cada push a main → Build → Deploy PRODUCCIÓN (espera aprobación manual en el Environment «Produccion»:
+#   Pipelines → Environments → Produccion → Approvals and checks). Sin servidor de desarrollo: la usuaria
+#   eligió quedarse solo con producción (19/11/2026).
 # También se puede lanzar a mano: Azure DevOps → Pipelines → EurovipBack → Run pipeline.
 #
 # Requisitos en Azure DevOps (proyecto EurovipBack):
-#   - Pool de agentes "Dev-Agents" (el mismo de BackTropi/BackTiTan en DESARROLLO, agente dev-agent-srvweb1)
-#     autorizado para el proyecto EurovipBack (Project settings → Agent pools → Add pool → Existing)
-#     (el que tiene el IIS donde vive el sitio "eurovip").
-#   - Environment "Desarrollo" (sin aprobación) en el proyecto EurovipBack
 #   - Pool "Prod-Agents" (agente prod-agent-srvweb2, el de BackTiTan en PRODUCCIÓN) autorizado para EurovipBack
 #   - Environment "Produccion" CON aprobación manual en el proyecto EurovipBack
 #   - Variable secreta EurovipAppSettingsLocalProd (appsettings.Local.json de producción en base64; si no se
-#     define, se usa la de desarrollo)
+#     define, se usa EurovipAppSettingsLocal)
 #
 # Requisitos en el servidor: ver DeploymentScripts/README-DESPLIEGUE.md
 # ============================================================
@@ -40,9 +37,6 @@ variables:
   # Solo se usan si el sitio IIS no existe (primer deploy: Deploy.ps1 lo crea)
   eurovipPuerto:      '8090'
   eurovipHost:        ''
-  # Pool del agente instalado en el servidor de Eurovip
-  agentPool:          'Dev-Agents'
-  agentName:          'dev-agent-srvweb1'
   # PRODUCCIÓN (bktitan.eurovip.com.do): mismo servidor y agente que BackTiTan en producción
   prodAgentPool:      'Prod-Agents'
   prodAgentName:      'prod-agent-srvweb2'
@@ -114,55 +108,13 @@ stages:
               ArtifactName: 'drop'
 
   # ============================================================
-  # STAGE 2: DEPLOY AL SERVIDOR DE EUROVIP
-  # Servidor de DESARROLLO (agente dev-agent-srvweb1 del pool Dev-Agents, como BackTropi).
-  # Blue-Green: publica en el slot inactivo, cambia IIS, revisa /health
-  # (que también comprueba la base) y vuelve atrás solo si falla.
-  # ============================================================
-  - stage: Deploy
-    displayName: 'Deploy → Servidor Eurovip'
-    dependsOn: Build
-    condition: succeeded()
-
-    jobs:
-      - deployment: DeployJob
-        displayName: 'Deploy Eurovip'
-        environment: 'Desarrollo'
-        pool:
-          name: ${{ variables.agentPool }}
-          demands:
-            - Agent.Name -equals ${{ variables.agentName }}
-
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - download: current
-                  artifact: drop
-
-                - task: PowerShell@2
-                  displayName: 'Blue-Green Deploy'
-                  inputs:
-                    filePath: '$(Pipeline.Workspace)/drop/scripts/Deploy.ps1'
-                    arguments: >-
-                      -ProjectName "$(projectName)"
-                      -ArtifactsPath "$(Pipeline.Workspace)/drop/app"
-                      -HealthCheckPath "/health"
-                      -Puerto $(eurovipPuerto)
-                      -NombreHost "$(eurovipHost)"
-                    errorActionPreference: 'stop'
-                  # Las variables secretas no llegan solas a los scripts: se pasan de forma explícita.
-                  env:
-                    EUROVIP_APPSETTINGS_LOCAL: $(EurovipAppSettingsLocal)
-
-  # ============================================================
-  # STAGE 3: DEPLOY A PRODUCCIÓN (bktitan.eurovip.com.do)
-  # Solo desde main y si DESARROLLO salió bien. Espera la aprobación del Environment «Produccion».
+  # STAGE 2: DEPLOY A PRODUCCIÓN (bktitan.eurovip.com.do)
+  # Solo desde main, después del Build. Espera la aprobación del Environment «Produccion».
   # El MISMO artifact del Build (no se recompila). Agente prod-agent-srvweb2, como BackTiTan.
   # ============================================================
   - stage: DeployProd
     displayName: 'Deploy → PRODUCCIÓN'
-    dependsOn: Deploy
+    dependsOn: Build
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
 
     jobs:

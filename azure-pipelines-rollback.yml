@@ -15,10 +15,10 @@ parameters:
   - name: servidor
     displayName: 'Servidor'
     type: string
-    default: 'Desarrollo'
+    default: 'Produccion'
     values:
-      - Desarrollo
       - Produccion
+      - Desarrollo
   - name: confirm
     displayName: 'Escribir ROLLBACK para confirmar'
     type: string
