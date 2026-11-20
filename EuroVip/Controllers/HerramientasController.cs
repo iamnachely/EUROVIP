@@ -291,6 +291,8 @@ namespace EuroVip.Controllers
         [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedorCargaAprobar([FromBody] RevisionCargaDto dto)
         {
+            if (await Prov.CargaAsync(dto.Id) is { } cg && await Seg.HotelesPendientesDeCargaAsync(cg) is { Count: > 0 } pend)
+                return BadRequest(new { mensaje = "Primero aprueba los hoteles que pidió el proveedor y esta carga usa: " + string.Join(", ", pend) + " (pestaña «Datos pedidos»)." });
             var (ok, mensaje, errores) = await Prov.PublicarAsync(dto.Id, User.Identity?.Name ?? "desconocido");
             await AuditarCarga("Proveedor_Carga_Aprobar", dto.Id, new { ok, mensaje });
             return ok ? Json(new { ok, mensaje }) : BadRequest(new { mensaje, errores = errores.Select(e => $"Producto {e.Indice}{(e.Producto is null ? "" : $" ({e.Producto})")}: {e.Mensaje}") });
@@ -300,6 +302,8 @@ namespace EuroVip.Controllers
         public async Task<IActionResult> ProveedorCargaProgramar([FromBody] RevisionCargaDto dto)
         {
             if (dto.Fecha is not DateTime cuando) return BadRequest(new { mensaje = "Elige la fecha y la hora del alta." });
+            if (await Prov.CargaAsync(dto.Id) is { } cg && await Seg.HotelesPendientesDeCargaAsync(cg) is { Count: > 0 } pend)
+                return BadRequest(new { mensaje = "Primero aprueba los hoteles que pidió el proveedor y esta carga usa: " + string.Join(", ", pend) + " (pestaña «Datos pedidos»)." });
             var (error, errores) = await Prov.ProgramarAsync(dto.Id, cuando, User.Identity?.Name ?? "desconocido");
             if (error is not null) return BadRequest(new { mensaje = error, errores = errores.Select(e => $"Producto {e.Indice}{(e.Producto is null ? "" : $" ({e.Producto})")}: {e.Mensaje}") });
             await AuditarCarga("Proveedor_Carga_Programar", dto.Id, new { activar_en = cuando });
@@ -392,6 +396,10 @@ namespace EuroVip.Controllers
             var equipo = g.Select(x => x.Asignado_A).Append(Yo).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x).ToList();
             return Json(new { items = g, equipo, yo = Yo, activo = await Seg.DisponibleAsync() });
         }
+
+        /// <summary>Control de calidad de la carga (semáforo + puntos a revisar) antes de aprobarla.</summary>
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorRevision(int id) => await Seg.RevisionAsync(Prov, id) is { } r ? Json(r) : NotFound(new { mensaje = "Esa carga ya no existe." });
 
         public sealed class GestionDto { public int Id { get; set; } public string? Asignado { get; set; } public int Prioridad { get; set; } }
 

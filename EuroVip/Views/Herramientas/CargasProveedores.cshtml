@@ -294,6 +294,25 @@
     .sg-prio button.on[data-p="0"] { background: #EEF2F6; border-color: #98A2B3; } .sg-prio button.on[data-p="1"] { background: #FEF0C7; border-color: #F79009; color: #B54708; } .sg-prio button.on[data-p="2"] { background: #FEE4E2; border-color: #F04438; color: #B42318; }
     .sg-hilo-det { height: 560px; border: 1px solid var(--ev-line); border-radius: 20px; overflow: hidden; box-shadow: var(--ev-shadow); }
 
+    /* Control de calidad de la carga */
+    .sg-cal { border-radius: 18px; padding: 12px 14px; border: 1.5px solid var(--ev-line); background: #fff; box-shadow: var(--ev-shadow); display: grid; gap: 8px; }
+    .sg-cal.verde { background: linear-gradient(135deg, #ECFDF3, #fff); border-color: #ABEFC6; } .sg-cal.ama { background: linear-gradient(135deg, #FFFAEB, #fff); border-color: #FEDF89; } .sg-cal.rojo { background: linear-gradient(135deg, #FEF3F2, #fff); border-color: #FDA29B; }
+    .sg-cal-cab { display: flex; gap: 12px; align-items: center; } .sg-cal-cab > i { font-size: 30px; } .sg-cal.verde .sg-cal-cab > i { color: #12B76A; } .sg-cal.ama .sg-cal-cab > i { color: #F79009; } .sg-cal.rojo .sg-cal-cab > i { color: #F04438; }
+    .sg-cal-cab b { display: block; font-size: 15px; } .sg-cal-cab small { color: var(--ev-muted); font-weight: 600; }
+    .sg-cal ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+    .sg-cal li { display: flex; gap: 9px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.8); font-size: 13px; line-height: 1.35; }
+    .sg-cal li > i { margin-top: 2px; } .sg-cal li.rojo > i { color: #F04438; } .sg-cal li.ama > i { color: #F79009; }
+    .sg-cal li b { display: block; } .sg-cal li span { color: #54656F; overflow-wrap: anywhere; }
+    .sg-cuidar .sg-fila { cursor: default; } .sg-cuidar .pt { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; flex: none; }
+    .sg-cuidar .pt.rojo { background: #FEE4E2; color: #B42318; } .sg-cuidar .pt.ama { background: #FEF0C7; color: #B54708; } .sg-cuidar .pt.info { background: #E0EAFF; color: #3538CD; }
+    .sg-nav { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--ev-muted); }
+    .sg-pal { position: fixed; inset: 0; z-index: 2000; background: rgba(11,18,21,.5); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
+    .sg-pal[hidden] { display: none; }
+    .sg-pal-caja { width: min(640px, calc(100vw - 24px)); background: #fff; border-radius: 22px; box-shadow: 0 40px 90px -20px rgba(11,18,21,.7); overflow: hidden; }
+    .sg-pal-caja input { width: 100%; border: 0; outline: 0; padding: 18px 22px; font: inherit; font-size: 17px; border-bottom: 1px solid var(--ev-line); }
+    .sg-pal-res { max-height: 52vh; overflow: auto; padding: 6px; } .sg-pal-res h5 { margin: 8px 12px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ev-muted); }
+    .sg-pal-pie { padding: 8px 16px; font-size: 12px; color: var(--ev-muted); background: #F7FCFB; border-top: 1px solid var(--ev-line); }
+    .sg-pal-pie kbd { background: #fff; border: 1px solid var(--ev-line); border-radius: 6px; padding: 1px 6px; font-size: 11px; }
     @@media (max-width: 900px) {
         .sg-hoy { grid-template-columns: 1fr; }
         .sg-split { grid-template-columns: 1fr; height: auto; } .sg-split .sg-main { height: 70vh; } .sg-split.hilo .sg-lado { display: none; } .sg-split:not(.hilo) .sg-main { display: none; }
@@ -312,6 +331,8 @@
     </div>
     <div class="acc">
         <a class="ev-btn ghost sm" href="/Herramientas/Index?tab=htCuentas"><i class="bi bi-briefcase"></i> Cuentas de proveedores</a>
+        <button type="button" class="ev-btn ghost sm" id="sgBuscar" title="Buscar en todo (Ctrl+K)"><i class="bi bi-search"></i> Buscar <kbd style="font-size:11px">Ctrl K</kbd></button>
+        <button type="button" class="ev-btn ghost sm" id="sgCsv" title="Descargar lo que ves en Excel"><i class="bi bi-filetype-csv"></i> Exportar</button>
         <button type="button" class="ev-btn ghost sm" id="hpRecargar"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
     </div>
 </div>
@@ -380,6 +401,8 @@
 </details>
 </section>
 
+<div class="sg-pal" id="sgPal" hidden><div class="sg-pal-caja"><input id="sgPalQ" type="search" placeholder="Busca una carga, un proveedor o una conversación…" autocomplete="off" aria-label="Buscar en todo"><div class="sg-pal-res" id="sgPalRes"></div>
+    <div class="sg-pal-pie"><kbd>Esc</kbd> cerrar · <kbd>Enter</kbd> abrir el primero · <kbd>1</kbd>–<kbd>6</kbd> cambia de sección (fuera de un cuadro de texto)</div></div></div>
 <button type="button" class="sg-fab" id="sgFab" aria-label="Abrir mensajes"><i class="bi bi-chat-dots-fill"></i><b class="sg-n" id="sgFabN" hidden>0</b></button>
 <div class="sg-dock" id="sgDock" role="dialog" aria-label="Mensajes de los proveedores">
     <div class="sg-dock-cab">
@@ -395,6 +418,7 @@
     <div class="ui-dh">
         <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-inboxes" id="hpVerIco"></i></div>
         <div style="min-width:0"><h2 id="hpVerTitulo">Carga</h2><small id="hpVerSub"></small></div>
+        <span class="sg-nav"><button class="ui-ibtn" type="button" id="hpVerPrev" aria-label="Carga anterior" title="Carga anterior"><i class="bi bi-chevron-left"></i></button><span id="hpVerPos"></span><button class="ui-ibtn" type="button" id="hpVerNext" aria-label="Carga siguiente" title="Carga siguiente"><i class="bi bi-chevron-right"></i></button></span>
         <button class="ui-ibtn" type="button" id="hpVerMax" aria-label="Pantalla completa" title="Pantalla completa"><i class="bi bi-arrows-fullscreen"></i></button>
         <button class="ui-ibtn x" type="button" id="hpVerCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
     </div>
@@ -472,7 +496,7 @@
         }
         $('#hpMas').hidden = items.length >= total;
     }
-    $('#hpLista').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) abrir(+b.dataset.id); });
+    $('#hpLista').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) abrirDesde(b, +b.dataset.id); });
     $('#hpMas').addEventListener('click', () => { pagina++; listar(false); });
     $('#hpQ').addEventListener('input', EV.debounce(() => listar(true), 300));
     $('#hpModulo').addEventListener('change', () => listar(true));
@@ -555,9 +579,9 @@
                     <details style="margin-top:16px"><summary style="cursor:pointer;font-weight:700;color:var(--ev-muted)">Ver los datos tal como los envió el proveedor (JSON)</summary>
                         <pre style="max-height:360px;overflow:auto;background:var(--ev-surface-2);border:1px solid var(--ev-line);border-radius:14px;padding:12px;font-size:12px">${esc(JSON.stringify(datos, null, 2))}</pre></details>
                 </div>
-                <div><div class="sg-seg" id="sgSegCarga"></div>${flyer}${acciones}</div>
+                <div><div class="sg-cal" id="sgCal"></div><div class="sg-seg" id="sgSegCarga"></div>${flyer}${acciones}</div>
             </div>`;
-        montarHilo($('#sgHiloDet'), c.id, { cab: false, alCambiar: cargarChats }); seguimientoCarga(c);
+        montarHilo($('#sgHiloDet'), c.id, { cab: false, alCambiar: cargarChats }); seguimientoCarga(c); calidad(c); navUI(c.id);
         // Si la imagen del flyer no carga (archivo borrado o movido), un aviso claro en vez del texto suelto
         document.querySelectorAll('[data-flyer-img]').forEach(im => im.addEventListener('error', () => {
             const a = im.closest('a'); if (a) a.outerHTML = '<div class="roto"><i class="bi bi-image-alt"></i><span>No se pudo mostrar el flyer.<br>Pulsa «Regenerar» para crearlo de nuevo.</span></div>';
@@ -578,7 +602,7 @@
             }
             if (acc === 'aprobar') {
                 if (!await EV.confirmar({ titulo: '¿Aprobar y activar ya?', si: 'Sí, activar', icono: 'rocket-takeoff',
-                    texto: `Los ${c.productos} producto(s) de la carga <b>${esc(c.codigo)}</b> de <b>${esc(c.cuenta || '')}</b> se crean en la web en este momento.` })) return;
+                    texto: `Los ${c.productos} producto(s) de la carga <b>${esc(c.codigo)}</b> de <b>${esc(c.cuenta || '')}</b> se crean en la web en este momento.` + (calActual && calActual.puntos.length ? `<br><br><b>Ojo, el control de calidad encontró ${calActual.puntos.length} punto(s):</b><ul style="text-align:left;margin:6px 0 0 18px">${calActual.puntos.slice(0, 5).map(p => `<li>${esc(p.titulo)}</li>`).join('')}</ul>` : '') })) return;
                 const r = await EV.post('/Herramientas/ProveedorCargaAprobar', { id: c.id });
                 EV.toast(r.mensaje); EV.confeti();
             } else if (acc === 'aprobar-sug' || acc === 'programar') {
@@ -604,7 +628,7 @@
             }
         } catch { /* EV.api ya mostró el aviso */ }
         try { actual = await EV.api('/Herramientas/ProveedorCarga?id=' + c.id); pintarDetalle(); } catch { }
-        listar(true);
+        listar(true); kdatos = null;
     });
 
     // ---------- Solicitudes de datos (hotel, destino, aeropuerto, habitación que el proveedor pidió crear) ----------
@@ -692,7 +716,8 @@
         const lista = (arr, f, vacio) => arr.length ? arr.map(f).join('') : `<div class="sg-vacio">${vacio}</div>`;
         const mov = r.actividad.map(e => { const t = EV_TXT[e.tipo] || [e.tipo, 'bi-dot', '']; const quien = e.tipo === 'EN_WEB' ? '' : esc(e.quien || e.cuenta || '');
             return `<li data-carga="${e.id_Carga}"><span class="pt ${t[2]}"><i class="bi ${t[1]}"></i></span><div><b>${quien} ${e.tipo === 'EN_WEB' ? t[0] : t[0]}</b><span>${esc(e.codigo)} · ${esc(e.cuenta || '')}${e.texto ? ' · “' + esc(corto(e.texto, 90)) + '”' : ''}</span></div><time>${diaTxt(e.fecha)}<br>${hm(e.fecha)}</time></li>`; }).join('');
-        $('#sgHoy').innerHTML = `
+        const cuid = (r.cuidados || []).map(p => `<div class="sg-fila"><span class="pt ${p.nivel}"><i class="bi ${p.nivel === 'rojo' ? 'bi-x-octagon-fill' : p.nivel === 'ama' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}"></i></span><div><b>${esc(p.titulo)}</b><small>${esc(p.detalle || '')}</small></div></div>`).join('');
+        $('#sgHoy').innerHTML = `${cuid ? `<div class="sg-panel ancho sg-cuidar"><h3><i class="bi bi-shield-exclamation"></i> Cosas a cuidar</h3>${cuid}</div>` : '<div class="sg-panel ancho sg-cuidar"><h3><i class="bi bi-shield-check"></i> Cosas a cuidar</h3><div class="sg-vacio">Todo tranquilo: no hay nada raro que cuidar hoy.</div></div>'}
             <div class="sg-panel"><h3><i class="bi bi-alarm"></i> Por revisar (las más antiguas primero)</h3>${lista(r.atrasadas, c => fila(c, 'hace ' + hace(c.fecha)), '¡Nada pendiente! Todo está revisado.')}</div>
             <div class="sg-panel"><h3><i class="bi bi-chat-left-dots"></i> Mensajes sin responder</h3>${lista(r.sinResponder, c => fila(c, 'hace ' + hace(c.fecha), 'g'), 'Todos los mensajes están respondidos.')}</div>
             <div class="sg-panel"><h3><i class="bi bi-calendar-check"></i> Salen pronto en la web</h3>${lista(r.salen, c => fila(c, fh(c.fecha), 'v'), 'No hay cargas programadas.')}</div>
@@ -700,7 +725,7 @@
     }
     document.addEventListener('click', e => {
         const ir = e.target.closest('[data-ir]'); if (ir) { pestana(ir.dataset.ir); return; }
-        const c = e.target.closest('[data-carga]'); if (c && c.closest('#tab-hoy, #sgKan, #sgProvs')) abrir(+c.dataset.carga);
+        const c = e.target.closest('[data-carga]'); if (c && c.closest('#tab-hoy, #sgKan, #sgProvs')) abrirDesde(c, +c.dataset.carga);
     });
 
     // ---------------- Tablero ----------------
@@ -823,6 +848,7 @@
         try { const r = await EV.api('/Herramientas/ProveedorChats'); chats = r.items || []; yo = r.yo || yo; } catch { }
         const n = chats.filter(sinLeer).length;
         [['#sgNChats', n], ['#sgFabN', n]].forEach(([s, v]) => { const x = $(s); x.textContent = v; x.hidden = !v; });
+        const pen = (conteo.PENDIENTE || 0) + n; document.title = (pen ? `(${pen}) ` : '') + 'Cargas de proveedores';
         $('#sgChatLista').innerHTML = listaChats($('#sgChatQ').value, chatActivo);
         if (dockAbierto && !dockHilo) $('#sgDockLista') && ($('#sgDockLista').innerHTML = listaChats($('#sgDockQ')?.value));
     }
@@ -855,6 +881,8 @@
         if (!fichas.length) { try { fichas = (await EV.api('/Herramientas/ProveedorFichas')).items; } catch { $('#sgProvs').innerHTML = '<div class="sg-vacio">No se pudo cargar.</div>'; return; } }
         pintarProv();
     }
+    const tasaAprob = p => { const ok = p.programada + p.activa, mal = p.rechazada + p.devuelta; if (!ok && !mal) return ''; const pc = Math.round(ok * 100 / (ok + mal));
+        return `<span><i class="bi bi-patch-check"></i> Aprobación: <b style="color:${pc >= 80 ? '#067647' : pc >= 50 ? '#B54708' : '#B42318'}">${pc}%</b> (${ok} de ${ok + mal} revisadas)${mal >= 3 ? ' <span class="sg-chip rojo">Muchos rechazos</span>' : ''}</span>`; };
     function pintarProv() {
         const q = $('#sgPQ').value.trim().toLowerCase(), f = $('#sgPEstado').value;
         const l = fichas.filter(p => (!q || `${p.nombre} ${p.email || ''} ${p.telefono || ''} ${p.proveedor || ''}`.toLowerCase().includes(q)) && (!f || (f === 'p' ? p.pendiente > 0 : String(p.activo ? 1 : 0) === f)));
@@ -864,7 +892,7 @@
             return `<div class="sg-prov ${p.activo ? '' : 'off'}" style="animation-delay:${Math.min(i, 10) * 30}ms">
                 <div class="sg-prov-cab">${av(p.nombre, 1)}<div><b>${esc(p.nombre)}</b><small>${esc(p.proveedor || p.id_Proveedor || '')}</small></div><span class="sg-chip ${p.activo ? 'verde' : 'rojo'}">${p.activo ? 'Activa' : 'Desactivada'}</span></div>
                 <div class="sg-contacto">${p.email ? `<a href="mailto:${esc(p.email)}"><i class="bi bi-envelope"></i> ${esc(p.email)}</a>` : ''}${tel ? `<a href="https://wa.me/${tel.replace('+', '')}" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i> ${esc(p.telefono)}</a>` : ''}
-                    <span><i class="bi bi-calendar3"></i> Cuenta desde ${fh(p.fecha_Alta).split(',')[0]}</span><span><i class="bi bi-clock-history"></i> Última actividad: ${p.ultima_Actividad ? 'hace ' + hace(p.ultima_Actividad) : '—'}</span></div>
+                    ${tasaAprob(p)}<span><i class="bi bi-calendar3"></i> Cuenta desde ${fh(p.fecha_Alta).split(',')[0]}</span><span><i class="bi bi-clock-history"></i> Última actividad: ${p.ultima_Actividad ? 'hace ' + hace(p.ultima_Actividad) : '—'}</span></div>
                 <div class="sg-prov-pie">${String(p.modulos || '').split(',').filter(Boolean).map(m => `<span class="sg-chip"><i class="bi ${esc((modulos[m] || {}).icono || 'bi-box')}"></i> ${esc((modulos[m] || {}).nombre || m)}</span>`).join('') || '<span class="sg-chip rojo">Sin módulos</span>'}</div>
                 ${p.cargas ? `<div class="sg-estbar">${barra}</div>` : ''}
                 <div class="sg-nums"><div><b>${p.cargas}</b><small>Cargas</small></div><div><b>${p.pendiente}</b><small>Por revisar</small></div><div><b>${p.activa}</b><small>En la web</small></div>
@@ -891,6 +919,75 @@
         $('#sgMia').addEventListener('click', () => { if (!$('#sgResp').querySelector(`option[value="${CSS.escape(yo)}"]`) && ![...$('#sgResp').options].some(o => o.value === yo)) $('#sgResp').insertAdjacentHTML('beforeend', `<option>${esc(yo)}</option>`); $('#sgResp').value = yo; guardar(yo, g.prioridad || 0); });
         caja.querySelector('.sg-prio').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; caja.querySelectorAll('.sg-prio button').forEach(x => x.classList.toggle('on', x === b)); guardar($('#sgResp').value, +b.dataset.p); });
     }
+
+    // ---------------- control de calidad ----------------
+    let calActual = null, navIds = [];
+    async function calidad(c) {
+        const box = document.getElementById('sgCal'); if (!box) return; calActual = null;
+        box.innerHTML = '<div class="sg-cal-cab"><i class="bi bi-hourglass-split"></i><div><b>Revisando la carga…</b><small>Reglas, precios, textos y hoteles</small></div></div>';
+        try {
+            const r = await EV.api('/Herramientas/ProveedorRevision?id=' + c.id); calActual = r;
+            const tit = { verde: ['bi-shield-check', 'Todo en orden', 'El control de calidad no encontró nada raro.'], ama: ['bi-shield-exclamation', 'Revisa estos puntos', 'Nada impide aprobarla, pero conviene mirar.'], rojo: ['bi-shield-x', 'Hay problemas que arreglar', 'Así no se debería publicar.'] }[r.riesgo];
+            box.className = 'sg-cal ' + r.riesgo;
+            box.innerHTML = `<div class="sg-cal-cab"><i class="bi ${tit[0]}"></i><div><b>${tit[1]}</b><small>${tit[2]}</small></div></div>${r.puntos.length ? `<ul>${r.puntos.map(p => `<li class="${p.nivel}"><i class="bi ${p.nivel === 'rojo' ? 'bi-x-octagon-fill' : 'bi-exclamation-triangle-fill'}"></i><div><b>${esc(p.titulo)}</b>${p.detalle ? `<span>${esc(p.detalle)}</span>` : ''}</div></li>`).join('')}</ul>` : ''}`;
+        } catch { box.innerHTML = ''; }
+    }
+    // ---------------- anterior / siguiente ----------------
+    function abrirDesde(el, id) {
+        const cont = el.closest('.sg-col-cuerpo, #hpLista, .sg-panel, .sg-provs');
+        navIds = cont ? [...cont.querySelectorAll('[data-carga],[data-id]')].map(x => +(x.dataset.carga || x.dataset.id)).filter((v, i, a) => v && a.indexOf(v) === i) : [id];
+        abrir(id);
+    }
+    function navUI(id) {
+        const i = navIds.indexOf(id); $('#hpVerPos').textContent = i >= 0 && navIds.length > 1 ? (i + 1) + ' / ' + navIds.length : '';
+        $('#hpVerPrev').disabled = !(i > 0); $('#hpVerNext').disabled = !(i >= 0 && i < navIds.length - 1);
+    }
+    $('#hpVerPrev').addEventListener('click', () => { const i = navIds.indexOf(actual?.carga?.id); if (i > 0) abrir(navIds[i - 1]); });
+    $('#hpVerNext').addEventListener('click', () => { const i = navIds.indexOf(actual?.carga?.id); if (i >= 0 && i < navIds.length - 1) abrir(navIds[i + 1]); });
+    document.addEventListener('keydown', e => { if (!$('#hpVer').classList.contains('open') && !visor.abierto()) return; if (e.target.matches('input,textarea,select')) return; if (e.key === 'ArrowLeft') $('#hpVerPrev').click(); if (e.key === 'ArrowRight') $('#hpVerNext').click(); });
+
+    // ---------------- buscador general (Ctrl+K) y atajos ----------------
+    const pal = $('#sgPal'); let palT = 0;
+    const abrirPal = () => { pal.hidden = false; $('#sgPalQ').value = ''; $('#sgPalRes').innerHTML = ''; $('#sgPalQ').focus(); buscarPal(''); };
+    const cerrarPal = () => { pal.hidden = true; };
+    async function buscarPal(q) {
+        q = q.trim().toLowerCase(); const mi = ++palT; let cs = [];
+        try { cs = (await EV.api('/Herramientas/ProveedoresCargas?' + new URLSearchParams({ estado: '', q, tam: 8, pagina: 1 }))).items; } catch { }
+        if (!fichas.length) { try { fichas = (await EV.api('/Herramientas/ProveedorFichas')).items; } catch { } }
+        if (mi !== palT) return;
+        const ps = fichas.filter(p => !q || `${p.nombre} ${p.email || ''} ${p.proveedor || ''}`.toLowerCase().includes(q)).slice(0, 5);
+        const ch = chats.filter(x => q && `${x.cuenta} ${x.codigo} ${x.ultimo_Texto}`.toLowerCase().includes(q)).slice(0, 4);
+        $('#sgPalRes').innerHTML = (cs.length ? '<h5>Cargas</h5>' + cs.map(c => `<button type="button" class="sg-fila" data-pal-carga="${c.id}">${av(c.cuenta)}<div><b>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''}</b><small>${esc(c.cuenta || '')} · ${UNO[c.estado] || esc(c.estado)}</small></div></button>`).join('') : '')
+            + (ps.length ? '<h5>Proveedores</h5>' + ps.map(p => `<button type="button" class="sg-fila" data-pal-prov="${esc(p.nombre)}">${av(p.nombre)}<div><b>${esc(p.nombre)}</b><small>${esc(p.email || '')} · ${p.cargas} cargas</small></div></button>`).join('') : '')
+            + (ch.length ? '<h5>Mensajes</h5>' + ch.map(x => `<button type="button" class="sg-fila" data-pal-chat="${x.id}">${av(x.cuenta)}<div><b>${esc(x.cuenta)} · ${esc(x.codigo)}</b><small>${esc(corto(x.ultimo_Texto, 70))}</small></div></button>`).join('') : '') || '<div class="sg-vacio" style="margin:10px">No encontré nada.</div>';
+    }
+    $('#sgPalQ').addEventListener('input', EV.debounce(() => buscarPal($('#sgPalQ').value), 220));
+    $('#sgPalQ').addEventListener('keydown', e => { if (e.key === 'Enter') { const b = $('#sgPalRes button'); if (b) b.click(); } });
+    pal.addEventListener('mousedown', e => { if (e.target === pal) cerrarPal(); });
+    $('#sgPalRes').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; cerrarPal();
+        if (b.dataset.palCarga) { navIds = [+b.dataset.palCarga]; abrir(+b.dataset.palCarga); }
+        else if (b.dataset.palProv) { $('#sgPQ').value = b.dataset.palProv; pestana('prov'); pintarProv(); }
+        else if (b.dataset.palChat) { pestana('chats'); setTimeout(() => abrirChat(+b.dataset.palChat), 400); } });
+    $('#sgBuscar').addEventListener('click', abrirPal);
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); pal.hidden ? abrirPal() : cerrarPal(); return; }
+        if (e.key === 'Escape' && !pal.hidden) { cerrarPal(); return; }
+        if (e.target.matches('input,textarea,select') || e.ctrlKey || e.altKey || e.metaKey || !pal.hidden) return;
+        const tabs = ['hoy', 'tablero', 'lista', 'chats', 'prov', 'sol']; const n = +e.key;
+        if (n >= 1 && n <= 6 && !$('#hpVer').classList.contains('open')) pestana(tabs[n - 1]); else if (e.key === '/') { e.preventDefault(); abrirPal(); }
+    });
+
+    // ---------------- exportar lo que se ve (Excel) ----------------
+    $('#sgCsv').addEventListener('click', () => {
+        const tab = document.querySelector('#sgTabs .on')?.dataset.tab;
+        let filas = tab === 'tablero' && kdatos ? Object.values(kdatos).flatMap(x => x.items || []) : items;
+        if (!filas.length) { EV.toast('No hay cargas para exportar en esta vista.', 'err'); return; }
+        const cab = ['Código', 'Título', 'Proveedor', 'Módulo', 'Estado', 'Productos', 'Desde', 'Moneda', 'Enviada', 'Revisada', 'Revisó', 'Sale en la web', 'En la web desde', 'Responsable', 'Prioridad'];
+        const cel = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+        const csv = [cab, ...filas.map(c => { const g = gest[c.id] || {}; return [c.codigo, c.titulo, c.cuenta, (modulos[c.modulo] || {}).nombre || c.modulo, UNO[c.estado] || c.estado, c.productos, c.precio_Desde, c.moneda, c.fecha_Solicitud, c.fecha_Revision, c.revisado_Por, c.activar_En, c.fecha_Activacion, g.asignado_A, ['Normal', 'Alta', 'Urgente'][g.prioridad || 0]]; })].map(r => r.map(cel).join(';')).join('\r\n');
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })); a.download = 'cargas-proveedores-' + new Date().toISOString().slice(0, 10) + '.csv'; a.click(); URL.revokeObjectURL(a.href);
+        EV.toast('Descargado: ' + filas.length + ' cargas.');
+    });
 
     // ---------------- arranque ----------------
     $('#hpRecargar').addEventListener('click', () => { kdatos = null; fichas = []; const t = document.querySelector('#sgTabs .on')?.dataset.tab || 'hoy'; pestana(t, false); cargarChats(); solicitudes(); listar(true); });

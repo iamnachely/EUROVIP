@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Dapper;
 using EuroVip.Repositories;
 
@@ -142,8 +144,155 @@ namespace EuroVip.Services
                 ) x ORDER BY Fecha DESC")).ToList();
             var datos = 0;
             try { datos = await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.proveedor_solicitud WHERE estado = 'PENDIENTE'"); } catch (System.Data.SqlClient.SqlException) { }
-            return new { numeros = n, atrasadas, salen, sinResponder, actividad, datosPendientes = datos, seguimientoActivo = _hayNotas && _hayGestion };
+            var cuidados = new List<Punto>();
+            try
+            {
+                foreach (var x in await cn.QueryAsync<(string Nombre, int N)>("SELECT pc.nombre, COUNT(*) FROM Eurovip.proveedor_cuenta pc JOIN Eurovip.carga_proveedor c ON c.id_cuenta = pc.id WHERE pc.activo = 0 AND c.estado IN ('PENDIENTE','PROGRAMADA') GROUP BY pc.nombre"))
+                    cuidados.Add(new("rojo", $"{x.Nombre}: cuenta desactivada con {x.N} carga(s) por salir", "Revisa si deben publicarse."));
+                foreach (var x in await cn.QueryAsync<(string Nombre, int N)>("SELECT pc.nombre, COUNT(*) FROM Eurovip.proveedor_cuenta pc JOIN Eurovip.carga_proveedor c ON c.id_cuenta = pc.id WHERE c.estado IN ('RECHAZADA','DEVUELTA') AND c.fecha_revision > DATEADD(DAY, -30, SYSDATETIME()) GROUP BY pc.nombre HAVING COUNT(*) >= 3"))
+                    cuidados.Add(new("ama", $"{x.Nombre}: {x.N} cargas rechazadas o devueltas en 30 días", "Conviene hablar con ellos."));
+                var atras = await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.carga_proveedor WHERE estado = 'PROGRAMADA' AND activar_en < DATEADD(MINUTE, -30, SYSDATETIME())");
+                if (atras > 0) cuidados.Add(new("rojo", $"{atras} carga(s) programada(s) no salieron a su hora", "Mira si el servidor de altas programadas está encendido."));
+                var viejas = await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.proveedor_cuenta pc WHERE pc.activo = 1 AND pc.modulos <> '' AND NOT EXISTS (SELECT 1 FROM Eurovip.carga_proveedor c WHERE c.id_cuenta = pc.id AND c.creado_en > DATEADD(DAY, -30, SYSDATETIME()))");
+                if (viejas > 0) cuidados.Add(new("info", $"{viejas} proveedor(es) activos no cargan nada hace 30 días", "Mira la pestaña Proveedores."));
+            }
+            catch (System.Data.SqlClient.SqlException) { }
+            if (datos > 0) cuidados.Add(new("ama", $"{datos} dato(s) pedido(s) por proveedores sin revisar", "Hasta aprobar un hotel pedido, no se pueden aprobar las cargas que lo usan."));
+            return new { numeros = n, atrasadas, salen, sinResponder, actividad, datosPendientes = datos, cuidados, seguimientoActivo = _hayNotas && _hayGestion };
         }
+
+        // ---------------------------------------------------------------- control de calidad de una carga
+        public sealed record Punto(string Nivel, string Titulo, string? Detalle);
+
+        private static readonly Regex Enlace = new(@"https?://|www\.|\b[\w.+-]+@[\w-]+\.[\w.]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex Telefono = new(@"(?<!\d)(\+?\d[\d\s().-]{8,}\d)(?!\d)", RegexOptions.Compiled);
+        private static readonly Regex Html = new(@"<\s*/?\s*(script|iframe|img|a|style|svg|object|embed)\b|javascript:|on\w+\s*=", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Todos los textos del JSON (nombre, descripción, incluye…) con el nombre de su campo.</summary>
+        private static IEnumerable<(string Campo, string Texto)> Textos(JsonElement e, string campo = "")
+        {
+            switch (e.ValueKind)
+            {
+                case JsonValueKind.String: yield return (campo, e.GetString() ?? ""); break;
+                case JsonValueKind.Array: foreach (var x in e.EnumerateArray()) foreach (var r in Textos(x, campo)) yield return r; break;
+                case JsonValueKind.Object: foreach (var p in e.EnumerateObject()) foreach (var r in Textos(p.Value, p.Name)) yield return r; break;
+            }
+        }
+
+        /// <summary>Ids de hotel (id_Alojamiento) que usa la carga, en cualquier parte del JSON.</summary>
+        private static IEnumerable<int> HotelesDe(JsonElement e)
+        {
+            switch (e.ValueKind)
+            {
+                case JsonValueKind.Array: foreach (var x in e.EnumerateArray()) foreach (var r in HotelesDe(x)) yield return r; break;
+                case JsonValueKind.Object:
+                    foreach (var p in e.EnumerateObject())
+                    {
+                        if (p.Name.Equals("id_Alojamiento", StringComparison.OrdinalIgnoreCase) && p.Value.ValueKind == JsonValueKind.Number && p.Value.TryGetInt32(out var id) && id > 0) yield return id;
+                        else foreach (var r in HotelesDe(p.Value)) yield return r;
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>Fechas «desde / fecha» del JSON (para avisar si ya pasaron).</summary>
+        private static IEnumerable<DateTime> FechasDe(JsonElement e, string campo = "")
+        {
+            switch (e.ValueKind)
+            {
+                case JsonValueKind.String:
+                    var c = campo.ToLowerInvariant();
+                    if ((c.Contains("desde") || c.StartsWith("fecha") || c.Contains("salida")) && DateTime.TryParse(e.GetString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d)) yield return d;
+                    break;
+                case JsonValueKind.Array: foreach (var x in e.EnumerateArray()) foreach (var r in FechasDe(x, campo)) yield return r; break;
+                case JsonValueKind.Object: foreach (var p in e.EnumerateObject()) foreach (var r in FechasDe(p.Value, p.Name)) yield return r; break;
+            }
+        }
+
+        /// <summary>Hoteles que la carga usa y que un proveedor pidió crear y Eurovip todavía NO aprobó (siguen inactivos).</summary>
+        public async Task<List<string>> HotelesPendientesDeCargaAsync(CargaProveedor c)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(c.Datos) ? "[]" : c.Datos);
+                var ids = HotelesDe(doc.RootElement).Distinct().ToList();
+                if (ids.Count == 0) return new();
+                using var cn = _db.Conexion();
+                return (await cn.QueryAsync<string>("SELECT a.nombre FROM Eurovip.alojamiento a WHERE a.id_idioma = 'ES' AND a.id_alojamiento IN @ids AND a.activo = 0", new { ids })).ToList();
+            }
+            catch (Exception) { return new(); }
+        }
+
+        /// <summary>
+        /// Control de calidad de una carga ANTES de aprobarla: las reglas de siempre (precio mínimo, repetidos, campos…) más lo que suele colarse
+        /// cuando carga una empresa externa: hoteles sin aprobar, enlaces/teléfonos/correos en los textos, código HTML, precios muy distintos,
+        /// fechas pasadas, proveedor con muchos rechazos y cargas que llevan días esperando. Devuelve un semáforo y la lista de puntos.
+        /// </summary>
+        public async Task<object?> RevisionAsync(ProveedoresCarga prov, int id)
+        {
+            var c = await prov.CargaAsync(id);
+            if (c is null) return null;
+            var puntos = new List<Punto>();
+            var cuenta = await prov.CuentaAsync(c.Id_Cuenta);
+            if (cuenta is not null && !cuenta.Activo) puntos.Add(new("rojo", "La cuenta del proveedor está desactivada", "No debería publicarse nada de una cuenta desactivada."));
+            JsonDocument? doc = null;
+            try { doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(c.Datos) ? "[]" : c.Datos); } catch (JsonException) { puntos.Add(new("rojo", "Los datos de la carga no se pueden leer", null)); }
+            if (doc is not null)
+            {
+                var raiz = doc.RootElement;
+                if (cuenta is not null && c.Estado is "PENDIENTE" or "PROGRAMADA" or "RECHAZADA" or "DEVUELTA" or "BORRADOR")
+                {
+                    try
+                    {
+                        var (prods, errores) = await prov.ValidarDatosAsync(cuenta, c.Modulo, c.Codigo, raiz);
+                        foreach (var e in errores.Take(8)) puntos.Add(new("rojo", e.Indice > 0 ? $"Producto {e.Indice}{(e.Producto is null ? "" : $" ({e.Producto})")}" : "Carga", e.Mensaje));
+                        if (errores.Count > 8) puntos.Add(new("rojo", $"…y {errores.Count - 8} problemas más", null));
+                        if (prods.Count == 0) puntos.Add(new("rojo", "La carga no tiene productos", null));
+                        if (prods.Count > 200) puntos.Add(new("ama", $"Carga muy grande: {prods.Count} productos", "Revísala con calma o pídele que la divida."));
+                        var precios = prods.Where(p => p.Precio is > 0).Select(p => p.Precio!.Value).ToList();
+                        if (precios.Count >= 2 && precios.Max() / precios.Min() >= 5)
+                            puntos.Add(new("ama", "Precios muy distintos entre sí", $"El más barato es {precios.Min():N0} y el más caro {precios.Max():N0}: puede haber un precio mal escrito."));
+                    }
+                    catch (Exception) { puntos.Add(new("ama", "No se pudieron revisar las reglas automáticas", "Revisa los productos a mano.")); }
+                }
+                var pend = await HotelesPendientesDeCargaAsync(c);
+                if (pend.Count > 0) puntos.Add(new("rojo", "Usa hoteles que pidió el proveedor y todavía no aprobaste", string.Join(", ", pend) + ". Apruébalos primero en la pestaña «Datos pedidos»."));
+                var enlaces = 0; var tel = 0; var html = 0; string? ejemplo = null;
+                foreach (var (campo, texto) in Textos(raiz))
+                {
+                    if (campo.Contains("codigo", StringComparison.OrdinalIgnoreCase) || campo.Contains("flyer", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (Html.IsMatch(texto)) { html++; ejemplo ??= texto; }
+                    if (Enlace.IsMatch(texto)) { enlaces++; ejemplo ??= texto; }
+                    if (Telefono.IsMatch(texto) && !Regex.IsMatch(texto, @"^\d{4}-\d{2}-\d{2}")) { tel++; ejemplo ??= texto; }
+                }
+                if (html > 0) puntos.Add(new("rojo", $"Hay código HTML o scripts en {html} texto(s)", "No se debe publicar. Pídele que lo quite."));
+                if (enlaces > 0) puntos.Add(new("ama", $"Hay enlaces o correos en {enlaces} texto(s)", "Evita que el cliente se vaya con el proveedor. Ej.: «" + Corta(ejemplo, 80) + "»"));
+                if (tel > 0) puntos.Add(new("ama", $"Hay teléfonos en {tel} texto(s)", "Los datos de contacto del proveedor no van en la web."));
+                var hoy = DateTime.Today;
+                var pasadas = FechasDe(raiz).Count(d => d.Date < hoy && d.Year >= 2000);
+                if (pasadas > 0) puntos.Add(new("ama", $"Tiene {pasadas} fecha(s) que ya pasaron", "No se pueden vender fechas pasadas."));
+            }
+            if (c.Estado == "PENDIENTE" && c.Fecha_Solicitud is DateTime fs)
+            {
+                var h = (DateTime.Now - fs).TotalHours;
+                if (h >= 48) puntos.Add(new("rojo", $"Lleva {Math.Floor(h / 24):0} días esperando revisión", null));
+                else if (h >= 24) puntos.Add(new("ama", "Lleva más de 24 horas esperando revisión", null));
+                if (string.IsNullOrWhiteSpace(c.Flyer)) puntos.Add(new("ama", "No tiene flyer", "Se genera al enviarla; pulsa «Generar flyer» si falta."));
+            }
+            if (!string.IsNullOrWhiteSpace(c.Error)) puntos.Add(new("rojo", "Falló al publicarse", c.Error));
+            try
+            {
+                using var cn = _db.Conexion();
+                var malas = await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM (SELECT TOP 10 estado FROM Eurovip.carga_proveedor WHERE id_cuenta = @c AND id <> @id AND fecha_revision IS NOT NULL ORDER BY fecha_revision DESC) x WHERE estado IN ('RECHAZADA','DEVUELTA')", new { c = c.Id_Cuenta, id });
+                if (malas >= 3) puntos.Add(new("ama", $"Este proveedor tiene {malas} de sus últimas cargas rechazadas o devueltas", "Revisa esta con más cuidado."));
+            }
+            catch (System.Data.SqlClient.SqlException) { }
+            doc?.Dispose();
+            var riesgo = puntos.Any(p => p.Nivel == "rojo") ? "rojo" : puntos.Any(p => p.Nivel == "ama") ? "ama" : "verde";
+            return new { riesgo, puntos = puntos.OrderBy(p => p.Nivel == "rojo" ? 0 : 1) };
+        }
+
+        private static string Corta(string? s, int n) => string.IsNullOrEmpty(s) ? "" : s.Length <= n ? s : s[..n] + "…";
 
         // ---------------------------------------------------------------- bandeja de chats
         public sealed class Chat
