@@ -398,7 +398,7 @@ namespace EuroVip.Controllers
 
         /// <summary>
         /// Guarda las 3 imágenes del slide (web, tablet, móvil). Pedido de la usuaria: «en la carga de Carrusel no bajar la calidad de las
-        /// imágenes». Por eso el archivo se copia TAL CUAL lo subió la persona: sin pasar por ConvertirWebpAsync (que reduce a 1600 px y
+        /// imágenes». Por eso el archivo se copia TAL CUAL lo subió la persona: sin pasar por ConvertirWebpAsync (que ya no reduce ni pierde calidad, pero convierte a WebP; antes reducía a 1600 px y
         /// calidad 82 en las demás cargas), sin redimensionar y sin recomprimir. No añadir conversión aquí.
         /// </summary>
         private async Task<string?> GuardarImagenes(string ruta, IFormFile? web, IFormFile? tablet, IFormFile? movil, bool nuevo)

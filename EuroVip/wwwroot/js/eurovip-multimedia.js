@@ -93,7 +93,7 @@ window.EVMultimedia = (() => {
                         </span></div>`).join('')}
                     <label class="mm-add"><span><i class="bi bi-cloud-arrow-up"></i>Arrastra fotos aquí<br>o pulsa para elegir</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple data-subir="GALERIA" hidden></label>
                 </div>` : ''}
-                <div class="mm-pie">JPG, PNG o WebP hasta 10 MB; se guardan en WebP de 1600 px como máximo.${o.galeria ? ' Arrastra las fotos de la galería o usa las flechas para cambiar el orden.' : ''}</div>
+                <div class="mm-pie">JPG, PNG o WebP hasta 10 MB; se guardan SIN perder calidad (no se reducen ni se recomprimen). Al elegir una foto verás si su calidad es buena, normal o mala.${o.galeria ? ' Arrastra las fotos de la galería o usa las flechas para cambiar el orden.' : ''}</div>
             </div>`;
         }
 

@@ -41,15 +41,14 @@ namespace EuroVip.Services
     /// Imágenes en carpetas internas del proyecto: wwwroot/imagenes/hoteles, wwwroot/imagenes/circuitos…
     /// No se guarda nada en la base: la imagen se relaciona por NOMBRE (como BackTiTan con /imagenes/destinos),
     /// así "Hotel Kristal" → /imagenes/hoteles/hotelkristal.webp.
-    /// Al subir, la imagen se convierte a WebP (máx. 1600 px de lado, calidad 82) para que pese poco.
+    /// Al subir, la imagen NUNCA pierde calidad (pedido de la usuaria, 20/11/2026): sin reducir de tamaño y sin recomprimir. Un WebP se guarda
+    /// tal cual; un JPG o PNG se guarda como WebP SIN PÉRDIDA (los mismos píxeles). La calidad se le indica a la persona al elegir el archivo.
     /// </summary>
     public class ImagenesLocales : IImagenesLocales
     {
         public static readonly string[] Tipos = { "hoteles", "circuitos", "destinos", "alojamientos", "excursiones", "traslados" };
         /// <summary>Subcarpetas permitidas (como BackTiTan: circuitos/itinerario/es).</summary>
         public static readonly string[] Subcarpetas = { "itinerario/es" };
-        private const int LadoMaximo = 1600;
-        private const int Calidad = 82;
         private readonly IWebHostEnvironment _env;
 
         public ImagenesLocales(IWebHostEnvironment env) => _env = env;
@@ -128,25 +127,29 @@ namespace EuroVip.Services
         }
 
         /// <summary>
-        /// Lee una imagen (JPG, PNG, WebP…), la endereza si viene girada del móvil, la reduce a 1600 px de lado como máximo
-        /// y la devuelve en WebP (calidad 82) con su ancho y alto. La usan estas carpetas y Eurovip.multimedia.
+        /// Lee una imagen (JPG, PNG, WebP…) y la devuelve en WebP SIN tocar su calidad: no se reduce de tamaño y no se recomprime.
+        /// • Si ya es WebP (y no viene girada), se guardan los mismos bytes que subió la persona.
+        /// • Si es JPG o PNG, se pasa a WebP sin pérdida (lossless): los píxeles son exactamente los mismos. Si venía girada del móvil
+        ///   (EXIF), solo se endereza, que tampoco pierde nada. NO añadir aquí reducción ni calidad con pérdida.
+        /// La usan estas carpetas y Eurovip.multimedia.
         /// </summary>
         public static async Task<(byte[] Datos, int Ancho, int Alto)> ConvertirWebpAsync(Stream origen)
         {
             using var ms = new MemoryStream();
             await origen.CopyToAsync(ms);
+            var bytes = ms.ToArray();
             ms.Position = 0;
             using var codec = SKCodec.Create(ms) ?? throw new InvalidOperationException("No se pudo leer la imagen. Usa JPG, PNG o WebP.");
-            using var leida = SKBitmap.Decode(codec) ?? throw new InvalidOperationException("No se pudo leer la imagen. Usa JPG, PNG o WebP.");
-            using var bmp = Enderezar(leida, codec.EncodedOrigin);   // fotos de móvil giradas
+            if (codec.EncodedFormat == SKEncodedImageFormat.Webp && codec.EncodedOrigin == SKEncodedOrigin.TopLeft)
+                return (bytes, codec.Info.Width, codec.Info.Height);   // ya es WebP: tal cual
 
-            var escala = Math.Min(1f, LadoMaximo / (float)Math.Max(bmp.Width, bmp.Height));
-            using var final = escala < 1f
-                ? bmp.Resize(new SKImageInfo((int)(bmp.Width * escala), (int)(bmp.Height * escala)), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
-                : bmp.Copy();
-            using var img = SKImage.FromBitmap(final);
-            using var datos = img.Encode(SKEncodedImageFormat.Webp, Calidad);
-            return (datos.ToArray(), final.Width, final.Height);
+            var info = codec.Info.WithAlphaType(codec.Info.IsOpaque ? SKAlphaType.Opaque : SKAlphaType.Unpremul);
+            using var leida = SKBitmap.Decode(codec, info) ?? throw new InvalidOperationException("No se pudo leer la imagen. Usa JPG, PNG o WebP.");
+            using var bmp = Enderezar(leida, codec.EncodedOrigin);   // fotos de móvil giradas (solo gira, no pierde nada)
+            using var pix = bmp.PeekPixels();
+            using var datos = pix.Encode(new SKWebpEncoderOptions(SKWebpEncoderCompression.Lossless, 100))
+                ?? throw new InvalidOperationException("No se pudo guardar la imagen.");
+            return (datos.ToArray(), bmp.Width, bmp.Height);
         }
 
         private static SKBitmap Enderezar(SKBitmap b, SKEncodedOrigin origen)
