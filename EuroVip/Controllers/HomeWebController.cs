@@ -181,7 +181,8 @@ namespace EuroVip.Controllers
         public async Task<IActionResult> GuardarTarjeta([FromBody] HwTarjetaDto dto)
         {
             if (!ModelState.IsValid) return Error();
-            if (!string.IsNullOrWhiteSpace(dto.CaratulaDestino) && !dto.CaratulaDestino.StartsWith("http") && !dto.CaratulaDestino.StartsWith("/"))
+            // En un HOTEL, CaratulaDestino es el nombre del destino (no una imagen): solo en las demás tarjetas tiene que ser una URL o una ruta
+            if (dto.Tipo_Servicio?.Trim().ToUpperInvariant() != "HOTEL" && !string.IsNullOrWhiteSpace(dto.CaratulaDestino) && !dto.CaratulaDestino.StartsWith("http") && !dto.CaratulaDestino.StartsWith("/"))
                 return BadRequest(new { mensaje = "La imagen debe ser una URL (https://…) o una ruta que empiece por /" });
             if (await _repo.RevisarTarjetaAsync(dto) is var (campo, mal))   // FASE 38: moneda y código interno
                 return BadRequest(new { mensaje = mal, errores = new Dictionary<string, string> { [campo] = mal } });

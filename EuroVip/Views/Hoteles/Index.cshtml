@@ -1466,6 +1466,7 @@ const HX = (() => {
         poner('Id_Destino', h.nombre);
         if (dest) poner('CaratulaDestino', dest.corto);
         poner('CodigoHotel', h.codigo);
+        poner('Noches', '');   // los hoteles de Booking Motor van SIN noches (pedido de la usuaria 20/11/2026)
         frm.dispatchEvent(new Event('change', { bubbles: true }));
         $$('.hx-bm-h').forEach(b => b.classList.toggle('on', JSON.parse(b.dataset.bm).codigo === h.codigo));
         const el = $('#bmElegido'); el.hidden = false;

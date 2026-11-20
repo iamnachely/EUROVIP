@@ -85,7 +85,7 @@ namespace EuroVip.Controllers
 
         /// <summary>
         /// Carga a la Home los hoteles elegidos de Booking Motor: el nombre, el código y la foto salen de Booking Motor; el resto con lo
-        /// habitual del formulario (campaña General-DT, sección HOTELES BOOKINGMOTOR, salida desde Santo Domingo, 1 noche, DOP).
+        /// habitual del formulario (campaña General-DT, sección HOTELES BOOKINGMOTOR, salida desde Santo Domingo, DOP) y SIN noches (el hotel no las lleva; pedido de la usuaria 20/11/2026).
         /// Pasa por las mismas reglas que el formulario y el Excel. Devuelve el resultado de cada hotel.
         /// </summary>
         [HttpPost]
@@ -120,7 +120,7 @@ namespace EuroVip.Controllers
                 var dto = new HotelGuardarDto
                 {
                     Id_Destino = h.Nombre, CaratulaDestino = destino, Descripcion = $"{regimen} -{h.Codigo}", Id_Idioma = HotelRepository.IdiomaHotel,
-                    Id_Campanya = camp.Id_Campanya, Id_Moneda = "DOP", Noches = 1, Id_Pais_Origen = "DO", Origen = "Santo Domingo",
+                    Id_Campanya = camp.Id_Campanya, Id_Moneda = "DOP", Noches = null, Id_Pais_Origen = "DO", Origen = "Santo Domingo",
                     Id_PaisDestino = pais, Id_Contenedor = cont?.Id_Contenedor, Posicion_Destino = 1, Estado = d.Visible
                 };
                 Preparar(dto);
