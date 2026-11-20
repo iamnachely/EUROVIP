@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "eurovip", "runtimeExecutable": "dotnet", "runtimeArgs": ["run", "--project", "EuroVip/EuroVip.csproj", "--launch-profile", "http"], "port": 5166 },
+    {
+      "name": "eurovip-prueba",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "EuroVip/EuroVip.csproj", "--no-launch-profile", "-p:OutputPath=C:/Users/nrodriguez/source/repos/BackEurovip/EuroVip/bin/prueba/", "--", "--urls", "http://localhost:5177", "--environment", "Development"],
+      "port": 5177,
+      "autoPort": false
+    },
+    { "name": "eurovip-b2b-api", "runtimeExecutable": "C:/Users/nrodriguez/.dotnet/dotnet.exe", "runtimeArgs": ["run", "--project", "C:/Users/nrodriguez/source/repos/EuroVip/api/EuroVip.Api", "--launch-profile", "http"], "port": 5080 }
+  ]
+}
