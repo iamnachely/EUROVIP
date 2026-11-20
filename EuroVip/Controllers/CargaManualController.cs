@@ -46,26 +46,65 @@ namespace EuroVip.Controllers
         /// <summary>Cómo va la carga en curso (la pantalla lo consulta cada medio segundo para la barra de progreso).</summary>
         [HttpGet]
         public IActionResult Progreso(string id, [FromServices] IProgresoCargas progreso) =>
-            Json(progreso.Leer(id) is { } p ? new { porcentaje = p.Porcentaje, paso = p.Paso } : new { porcentaje = 0, paso = "" });
+            Json(progreso.Leer(id) is { } p
+                ? new { existe = true, porcentaje = p.Porcentaje, paso = p.Paso, terminado = p.Terminado, estado = p.Estado, cuerpo = p.Terminado ? p.Cuerpo : null }
+                : new { existe = false, porcentaje = 0, paso = "", terminado = false, estado = 0, cuerpo = (object?)null });
 
+        /// <summary>
+        /// Guarda la carga. Con la cabecera X-Segundo-Plano la carga corre en el servidor AUNQUE el navegador pierda la conexión (red, proxy, tiempo
+        /// de espera): se responde 202 enseguida y la pantalla consulta /Progreso?id=… hasta que trae el resultado. Así una carga larga (decenas de
+        /// ofertas) no termina en «Failed to fetch». Sin la cabecera, funciona como siempre (espera el resultado).
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Guardar([FromBody] CargaOfertaDto dto)
+        public async Task<IActionResult> Guardar([FromBody] CargaOfertaDto dto, [FromServices] IProgresoCargas progreso, [FromServices] IServiceScopeFactory scopes)
         {
             var errores = ErroresModelo();
             if (errores.Count > 0) return BadRequest(new { mensaje = errores[0], errores });
+            var usuario = User.Identity?.Name ?? "eurovip";
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var navegador = Request.Headers.UserAgent.ToString();
+            var idProgreso = Request.Headers[ProgresoCargas.Cabecera].ToString();
+
+            if (Request.Headers["X-Segundo-Plano"] == "1" && !string.IsNullOrWhiteSpace(idProgreso) && idProgreso.Length <= 64)
+            {
+                progreso.Reportar(idProgreso, 1, "Recibido. Empezando la carga…");
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = scopes.CreateScope();
+                        var (estado, cuerpo) = await EjecutarGuardarAsync(dto, usuario, ip, navegador, idProgreso,
+                            scope.ServiceProvider.GetRequiredService<ICargaOfertaService>(), scope.ServiceProvider.GetRequiredService<ICircuitoRepository>());
+                        progreso.Terminar(idProgreso, estado, cuerpo);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error inesperado en carga manual (segundo plano)");
+                        progreso.Terminar(idProgreso, 500, new { mensaje = "Error inesperado: " + ex.Message });
+                    }
+                });
+                return Accepted(new { segundoPlano = true, id = idProgreso });
+            }
+
+            var (st, body) = await EjecutarGuardarAsync(dto, usuario, ip, navegador, idProgreso, _carga, _aud);
+            return StatusCode(st, body);
+        }
+
+        /// <summary>La carga de verdad. Devuelve el código HTTP y el cuerpo, para responderlos ya o dejarlos en el progreso.</summary>
+        private async Task<(int Estado, object Cuerpo)> EjecutarGuardarAsync(CargaOfertaDto dto, string usuario, string? ip, string navegador, string idProgreso, ICargaOfertaService carga, ICircuitoRepository aud)
+        {
             try
             {
-                var (r, errs) = await _carga.CargarAsync(dto, User.Identity?.Name ?? "eurovip", HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), Request.Headers[ProgresoCargas.Cabecera].ToString());
-                if (r is null) return BadRequest(new { mensaje = errs.FirstOrDefault(), errores = errs, precioMinimo = _carga.PrecioMinimo?.Info(), precioMinimoLista = _carga.PrecioMinimo?.Lista });   // CAMBIO 139
-                await _aud.AuditarAsync(OfertaRepository.TipoDe(dto.Tipo) == OfertaRepository.TipoPaquete ? "Paquete_Carga" : "Oferta_Carga", r.Ids, new { dto.Modo, r.Codigo, r.LogId }, User.Identity?.Name ?? "desconocido",
-                    HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
-                return Json(r);
+                var (r, errs) = await carga.CargarAsync(dto, usuario, ip, navegador, idProgreso);
+                if (r is null) return (400, new { mensaje = errs.FirstOrDefault(), errores = errs, precioMinimo = carga.PrecioMinimo?.Info(), precioMinimoLista = carga.PrecioMinimo?.Lista });   // CAMBIO 139
+                await aud.AuditarAsync(OfertaRepository.TipoDe(dto.Tipo) == OfertaRepository.TipoPaquete ? "Paquete_Carga" : "Oferta_Carga", r.Ids, new { dto.Modo, r.Codigo, r.LogId }, usuario, ip, navegador);
+                return (200, r);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error inesperado en carga manual");
-                return StatusCode(500, new { mensaje = "Error inesperado: " + ex.Message });
+                return (500, new { mensaje = "Error inesperado: " + ex.Message });
             }
         }
 

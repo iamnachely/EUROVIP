@@ -346,7 +346,7 @@ const XP = (() => {
         const btn = $('#xpCargar'), html = btn.innerHTML;
         btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span> Cargando…';
         try {
-            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { titulo: 'Cargando ' + NOMBRE });
+            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { segundoPlano: true, titulo: 'Cargando ' + NOMBRE });
             $('#xpOk').innerHTML = `<div class="ring"><i class="bi bi-check-lg"></i></div><h2>${esc(r.mensaje)}</h2>
                 <p style="color:var(--ev-muted);margin:0 0 22px">Código de carga <b>${esc(r.codigo)}</b> · ${OFS} #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro de carga #${r.logId}</p>
                 <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">

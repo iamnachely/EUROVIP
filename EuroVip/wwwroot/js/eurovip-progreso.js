@@ -94,6 +94,7 @@
 
     /** POST con progreso reportado por el servidor. Devuelve la respuesta JSON (o lanza Error con .data y .status). */
     async function conServidor(url, body, opts = {}) {
+        if (opts.segundoPlano) return conServidorSegundoPlano(url, body, opts);
         const id = idNuevo();
         const base = opts.base || url.replace(/\/[^/]*$/, '');
         const ui = abrir(opts.titulo || 'Cargando…', opts.sub);
@@ -125,6 +126,61 @@
             fin = true;
             ui.cerrar();
         }
+    }
+
+    /**
+     * Igual que conServidor, pero la carga corre en el SERVIDOR aunque el navegador pierda la conexión (red, proxy, tiempo de espera):
+     * el POST responde 202 enseguida y aquí se sigue consultando /Progreso?id=… hasta que trae el resultado. Si una consulta falla,
+     * se reintenta; la persona nunca ve «Failed to fetch» por una carga larga. Lo usan las cargas manuales de ofertas y paquetes.
+     */
+    async function conServidorSegundoPlano(url, body, opts) {
+        const id = idNuevo();
+        const base = opts.base || url.replace(/\/[^/]*$/, '');
+        const ui = abrir(opts.titulo || 'Cargando…', opts.sub);
+        ui.poner(2, 'Enviando los datos…');
+        try {
+            let aceptado = false, errorEnvio = null;
+            try {
+                const r = await fetch(url, {
+                    method: 'POST', body: JSON.stringify(body ?? {}),
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token(), 'X-Progreso': id, 'X-Segundo-Plano': '1' }
+                });
+                let data = null; try { data = await r.json(); } catch { }
+                if (r.redirected && /\/Auth\/Login/i.test(r.url)) throw Object.assign(new Error('Tu sesión terminó. Vuelve a iniciar sesión (tus datos están en esta pantalla: no la cierres) y repite la carga.'), { status: 401 });
+                if (!r.ok) throw Object.assign(new Error(data?.mensaje || (r.status === 400 ? 'Revisa los datos.' : 'Algo salió mal. Intenta de nuevo.')), { data, status: r.status });
+                aceptado = true;
+            } catch (e) {
+                if (e.status) throw e;       // el servidor respondió con un error: es el de verdad
+                errorEnvio = e;              // se cortó la conexión al enviar: puede que el servidor sí lo recibió; se comprueba abajo
+            }
+
+            const inicio = Date.now();
+            let vioProgreso = false, sinRastro = 0, ultimoPaso = Date.now();
+            for (;;) {
+                await espera(errorEnvio && !vioProgreso ? 1000 : 700);
+                let p = null;
+                try {
+                    const r = await fetch(`${base}/Progreso?id=${encodeURIComponent(id)}`, { headers: { 'Accept': 'application/json' } });
+                    if (r.ok) p = await r.json();
+                } catch { /* sin red un momento: se reintenta */ }
+
+                if (p && p.existe) {
+                    vioProgreso = true; sinRastro = 0;
+                    ui.poner(p.porcentaje, p.paso);
+                    if (p.terminado) {
+                        if (p.estado >= 200 && p.estado < 300) { ui.poner(100, '¡Listo!'); await espera(600); return p.cuerpo; }
+                        throw Object.assign(new Error(p.cuerpo?.mensaje || (p.estado === 400 ? 'Revisa los datos.' : 'Algo salió mal. Intenta de nuevo.')), { data: p.cuerpo, status: p.estado });
+                    }
+                } else if (p && !p.existe) {
+                    sinRastro++;
+                    if (errorEnvio && !vioProgreso && sinRastro >= 6)
+                        throw new Error('No se pudo enviar la carga (se cortó la conexión). No se cargó nada: revisa tu conexión y vuelve a intentarlo.');
+                    if (vioProgreso && sinRastro >= 8)
+                        throw new Error('La carga se interrumpió porque el servidor se reinició. Antes de repetirla, mira en la pestaña «Cargas» si se alcanzó a guardar, para no duplicar.');
+                }
+                if (Date.now() - inicio > 30 * 60 * 1000) throw new Error('La carga está tardando más de lo normal. No la repitas: mira en la pestaña «Cargas» si ya se guardó.');
+            }
+        } finally { ui.cerrar(); }
     }
 
     /** Subida de un FormData con el % real de bytes enviados. alAvanzar(pct) opcional. */

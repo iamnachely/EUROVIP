@@ -180,7 +180,15 @@
                 headers: { ...(esForm ? {} : { 'Content-Type': 'application/json' }), 'RequestVerificationToken': EV.token(), ...(opts.headers || {}) }
             });
             try { data = await r.json(); } catch { }
-        } catch {
+            // La sesión caducó: el servidor manda al login y fetch lo sigue (HTML, no JSON). Se avisa claro en vez de fallar más adelante.
+            if (r.redirected && /\/Auth\/Login/i.test(r.url)) {
+                await cerrarEspera();
+                const msg = 'Tu sesión terminó. Vuelve a iniciar sesión (no cierres esta pantalla, tus datos siguen aquí) y repite la acción.';
+                if (accion && !opts.sinAlerta) EV.alerta({ tipo: 'error', titulo: 'Tu sesión terminó', texto: EV.esc(msg) });
+                throw Object.assign(new Error(msg), { status: 401 });
+            }
+        } catch (e0) {
+            if (e0 && e0.status === 401) throw e0;
             await cerrarEspera();
             const msg = 'No pudimos hablar con el servidor. Revisa tu conexión e inténtalo de nuevo.';
             if (accion && !opts.sinAlerta) { ultimoError = { msg, t: Date.now() }; EV.alerta({ tipo: 'error', titulo: 'Se cortó la conexión', texto: EV.esc(msg) }); }

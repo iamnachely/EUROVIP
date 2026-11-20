@@ -448,7 +448,7 @@ const CL = (() => {
         if (!await EV.confirmar({ titulo: `¿Guardar ${total} ${OFS}?`, texto: `Se crearán <b>${total}</b> ${OFS} de <b>${dto.Hoteles.length}</b> hotel${dto.Hoteles.length === 1 ? '' : 'es'}. Si algo falla, no se guarda nada.`, si: 'Sí, guardar todos', icono: 'cloud-arrow-up' })) return;
         const b = $('#bGuardar'), html = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="ui-spin"></span> Guardando…';
         try {
-            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { titulo: 'Cargando ' + NOMBRE });
+            const r = await EVProgreso.conServidor('/CargaManual/Guardar', dto, { segundoPlano: true, titulo: 'Cargando ' + NOMBRE });
             $('#clRevision').innerHTML = `<div class="ui-note ok"><i class="bi bi-check-circle-fill"></i><div><b>${esc(r.mensaje)}</b><br>Código de carga <b>${esc(r.codigo)}</b> · ${OFS} #${r.ids[0]} a #${r.ids[r.ids.length - 1]} · registro #${r.logId}
                 <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><a class="ev-btn sm" href="${LISTA}"><i class="bi bi-eye"></i> Ver los ${OFS}</a><a class="ev-btn ghost sm" href="/CargaManual/Clasica"><i class="bi bi-arrow-repeat"></i> Nueva carga</a></div></div></div>`;
             $('#clRevision').scrollIntoView({ behavior: 'smooth', block: 'center' });
