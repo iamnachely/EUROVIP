@@ -53,7 +53,8 @@ namespace EuroVip.Controllers
     {
         private readonly ProveedoresCarga _srv;
         private readonly ICircuitoRepository _repo;
-        public ProveedorApiController(ProveedoresCarga srv, ICircuitoRepository repo) { _srv = srv; _repo = repo; }
+        private readonly ProveedoresSolicitudes _sol;
+        public ProveedorApiController(ProveedoresCarga srv, ICircuitoRepository repo, ProveedoresSolicitudes sol) { _srv = srv; _repo = repo; _sol = sol; }
 
         private ProveedorCuenta Cuenta => (ProveedorCuenta)HttpContext.Items[ClaveProveedorAttribute.ClaveCuenta]!;
 
@@ -79,7 +80,9 @@ namespace EuroVip.Controllers
                 "categorias" => await _repo.CategoriasAsync(),
                 "paises" => await _repo.PaisesAsync(),
                 "destinos" => await _repo.DestinosAsync(q, pais),
-                "hoteles" => await _repo.HotelesAsync(q, destino, pais),
+                "hoteles" => (await _sol.HotelesPendientesAsync(Cuenta.Id, q)).Select(o => new CircuitoHotelDto { Id_Alojamiento = int.Parse(o.Valor), Nombre = o.Texto, Destino = o.Extra, Estrellas = o.Extra2 })
+                    .Concat(await _repo.HotelesAsync(q, destino, pais)).ToList(),
+                "tipos-habitacion" => await _sol.TiposHabitacionAsync(q),
                 "habitaciones" => hotel is int h ? await ofertas.HabitacionesAsync(h) : Array.Empty<object>(),
                 "aeropuertos" => await _repo.AeropuertosAsync(q, pais),
                 "circuitos" => await _repo.ListarAsync(q, pais),
@@ -212,6 +215,39 @@ namespace EuroVip.Controllers
             if (m is null || !Cuenta.ListaModulos.Contains(m)) return NotFound(new { mensaje = "Tu cuenta no tiene habilitado ese tipo de producto." });
             var (r, error) = await excel.LeerAsync(Cuenta, m, archivo, mapa);
             return error is not null ? BadRequest(new { mensaje = error }) : Json(r);
+        }
+
+        // ---------- Solicitudes de creación (20/11/2026): «no existe mi hotel → pido que lo creen y lo uso ya» ----------
+        /// <summary>El formulario de ese tipo (hotel, destino, aeropuerto, habitacion): los mismos campos de Herramientas.</summary>
+        [HttpGet("solicitudes/formulario/{tipo}")]
+        public async Task<IActionResult> SolicitudFormulario(string tipo) =>
+            await _sol.FormularioAsync(tipo) is { } f ? Json(f) : NotFound(new { mensaje = "No sé crear eso." });
+
+        public sealed class ParecidosSolDto { public string Col { get; set; } = ""; public string Texto { get; set; } = ""; public Dictionary<string, string?> Contexto { get; set; } = new(); }
+
+        /// <summary>Lo que ya existe o se parece a lo que escribe (para no pedirlo dos veces).</summary>
+        [HttpPost("solicitudes/parecidos/{tipo}")]
+        public async Task<IActionResult> SolicitudParecidos(string tipo, [FromBody] ParecidosSolDto dto) =>
+            await _sol.ParecidosAsync(tipo, dto.Col, dto.Texto, dto.Contexto) is { } r ? Json(r) : NotFound(new { mensaje = "No sé revisar eso." });
+
+        public sealed class SolicitudDto { public Dictionary<string, JsonElement> Datos { get; set; } = new(); }
+
+        /// <summary>Crea el dato (mismas reglas que Herramientas) y lo deja anotado para que Eurovip lo revise.</summary>
+        [HttpPost("solicitudes/{tipo}")]
+        public async Task<IActionResult> SolicitudCrear(string tipo, [FromBody] SolicitudDto dto)
+        {
+            var (r, error) = await _sol.CrearAsync(Cuenta, tipo, dto.Datos);
+            if (r is null) return BadRequest(new { mensaje = error });
+            await Auditar("Proveedor_Solicitud_" + tipo, new { dto.Datos });
+            return Json(r);
+        }
+
+        /// <summary>Mis solicitudes (pendientes, aprobadas y rechazadas con su motivo).</summary>
+        [HttpGet("solicitudes")]
+        public async Task<IActionResult> Solicitudes(string? estado)
+        {
+            var (items, conteo) = await _sol.ListarAsync(Cuenta.Id, estado);
+            return Json(new { items, conteo });
         }
 
         private Task Auditar(string tipo, object cambios) =>

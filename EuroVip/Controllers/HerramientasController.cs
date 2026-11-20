@@ -340,6 +340,34 @@ namespace EuroVip.Controllers
             return Json(new { ok = true, mensaje = "Se la devolviste al proveedor. Verá tus instrucciones y la podrá corregir y volver a enviar." });
         }
 
+        // ---------- Solicitudes de datos de los proveedores (20/11/2026) ----------
+        private ProveedoresSolicitudes Sol => HttpContext.RequestServices.GetRequiredService<ProveedoresSolicitudes>();
+
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorSolicitudes(string? estado)
+        {
+            var (items, conteo) = await Sol.ListarAsync(null, estado);
+            return Json(new { items, conteo });
+        }
+
+        public sealed class SolicitudRevisionDto { public int Id { get; set; } public string? Motivo { get; set; } }
+
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorSolicitudAprobar([FromBody] SolicitudRevisionDto dto)
+        {
+            if (await Sol.AprobarAsync(dto.Id, User.Identity?.Name ?? "desconocido") is string error) return BadRequest(new { mensaje = error });
+            await Auditar("Proveedor_Solicitud_Aprobar", new { dto.Id });
+            return Json(new { ok = true, mensaje = "Aprobada: el dato queda activo." });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorSolicitudRechazar([FromBody] SolicitudRevisionDto dto)
+        {
+            if (await Sol.RechazarAsync(dto.Id, dto.Motivo, User.Identity?.Name ?? "desconocido") is string error) return BadRequest(new { mensaje = error });
+            await Auditar("Proveedor_Solicitud_Rechazar", new { dto.Id, dto.Motivo });
+            return Json(new { ok = true, mensaje = "Rechazada: el proveedor verá tu motivo." });
+        }
+
         public sealed class ComentarioRevisionDto
         {
             public int Id { get; set; }
