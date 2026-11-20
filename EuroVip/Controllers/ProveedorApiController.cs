@@ -268,6 +268,18 @@ namespace EuroVip.Controllers
             return Json(r);
         }
 
+        public sealed class SugerenciaDto { public string? Categoria { get; set; } public string? Asunto { get; set; } public string? Texto { get; set; } }
+
+        /// <summary>Sugerencia, problema, pregunta o comentario para Eurovip.</summary>
+        [HttpPost("solicitudes/sugerencia")]
+        public async Task<IActionResult> SolicitudSugerencia([FromBody] SugerenciaDto dto)
+        {
+            var (r, error) = await _sol.CrearSugerenciaAsync(Cuenta, dto.Categoria, dto.Asunto, dto.Texto);
+            if (r is null) return BadRequest(new { mensaje = error });
+            await Auditar("Proveedor_Sugerencia", new { dto.Categoria, dto.Asunto });
+            return Json(r);
+        }
+
         /// <summary>Mis solicitudes (pendientes, aprobadas y rechazadas con su motivo).</summary>
         [HttpGet("solicitudes")]
         public async Task<IActionResult> Solicitudes(string? estado)

@@ -66,6 +66,27 @@ namespace EuroVip.Services
             return (new { ok = true, id, mensaje = $"Listo: pediste agregar {validos.Count} foto(s). Eurovip las revisa y, si están bien, salen en la web." }, null);
         }
 
+        // ---------------------------------------------------------------- sugerencias y comentarios del proveedor
+        public static readonly string[] CategoriasSugerencia = { "sugerencia", "problema", "pregunta", "felicitacion" };
+
+        /// <summary>El proveedor deja una sugerencia, un problema, una pregunta o un comentario para Eurovip (se guarda como una solicitud más, sin cambiar la base).</summary>
+        public async Task<(object? Resultado, string? Error)> CrearSugerenciaAsync(ProveedorCuenta cuenta, string? categoria, string? asunto, string? texto)
+        {
+            categoria = (categoria ?? "sugerencia").Trim().ToLowerInvariant();
+            if (!CategoriasSugerencia.Contains(categoria)) categoria = "sugerencia";
+            asunto = (asunto ?? "").Trim(); texto = (texto ?? "").Trim();
+            if (asunto.Length < 3) return (null, "Escribe un título corto (al menos 3 letras).");
+            if (texto.Length < 10) return (null, "Cuéntanos un poco más (al menos 10 letras).");
+            if (asunto.Length > 150) asunto = asunto[..150]; if (texto.Length > 3000) texto = texto[..3000];
+            using var cn = _db.Conexion();
+            if (!await HayTablaAsync(cn)) return (null, "Las sugerencias todavía no están disponibles en este servidor. Escribe a Eurovip.");
+            if (await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.proveedor_solicitud WHERE id_cuenta = @c AND tipo = 'sugerencia' AND creado_en > DATEADD(MINUTE, -1, SYSDATETIME())", new { c = cuenta.Id }) >= 3)
+                return (null, "Enviaste varios mensajes seguidos. Espera un minuto y vuelve a intentarlo.");
+            var id = await cn.ExecuteScalarAsync<int>("INSERT INTO Eurovip.proveedor_solicitud (id_cuenta, tipo, nombre, datos) OUTPUT INSERTED.id_solicitud VALUES (@c, 'sugerencia', @n, @d)",
+                new { c = cuenta.Id, n = asunto, d = JsonSerializer.Serialize(new { categoria, texto }) });
+            return (new { ok = true, id, mensaje = "¡Gracias! Eurovip recibió tu mensaje y te responderá aquí." }, null);
+        }
+
         private async Task<string?> AprobarImagenesAsync(int id, string? datos)
         {
             if (string.IsNullOrWhiteSpace(datos)) return "La solicitud no tiene fotos.";

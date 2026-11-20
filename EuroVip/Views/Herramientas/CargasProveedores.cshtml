@@ -739,9 +739,9 @@
     });
 
     // ---------- Solicitudes de datos (hotel, destino, aeropuerto, habitación que el proveedor pidió crear) ----------
-    const SOL = { imagen: ['bi-images', 'Fotos'], hotel: ['bi-building', 'Hotel'], destino: ['bi-geo-alt', 'Destino'], aeropuerto: ['bi-airplane-engines', 'Aeropuerto'], habitacion: ['bi-door-open', 'Habitación'] };
+    const SOL = { sugerencia: ['bi-lightbulb', 'Sugerencia'], imagen: ['bi-images', 'Fotos'], hotel: ['bi-building', 'Hotel'], destino: ['bi-geo-alt', 'Destino'], aeropuerto: ['bi-airplane-engines', 'Aeropuerto'], habitacion: ['bi-door-open', 'Habitación'] };
     const SOL_EST = { PENDIENTE: 'Por revisar', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' };
-    const SOL_CAT = { imagen: 'alojamientos', hotel: 'alojamientos', destino: 'destinos', aeropuerto: 'estaciones', habitacion: 'habitaciones' };
+    const SOL_CAT = { sugerencia: 'alojamientos', imagen: 'alojamientos', hotel: 'alojamientos', destino: 'destinos', aeropuerto: 'estaciones', habitacion: 'habitaciones' };
     async function solicitudes() {
         let r;
         try { r = await EV.api('/Herramientas/ProveedorSolicitudes'); } catch { return; }
@@ -753,12 +753,15 @@
         caja.innerHTML = r.items.map(s => {
             const [ico, nombre] = SOL[s.tipo] || ['bi-box', s.tipo];
             let datos = '';
-            try { const d = JSON.parse(s.datos || '{}'); if (s.tipo === 'imagen') { const q = a => { const l = Math.max(a.ancho || 0, a.alto || 0), c = Math.min(a.ancho || 0, a.alto || 0); return l >= 1600 && c >= 900 ? 'buena' : l >= 1000 && c >= 600 ? 'normal' : 'mala'; };
+            try { const d = JSON.parse(s.datos || '{}'); if (s.tipo === 'sugerencia') { const CAT = { sugerencia: '💡 Sugerencia', problema: '⚠️ Problema', pregunta: '❓ Pregunta', felicitacion: '🎉 Comentario' }; datos = `<b>${CAT[d.categoria] || 'Mensaje'}</b><div style="white-space:pre-line;margin-top:4px">${esc(d.texto)}</div>`; } else if (s.tipo === 'imagen') { const q = a => { const l = Math.max(a.ancho || 0, a.alto || 0), c = Math.min(a.ancho || 0, a.alto || 0); return l >= 1600 && c >= 900 ? 'buena' : l >= 1000 && c >= 600 ? 'normal' : 'mala'; };
                 datos = `<b>${d.destinoTipo === 'hotel' ? 'Hotel' : 'Destino'}:</b> ${esc(d.nombre || d.clave)} · uso: ${d.uso === 'PORTADA' ? 'la primera es portada' : 'galería'}<div class="sg-thumbs">${(d.archivos || []).map(a => `<a href="/uploads/proveedores/imagenes/${s.id_Solicitud}/${a.n}.${esc(a.ext)}" target="_blank" rel="noopener"><figure class="${q(a)}"><img src="/uploads/proveedores/imagenes/${s.id_Solicitud}/${a.n}.${esc(a.ext)}" alt="" loading="lazy"><figcaption><span>${q(a)}</span><span>${a.ancho || '?'}×${a.alto || '?'}</span></figcaption></figure></a>`).join('')}</div>`; } else datos = Object.entries(d).filter(([k, v]) => v !== '' && v !== null && k !== 'activo').map(([k, v]) => esc(k.replace(/^id_/, '').replace('_', ' ')) + ': ' + esc(v)).join(' · '); } catch { }
             const acc = s.estado === 'PENDIENTE'
-                ? `<button type="button" class="ev-btn sm" data-sol="ok" data-id="${s.id_Solicitud}"><i class="bi bi-check2-circle"></i> Aprobar</button>
+                ? (s.tipo === 'sugerencia'
+                    ? `<button type="button" class="ev-btn sm" data-sol="ok" data-id="${s.id_Solicitud}"><i class="bi bi-check2-circle"></i> Marcar como vista</button>
+                       <button type="button" class="ev-btn ghost sm" data-sol="no" data-id="${s.id_Solicitud}"><i class="bi bi-reply"></i> Responder</button>`
+                    : `<button type="button" class="ev-btn sm" data-sol="ok" data-id="${s.id_Solicitud}"><i class="bi bi-check2-circle"></i> Aprobar</button>
                    <button type="button" class="ev-btn ghost sm" data-sol="no" data-id="${s.id_Solicitud}"><i class="bi bi-x-circle"></i> Rechazar</button>
-                   <a class="ev-btn ghost sm" href="/Herramientas/Catalogo/${SOL_CAT[s.tipo]}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Abrir en Herramientas</a>`
+                   <a class="ev-btn ghost sm" href="/Herramientas/Catalogo/${SOL_CAT[s.tipo]}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Abrir en Herramientas</a>`)
                 : `<small>${esc(SOL_EST[s.estado] || s.estado)}${s.revisado_Por ? ' por ' + esc(s.revisado_Por) : ''}</small>`;
             return `<div class="hp-sol-fila ${esc(s.estado)}"><span class="ico"><i class="bi ${ico}"></i></span>
                 <div><b>${esc(nombre)}: ${esc(s.nombre)}</b><small>${esc(s.cuenta || '')} · ${fh(s.creado_En)}${s.motivo ? ' · Motivo: ' + esc(s.motivo) : ''}</small>
@@ -772,7 +775,7 @@
             if (b.dataset.sol === 'ok') {
                 const r = await EV.post('/Herramientas/ProveedorSolicitudAprobar', { id }); EV.toast(r.mensaje, 'ok');
             } else {
-                const motivo = prompt('¿Por qué lo rechazas? El proveedor lo verá.'); if (!motivo) return;
+                const esSug = (document.querySelector(`[data-sol="no"][data-id="${id}"]`)?.textContent || '').includes('Responder'); const motivo = prompt(esSug ? 'Escribe tu respuesta. El proveedor la verá en Gestión.' : '¿Por qué lo rechazas? El proveedor lo verá.'); if (!motivo) return;
                 const r = await EV.post('/Herramientas/ProveedorSolicitudRechazar', { id, motivo }); EV.toast(r.mensaje, 'ok');
             }
             solicitudes();
