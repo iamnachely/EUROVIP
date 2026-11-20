@@ -1,4 +1,5 @@
 using System.Text.Json;
+using EuroVip.Services;
 using System.Text.RegularExpressions;
 using Dapper;
 using EuroVip.Repositories;
@@ -15,7 +16,53 @@ namespace EuroVip.Services
     public class ProveedoresSeguimiento
     {
         private readonly ICircuitoRepository _db;
-        public ProveedoresSeguimiento(ICircuitoRepository db) { _db = db; }
+        private readonly IWebHostEnvironment _env;
+        private readonly IMultimedia _mm;
+        public ProveedoresSeguimiento(ICircuitoRepository db, IWebHostEnvironment env, IMultimedia mm) { _db = db; _env = env; _mm = mm; }
+
+        /// <summary>Plazo máximo para atender una solicitud de un proveedor (pedido de la usuaria: 5 días). Pasado el plazo queda «vencida · por ver».</summary>
+        public const int PlazoDias = 5;
+
+        // ---------------------------------------------------------------- logos de los proveedores
+        private const string CarpetaLogos = "uploads/proveedores/logos";
+        private static readonly string[] ExtLogo = { "png", "jpg", "webp" };
+
+        /// <summary>Logo de cada cuenta (id → URL) leyendo la carpeta. Sin logo = no está en el diccionario.</summary>
+        public Dictionary<int, string> Logos()
+        {
+            var d = new Dictionary<int, string>();
+            var dir = Path.Combine(_env.WebRootPath ?? "wwwroot", CarpetaLogos.Replace('/', Path.DirectorySeparatorChar));
+            if (!Directory.Exists(dir)) return d;
+            foreach (var f in Directory.EnumerateFiles(dir))
+                if (int.TryParse(Path.GetFileNameWithoutExtension(f), out var id) && ExtLogo.Contains(Path.GetExtension(f).TrimStart('.').ToLowerInvariant()))
+                    d[id] = $"/{CarpetaLogos}/{Path.GetFileName(f)}?v={File.GetLastWriteTimeUtc(f).Ticks}";
+            return d;
+        }
+
+        /// <summary>Guarda el logo tal cual lo subió (sin recomprimir: nunca se baja la calidad). Devuelve (url, error).</summary>
+        public async Task<(string? Url, string? Error)> GuardarLogoAsync(int cuenta, Microsoft.AspNetCore.Http.IFormFile? archivo)
+        {
+            if (archivo is null || archivo.Length == 0) return (null, "Elige una imagen.");
+            if (archivo.Length > 5_000_000) return (null, "El logo pesa más de 5 MB.");
+            var ext = await EuroVip.Helpers.ImagenSegura.ExtensionAsync(archivo);
+            if (ext is null || !ExtLogo.Contains(ext)) return (null, "El logo tiene que ser una imagen PNG, JPG o WebP.");
+            var dir = Path.Combine(_env.WebRootPath ?? "wwwroot", CarpetaLogos.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(dir);
+            foreach (var e in ExtLogo) { var v = Path.Combine(dir, $"{cuenta}.{e}"); if (File.Exists(v)) File.Delete(v); }
+            var destino = Path.Combine(dir, $"{cuenta}.{ext}");
+            await using (var fs = File.Create(destino)) await archivo.CopyToAsync(fs);
+            return ($"/{CarpetaLogos}/{cuenta}.{ext}?v={DateTime.UtcNow.Ticks}", null);
+        }
+
+        // ---------------------------------------------------------------- equipo (a quién se le puede encargar un chat)
+        public sealed class Miembro { public string UserName { get; set; } = ""; public string Nombre { get; set; } = ""; public string? Imagen { get; set; } public string? Foto { get; set; } }
+        public async Task<List<Miembro>> EquipoAsync()
+        {
+            using var cn = _db.Conexion();
+            var l = (await cn.QueryAsync<Miembro>("SELECT userName AS UserName, LTRIM(RTRIM(nombre)) + ' ' + LTRIM(RTRIM(apellido)) AS Nombre, imagen AS Imagen FROM Eurovip.usuario WHERE activo = 1 ORDER BY nombre, apellido")).ToList();
+            l.ForEach(m => m.Foto = EuroVip.Models.PerfilFoto.Url(m.Imagen));
+            return l;
+        }
 
         private static bool _hayNotas, _hayGestion; private static DateTime _mirado = DateTime.MinValue;
         /// <summary>¿Ya están las tablas nuevas? Se mira una vez y, mientras falten, cada 2 minutos.</summary>
@@ -82,6 +129,10 @@ namespace EuroVip.Services
             if (asignado is { Length: > 150 }) asignado = asignado[..150];
             using var cn = _db.Conexion(); await MirarAsync(cn);
             if (!_hayGestion) return "El responsable y la prioridad todavía no están activados en este servidor (falta aplicar Database/proveedor-seguimiento.sql).";
+            var antes = await cn.QueryFirstOrDefaultAsync<(string? Asignado, int Prioridad)?>("SELECT asignado_a, prioridad FROM Eurovip.carga_proveedor_gestion WHERE id_carga = @idCarga", new { idCarga });
+            if (_hayNotas && (antes?.Asignado ?? null) != asignado)
+                await cn.ExecuteAsync("INSERT INTO Eurovip.carga_proveedor_nota (id_carga, autor, texto) VALUES (@idCarga, @usuario, @texto)",
+                    new { idCarga, usuario, texto = asignado is null ? "[[SIS]]Quitó la asignación de la conversación" : asignado == usuario ? "[[SIS]]Se encargó de la conversación" : $"[[SIS]]Encargó la conversación a {asignado}" });
             await cn.ExecuteAsync(@"MERGE Eurovip.carga_proveedor_gestion AS t USING (SELECT @idCarga AS id) AS s ON t.id_carga = s.id
                 WHEN MATCHED THEN UPDATE SET asignado_a = @asignado, prioridad = @prioridad, actualizado_en = SYSDATETIME(), actualizado_por = @usuario
                 WHEN NOT MATCHED THEN INSERT (id_carga, asignado_a, prioridad, actualizado_por) VALUES (@idCarga, @asignado, @prioridad, @usuario);",
@@ -144,6 +195,24 @@ namespace EuroVip.Services
                 ) x ORDER BY Fecha DESC")).ToList();
             var datos = 0;
             try { datos = await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.proveedor_solicitud WHERE estado = 'PENDIENTE'"); } catch (System.Data.SqlClient.SqlException) { }
+            object sla;
+            try
+            {
+                var plazoH = PlazoDias * 24;
+                var s = await cn.QueryFirstAsync<dynamic>(@"
+                    SELECT (SELECT COUNT(*) FROM Eurovip.carga_proveedor WHERE estado = 'PENDIENTE' AND fecha_solicitud < DATEADD(HOUR, -@plazo, SYSDATETIME())) AS Vencidas,
+                           (SELECT COUNT(*) FROM Eurovip.carga_proveedor WHERE estado = 'PENDIENTE' AND fecha_solicitud >= DATEADD(HOUR, -@plazo, SYSDATETIME()) AND fecha_solicitud < DATEADD(HOUR, -(@plazo - 24), SYSDATETIME())) AS VencenPronto,
+                           (SELECT COUNT(*) FROM Eurovip.carga_proveedor WHERE estado = 'PENDIENTE' AND fecha_solicitud >= DATEADD(HOUR, -(@plazo - 24), SYSDATETIME())) AS EnTiempo,
+                           (SELECT COUNT(*) FROM Eurovip.carga_proveedor WHERE fecha_revision > DATEADD(DAY, -30, SYSDATETIME()) AND fecha_solicitud IS NOT NULL) AS Revisadas30,
+                           (SELECT AVG(CAST(DATEDIFF(MINUTE, fecha_solicitud, fecha_revision) AS float)) / 60.0 FROM Eurovip.carga_proveedor WHERE fecha_revision > DATEADD(DAY, -30, SYSDATETIME()) AND fecha_solicitud IS NOT NULL) AS PromedioHoras,
+                           (SELECT SUM(CASE WHEN DATEDIFF(HOUR, fecha_solicitud, fecha_revision) <= @plazo THEN 1 ELSE 0 END) FROM Eurovip.carga_proveedor WHERE fecha_revision > DATEADD(DAY, -30, SYSDATETIME()) AND fecha_solicitud IS NOT NULL) AS EnPlazo", new { plazo = plazoH });
+                var porRevisor = (await cn.QueryAsync<(string? Quien, int N, double? Horas)>(@"
+                    SELECT ISNULL(revisado_por, '—'), COUNT(*), AVG(CAST(DATEDIFF(MINUTE, fecha_solicitud, fecha_revision) AS float)) / 60.0
+                    FROM Eurovip.carga_proveedor WHERE fecha_revision > DATEADD(DAY, -30, SYSDATETIME()) AND fecha_solicitud IS NOT NULL
+                    GROUP BY revisado_por ORDER BY COUNT(*) DESC")).Select(x => new { quien = x.Quien, revisadas = x.N, horas = x.Horas }).ToList();
+                sla = new { plazoDias = PlazoDias, vencidas = (int)s.Vencidas, vencenPronto = (int)s.VencenPronto, enTiempo = (int)s.EnTiempo, revisadas30 = (int)s.Revisadas30, promedioHoras = (double?)s.PromedioHoras, enPlazo = (int?)s.EnPlazo ?? 0, porRevisor };
+            }
+            catch (Exception) { sla = new { plazoDias = PlazoDias, vencidas = 0, vencenPronto = 0, enTiempo = 0, revisadas30 = 0, promedioHoras = (double?)null, enPlazo = 0, porRevisor = Array.Empty<object>() }; }
             var cuidados = new List<Punto>();
             try
             {
@@ -157,8 +226,9 @@ namespace EuroVip.Services
                 if (viejas > 0) cuidados.Add(new("info", $"{viejas} proveedor(es) activos no cargan nada hace 30 días", "Mira la pestaña Proveedores."));
             }
             catch (System.Data.SqlClient.SqlException) { }
+            if (((dynamic)sla).vencidas > 0) cuidados.Insert(0, new("rojo", $"{((dynamic)sla).vencidas} carga(s) pasaron el plazo de {PlazoDias} días sin revisar", "Quedan como «vencidas · por ver». Atiéndelas primero."));
             if (datos > 0) cuidados.Add(new("ama", $"{datos} dato(s) pedido(s) por proveedores sin revisar", "Hasta aprobar un hotel pedido, no se pueden aprobar las cargas que lo usan."));
-            return new { numeros = n, atrasadas, salen, sinResponder, actividad, datosPendientes = datos, cuidados, seguimientoActivo = _hayNotas && _hayGestion };
+            return new { numeros = n, atrasadas, salen, sinResponder, actividad, datosPendientes = datos, cuidados, sla, seguimientoActivo = _hayNotas && _hayGestion };
         }
 
         // ---------------------------------------------------------------- control de calidad de una carga
@@ -292,13 +362,80 @@ namespace EuroVip.Services
             return new { riesgo, puntos = puntos.OrderBy(p => p.Nivel == "rojo" ? 0 : 1) };
         }
 
+        // ---------------------------------------------------------------- simulación: cómo se verá en la web
+        private static JsonElement? P(JsonElement e, string nombre) { if (e.ValueKind != JsonValueKind.Object) return null; foreach (var p in e.EnumerateObject()) if (p.Name.Equals(nombre, StringComparison.OrdinalIgnoreCase)) return p.Value; return null; }
+        private static string? S(JsonElement e, string nombre) => P(e, nombre) is { ValueKind: JsonValueKind.String } v ? v.GetString() : P(e, nombre) is { ValueKind: JsonValueKind.Number } n ? n.ToString() : null;
+        private static decimal? N(JsonElement e, string nombre) => P(e, nombre) is { ValueKind: JsonValueKind.Number } v && v.TryGetDecimal(out var d) ? d : null;
+        private static IEnumerable<JsonElement> L(JsonElement e, string nombre) => P(e, nombre) is { ValueKind: JsonValueKind.Array } a ? a.EnumerateArray() : Enumerable.Empty<JsonElement>();
+
+        public sealed class Img { public string Uso { get; set; } = ""; public string Url { get; set; } = ""; public int? Ancho { get; set; } public int? Alto { get; set; } }
+
+        /// <summary>
+        /// Cada producto de la carga con lo que mostraría la web (tarjeta de la Home, pantalla intermedia y ficha): nombre, destino, estrellas,
+        /// régimen, noches, precio desde, fechas, habitaciones, textos y las fotos que ya tiene el hotel o el destino en Eurovip.
+        /// </summary>
+        public async Task<object?> SimulacionAsync(ProveedoresCarga prov, int id)
+        {
+            var c = await prov.CargaAsync(id);
+            if (c is null) return null;
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(c.Datos) ? "[]" : c.Datos);
+            var salida = new List<object>();
+            using var cn = _db.Conexion();
+            foreach (var p in doc.RootElement.ValueKind == JsonValueKind.Array ? doc.RootElement.EnumerateArray() : Enumerable.Empty<JsonElement>())
+            {
+                string? nombre = null, destino = null, pais = null, regimen = null, estrellas = null, desc = null, incluye = null, noIncluye = null, detalle = null; int? noches = null; decimal? desde = null;
+                var moneda = S(p, "divisa") ?? S(p, "id_Moneda") ?? c.Moneda ?? "USD";
+                var fechas = new List<object>(); var habs = new List<object>(); var imgs = new List<Img>();
+                if (P(p, "info") is { } info) { incluye = S(info, "incluye"); noIncluye = S(info, "no_Incluye"); }
+                desc = S(p, "descripcion");
+                switch (c.Modulo)
+                {
+                    case "OFERTAS": case "PAQUETES":
+                        {
+                            noches = (int?)N(p, "noches");
+                            var h = L(p, "hoteles").FirstOrDefault();
+                            if (h.ValueKind == JsonValueKind.Object)
+                            {
+                                var ida = (int?)N(h, "id_Alojamiento") ?? 0; regimen = S(h, "id_Regimen"); nombre = S(h, "nombre");
+                                var a = ida > 0 ? await cn.QueryFirstOrDefaultAsync<(string Nombre, string? Destino, string? Estrellas, string? Pais, string? Desc)?>("SELECT nombre, id_destino, categoria, id_pais, descripcion FROM Eurovip.alojamiento WHERE id_alojamiento = @ida AND id_idioma = 'ES'", new { ida }) : null;
+                                if (a is not null) { nombre = a.Value.Nombre; destino = a.Value.Destino; estrellas = a.Value.Estrellas; pais = a.Value.Pais; desc ??= a.Value.Desc; }
+                                if (ida > 0) imgs.AddRange((await _mm.ListarAsync("ALOJAMIENTO", ida.ToString())).Select(m => new Img { Uso = m.Uso, Url = m.Url, Ancho = m.Ancho, Alto = m.Alto }));
+                                foreach (var x in L(h, "habitaciones")) habs.Add(new { nombre = S(x, "nombre"), suplemento = N(x, "precio") });
+                                foreach (var s in L(h, "salidas")) { var pr = N(s, "precioTotal"); fechas.Add(new { desde = S(s, "desde"), hasta = S(s, "hasta"), precio = pr }); if (pr is > 0 && (desde is null || pr < desde)) desde = pr; }
+                            }
+                            break;
+                        }
+                    case "EXCURSIONES": nombre = S(p, "nombre"); destino = S(p, "id_Destino"); desde = N(p, "precio"); detalle = "Excursión de un día"; break;
+                    case "TRASLADOS":
+                        nombre = S(p, "nombre"); destino = S(p, "id_Destino"); detalle = $"{S(p, "id_Estacion_Origen")} → {S(p, "id_Destino")} · {(S(p, "tipo") == "PRIVADO" ? "Privado" : "Compartido")} · {S(p, "vehiculo")}";
+                        desde = new[] { N(p, "precio_Ida_Vuelta"), N(p, "precio_Ida") }.Where(x => x is > 0).Min(); break;
+                    case "CIRCUITOS":
+                        nombre = S(p, "_nombreCircuito") ?? (P(p, "nuevoCircuito") is { } nc ? S(nc, "nombre") : null) ?? S(p, "codigoCircuito"); noches = (int?)N(p, "noches"); regimen = S(p, "categoria");
+                        foreach (var s in L(p, "salidas")) { var pr = N(s, "precioTotal"); fechas.Add(new { desde = S(s, "desde"), hasta = S(s, "hasta"), precio = pr }); if (pr is > 0 && (desde is null || pr < desde)) desde = pr; }
+                        break;
+                    case "CRUCEROS":
+                        nombre = S(p, "titulo"); detalle = $"{S(p, "barco_Nombre")} · {S(p, "naviera_Nombre")} · salida {S(p, "puerto_Salida")}"; noches = (int?)N(p, "noches"); desc = S(p, "descripcion"); incluye = S(p, "incluye"); noIncluye = S(p, "no_Incluye");
+                        foreach (var x in L(p, "precios")) { var pr = N(x, "precio_Pp"); if (pr is > 0 && (desde is null || pr < desde)) desde = pr; }
+                        break;
+                }
+                if (!string.IsNullOrWhiteSpace(destino) && imgs.Count == 0)
+                {
+                    var portada = await _mm.PortadaAsync("DESTINO", destino!);
+                    if (portada is not null) imgs.Add(new Img { Uso = "PORTADA", Url = portada });
+                }
+                salida.Add(new { nombre = nombre ?? "Sin nombre", destino, pais, regimen, estrellas, noches, detalle, descripcion = desc, incluye, noIncluye, desde, moneda, fechas = fechas.Take(12), habitaciones = habs, imagenes = imgs });
+            }
+            var logos = Logos();
+            return new { carga = new { c.Id, c.Codigo, c.Titulo, c.Modulo, c.Estado, c.Cuenta, logo = logos.GetValueOrDefault(c.Id_Cuenta) }, productos = salida };
+        }
+
         private static string Corta(string? s, int n) => string.IsNullOrEmpty(s) ? "" : s.Length <= n ? s : s[..n] + "…";
 
         // ---------------------------------------------------------------- bandeja de chats
         public sealed class Chat
         {
             public int Id { get; set; } public string Codigo { get; set; } = ""; public string? Titulo { get; set; } public string Modulo { get; set; } = ""; public string Estado { get; set; } = "";
-            public string? Cuenta { get; set; } public string? Ultimo_Autor { get; set; } public string? Ultimo_Texto { get; set; } public DateTime? Ultima_Fecha { get; set; } public int Mensajes { get; set; }
+            public string? Cuenta { get; set; } public int Id_Cuenta { get; set; } public string? Asignado_A { get; set; } public int Prioridad { get; set; } public string? Logo { get; set; } public string? Ultimo_Autor { get; set; } public string? Ultimo_Texto { get; set; } public DateTime? Ultima_Fecha { get; set; } public int Mensajes { get; set; }
         }
 
         /// <summary>Todas las conversaciones (cargas con mensajes), la última primero.</summary>
@@ -307,12 +444,17 @@ namespace EuroVip.Services
             using var cn = _db.Conexion();
             try
             {
-                return (await cn.QueryAsync<Chat>(@"
-                    SELECT TOP 150 c.id, c.codigo, c.titulo, c.modulo, c.estado, pc.nombre AS Cuenta, m.autor AS Ultimo_Autor, m.texto AS Ultimo_Texto, m.fecha AS Ultima_Fecha,
+                await MirarAsync(cn);
+                var gj = _hayGestion ? "LEFT JOIN Eurovip.carga_proveedor_gestion g ON g.id_carga = c.id" : "";
+                var gc = _hayGestion ? "g.asignado_a AS Asignado_A, ISNULL(g.prioridad, 0) AS Prioridad," : "CAST(NULL AS nvarchar(150)) AS Asignado_A, 0 AS Prioridad,";
+                var l = (await cn.QueryAsync<Chat>($@"
+                    SELECT TOP 150 c.id, c.codigo, c.titulo, c.modulo, c.estado, pc.nombre AS Cuenta, pc.id AS Id_Cuenta, {gc} m.autor AS Ultimo_Autor, m.texto AS Ultimo_Texto, m.fecha AS Ultima_Fecha,
                            (SELECT COUNT(*) FROM Eurovip.carga_proveedor_comentario x WHERE x.id_carga = c.id) AS Mensajes
-                    FROM Eurovip.carga_proveedor c JOIN Eurovip.proveedor_cuenta pc ON pc.id = c.id_cuenta
+                    FROM Eurovip.carga_proveedor c JOIN Eurovip.proveedor_cuenta pc ON pc.id = c.id_cuenta {gj}
                     CROSS APPLY (SELECT TOP 1 autor, texto, fecha FROM Eurovip.carga_proveedor_comentario WHERE id_carga = c.id ORDER BY id DESC) m
                     ORDER BY m.fecha DESC")).ToList();
+                var logos = Logos(); l.ForEach(x => x.Logo = logos.GetValueOrDefault(x.Id_Cuenta));
+                return l;
             }
             catch (System.Data.SqlClient.SqlException) { return new(); }
         }
@@ -324,7 +466,7 @@ namespace EuroVip.Services
             public string? Id_Proveedor { get; set; } public string? Proveedor { get; set; } public string? Modulos { get; set; } public bool Activo { get; set; }
             public DateTime Fecha_Alta { get; set; } public int Cargas { get; set; } public int Borrador { get; set; } public int Pendiente { get; set; } public int Devuelta { get; set; }
             public int Rechazada { get; set; } public int Programada { get; set; } public int Activa { get; set; } public int Productos { get; set; } public int Mensajes { get; set; }
-            public DateTime? Ultima_Actividad { get; set; } public DateTime? Ultima_Carga { get; set; }
+            public DateTime? Ultima_Actividad { get; set; } public DateTime? Ultima_Carga { get; set; } public string? Logo { get; set; }
         }
 
         public async Task<List<FichaProveedor>> FichasAsync()
@@ -341,6 +483,7 @@ namespace EuroVip.Services
                 FROM Eurovip.proveedor_cuenta pc LEFT JOIN Eurovip.proveedor p ON p.id_proveedor = pc.id_proveedor LEFT JOIN Eurovip.carga_proveedor c ON c.id_cuenta = pc.id
                 GROUP BY pc.id, pc.nombre, pc.email, pc.telefono, pc.id_proveedor, p.nombre, pc.modulos, pc.activo, pc.fecha_alta
                 ORDER BY pc.activo DESC, MAX(c.actualizado_en) DESC, pc.nombre")).ToList();
+            var logos = Logos(); lista.ForEach(x => x.Logo = logos.GetValueOrDefault(x.Id));
             return lista;
         }
     }

@@ -176,8 +176,7 @@
 @* CAMBIO 140: la vista se ordena por secciones con pestañas (Catálogos · Cargas de proveedores · Proveedores) *@
 <nav class="ht-secciones" id="htSecciones" role="tablist" aria-label="Secciones de Herramientas">
     <button type="button" class="on" data-tab="htCat" role="tab"><i class="bi bi-grid-1x2"></i> Catálogos</button>
-    <button type="button" data-tab="htProv" role="tab"><i class="bi bi-inboxes"></i> Cargas de proveedores <span class="n" id="tabProvN" hidden>0</span></button>
-    <button type="button" data-tab="htCuentas" role="tab"><i class="bi bi-briefcase"></i> Proveedores</button>
+    <a href="/Herramientas/CargasProveedores" role="tab" class="ht-ir" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:inherit;font-weight:800;padding:10px 16px"><i class="bi bi-inboxes"></i> Cargas de proveedores <span class="n" id="tabProvN" hidden>0</span> <i class="bi bi-box-arrow-up-right" style="font-size:12px;opacity:.6"></i></a>
 </nav>
 
 <section class="ht-tab on" id="htCat" role="tabpanel">
@@ -327,6 +326,8 @@
 <script src="~/js/eurovip-ui.js" asp-append-version="true"></script>
 <script>
 (() => {
+    // Proveedores y sus cargas viven SOLO en Cargas de proveedores (20/11/2026): los enlaces viejos y la campana se redirigen allí
+    { const p0 = new URLSearchParams(location.search), t0 = p0.get('tab'); if (t0 === 'htProv' || t0 === 'htCuentas') { const c0 = p0.get('carga'); location.replace('/Herramientas/CargasProveedores?tab=' + (t0 === 'htCuentas' ? 'prov' : 'lista') + (c0 ? '&carga=' + c0 : '')); return; } }
     const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], esc = EV.esc;
     const defs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(HrCatalogos.Todos.ToDictionary(c => c.Clave, c => new { claves = c.Claves.Select(k => k.Col), titulo = (c.Campo("nombre") ?? c.Campo("descripcion") ?? c.Campos.First(f => !f.Auto && f.Tipo != "hotel" && f.Tipo != "select")).Col, nombre = c.Titulo })));
     const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -499,7 +500,7 @@
         if (id === 'htProv' && !listo.prov) { listo.prov = true; cargarCuentas().then(() => listar(true)); }
         if (id === 'htCuentas' && !listo.cuentas) { listo.cuentas = true; cargarCuentas(); }
     });
-    $('#sProvIr').addEventListener('click', () => tabs.ir('htProv'));
+    $('#sProvIr').addEventListener('click', () => { location.href = '/Herramientas/CargasProveedores'; });
 
     // ---------------- resumen: contador de pendientes (portada y pestaña) ----------------
     const resumen = EV.api('/Herramientas/ProveedoresResumen').then(r => {

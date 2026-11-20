@@ -313,6 +313,90 @@
     .sg-pal-res { max-height: 52vh; overflow: auto; padding: 6px; } .sg-pal-res h5 { margin: 8px 12px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ev-muted); }
     .sg-pal-pie { padding: 8px 16px; font-size: 12px; color: var(--ev-muted); background: #F7FCFB; border-top: 1px solid var(--ev-line); }
     .sg-pal-pie kbd { background: #fff; border: 1px solid var(--ev-line); border-radius: 6px; padding: 1px 6px; font-size: 11px; }
+    /* =====================================================================================================================
+       20/11/2026 · logos, cronograma de 5 días, chats encargados, cards de cargas, simulación de la web y cuentas.
+       ===================================================================================================================== */
+    .sg-av.logo { background: #fff; overflow: hidden; padding: 2px; } .sg-av.logo img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
+    .sg-sla { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+    .sg-sla.verde { background: #DCFCE7; color: #067647; } .sg-sla.ama { background: #FEF0C7; color: #B54708; } .sg-sla.rojo { background: #FEE4E2; color: #B42318; }
+    .sg-barra-sla { display: flex; height: 14px; border-radius: 99px; overflow: hidden; background: #EEF2F1; margin: 8px 0; } .sg-barra-sla span { min-width: 4px; }
+    .sg-rend { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }
+    .sg-rend div { background: #F5FBFA; border-radius: 14px; padding: 10px 12px; } .sg-rend b { display: block; font-size: 22px; letter-spacing: -.5px; } .sg-rend small { color: var(--ev-muted); font-weight: 700; font-size: 12px; }
+    .sg-tabla { width: 100%; border-collapse: collapse; font-size: 13px; } .sg-tabla th { text-align: left; color: var(--ev-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; padding: 6px 4px; } .sg-tabla td { padding: 7px 4px; border-top: 1px dashed var(--ev-line); }
+
+    /* Cards de las cargas (pestaña «Todas las cargas») */
+    #hpLista { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 16px; }
+    .sg-lc { text-align: left; border: 1px solid var(--ev-line); border-radius: 24px; background: #fff; box-shadow: var(--ev-shadow); overflow: hidden; cursor: pointer; font: inherit; color: inherit; display: grid; grid-template-columns: 150px minmax(0, 1fr); transition: transform .18s, box-shadow .18s; animation: sgEntra .35s ease both; position: relative; padding: 0; }
+    .sg-lc:hover { transform: translateY(-4px); box-shadow: 0 24px 40px -26px var(--c); }
+    .sg-lc .fl { background: linear-gradient(160deg, var(--c), #0B1215); background-size: cover; background-position: center; display: grid; place-items: center; color: #fff; font-size: 38px; min-height: 190px; position: relative; }
+    .sg-lc .fl .prov { position: absolute; left: 10px; bottom: 10px; }
+    .sg-lc .cu { padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+    .sg-lc .l1 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .sg-lc .cod { font-family: ui-monospace, Consolas, monospace; font-weight: 800; font-size: 12.5px; background: var(--ev-ink); color: var(--ev-aqua); padding: 3px 10px; border-radius: 8px; }
+    .sg-lc h4 { margin: 0; font-size: 16px; letter-spacing: -.2px; overflow-wrap: anywhere; } .sg-lc .pv { display: flex; gap: 8px; align-items: center; color: #3C5B57; font-weight: 700; font-size: 13px; }
+    .sg-lc .pv .sg-av { width: 26px; height: 26px; font-size: 10px; }
+    .sg-lc .est { position: absolute; top: 12px; right: 12px; }
+    .sg-lc .pie { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .sg-lc .precio { font-weight: 800; font-size: 17px; letter-spacing: -.4px; } .sg-lc .precio small { font-size: 11.5px; color: var(--ev-muted); font-weight: 700; display: block; letter-spacing: 0; }
+
+    /* Mensajes: filtros y encargado */
+    .sg-filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+    .sg-filtros button { border: 1.5px solid var(--ev-line); background: #fff; border-radius: 99px; padding: 5px 12px; font: inherit; font-weight: 800; font-size: 12.5px; color: var(--ev-muted); cursor: pointer; }
+    .sg-filtros button.on { background: var(--ev-ink); color: #fff; border-color: var(--ev-ink); } .sg-filtros b { margin-left: 4px; opacity: .7; }
+    .sg-asig { display: flex; align-items: center; gap: 8px; padding: 7px 14px; background: #fff; border-bottom: 1px solid #DDE3E6; font-size: 12.5px; flex-wrap: wrap; }
+    .sg-asig label { font-weight: 800; color: #54656F; } .sg-asig select { border: 1.5px solid #D5DBDF; border-radius: 10px; padding: 5px 8px; font: inherit; font-size: 12.5px; background: #fff; max-width: 190px; }
+    .sg-asig small { color: #667781; margin-left: auto; }
+    .sg-chat .enc { display: inline-flex; align-items: center; gap: 4px; background: #E0EAFF; color: #3538CD; border-radius: 99px; padding: 1px 8px; font-size: 11px; font-weight: 800; margin-left: 6px; }
+
+    /* Simulación de la web */
+    .sg-sim { position: fixed; inset: 0; z-index: 2100; background: rgba(11,18,21,.65); backdrop-filter: blur(4px); display: grid; place-items: center; padding: 14px; }
+    .sg-sim[hidden] { display: none; }
+    .sg-sim-caja { width: min(1500px, 100%); height: min(940px, 100%); background: #fff; border-radius: 26px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 50px 100px -30px rgba(11,18,21,.8); }
+    .sg-sim-cab { display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: var(--ev-ink); color: #fff; flex-wrap: wrap; }
+    .sg-sim-cab h3 { margin: 0; font-size: 17px; flex: 1; min-width: 200px; } .sg-sim-cab small { display: block; font-weight: 500; color: rgba(255,255,255,.65); font-size: 12px; }
+    .sg-sim-tabs { display: flex; gap: 4px; background: rgba(255,255,255,.1); border-radius: 14px; padding: 4px; }
+    .sg-sim-tabs button, .sg-sim-cab > button, .sg-sim-cab select { border: 0; background: transparent; color: #fff; border-radius: 10px; padding: 7px 14px; font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; }
+    .sg-sim-tabs button.on { background: #fff; color: var(--ev-ink); } .sg-sim-cab select { background: rgba(255,255,255,.12); max-width: 260px; } .sg-sim-cab select option { color: #000; }
+    .sg-sim-cab > button { background: rgba(255,255,255,.12); }
+    .sg-sim-aviso { padding: 8px 18px; background: #FFF8D6; color: #6B5400; font-size: 13px; font-weight: 700; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .sg-sim-lienzo { flex: 1; overflow: auto; background: #E9EEF2; padding: 18px; display: flex; justify-content: center; }
+    .sg-sim-web { width: 100%; max-width: 1280px; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px -20px rgba(11,18,21,.5); align-self: flex-start; transition: max-width .25s; }
+    .sg-sim-web.movil { max-width: 390px; }
+    .wx-nav { display: flex; align-items: center; gap: 22px; padding: 14px 24px; border-bottom: 1px solid #E5EAF0; font-weight: 700; font-size: 14px; color: #33415C; } .wx-nav .lg { font-weight: 800; font-size: 20px; color: #124396; letter-spacing: -.5px; margin-right: auto; } .wx-nav .lg i { color: #F79009; }
+    .wx-hero { padding: 38px 24px; background: linear-gradient(120deg, #124396, #2F6FD8 60%, #2BD4C4); color: #fff; } .wx-hero h2 { margin: 0 0 6px; font-size: 28px; } .wx-hero p { margin: 0; opacity: .85; }
+    .wx-sec { padding: 22px 24px; } .wx-sec > h3 { margin: 0 0 14px; font-size: 21px; letter-spacing: -.4px; color: #0B1F3A; }
+    .wx-fila { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .sg-sim-web.movil .wx-fila { grid-template-columns: 1fr 1fr; } .sg-sim-web.movil .wx-fila > *:nth-child(n+3) { display: none; }
+    .wx-card { border-radius: 18px; overflow: hidden; background: #fff; border: 1px solid #E5EAF0; box-shadow: 0 8px 24px -16px rgba(18,67,150,.35); display: flex; flex-direction: column; position: relative; }
+    .wx-card.nuevo { outline: 3px solid #2BD4C4; outline-offset: 2px; }
+    .wx-card .foto { aspect-ratio: 4 / 3; background: linear-gradient(135deg, #BFD3F2, #E3ECFB); background-size: cover; background-position: center; display: grid; place-items: center; color: #7A93BF; font-size: 40px; position: relative; }
+    .wx-card .cinta { position: absolute; top: 10px; left: 10px; background: #2BD4C4; color: #06332F; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 99px; }
+    .wx-card .estado { position: absolute; top: 10px; right: 10px; background: #fff; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 99px; color: #9A3412; }
+    .wx-card .tx { padding: 12px 14px 14px; display: grid; gap: 4px; } .wx-card .st { color: #F79009; font-size: 13px; letter-spacing: 1px; }
+    .wx-card b { font-size: 15px; line-height: 1.25; color: #0B1F3A; } .wx-card small { color: #667085; font-size: 12.5px; }
+    .wx-card .pr { margin-top: 6px; display: flex; justify-content: space-between; align-items: flex-end; } .wx-card .pr small { display: block; } .wx-card .pr strong { font-size: 19px; color: #124396; letter-spacing: -.4px; }
+    .wx-ph { border-radius: 18px; background: #F2F5F9; min-height: 250px; position: relative; overflow: hidden; } .wx-ph::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); animation: wxBrillo 1.8s infinite; }
+    @@keyframes wxBrillo { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+    .wx-migas { padding: 14px 24px 0; font-size: 13px; color: #667085; } .wx-migas b { color: #124396; }
+    .wx-2col { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 20px; padding: 18px 24px 26px; } .wx-2col.ficha { grid-template-columns: minmax(0, 1fr) 320px; }
+    .sg-sim-web.movil .wx-2col, .sg-sim-web.movil .wx-2col.ficha { grid-template-columns: 1fr; }
+    .wx-filtros { display: grid; gap: 10px; align-content: start; } .wx-filtros div { height: 46px; background: #F2F5F9; border-radius: 12px; }
+    .wx-fila-h { display: grid; grid-template-columns: 260px minmax(0, 1fr) 190px; border: 1px solid #E5EAF0; border-radius: 18px; overflow: hidden; background: #fff; margin-bottom: 14px; box-shadow: 0 8px 24px -16px rgba(18,67,150,.35); }
+    .wx-fila-h.nuevo { outline: 3px solid #2BD4C4; outline-offset: 2px; } .wx-fila-h .foto { background: linear-gradient(135deg, #BFD3F2, #E3ECFB); background-size: cover; background-position: center; display: grid; place-items: center; color: #7A93BF; font-size: 40px; min-height: 170px; }
+    .wx-fila-h .tx { padding: 14px 16px; display: grid; gap: 6px; align-content: start; } .wx-fila-h .tx b { font-size: 18px; color: #0B1F3A; } .wx-fila-h .pre { padding: 14px; border-left: 1px dashed #E5EAF0; display: grid; place-content: center; text-align: center; gap: 6px; } .wx-fila-h .pre strong { font-size: 24px; color: #124396; }
+    .wx-btn { background: #F79009; color: #fff; border: 0; border-radius: 12px; padding: 10px 14px; font-weight: 800; }
+    .sg-sim-web.movil .wx-fila-h { grid-template-columns: 1fr; } .sg-sim-web.movil .wx-fila-h .pre { border-left: 0; border-top: 1px dashed #E5EAF0; }
+    .wx-chip { display: inline-flex; background: #EAF2FF; color: #124396; border-radius: 99px; padding: 3px 10px; font-size: 12px; font-weight: 800; margin-right: 6px; }
+    .wx-gal { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 150px 150px; gap: 8px; padding: 14px 24px 0; } .wx-gal > div { background: linear-gradient(135deg, #BFD3F2, #E3ECFB); background-size: cover; background-position: center; border-radius: 14px; } .wx-gal > div:first-child { grid-row: 1 / 3; }
+    .sg-sim-web.movil .wx-gal { grid-template-columns: 1fr 1fr; grid-template-rows: 160px 100px; } .sg-sim-web.movil .wx-gal > div:first-child { grid-column: 1 / 3; grid-row: 1; }
+    .wx-ficha h1 { margin: 0 0 4px; font-size: 28px; color: #0B1F3A; letter-spacing: -.6px; } .wx-ficha h4 { margin: 20px 0 8px; font-size: 17px; color: #0B1F3A; } .wx-ficha p { color: #475467; line-height: 1.55; white-space: pre-line; margin: 0; }
+    .wx-fechas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; } .wx-fechas div { border: 1px solid #E5EAF0; border-radius: 12px; padding: 8px 12px; display: grid; } .wx-fechas small { color: #667085; } .wx-fechas b { color: #124396; }
+    .wx-reserva { border: 1px solid #E5EAF0; border-radius: 20px; padding: 18px; display: grid; gap: 10px; align-self: start; box-shadow: 0 16px 40px -24px rgba(18,67,150,.5); } .wx-reserva strong { font-size: 30px; color: #124396; letter-spacing: -1px; }
+    .wx-lista { margin: 0; padding-left: 18px; color: #475467; line-height: 1.6; }
+    @@media (max-width: 900px) { #hpLista { grid-template-columns: 1fr; } .sg-lc { grid-template-columns: 110px minmax(0, 1fr); } .wx-fila { grid-template-columns: 1fr 1fr; } .wx-2col, .wx-2col.ficha, .wx-fila-h { grid-template-columns: 1fr; } }
+    .sg-fila .cuando.rojo { background: #FEE4E2; color: #B42318; } .sg-fila .cuando.ama { background: #FEF0C7; color: #B54708; } .sg-fila .cuando.verde { background: #DCFCE7; color: #067647; }
+    .sg-pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; } .sg-pasos li span { display: block; height: 6px; border-radius: 99px; background: #E2EDEB; } .sg-pasos li.h span { background: var(--c); } .sg-pasos li.a span { background: repeating-linear-gradient(45deg, var(--c) 0 5px, #fff 5px 10px); }
+    .sg-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; } .sg-thumbs figure { margin: 0; width: 120px; border-radius: 12px; overflow: hidden; border: 3px solid #DCE8E6; position: relative; background: #000; } .sg-thumbs img { width: 100%; height: 84px; object-fit: cover; display: block; } .sg-thumbs figcaption { font-size: 11px; font-weight: 800; padding: 3px 6px; background: #fff; display: flex; justify-content: space-between; }
+    .sg-thumbs figure.buena { border-color: #16A34A; } .sg-thumbs figure.normal { border-color: #F0A800; } .sg-thumbs figure.mala { border-color: #D92D20; }
     @@media (max-width: 900px) {
         .sg-hoy { grid-template-columns: 1fr; }
         .sg-split { grid-template-columns: 1fr; height: auto; } .sg-split .sg-main { height: 70vh; } .sg-split.hilo .sg-lado { display: none; } .sg-split:not(.hilo) .sg-main { display: none; }
@@ -330,7 +414,7 @@
            proveedor y dejar <b>notas internas</b> para tu equipo.</p>
     </div>
     <div class="acc">
-        <a class="ev-btn ghost sm" href="/Herramientas/Index?tab=htCuentas"><i class="bi bi-briefcase"></i> Cuentas de proveedores</a>
+        <button type="button" class="ev-btn sm" id="sgNuevaCuenta"><i class="bi bi-plus-lg"></i> Nueva cuenta de proveedor</button>
         <button type="button" class="ev-btn ghost sm" id="sgBuscar" title="Buscar en todo (Ctrl+K)"><i class="bi bi-search"></i> Buscar <kbd style="font-size:11px">Ctrl K</kbd></button>
         <button type="button" class="ev-btn ghost sm" id="sgCsv" title="Descargar lo que ves en Excel"><i class="bi bi-filetype-csv"></i> Exportar</button>
         <button type="button" class="ev-btn ghost sm" id="hpRecargar"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
@@ -378,7 +462,7 @@
     <div class="sg-split" id="sgSplit">
         <div class="sg-lado">
             <div class="sg-lado-cab"><h3><i class="bi bi-chat-dots"></i> Conversaciones</h3>
-                <input class="ui-input" id="sgChatQ" type="search" placeholder="Buscar proveedor o código…" aria-label="Buscar conversaciones"></div>
+                <input class="ui-input" id="sgChatQ" type="search" placeholder="Buscar proveedor o código…" aria-label="Buscar conversaciones"><div class="sg-filtros" id="sgChatFiltros"></div></div>
             <div class="sg-lado-lista" id="sgChatLista"></div>
         </div>
         <div class="sg-main" id="sgChatMain"><div class="sg-main-vacio"><i class="bi bi-chat-square-text"></i><b>Elige una conversación</b><p>Cada carga tiene su chat con el proveedor y sus notas internas.</p></div></div>
@@ -401,6 +485,29 @@
 </details>
 </section>
 
+<div class="sg-sim" id="sgSim" hidden><div class="sg-sim-caja">
+    <div class="sg-sim-cab"><h3 id="sgSimTit">Así se verá en la web</h3>
+        <select id="sgSimProd" aria-label="Producto" hidden></select>
+        <div class="sg-sim-tabs" id="sgSimTabs"><button type="button" data-v="home"><i class="bi bi-house"></i> Home</button><button type="button" data-v="inter"><i class="bi bi-list-ul"></i> Pantalla intermedia</button><button type="button" data-v="ficha"><i class="bi bi-card-image"></i> Ficha</button></div>
+        <button type="button" id="sgSimMovil"><i class="bi bi-phone"></i> Móvil</button><button type="button" id="sgSimCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></div>
+    <div class="sg-sim-aviso" id="sgSimAvisos" hidden></div>
+    <div class="sg-sim-lienzo" id="sgSimCuerpo"></div></div></div>
+
+<aside class="ui-drawer" id="sgCuenta" aria-hidden="true" style="width:min(680px, calc(100vw - 24px))">
+    <div class="ui-dh"><div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-briefcase"></i></div>
+        <div style="min-width:0"><h2 id="scTitulo">Nueva cuenta de proveedor</h2><small>Los campos con * son obligatorios.</small></div>
+        <button class="ui-ibtn x" type="button" id="sgCuentaCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></div>
+    <div class="ui-db"><input type="hidden" id="scId">
+        <div style="display:flex;gap:16px;align-items:center;margin-bottom:14px"><div class="sg-av g logo" id="scLogoVer" style="width:84px;height:84px;font-size:28px"></div>
+            <div><b>Logo de la empresa</b><br><small style="color:var(--ev-muted)">PNG, JPG o WebP. Lo puede subir también el proveedor desde Gestión.</small><br><input type="file" id="scLogoArchivo" accept="image/png,image/jpeg,image/webp" style="margin-top:6px"></div></div>
+        <div class="ui-f"><label for="scNombre">Empresa *</label><input id="scNombre" maxlength="150" placeholder="Nombre de la empresa proveedora"></div>
+        <div class="ui-row"><div class="ui-f"><label for="scEmail">Correo * <em>con él entra en Gestión</em></label><input id="scEmail" type="email" maxlength="250"></div><div class="ui-f"><label for="scTel">Teléfono</label><input id="scTel" maxlength="30"></div></div>
+        <div class="ui-f"><label for="scProv">Proveedor del catálogo * <em>lo que cargue irá a nombre de este proveedor</em></label><select id="scProv"></select></div>
+        <div class="ui-f"><label>Puede cargar en</label><div class="hp-mods" id="scMods"></div></div>
+        <label class="ui-switch"><input type="checkbox" id="scActivo" checked><span class="tr"></span> Cuenta activa (si la desactivas no puede entrar ni cargar)</label></div>
+    <div class="ui-df"><span class="hint">El proveedor solo ve y edita sus propias cargas.</span><button type="button" class="ev-btn ghost" id="sgCuentaCancelar">Cancelar</button><button type="button" class="ev-btn" id="sgCuentaGuardar"><i class="bi bi-check2"></i> Guardar</button></div>
+</aside>
+
 <div class="sg-pal" id="sgPal" hidden><div class="sg-pal-caja"><input id="sgPalQ" type="search" placeholder="Busca una carga, un proveedor o una conversación…" autocomplete="off" aria-label="Buscar en todo"><div class="sg-pal-res" id="sgPalRes"></div>
     <div class="sg-pal-pie"><kbd>Esc</kbd> cerrar · <kbd>Enter</kbd> abrir el primero · <kbd>1</kbd>–<kbd>6</kbd> cambia de sección (fuera de un cuadro de texto)</div></div></div>
 <button type="button" class="sg-fab" id="sgFab" aria-label="Abrir mensajes"><i class="bi bi-chat-dots-fill"></i><b class="sg-n" id="sgFabN" hidden>0</b></button>
@@ -414,10 +521,11 @@
     <div class="sg-dock-cuerpo" id="sgDockCuerpo"></div>
 </div>
 
-<aside class="ui-drawer" id="hpVer" aria-hidden="true" style="width:min(1560px, calc(100vw - 24px))">
+<aside class="ui-drawer" id="hpVer" aria-hidden="true" style="width:min(1900px, calc(100vw - 12px))">
     <div class="ui-dh">
         <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-inboxes" id="hpVerIco"></i></div>
         <div style="min-width:0"><h2 id="hpVerTitulo">Carga</h2><small id="hpVerSub"></small></div>
+        <button type="button" class="ev-btn sm" id="hpVerSim" title="Ver cómo quedaría en la Home, en la pantalla intermedia y en la ficha"><i class="bi bi-window-stack"></i> Cómo se verá en la web</button>
         <span class="sg-nav"><button class="ui-ibtn" type="button" id="hpVerPrev" aria-label="Carga anterior" title="Carga anterior"><i class="bi bi-chevron-left"></i></button><span id="hpVerPos"></span><button class="ui-ibtn" type="button" id="hpVerNext" aria-label="Carga siguiente" title="Carga siguiente"><i class="bi bi-chevron-right"></i></button></span>
         <button class="ui-ibtn" type="button" id="hpVerMax" aria-label="Pantalla completa" title="Pantalla completa"><i class="bi bi-arrows-fullscreen"></i></button>
         <button class="ui-ibtn x" type="button" id="hpVerCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
@@ -481,17 +589,16 @@
                 <p>${filtro === 'PENDIENTE' ? 'Cuando un proveedor envíe una carga a revisión aparecerá aquí y te avisará la campana.' : 'Prueba con otro filtro.'}</p></div>`;
         } else {
             $('#hpLista').innerHTML = items.map((c, k) => {
-                const m = modulos[c.modulo] || { nombre: c.modulo, icono: 'bi-box' };
-                return `<button type="button" class="hp-card" data-id="${c.id}" style="animation-delay:${Math.min(k, 12) * 35}ms">
-                    <span class="fl" style="${c.flyer ? `background-image:url('${esc(c.flyer)}')` : ''}">${c.flyer ? '' : `<i class="bi ${esc(m.icono)}"></i>`}</span>
-                    <div style="min-width:0;padding-right:74px">
-                        <h4>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''}</h4>
-                        <div class="sub"><i class="bi ${esc(m.icono)}"></i> ${esc(m.nombre)} · ${esc(c.cuenta || '')}</div>
-                        <div class="meta"><span>${EV.fmt(c.productos)} producto${c.productos === 1 ? '' : 's'}</span>${c.precio_Desde ? `<span>desde ${EV.dinero(c.precio_Desde, c.moneda)}</span>` : ''}<span>${fechaDe(c)}</span>
-                            ${c.activar_Sugerido && c.estado === 'PENDIENTE' ? `<span title="Fecha que sugiere el proveedor"><i class="bi bi-calendar-heart"></i> sugiere ${fh(c.activar_Sugerido)}</span>` : ''}</div>
-                        ${c.error ? `<div class="err"><i class="bi bi-exclamation-octagon"></i> ${esc(c.error.length > 120 ? c.error.slice(0, 120) + '…' : c.error)}</div>` : ''}
-                    </div>
-                    <span class="hp-est ${esc(c.estado)}">${UNO[c.estado] || esc(c.estado)}</span></button>`;
+                const m = modulos[c.modulo] || { nombre: c.modulo, icono: 'bi-box' }, paso = { BORRADOR: 0, PENDIENTE: 2, DEVUELTA: 2, RECHAZADA: 2, PROGRAMADA: 3, ACTIVA: 4 }[c.estado] ?? 0;
+                return `<button type="button" class="sg-lc" data-id="${c.id}" style="--c:${COL[c.estado] || '#0E8F86'};animation-delay:${Math.min(k, 12) * 35}ms">
+                    <span class="fl" style="${c.flyer ? `background-image:url('${esc(c.flyer)}')` : ''}">${c.flyer ? '' : `<i class="bi ${esc(m.icono)}"></i>`}<span class="prov">${av(c.cuenta, 0, c.id_Cuenta)}</span></span>
+                    <div class="cu"><span class="est hp-est ${esc(c.estado)}">${UNO[c.estado] || esc(c.estado)}</span>
+                        <div class="l1"><span class="cod">${esc(c.codigo)}</span><span class="sg-chip"><i class="bi ${esc(m.icono)}"></i> ${esc(m.nombre)}</span></div>
+                        <h4>${esc(c.titulo || m.nombre)}</h4>
+                        <div class="pv"><b>Proveedor:</b> ${esc(c.cuenta || '')}</div>
+                        <div class="sg-card-pies"><span class="sg-chip">${EV.fmt(c.productos)} producto${c.productos === 1 ? '' : 's'}</span>${c.activar_Sugerido && c.estado === 'PENDIENTE' ? `<span class="sg-chip azul" title="Fecha que sugiere el proveedor"><i class="bi bi-calendar-heart"></i> sugiere ${fh(c.activar_Sugerido)}</span>` : ''}${c.error ? '<span class="sg-chip rojo"><i class="bi bi-exclamation-octagon"></i> error</span>' : ''}</div>
+                        <ol class="sg-pasos" aria-label="Paso ${paso} de 4">${[0, 1, 2, 3].map(i => `<li class="${i < paso ? 'h' : i === paso ? 'a' : ''}"><span></span></li>`).join('')}</ol>
+                        <div class="pie">${c.estado === 'PENDIENTE' ? slaChip(c.fecha_Solicitud) : `<small style="color:var(--ev-muted);font-weight:700">${fechaDe(c)}</small>`}<span class="precio">${c.precio_Desde ? EV.dinero(c.precio_Desde, c.moneda) : '—'}<small>precio desde</small></span></div></div></button>`;
             }).join('');
         }
         $('#hpMas').hidden = items.length >= total;
@@ -632,9 +739,9 @@
     });
 
     // ---------- Solicitudes de datos (hotel, destino, aeropuerto, habitación que el proveedor pidió crear) ----------
-    const SOL = { hotel: ['bi-building', 'Hotel'], destino: ['bi-geo-alt', 'Destino'], aeropuerto: ['bi-airplane-engines', 'Aeropuerto'], habitacion: ['bi-door-open', 'Habitación'] };
+    const SOL = { imagen: ['bi-images', 'Fotos'], hotel: ['bi-building', 'Hotel'], destino: ['bi-geo-alt', 'Destino'], aeropuerto: ['bi-airplane-engines', 'Aeropuerto'], habitacion: ['bi-door-open', 'Habitación'] };
     const SOL_EST = { PENDIENTE: 'Por revisar', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' };
-    const SOL_CAT = { hotel: 'alojamientos', destino: 'destinos', aeropuerto: 'estaciones', habitacion: 'habitaciones' };
+    const SOL_CAT = { imagen: 'alojamientos', hotel: 'alojamientos', destino: 'destinos', aeropuerto: 'estaciones', habitacion: 'habitaciones' };
     async function solicitudes() {
         let r;
         try { r = await EV.api('/Herramientas/ProveedorSolicitudes'); } catch { return; }
@@ -646,7 +753,8 @@
         caja.innerHTML = r.items.map(s => {
             const [ico, nombre] = SOL[s.tipo] || ['bi-box', s.tipo];
             let datos = '';
-            try { const d = JSON.parse(s.datos || '{}'); datos = Object.entries(d).filter(([k, v]) => v !== '' && v !== null && k !== 'activo').map(([k, v]) => esc(k.replace(/^id_/, '').replace('_', ' ')) + ': ' + esc(v)).join(' · '); } catch { }
+            try { const d = JSON.parse(s.datos || '{}'); if (s.tipo === 'imagen') { const q = a => { const l = Math.max(a.ancho || 0, a.alto || 0), c = Math.min(a.ancho || 0, a.alto || 0); return l >= 1600 && c >= 900 ? 'buena' : l >= 1000 && c >= 600 ? 'normal' : 'mala'; };
+                datos = `<b>${d.destinoTipo === 'hotel' ? 'Hotel' : 'Destino'}:</b> ${esc(d.nombre || d.clave)} · uso: ${d.uso === 'PORTADA' ? 'la primera es portada' : 'galería'}<div class="sg-thumbs">${(d.archivos || []).map(a => `<a href="/uploads/proveedores/imagenes/${s.id_Solicitud}/${a.n}.${esc(a.ext)}" target="_blank" rel="noopener"><figure class="${q(a)}"><img src="/uploads/proveedores/imagenes/${s.id_Solicitud}/${a.n}.${esc(a.ext)}" alt="" loading="lazy"><figcaption><span>${q(a)}</span><span>${a.ancho || '?'}×${a.alto || '?'}</span></figcaption></figure></a>`).join('')}</div>`; } else datos = Object.entries(d).filter(([k, v]) => v !== '' && v !== null && k !== 'activo').map(([k, v]) => esc(k.replace(/^id_/, '').replace('_', ' ')) + ': ' + esc(v)).join(' · '); } catch { }
             const acc = s.estado === 'PENDIENTE'
                 ? `<button type="button" class="ev-btn sm" data-sol="ok" data-id="${s.id_Solicitud}"><i class="bi bi-check2-circle"></i> Aprobar</button>
                    <button type="button" class="ev-btn ghost sm" data-sol="no" data-id="${s.id_Solicitud}"><i class="bi bi-x-circle"></i> Rechazar</button>
@@ -681,8 +789,9 @@
     const hace = d => { const m = Math.max(0, Math.round((Date.now() - new Date(d)) / 60000)); return m < 1 ? 'ahora' : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`; };
     const corto = (t, n = 70) => { t = String(t || ''); return t.length > n ? t.slice(0, n) + '…' : t; };
     const iniciales = n => (String(n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('') || '?').toUpperCase();
-    const av = (n, g) => { let h = 0; for (const c of String(n || '?')) h = (h * 31 + c.charCodeAt(0)) % 360; return `<span class="sg-av${g ? ' g' : ''}" style="--h:${h}">${esc(iniciales(n))}</span>`; };
-    const COL = { PENDIENTE: '#F79009', DEVUELTA: '#D444A0', RECHAZADA: '#F04438', PROGRAMADA: '#7A5AF8', ACTIVA: '#12B76A', BORRADOR: '#98A2B3' };
+    let logos = {};
+    const av = (n, g, id) => { const l = id ? logos[id] : null; if (l) return `<span class="sg-av${g ? ' g' : ''} logo"><img src="${esc(l)}" alt=""></span>`; let h = 0; for (const c of String(n || '?')) h = (h * 31 + c.charCodeAt(0)) % 360; return `<span class="sg-av${g ? ' g' : ''}" style="--h:${h}">${esc(iniciales(n))}</span>`; };
+    const COL = { VENCIDA: '#B42318', PENDIENTE: '#F79009', DEVUELTA: '#D444A0', RECHAZADA: '#F04438', PROGRAMADA: '#7A5AF8', ACTIVA: '#12B76A', BORRADOR: '#98A2B3' };
     const pk = (o, k) => o?.[k] ?? o?.[k[0].toLowerCase() + k.slice(1)] ?? 0;
     let gest = {}, equipo = [], yo = '', segActivo = true, chats = [], fichas = [], visto = {};
     try { visto = JSON.parse(localStorage.getItem('hpVisto') || '{}'); } catch { }
@@ -701,14 +810,15 @@
     $('#sgTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) pestana(b.dataset.tab); });
 
     // ---------------- Hoy ----------------
+    const insertarCrono = sl => { const el = document.querySelector('#sgHoy .sg-cuidar'); if (el) el.insertAdjacentHTML('afterend', cronograma(sl)); };
     const EV_TXT = { CREADA: ['creó la carga', 'bi-plus-circle', ''], ENVIADA: ['la envió a revisión', 'bi-send', 'az'], PENDIENTE: ['la envió a revisión', 'bi-send', 'az'], RECHAZADA: ['la rechazó', 'bi-x-octagon', 'mal'], DEVUELTA: ['la devolvió', 'bi-arrow-return-left', 'ama'],
         PROGRAMADA: ['la aprobó y programó', 'bi-calendar-check', 'vio'], ACTIVA: ['la aprobó', 'bi-check2-circle', 'ok'], EN_WEB: ['Publicada en la web', 'bi-globe2', 'ok'], MENSAJE_PROVEEDOR: ['escribió', 'bi-chat-left-text', 'az'], MENSAJE_EUROVIP: ['respondió', 'bi-reply', ''] };
     async function pintarHoy() {
         let r;
         try { r = await EV.api('/Herramientas/ProveedorDia'); } catch { $('#sgHoyKpis').innerHTML = ''; $('#sgHoy').innerHTML = '<div class="sg-vacio sg-panel ancho">No se pudo cargar el seguimiento del día.</div>'; return; }
-        const n = r.numeros || {}, g = k => pk(n, k);
+        const n = r.numeros || {}, g = k => pk(n, k), sl = r.sla || {};
         const k = (cls, ic, num, txt, tab) => `<${tab ? 'button type="button" data-ir="' + tab + '"' : 'div'} class="sg-kpi ${cls}"><i class="bi ${ic}"></i><b>${EV.fmt(num)}</b><small>${txt}</small></${tab ? 'button' : 'div'}>`;
-        $('#sgHoyKpis').innerHTML = k(g('PorRevisar') ? 'ama' : '', 'bi-hourglass-split', g('PorRevisar'), 'Por revisar', 'tablero') + k(g('Atrasadas') ? 'rojo' : '', 'bi-alarm', g('Atrasadas'), 'Esperando más de 24 h', 'tablero')
+        $('#sgHoyKpis').innerHTML = k(g('PorRevisar') ? 'ama' : '', 'bi-hourglass-split', g('PorRevisar'), 'Por revisar', 'tablero') + k(sl.vencidas ? 'rojo' : '', 'bi-alarm-fill', sl.vencidas || 0, 'Vencidas · por ver (+' + PLAZO + ' días)', 'tablero') + k(sl.vencenPronto ? 'ama' : '', 'bi-hourglass-bottom', sl.vencenPronto || 0, 'Vencen en menos de 24 h', 'tablero')
             + k('azul', 'bi-send', g('EnviadasHoy'), 'Enviadas hoy') + k('verde', 'bi-check2-circle', g('RevisadasHoy'), 'Revisadas hoy') + k('verde', 'bi-globe2', g('ActivadasHoy'), 'Activadas hoy')
             + k('azul', 'bi-calendar-check', g('SalenHoy'), 'Salen hoy') + k('', 'bi-calendar-plus', g('SalenManana'), 'Salen mañana')
             + k(g('ConError') ? 'rojo' : '', 'bi-exclamation-octagon', g('ConError'), 'Con error al publicar') + k(r.datosPendientes ? 'ama' : '', 'bi-plus-square-dotted', r.datosPendientes, 'Datos pedidos', 'sol');
@@ -718,10 +828,19 @@
             return `<li data-carga="${e.id_Carga}"><span class="pt ${t[2]}"><i class="bi ${t[1]}"></i></span><div><b>${quien} ${e.tipo === 'EN_WEB' ? t[0] : t[0]}</b><span>${esc(e.codigo)} · ${esc(e.cuenta || '')}${e.texto ? ' · “' + esc(corto(e.texto, 90)) + '”' : ''}</span></div><time>${diaTxt(e.fecha)}<br>${hm(e.fecha)}</time></li>`; }).join('');
         const cuid = (r.cuidados || []).map(p => `<div class="sg-fila"><span class="pt ${p.nivel}"><i class="bi ${p.nivel === 'rojo' ? 'bi-x-octagon-fill' : p.nivel === 'ama' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}"></i></span><div><b>${esc(p.titulo)}</b><small>${esc(p.detalle || '')}</small></div></div>`).join('');
         $('#sgHoy').innerHTML = `${cuid ? `<div class="sg-panel ancho sg-cuidar"><h3><i class="bi bi-shield-exclamation"></i> Cosas a cuidar</h3>${cuid}</div>` : '<div class="sg-panel ancho sg-cuidar"><h3><i class="bi bi-shield-check"></i> Cosas a cuidar</h3><div class="sg-vacio">Todo tranquilo: no hay nada raro que cuidar hoy.</div></div>'}
-            <div class="sg-panel"><h3><i class="bi bi-alarm"></i> Por revisar (las más antiguas primero)</h3>${lista(r.atrasadas, c => fila(c, 'hace ' + hace(c.fecha)), '¡Nada pendiente! Todo está revisado.')}</div>
+            <div class="sg-panel"><h3><i class="bi bi-alarm"></i> Por revisar · plazo de ${PLAZO} días (las más antiguas primero)</h3>${lista(r.atrasadas, c => { const s = slaDe(c.fecha); return fila(c, s.txt, s.cls); }, '¡Nada pendiente! Todo está revisado.')}</div>
             <div class="sg-panel"><h3><i class="bi bi-chat-left-dots"></i> Mensajes sin responder</h3>${lista(r.sinResponder, c => fila(c, 'hace ' + hace(c.fecha), 'g'), 'Todos los mensajes están respondidos.')}</div>
             <div class="sg-panel"><h3><i class="bi bi-calendar-check"></i> Salen pronto en la web</h3>${lista(r.salen, c => fila(c, fh(c.fecha), 'v'), 'No hay cargas programadas.')}</div>
             <div class="sg-panel"><h3><i class="bi bi-activity"></i> Movimiento reciente</h3><ul class="sg-mov">${mov || '<div class="sg-vacio">Todavía no hay movimiento.</div>'}</ul></div>`;
+        insertarCrono(sl);
+    }
+    function cronograma(sl) {
+        const tot = (sl.vencidas || 0) + (sl.vencenPronto || 0) + (sl.enTiempo || 0), pc = sl.revisadas30 ? Math.round((sl.enPlazo || 0) * 100 / sl.revisadas30) : null;
+        return `<div class="sg-panel ancho"><h3><i class="bi bi-speedometer2"></i> Cronograma de respuesta · plazo máximo de ${PLAZO} días</h3>
+            ${tot ? `<div class="sg-barra-sla" title="Pendientes por plazo"><span style="flex:${sl.enTiempo};background:#12B76A"></span><span style="flex:${sl.vencenPronto};background:#F79009"></span><span style="flex:${sl.vencidas};background:#F04438"></span></div>
+              <small style="color:var(--ev-muted);font-weight:700">🟢 ${sl.enTiempo} en tiempo · 🟠 ${sl.vencenPronto} vencen pronto · 🔴 ${sl.vencidas} vencidas (quedan «por ver»)</small>` : '<div class="sg-vacio">No hay cargas pendientes. ¡Todo al día!</div>'}
+            <div class="sg-rend"><div><b>${dur(sl.promedioHoras)}</b><small>Tiempo promedio de respuesta (30 días)</small></div><div><b>${pc == null ? '—' : pc + '%'}</b><small>Respondidas dentro del plazo</small></div><div><b>${sl.revisadas30 || 0}</b><small>Cargas revisadas (30 días)</small></div><div><b style="color:${sl.vencidas ? '#B42318' : '#067647'}">${sl.vencidas || 0}</b><small>Vencidas ahora</small></div></div>
+            ${(sl.porRevisor || []).length ? `<table class="sg-tabla"><thead><tr><th>Quién revisó</th><th>Cargas</th><th>Tiempo promedio</th></tr></thead><tbody>${sl.porRevisor.map(x => `<tr><td><b>${esc(nombreDe(x.quien))}</b></td><td>${x.revisadas}</td><td>${dur(x.horas)}</td></tr>`).join('')}</tbody></table>` : ''}</div>`;
     }
     document.addEventListener('click', e => {
         const ir = e.target.closest('[data-ir]'); if (ir) { pestana(ir.dataset.ir); return; }
@@ -729,12 +848,13 @@
     });
 
     // ---------------- Tablero ----------------
-    const KCOLS = [['PENDIENTE', 'Por revisar', 'Esperan a Eurovip', 'bi-hourglass-split', ['PENDIENTE']], ['DEVUELTA', 'Con el proveedor', 'Devueltas o rechazadas', 'bi-arrow-return-left', ['DEVUELTA', 'RECHAZADA']],
+    const KCOLS = [['PENDIENTE', 'Por revisar', 'Dentro del plazo de 5 días', 'bi-hourglass-split', ['PENDIENTE']], ['VENCIDA', 'Vencidas · por ver', 'Pasaron los 5 días', 'bi-alarm-fill', ['PENDIENTE']], ['DEVUELTA', 'Con el proveedor', 'Devueltas o rechazadas', 'bi-arrow-return-left', ['DEVUELTA', 'RECHAZADA']],
         ['PROGRAMADA', 'Programadas', 'Aprobadas, salen solas', 'bi-calendar-check', ['PROGRAMADA']], ['ACTIVA', 'En la web', 'Las más recientes', 'bi-globe2', ['ACTIVA']], ['BORRADOR', 'Borradores', 'Aún sin enviar', 'bi-pencil', ['BORRADOR']]];
     let kdatos = null;
     async function tablero(recargar) {
         if (!kdatos || recargar) {
             const pide = (e, tam) => EV.api('/Herramientas/ProveedoresCargas?' + new URLSearchParams({ estado: e, tam, pagina: 1 })).catch(() => ({ items: [], total: 0 }));
+            await cargarEquipo();
             const [a, b, c, d, e, f, g] = await Promise.all([pide('PENDIENTE', 100), pide('DEVUELTA', 50), pide('RECHAZADA', 50), pide('PROGRAMADA', 100), pide('ACTIVA', 30), pide('BORRADOR', 30), EV.api('/Herramientas/ProveedorGestiones').catch(() => ({ items: [], equipo: [], activo: false }))]);
             kdatos = { PENDIENTE: a, DEVUELTA: b, RECHAZADA: c, PROGRAMADA: d, ACTIVA: e, BORRADOR: f };
             gest = Object.fromEntries((g.items || []).map(x => [x.id_Carga, x])); equipo = g.equipo || []; yo = g.yo || ''; segActivo = !!g.activo;
@@ -748,21 +868,21 @@
         const q = $('#sgKQ').value.trim().toLowerCase(), mod = $('#sgKModulo').value, cu = $('#sgKCuenta').value, mias = $('#sgKMias').checked;
         const ok = c => (!mod || c.modulo === mod) && (!cu || String(c.id_Cuenta) === cu) && (!q || `${c.codigo} ${c.titulo || ''} ${c.cuenta || ''}`.toLowerCase().includes(q)) && (!mias || (gest[c.id] || {}).asignado_A === yo);
         $('#sgKan').innerHTML = KCOLS.map(([clave, tit, sub, ic, estados]) => {
-            const todas = estados.flatMap(e => (kdatos[e] || {}).items || []).filter(ok);
-            const total = estados.reduce((s, e) => s + ((kdatos[e] || {}).total || 0), 0);
+            const todas = estados.flatMap(e => (kdatos[e] || {}).items || []).filter(ok).filter(c => clave === 'PENDIENTE' ? !slaDe(c.fecha_Solicitud).venc : clave === 'VENCIDA' ? slaDe(c.fecha_Solicitud).venc : true);
+            const total = (clave === 'PENDIENTE' || clave === 'VENCIDA') ? todas.length : estados.reduce((s, e) => s + ((kdatos[e] || {}).total || 0), 0);
             todas.sort((x, y) => ((gest[y.id] || {}).prioridad || 0) - ((gest[x.id] || {}).prioridad || 0) || new Date(x.fecha_Solicitud || x.creado_En) - new Date(y.fecha_Solicitud || y.creado_En));
             const cards = todas.map((c, i) => {
                 const g = gest[c.id] || {}, m = modulos[c.modulo] || { nombre: c.modulo, icono: 'bi-box' }, chat = chats.find(x => x.id === c.id);
-                const desde = c.estado === 'PENDIENTE' ? `<span class="sg-chip ${Date.now() - new Date(c.fecha_Solicitud) > 864e5 ? 'rojo' : 'ama'}"><i class="bi bi-clock"></i> hace ${hace(c.fecha_Solicitud)}</span>`
+                const desde = c.estado === 'PENDIENTE' ? slaChip(c.fecha_Solicitud)
                     : c.estado === 'PROGRAMADA' ? `<span class="sg-chip vio"><i class="bi bi-calendar-check"></i> ${fh(c.activar_En)}</span>` : c.estado === 'ACTIVA' ? `<span class="sg-chip verde"><i class="bi bi-globe2"></i> ${fh(c.fecha_Activacion)}</span>`
                     : `<span class="sg-chip"><i class="bi bi-clock-history"></i> ${hace(c.actualizado_En || c.creado_En)}</span>`;
                 return `<button type="button" class="sg-card u${g.prioridad || 0}" style="--c:${COL[c.estado]};animation-delay:${Math.min(i, 8) * 30}ms" data-carga="${c.id}">
-                    <div class="sg-card-top">${av(c.cuenta)}<div><b>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''}</b><small>${esc(c.cuenta || '')}</small></div>${chat && sinLeer(chat) ? '<span class="sg-punto" title="Mensaje sin leer"></span>' : ''}</div>
+                    <div class="sg-card-top">${av(c.cuenta, 0, c.id_Cuenta)}<div><b>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''}</b><small>${esc(c.cuenta || '')}</small></div>${chat && sinLeer(chat) ? '<span class="sg-punto" title="Mensaje sin leer"></span>' : ''}</div>
                     <div class="sg-card-pies"><span class="sg-chip"><i class="bi ${esc(m.icono)}"></i> ${esc(m.nombre)}</span><span class="sg-chip">${EV.fmt(c.productos)} prod.</span>${c.precio_Desde ? `<span class="sg-chip">desde ${EV.dinero(c.precio_Desde, c.moneda)}</span>` : ''}
                         ${c.estado === 'DEVUELTA' ? '<span class="sg-chip ama">Devuelta</span>' : c.estado === 'RECHAZADA' ? '<span class="sg-chip rojo">Rechazada</span>' : ''}${c.error ? '<span class="sg-chip rojo"><i class="bi bi-exclamation-octagon"></i> error</span>' : ''}</div>
                     <div class="sg-card-pies">${desde}${g.prioridad === 2 ? '<span class="sg-chip rojo"><i class="bi bi-flag-fill"></i> Urgente</span>' : g.prioridad === 1 ? '<span class="sg-chip ama"><i class="bi bi-flag-fill"></i> Alta</span>' : ''}${g.asignado_A ? `<span class="sg-chip azul"><i class="bi bi-person-check"></i> ${esc(g.asignado_A)}</span>` : ''}</div></button>`;
             }).join('');
-            return `<div class="sg-col" style="--c:${COL[estados[0]]}"><div class="sg-col-cab"><span class="ic"><i class="bi ${ic}"></i></span><b>${tit}<small>${sub}</small></b><span class="n">${total}</span></div>
+            return `<div class="sg-col" style="--c:${COL[clave] || COL[estados[0]]}"><div class="sg-col-cab"><span class="ic"><i class="bi ${ic}"></i></span><b>${tit}<small>${sub}</small></b><span class="n">${total}</span></div>
                 <div class="sg-col-cuerpo">${cards || '<div class="sg-vacio">Nada aquí.</div>'}</div></div>`;
         }).join('');
     }
@@ -774,6 +894,7 @@
     async function montarHilo(el, id, op = {}) {
         let st = { carga: null, coms: [], notas: [], activo: true, yo: '' }, modo = 'msg';
         const cargar = async () => {
+            await cargarEquipo();
             const [d, n] = await Promise.all([EV.api('/Herramientas/ProveedorCarga?id=' + id), EV.api('/Herramientas/ProveedorNotas?id=' + id).catch(() => ({ items: [], activo: false, yo: '' }))]);
             st = { carga: d.carga, coms: d.comentarios || [], notas: n.items || [], activo: n.activo, yo: n.yo };
             const ult = st.coms.filter(x => x.autor === 'PROVEEDOR').pop(); if (ult) marcarVisto(id, ult.fecha);
@@ -794,6 +915,7 @@
             const cuerpo = items().map(i => {
                 const dia = diaTxt(i.f), sep = dia !== ultimoDia ? `<div class="sg-dia">${dia}</div>` : ''; ultimoDia = dia;
                 if (i.t === 'sis') return `${sep}<div class="sg-sis">${esc(i.x)} · ${hm(i.f)}</div>`;
+                if (i.t === 'nota' && i.n.texto.startsWith('[[SIS]]')) return `${sep}<div class="sg-sis">📌 ${esc(nombreDe(i.n.autor))} ${esc(i.n.texto.slice(7))} · ${hm(i.f)}</div>`;
                 if (i.t === 'nota') { const n = i.n; return `${sep}<div class="sg-msg NOTA${n.fijada ? ' fij' : ''}"><div class="qn"><i class="bi bi-lock-fill"></i> Nota interna · ${esc(n.autor)}${n.fijada ? ' · <i class="bi bi-pin-angle-fill"></i>' : ''}</div>${esc(n.texto)}<div class="tm">${hm(n.creado_En)}</div>
                     <div class="acc"><button type="button" data-fijar="${n.id}" data-v="${n.fijada ? 0 : 1}" title="${n.fijada ? 'Soltar' : 'Fijar'}"><i class="bi bi-pin-angle"></i></button>${n.autor === st.yo ? `<button type="button" data-borrar="${n.id}" title="Borrar"><i class="bi bi-trash"></i></button>` : ''}</div></div>`; }
                 const x = i.m, eur = x.autor === 'EUROVIP';
@@ -801,8 +923,9 @@
             }).join('');
             const fij = st.notas.filter(n => n.fijada).pop();
             el.innerHTML = `<div class="sg-hilo">
-                ${op.cab ? `<div class="sg-hilo-cab">${op.atras ? '<button type="button" class="ui-ibtn" data-atras aria-label="Volver"><i class="bi bi-arrow-left"></i></button>' : ''}${av(c.cuenta)}<div><b>${esc(c.cuenta || '')}</b><small>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''} · ${esc(m.nombre)} · ${UNO[c.estado] || esc(c.estado)}</small></div>
+                ${op.cab ? `<div class="sg-hilo-cab">${op.atras ? '<button type="button" class="ui-ibtn" data-atras aria-label="Volver"><i class="bi bi-arrow-left"></i></button>' : ''}${av(c.cuenta, 0, c.id_Cuenta)}<div><b>${esc(c.cuenta || '')}</b><small>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''} · ${esc(m.nombre)} · ${UNO[c.estado] || esc(c.estado)}</small></div>
                     <button type="button" class="ev-btn ghost sm" data-abrir="${c.id}"><i class="bi bi-box-arrow-up-right"></i> Abrir carga</button></div>` : ''}
+                ${op.cab ? asigBar(c) : ''}
                 ${fij ? `<div class="sg-fijada"><i class="bi bi-pin-angle-fill"></i><span>${esc(fij.texto)}</span></div>` : ''}
                 <div class="sg-msgs" data-msgs>${cuerpo}</div>
                 <div class="sg-comp"><div class="sg-modo"><button type="button" data-modo="msg" class="${modo === 'msg' ? 'on' : ''}"><i class="bi bi-chat-text"></i> Responder al proveedor</button><button type="button" data-modo="nota" class="${modo === 'nota' ? 'on' : ''}"><i class="bi bi-lock"></i> Nota interna</button></div>
@@ -811,6 +934,12 @@
                     <button type="button" class="sg-enviar" data-enviar aria-label="Enviar"><i class="bi bi-send-fill"></i></button></div></div></div>`;
             const ms = el.querySelector('[data-msgs]'); ms.scrollTop = ms.scrollHeight;
         };
+        const asigBar = c => { const g = gest[c.id] || {}, asig = g.asignado_A || '';
+            const ops = [...new Set([...equipoFull.map(m => m.userName), asig].filter(Boolean))];
+            return `<div class="sg-asig"><label for="sgAsig${c.id}"><i class="bi bi-person-check"></i> Encargada a</label><select id="sgAsig${c.id}" data-asig><option value="">Sin asignar</option>${ops.map(u => `<option value="${esc(u)}" ${u === asig ? 'selected' : ''}>${esc(nombreDe(u))}${u === yo ? ' (tú)' : ''}</option>`).join('')}</select>
+                ${asig === yo ? '' : '<button type="button" class="ev-btn ghost sm" data-encargarme><i class="bi bi-hand-index-thumb"></i> Encargármela</button>'}<small>Todo el equipo puede ver y responder esta conversación.</small></div>`; };
+        const asignar = async valor => { const g = gest[id] || {}; try { await EV.post('/Herramientas/ProveedorGestionGuardar', { id, asignado: valor || null, prioridad: g.prioridad || 0 }); await cargar(); op.alCambiar?.(); EV.toast(valor ? 'Conversación encargada.' : 'Asignación quitada.'); } catch { } };
+        el.onchange = e => { if (e.target.matches('[data-asig]')) asignar(e.target.value); };
         const enviar = async () => {
             const ta = el.querySelector('[data-texto]'), texto = ta.value.trim(); if (!texto) { ta.focus(); return; }
             try {
@@ -822,6 +951,7 @@
         el.onclick = async e => {
             const b = e.target.closest('button, a'); if (!b) return;
             if (b.dataset.modo) { modo = b.dataset.modo; const t = el.querySelector('[data-texto]').value; pintar(); el.querySelector('[data-texto]').value = t; }
+            else if (b.dataset.encargarme !== undefined) asignar(yo);
             else if (b.dataset.rapida) { const ta = el.querySelector('[data-texto]'); ta.value = b.dataset.rapida; ta.focus(); }
             else if (b.dataset.enviar !== undefined) enviar();
             else if (b.dataset.abrir) { op.abrir ? op.abrir(+b.dataset.abrir) : abrir(+b.dataset.abrir); }
@@ -835,13 +965,14 @@
     }
 
     // ---------------- bandeja de mensajes ----------------
+    let chatFiltro = 'todas';
     const listaChats = (q, activo) => {
         q = (q || '').trim().toLowerCase();
-        const l = chats.filter(c => !q || `${c.codigo} ${c.titulo || ''} ${c.cuenta || ''} ${c.ultimo_Texto || ''}`.toLowerCase().includes(q));
+        const l = chats.filter(c => (!q || `${c.codigo} ${c.titulo || ''} ${c.cuenta || ''} ${c.ultimo_Texto || ''}`.toLowerCase().includes(q)) && (chatFiltro === 'mias' ? c.asignado_A === yo : chatFiltro === 'sin' ? !c.asignado_A : chatFiltro === 'nuevos' ? sinLeer(c) : true));
         return l.length ? l.map(c => { const nu = sinLeer(c), m = modulos[c.modulo] || { nombre: c.modulo };
-            return `<button type="button" class="sg-chat ${nu ? 'nuevo' : ''} ${activo === c.id ? 'on' : ''}" data-chat="${c.id}">${av(c.cuenta, 1)}<div><div class="l1"><b>${esc(c.cuenta || '')}</b><time>${diaTxt(c.ultima_Fecha) === 'Hoy' ? hm(c.ultima_Fecha) : diaTxt(c.ultima_Fecha)}</time></div>
+            return `<button type="button" class="sg-chat ${nu ? 'nuevo' : ''} ${activo === c.id ? 'on' : ''}" data-chat="${c.id}">${av(c.cuenta, 1, c.id_Cuenta)}<div><div class="l1"><b>${esc(c.cuenta || '')}</b><time>${diaTxt(c.ultima_Fecha) === 'Hoy' ? hm(c.ultima_Fecha) : diaTxt(c.ultima_Fecha)}</time></div>
                 <div class="l2"><span>${c.ultimo_Autor === 'EUROVIP' ? '<i class="bi bi-check2-all" style="color:#53BDEB"></i> ' : ''}${esc(corto(c.ultimo_Texto, 60))}</span>${nu ? '<b class="sg-badge">●</b>' : ''}</div>
-                <div class="l3">${esc(c.codigo)} · ${esc(m.nombre)} · ${UNO[c.estado] || esc(c.estado)}</div></div></button>`; }).join('')
+                <div class="l3">${esc(c.codigo)} · ${esc(m.nombre)} · ${UNO[c.estado] || esc(c.estado)}${c.asignado_A ? `<span class="enc"><i class="bi bi-person-check"></i> ${esc(c.asignado_A === yo ? 'Tú' : nombreDe(c.asignado_A))}</span>` : ''}</div></div></button>`; }).join('')
             : '<div class="sg-vacio" style="margin:14px">Todavía no hay conversaciones. Escribe desde una carga y aparecerá aquí.</div>';
     };
     async function cargarChats() {
@@ -849,9 +980,15 @@
         const n = chats.filter(sinLeer).length;
         [['#sgNChats', n], ['#sgFabN', n]].forEach(([s, v]) => { const x = $(s); x.textContent = v; x.hidden = !v; });
         const pen = (conteo.PENDIENTE || 0) + n; document.title = (pen ? `(${pen}) ` : '') + 'Cargas de proveedores';
-        $('#sgChatLista').innerHTML = listaChats($('#sgChatQ').value, chatActivo);
+        pintarFiltrosChat(); $('#sgChatLista').innerHTML = listaChats($('#sgChatQ').value, chatActivo);
+        chats.forEach(c => { if (c.logo) logos[c.id_Cuenta] = c.logo; });
         if (dockAbierto && !dockHilo) $('#sgDockLista') && ($('#sgDockLista').innerHTML = listaChats($('#sgDockQ')?.value));
     }
+    function pintarFiltrosChat() {
+        const cuenta = f => chats.filter(c => f === 'mias' ? c.asignado_A === yo : f === 'sin' ? !c.asignado_A : f === 'nuevos' ? sinLeer(c) : true).length;
+        $('#sgChatFiltros').innerHTML = [['todas', 'Todas'], ['mias', 'Mías'], ['sin', 'Sin asignar'], ['nuevos', 'Sin leer']].map(([k, t]) => `<button type="button" data-f="${k}" class="${chatFiltro === k ? 'on' : ''}">${t}<b>${cuenta(k)}</b></button>`).join('');
+    }
+    $('#sgChatFiltros').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; chatFiltro = b.dataset.f; pintarFiltrosChat(); $('#sgChatLista').innerHTML = listaChats($('#sgChatQ').value, chatActivo); });
     let chatActivo = null;
     async function bandeja() { await cargarChats(); }
     function abrirChat(id) {
@@ -878,7 +1015,7 @@
 
     // ---------------- Proveedores (fichas) ----------------
     async function proveedores() {
-        if (!fichas.length) { try { fichas = (await EV.api('/Herramientas/ProveedorFichas')).items; } catch { $('#sgProvs').innerHTML = '<div class="sg-vacio">No se pudo cargar.</div>'; return; } }
+        if (!fichas.length) { try { fichas = (await EV.api('/Herramientas/ProveedorFichas')).items; fichas.forEach(p => { if (p.logo) logos[p.id] = p.logo; }); } catch { $('#sgProvs').innerHTML = '<div class="sg-vacio">No se pudo cargar.</div>'; return; } }
         pintarProv();
     }
     const tasaAprob = p => { const ok = p.programada + p.activa, mal = p.rechazada + p.devuelta; if (!ok && !mal) return ''; const pc = Math.round(ok * 100 / (ok + mal));
@@ -890,14 +1027,14 @@
             const barra = ['borrador', 'pendiente', 'devuelta', 'rechazada', 'programada', 'activa'].map(k => `<span style="flex:${p[k]};background:${COL[k.toUpperCase()]}" title="${k}: ${p[k]}"></span>`).join('');
             const tel = (p.telefono || '').replace(/[^\d+]/g, '');
             return `<div class="sg-prov ${p.activo ? '' : 'off'}" style="animation-delay:${Math.min(i, 10) * 30}ms">
-                <div class="sg-prov-cab">${av(p.nombre, 1)}<div><b>${esc(p.nombre)}</b><small>${esc(p.proveedor || p.id_Proveedor || '')}</small></div><span class="sg-chip ${p.activo ? 'verde' : 'rojo'}">${p.activo ? 'Activa' : 'Desactivada'}</span></div>
+                <div class="sg-prov-cab">${av(p.nombre, 1, p.id)}<div><b>${esc(p.nombre)}</b><small>${esc(p.proveedor || p.id_Proveedor || '')}</small></div><span class="sg-chip ${p.activo ? 'verde' : 'rojo'}">${p.activo ? 'Activa' : 'Desactivada'}</span></div>
                 <div class="sg-contacto">${p.email ? `<a href="mailto:${esc(p.email)}"><i class="bi bi-envelope"></i> ${esc(p.email)}</a>` : ''}${tel ? `<a href="https://wa.me/${tel.replace('+', '')}" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i> ${esc(p.telefono)}</a>` : ''}
                     ${tasaAprob(p)}<span><i class="bi bi-calendar3"></i> Cuenta desde ${fh(p.fecha_Alta).split(',')[0]}</span><span><i class="bi bi-clock-history"></i> Última actividad: ${p.ultima_Actividad ? 'hace ' + hace(p.ultima_Actividad) : '—'}</span></div>
                 <div class="sg-prov-pie">${String(p.modulos || '').split(',').filter(Boolean).map(m => `<span class="sg-chip"><i class="bi ${esc((modulos[m] || {}).icono || 'bi-box')}"></i> ${esc((modulos[m] || {}).nombre || m)}</span>`).join('') || '<span class="sg-chip rojo">Sin módulos</span>'}</div>
                 ${p.cargas ? `<div class="sg-estbar">${barra}</div>` : ''}
                 <div class="sg-nums"><div><b>${p.cargas}</b><small>Cargas</small></div><div><b>${p.pendiente}</b><small>Por revisar</small></div><div><b>${p.activa}</b><small>En la web</small></div>
                     <div><b>${p.devuelta + p.rechazada}</b><small>Con el proveedor</small></div><div><b>${EV.fmt(p.productos)}</b><small>Productos</small></div><div><b>${p.mensajes}</b><small>Mensajes</small></div></div>
-                <div class="sg-prov-pie"><button type="button" class="ev-btn sm" data-ver-cargas="${p.id}"><i class="bi bi-collection"></i> Ver sus cargas</button><a class="ev-btn ghost sm" href="/Herramientas/Index?tab=htCuentas"><i class="bi bi-pencil"></i> Editar cuenta</a></div></div>`;
+                <div class="sg-prov-pie"><button type="button" class="ev-btn sm" data-ver-cargas="${p.id}"><i class="bi bi-collection"></i> Ver sus cargas</button><button type="button" class="ev-btn ghost sm" data-editar-cuenta="${p.id}"><i class="bi bi-pencil"></i> Editar cuenta</button></div></div>`;
         }).join('') : '<div class="sg-vacio">No hay proveedores con ese filtro.</div>';
     }
     $('#sgPQ').addEventListener('input', EV.debounce(pintarProv, 200)); $('#sgPEstado').addEventListener('change', pintarProv);
@@ -908,10 +1045,10 @@
         const caja = document.getElementById('sgSegCarga'); if (!caja) return;
         let g = {}, lista = equipo;
         try { const r = await EV.api('/Herramientas/ProveedorGestiones'); gest = Object.fromEntries((r.items || []).map(x => [x.id_Carga, x])); equipo = r.equipo || []; yo = r.yo || yo; segActivo = !!r.activo; g = gest[c.id] || {}; lista = equipo; } catch { }
-        const nombres = [...new Set([...lista, g.asignado_A].filter(Boolean))];
+        const nombres = [...new Set([...equipoFull.map(m => m.userName), ...lista, g.asignado_A].filter(Boolean))];
         caja.innerHTML = `<h4><i class="bi bi-person-workspace"></i> Seguimiento interno</h4>
             ${segActivo ? '' : '<div class="hp-aviso ama" style="font-size:12.5px">Todavía no está activado en este servidor.</div>'}
-            <div><label for="sgResp">Responsable</label><div style="display:flex;gap:6px"><select class="ui-input" id="sgResp"><option value="">Sin asignar</option>${nombres.map(n => `<option ${n === g.asignado_A ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+            <div><label for="sgResp">Responsable</label><div style="display:flex;gap:6px"><select class="ui-input" id="sgResp"><option value="">Sin asignar</option>${nombres.map(n => `<option value="${esc(n)}" ${n === g.asignado_A ? 'selected' : ''}>${esc(nombreDe(n))}</option>`).join('')}</select>
                 <button type="button" class="ev-btn ghost sm" id="sgMia">Asignármela</button></div></div>
             <div><label>Prioridad</label><div class="sg-prio">${[['0', 'Normal'], ['1', 'Alta'], ['2', 'Urgente']].map(([p, t]) => `<button type="button" data-p="${p}" class="${String(g.prioridad || 0) === p ? 'on' : ''}">${t}</button>`).join('')}</div></div>`;
         const guardar = async (asignado, prioridad) => { try { await EV.post('/Herramientas/ProveedorGestionGuardar', { id: c.id, asignado, prioridad }); g = { ...g, asignado_A: asignado || null, prioridad }; gest[c.id] = { id_Carga: c.id, ...g }; EV.toast('Guardado.'); if (kdatos) pintarTablero(); } catch { } };
@@ -919,6 +1056,118 @@
         $('#sgMia').addEventListener('click', () => { if (!$('#sgResp').querySelector(`option[value="${CSS.escape(yo)}"]`) && ![...$('#sgResp').options].some(o => o.value === yo)) $('#sgResp').insertAdjacentHTML('beforeend', `<option>${esc(yo)}</option>`); $('#sgResp').value = yo; guardar(yo, g.prioridad || 0); });
         caja.querySelector('.sg-prio').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; caja.querySelectorAll('.sg-prio button').forEach(x => x.classList.toggle('on', x === b)); guardar($('#sgResp').value, +b.dataset.p); });
     }
+
+    // ---------------- cronograma de respuesta: plazo máximo de 5 días ----------------
+    const PLAZO = 5;
+    const slaDe = f => { const ms = new Date(f).getTime() + PLAZO * 864e5 - Date.now(), venc = ms < 0, a = Math.abs(ms), d = Math.floor(a / 864e5), h = Math.floor(a % 864e5 / 36e5);
+        const t = (d ? d + ' d ' : '') + h + ' h'; return { venc, ms, txt: venc ? 'Vencida hace ' + t : 'Vence en ' + t, cls: venc ? 'rojo' : ms < 2 * 864e5 ? 'ama' : 'verde' }; };
+    const slaChip = f => { if (!f) return ''; const s = slaDe(f); return `<span class="sg-sla ${s.cls}" title="Plazo máximo de respuesta: ${PLAZO} días"><i class="bi ${s.venc ? 'bi-alarm-fill' : 'bi-hourglass-split'}"></i> ${s.txt}</span>`; };
+    const dur = h => h == null ? '—' : h < 1 ? Math.round(h * 60) + ' min' : h < 48 ? Math.round(h * 10) / 10 + ' h' : Math.round(h / 24 * 10) / 10 + ' días';
+
+    // ---------------- equipo (a quién se le encarga un chat) ----------------
+    let equipoFull = [], equipoListo = false;
+    const nombreDe = u => (equipoFull.find(m => m.userName === u) || {}).nombre || u;
+    async function cargarEquipo() {
+        if (!equipoListo) { try { const r = await EV.api('/Herramientas/ProveedorEquipo'); equipoFull = r.items || []; yo = r.yo || yo; equipoListo = true; } catch { } }
+        try { const g = await EV.api('/Herramientas/ProveedorGestiones'); gest = Object.fromEntries((g.items || []).map(x => [x.id_Carga, x])); segActivo = !!g.activo; yo = g.yo || yo; } catch { }
+    }
+
+    // ---------------- simulación: cómo se verá en la web ----------------
+    let sim = null, simTab = 'home', simProd = 0, simMovil = false;
+    const ESTR = '★';
+    const dinero = (n, m) => n == null ? '—' : (m === 'USD' ? 'US$ ' : m === 'EUR' ? '€ ' : m === 'DOP' ? 'RD$ ' : (m || '') + ' ') + Math.round(n).toLocaleString('es-DO');
+    const fotoDe = p => (p.imagenes.find(i => i.uso === 'INTERMEDIA') && simTab === 'inter' ? p.imagenes.find(i => i.uso === 'INTERMEDIA') : p.imagenes.find(i => i.uso === 'PORTADA')) || p.imagenes[0];
+    const fotoBg = (p, ic) => { const f = fotoDe(p); return f ? `style="background-image:url('${esc(f.Url || f.url)}')"` : ''; };
+    const iconoMod = m => (modulos[m] || {}).icono || 'bi-image';
+    function tarjetaWeb(p, c) {
+        const f = fotoDe(p);
+        return `<div class="wx-card nuevo"><div class="foto" ${f ? `style="background-image:url('${esc(f.url)}')"` : ''}>${f ? '' : `<i class="bi ${iconoMod(c.modulo)}"></i>`}<span class="cinta">Nuevo</span></div>
+            <div class="tx">${p.estrellas ? `<span class="st">${ESTR.repeat(+p.estrellas || 0)}</span>` : ''}<b>${esc(p.nombre)}</b><small><i class="bi bi-geo-alt-fill"></i> ${esc(p.destino || '—')}${p.pais ? ', ' + esc(p.pais) : ''}</small>
+            <div>${p.regimen ? `<span class="wx-chip">${esc(p.regimen)}</span>` : ''}${p.noches ? `<span class="wx-chip">${p.noches} noches</span>` : ''}</div>
+            <div class="pr"><small>${p.detalle ? esc(p.detalle) : 'Desde, por persona'}</small><strong>${dinero(p.desde, p.moneda)}</strong></div></div></div>`;
+    }
+    const ph = '<div class="wx-ph"></div>';
+    function vistaSim() {
+        const c = sim.carga, p = sim.productos[simProd] || { nombre: '—', imagenes: [], fechas: [], habitaciones: [] }, f = fotoDe(p), movil = simMovil;
+        const nav = `<div class="wx-nav"><span class="lg"><i class="bi bi-airplane-fill"></i> EuroVip</span><span>Hoteles</span><span>Paquetes</span><span>Circuitos</span><span>Excursiones</span></div>`;
+        if (simTab === 'home') return `${nav}<div class="wx-hero"><h2>Encuentra tu próximo viaje</h2><p>Las mejores ofertas, para ti.</p></div>
+            <div class="wx-sec"><h3>${esc((modulos[c.modulo] || {}).nombre || 'Ofertas')} · ofertas destacadas</h3><div class="wx-fila">${tarjetaWeb(p, c)}${ph}${ph}${ph}</div></div>`;
+        if (simTab === 'inter') return `${nav}<div class="wx-migas">Inicio › <b>${esc((modulos[c.modulo] || {}).nombre || 'Ofertas')}</b> › ${esc(p.destino || 'Destino')}</div>
+            <div class="wx-2col"><div class="wx-filtros"><div></div><div></div><div></div><div></div></div><div>
+            <h2 style="margin:0 0 14px;color:#0B1F3A">${esc((modulos[c.modulo] || {}).nombre || 'Ofertas')} en ${esc(p.destino || 'este destino')}</h2>
+            <div class="wx-fila-h nuevo"><div class="foto" ${f ? `style="background-image:url('${esc(f.url)}')"` : ''}>${f ? '' : `<i class="bi ${iconoMod(c.modulo)}"></i>`}</div>
+              <div class="tx">${p.estrellas ? `<span style="color:#F79009">${ESTR.repeat(+p.estrellas || 0)}</span>` : ''}<b>${esc(p.nombre)}</b><small style="color:#667085"><i class="bi bi-geo-alt-fill"></i> ${esc(p.destino || '—')}</small>
+              <div>${p.regimen ? `<span class="wx-chip">${esc(p.regimen)}</span>` : ''}${p.noches ? `<span class="wx-chip">${p.noches} noches</span>` : ''}</div><small style="color:#667085">${esc(p.detalle || '')}</small>${p.fechas.length ? `<small style="color:#067647"><b>${p.fechas.length}</b> fecha(s) disponibles</small>` : ''}</div>
+              <div class="pre"><small>desde, por persona</small><strong>${dinero(p.desde, p.moneda)}</strong><span class="wx-btn">Ver oferta</span></div></div>
+            <div class="wx-ph" style="min-height:170px;margin-bottom:14px"></div><div class="wx-ph" style="min-height:170px"></div></div></div>`;
+        const imgs = p.imagenes.filter(i => i.uso !== 'INTERMEDIA').slice(0, 5);
+        const gal = [0, 1, 2, 3, 4].map(i => `<div ${imgs[i] ? `style="background-image:url('${esc(imgs[i].url)}')"` : ''}></div>`).join('');
+        return `${nav}<div class="wx-migas">Inicio › ${esc(p.destino || 'Destino')} › <b>${esc(p.nombre)}</b></div><div class="wx-gal">${gal}</div>
+            <div class="wx-2col ficha wx-ficha"><div><h1>${esc(p.nombre)} ${p.estrellas ? `<span style="color:#F79009;font-size:18px">${ESTR.repeat(+p.estrellas || 0)}</span>` : ''}</h1>
+              <small style="color:#667085"><i class="bi bi-geo-alt-fill"></i> ${esc(p.destino || '—')}${p.pais ? ', ' + esc(p.pais) : ''}${p.regimen ? ' · ' + esc(p.regimen) : ''}${p.noches ? ' · ' + p.noches + ' noches' : ''}</small>
+              ${p.descripcion ? `<h4>Descripción</h4><p>${esc(p.descripcion)}</p>` : ''}${p.detalle ? `<h4>Detalle</h4><p>${esc(p.detalle)}</p>` : ''}
+              ${p.habitaciones.length ? `<h4>Habitaciones</h4><ul class="wx-lista">${p.habitaciones.map(h => `<li>${esc(h.nombre)}${h.suplemento ? ` <small style="color:#667085">(+${dinero(h.suplemento, p.moneda)} por persona)</small>` : ''}</li>`).join('')}</ul>` : ''}
+              ${p.fechas.length ? `<h4>Fechas y precios</h4><div class="wx-fechas">${p.fechas.map(x => `<div><small>${esc(String(x.desde || '').slice(0, 10))}${x.hasta ? ' → ' + esc(String(x.hasta).slice(0, 10)) : ''}</small><b>${dinero(x.precio, p.moneda)}</b></div>`).join('')}</div>` : ''}
+              ${p.incluye ? `<h4>Incluye</h4><p>${esc(p.incluye)}</p>` : ''}${p.noIncluye ? `<h4>No incluye</h4><p>${esc(p.noIncluye)}</p>` : ''}</div>
+              <aside class="wx-reserva"><small>desde, por persona</small><strong>${dinero(p.desde, p.moneda)}</strong><span class="wx-chip">${p.noches ? p.noches + ' noches' : (modulos[c.modulo] || {}).nombre || ''}</span><span class="wx-btn" style="text-align:center">Reservar</span><small style="color:#667085">Así se vería el botón y el precio en la ficha.</small></aside></div>`;
+    }
+    function pintarSim() {
+        const c = sim.carga, p = sim.productos[simProd];
+        const avisos = []; if (!p) avisos.push('La carga no tiene productos que mostrar.');
+        else { if (!p.imagenes.length) avisos.push('<i class="bi bi-image"></i> Este producto <b>no tiene fotos</b> en Eurovip: la web usará la imagen por defecto. Pídele al proveedor que agregue fotos (Gestión › Perfil › Pedir agregar fotos).');
+            if (p.desde == null) avisos.push('<i class="bi bi-cash-coin"></i> No hay precio “desde”: la web no podría mostrar el precio.'); }
+        $('#sgSimCuerpo').innerHTML = `<div class="sg-sim-web ${simMovil ? 'movil' : ''}">${p ? vistaSim() : ''}</div>`;
+        $('#sgSimAvisos').innerHTML = avisos.map(a => `<span>${a}</span>`).join(''); $('#sgSimAvisos').hidden = !avisos.length;
+        $('#sgSimTit').innerHTML = `Así se verá en la web <small>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''} · ${esc(c.cuenta || '')} · ${(modulos[c.modulo] || {}).nombre || c.modulo}</small>`;
+        document.querySelectorAll('#sgSimTabs button').forEach(b => b.classList.toggle('on', b.dataset.v === simTab));
+        $('#sgSimProd').innerHTML = sim.productos.map((x, i) => `<option value="${i}" ${i === simProd ? 'selected' : ''}>${i + 1}. ${esc(corto(x.nombre, 40))}</option>`).join(''); $('#sgSimProd').hidden = sim.productos.length < 2;
+        $('#sgSimMovil').innerHTML = simMovil ? '<i class="bi bi-display"></i> Escritorio' : '<i class="bi bi-phone"></i> Móvil';
+    }
+    async function simular(id) {
+        $('#sgSim').hidden = false; $('#sgSimCuerpo').innerHTML = '<div class="sg-main-vacio" style="margin:auto"><i class="bi bi-hourglass-split"></i></div>';
+        try { sim = await EV.api('/Herramientas/ProveedorSimulacion?id=' + id); } catch { $('#sgSim').hidden = true; return; }
+        simProd = 0; pintarSim();
+    }
+    $('#sgSimTabs').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b && sim) { simTab = b.dataset.v; pintarSim(); } });
+    $('#sgSimProd').addEventListener('change', e => { simProd = +e.target.value; pintarSim(); });
+    $('#sgSimMovil').addEventListener('click', () => { simMovil = !simMovil; pintarSim(); });
+    $('#sgSimCerrar').addEventListener('click', () => { $('#sgSim').hidden = true; });
+    $('#sgSim').addEventListener('mousedown', e => { if (e.target === $('#sgSim')) $('#sgSim').hidden = true; });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sgSim').hidden) { $('#sgSim').hidden = true; e.stopPropagation(); } }, true);
+    $('#hpVerSim').addEventListener('click', () => { if (actual) simular(actual.carga.id); });
+
+    // ---------------- cuentas de proveedor (crear y editar aquí mismo) ----------------
+    let catalogoProv = [];
+    const editorCuenta = EV.drawer($('#sgCuenta'));
+    $('#sgCuentaCerrar').addEventListener('click', () => editorCuenta.cerrar()); $('#sgCuentaCancelar').addEventListener('click', () => editorCuenta.cerrar());
+    $('#sgNuevaCuenta').addEventListener('click', () => editarCuenta(null));
+    async function editarCuenta(x) {
+        await resumen;
+        if (!catalogoProv.length) { try { catalogoProv = (await EV.api('/Herramientas/ProveedoresCuentas')).catalogo || []; } catch { } }
+        $('#scTitulo').textContent = x ? `Editar «${x.nombre}»` : 'Nueva cuenta de proveedor'; $('#scId').value = x?.id || '';
+        $('#scNombre').value = x?.nombre || ''; $('#scEmail').value = x?.email || ''; $('#scTel').value = x?.telefono || '';
+        const grupos = {}; catalogoProv.forEach(p => (grupos[p.tipo || 'Otros'] ||= []).push(p));
+        $('#scProv').innerHTML = '<option value="">Elige el proveedor…</option>' + Object.entries(grupos).map(([g, l]) => `<optgroup label="${esc(g)}">${l.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)} (${esc(p.id)})</option>`).join('')}</optgroup>`).join('');
+        $('#scProv').value = x?.id_Proveedor || '';
+        const tiene = new Set(String(x?.modulos || '').split(',').filter(Boolean));
+        $('#scMods').innerHTML = Object.values(modulos).map(m => `<label class="ui-switch"><input type="checkbox" value="${esc(m.clave)}" ${tiene.has(m.clave) ? 'checked' : ''}><span class="tr"></span><i class="bi ${esc(m.icono)}"></i> ${esc(m.nombre)}</label>`).join('');
+        $('#scActivo').checked = x ? x.activo : true; $('#scLogoArchivo').value = '';
+        $('#scLogoVer').innerHTML = x?.logo ? `<img src="${esc(x.logo)}" alt="">` : `<span>${esc(iniciales(x?.nombre || '+'))}</span>`;
+        editorCuenta.abrir(); setTimeout(() => $('#scNombre').focus(), 200);
+    }
+    $('#scLogoArchivo').addEventListener('change', e => { const f = e.target.files[0]; if (f) $('#scLogoVer').innerHTML = `<img src="${URL.createObjectURL(f)}" alt="">`; });
+    $('#sgCuentaGuardar').addEventListener('click', async () => {
+        const dto = { id: +$('#scId').value || null, nombre: $('#scNombre').value.trim(), email: $('#scEmail').value.trim(), telefono: $('#scTel').value.trim() || null, id_Proveedor: $('#scProv').value,
+            modulos: [...$('#scMods').querySelectorAll('input:checked')].map(i => i.value), activo: $('#scActivo').checked };
+        try {
+            const r = await EV.post('/Herramientas/ProveedorCuentaGuardar', dto); const id = r.id || dto.id; const f = $('#scLogoArchivo').files[0];
+            if (f && id) { const fd = new FormData(); fd.append('id', id); fd.append('archivo', f); await EV.post('/Herramientas/ProveedorLogo', fd); }
+            EV.toast(r.mensaje); editorCuenta.cerrar(true); fichas = []; await proveedores(); cargarLogos();
+        } catch { }
+    });
+    $('#sgProvs').addEventListener('click', e => { const b = e.target.closest('[data-editar-cuenta]'); if (b) editarCuenta(fichas.find(x => x.id === +b.dataset.editarCuenta)); });
+    async function cargarLogos() { try { const r = await EV.api('/Herramientas/ProveedorFichas'); fichas = r.items; r.items.forEach(p => { if (p.logo) logos[p.id] = p.logo; }); } catch { } }
+
 
     // ---------------- control de calidad ----------------
     let calActual = null, navIds = [];
@@ -992,6 +1241,7 @@
     // ---------------- arranque ----------------
     $('#hpRecargar').addEventListener('click', () => { kdatos = null; fichas = []; const t = document.querySelector('#sgTabs .on')?.dataset.tab || 'hoy'; pestana(t, false); cargarChats(); solicitudes(); listar(true); });
     setInterval(() => { if (!document.hidden) cargarChats(); }, 60000);
+    cargarLogos().then(() => { if (document.querySelector('#tab-lista.on, #tab-tablero.on')) { pintarLista(); } });
     cargarChats();
     resumen.then(() => pestana(params.get('tab') && document.getElementById('tab-' + params.get('tab')) ? params.get('tab') : 'hoy', false));
 

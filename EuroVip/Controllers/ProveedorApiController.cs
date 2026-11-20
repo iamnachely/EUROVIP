@@ -217,6 +217,21 @@ namespace EuroVip.Controllers
             return error is not null ? BadRequest(new { mensaje = error }) : Json(r);
         }
 
+        /// <summary>El logo de mi cuenta (null si no subió ninguno).</summary>
+        [HttpGet("logo")]
+        public IActionResult Logo([FromServices] ProveedoresSeguimiento seg) => Json(new { url = seg.Logos().GetValueOrDefault(Cuenta.Id) });
+
+        /// <summary>Subir mi logo (PNG, JPG o WebP, hasta 5 MB). Se guarda tal cual, sin recomprimir.</summary>
+        [HttpPost("logo")]
+        [RequestSizeLimit(6_000_000)]
+        public async Task<IActionResult> LogoSubir(IFormFile? archivo, [FromServices] ProveedoresSeguimiento seg)
+        {
+            var (url, error) = await seg.GuardarLogoAsync(Cuenta.Id, archivo);
+            if (error is not null) return BadRequest(new { mensaje = error });
+            await Auditar("Proveedor_Logo", new { cuenta = Cuenta.Id });
+            return Json(new { ok = true, url, mensaje = "Logo guardado." });
+        }
+
         // ---------- Solicitudes de creación (20/11/2026): «no existe mi hotel → pido que lo creen y lo uso ya» ----------
         /// <summary>El formulario de ese tipo (hotel, destino, aeropuerto, habitacion): los mismos campos de Herramientas.</summary>
         [HttpGet("solicitudes/formulario/{tipo}")]
@@ -239,6 +254,17 @@ namespace EuroVip.Controllers
             var (r, error) = await _sol.CrearAsync(Cuenta, tipo, dto.Datos);
             if (r is null) return BadRequest(new { mensaje = error });
             await Auditar("Proveedor_Solicitud_" + tipo, new { dto.Datos });
+            return Json(r);
+        }
+
+        /// <summary>Pedir que agreguen fotos a un hotel o destino (multipart: tipo, clave, nombre, uso, archivos). Se guardan sin tocar la calidad.</summary>
+        [HttpPost("solicitudes/imagenes")]
+        [RequestSizeLimit(200_000_000)]
+        public async Task<IActionResult> SolicitudImagenes([FromForm] string? tipo, [FromForm] string? clave, [FromForm] string? nombre, [FromForm] string? uso, [FromForm] List<IFormFile> archivos)
+        {
+            var (r, error) = await _sol.CrearImagenesAsync(Cuenta, tipo, clave, nombre, uso, archivos);
+            if (r is null) return BadRequest(new { mensaje = error });
+            await Auditar("Proveedor_Solicitud_imagenes", new { tipo, clave, archivos = archivos.Count });
             return Json(r);
         }
 

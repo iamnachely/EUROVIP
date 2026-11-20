@@ -401,6 +401,25 @@ namespace EuroVip.Controllers
         [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
         public async Task<IActionResult> ProveedorRevision(int id) => await Seg.RevisionAsync(Prov, id) is { } r ? Json(r) : NotFound(new { mensaje = "Esa carga ya no existe." });
 
+        /// <summary>El equipo (usuarios activos del BackOffice) para encargarles conversaciones y cargas.</summary>
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorEquipo() => Json(new { items = await Seg.EquipoAsync(), yo = Yo });
+
+        /// <summary>Cómo se vería la carga en la web: tarjeta de la Home, pantalla intermedia y ficha, con sus datos y fotos.</summary>
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorSimulacion(int id) => await Seg.SimulacionAsync(Prov, id) is { } r ? Json(r) : NotFound(new { mensaje = "Esa carga ya no existe." });
+
+        /// <summary>Subir o cambiar el logo de una cuenta (también lo puede subir el proveedor desde Gestión).</summary>
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores), RequestSizeLimit(6_000_000)]
+        public async Task<IActionResult> ProveedorLogo([FromForm] int id, IFormFile? archivo)
+        {
+            if (await Prov.CuentaAsync(id) is null) return NotFound(new { mensaje = "Esa cuenta ya no existe." });
+            var (url, error) = await Seg.GuardarLogoAsync(id, archivo);
+            if (error is not null) return BadRequest(new { mensaje = error });
+            await Auditar("Proveedor_Logo", new { cuenta = id });
+            return Json(new { ok = true, url, mensaje = "Logo guardado." });
+        }
+
         public sealed class GestionDto { public int Id { get; set; } public string? Asignado { get; set; } public int Prioridad { get; set; } }
 
         [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]

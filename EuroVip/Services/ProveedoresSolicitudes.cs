@@ -1,4 +1,5 @@
 using System.Text.Json;
+using EuroVip.Services;
 using Dapper;
 using EuroVip.Models;
 using EuroVip.Repositories;
@@ -16,7 +17,73 @@ namespace EuroVip.Services
     {
         private readonly ICircuitoRepository _db;
         private readonly IHerramientasRepository _hr;
-        public ProveedoresSolicitudes(ICircuitoRepository db, IHerramientasRepository hr) { _db = db; _hr = hr; }
+        private readonly IMultimedia _mm;
+        private readonly IWebHostEnvironment _env;
+        public ProveedoresSolicitudes(ICircuitoRepository db, IHerramientasRepository hr, IMultimedia mm, IWebHostEnvironment env) { _db = db; _hr = hr; _mm = mm; _env = env; }
+
+        // ---------------------------------------------------------------- imágenes que pide agregar el proveedor
+        private const string CarpetaImagenes = "uploads/proveedores/imagenes";
+        private string DirImagenes(int id) => Path.Combine(_env.WebRootPath ?? "wwwroot", CarpetaImagenes.Replace('/', Path.DirectorySeparatorChar), id.ToString());
+
+        public sealed record ArchivoSol(int N, string Ext, int? Ancho, int? Alto, long Bytes, string? Original);
+
+        /// <summary>
+        /// El proveedor pide agregar fotos a un hotel o destino. Se guardan TAL CUAL (sin tocar la calidad) en una carpeta aparte y NO salen en la web
+        /// hasta que Eurovip las aprueba: entonces pasan a Eurovip.multimedia con el mismo proceso de siempre (sin perder calidad).
+        /// </summary>
+        public async Task<(object? Resultado, string? Error)> CrearImagenesAsync(ProveedorCuenta cuenta, string? tipo, string? clave, string? nombre, string? uso, IList<Microsoft.AspNetCore.Http.IFormFile> archivos)
+        {
+            tipo = (tipo ?? "").Trim().ToLowerInvariant(); uso = (uso ?? "GALERIA").Trim().ToUpperInvariant();
+            if (tipo is not ("hotel" or "destino")) return (null, "Elige si las fotos son de un hotel o de un destino.");
+            if (string.IsNullOrWhiteSpace(clave)) return (null, tipo == "hotel" ? "Elige el hotel." : "Elige el destino.");
+            if (uso is not ("PORTADA" or "GALERIA")) uso = "GALERIA";
+            if (archivos is null || archivos.Count == 0) return (null, "Elige al menos una imagen.");
+            if (archivos.Count > 12) return (null, "Puedes pedir hasta 12 fotos cada vez.");
+            using (var cn0 = _db.Conexion()) if (!await HayTablaAsync(cn0)) return (null, "Las solicitudes todavía no están disponibles en este servidor. Escribe a Eurovip.");
+            var validos = new List<(Microsoft.AspNetCore.Http.IFormFile F, string Ext)>();
+            foreach (var f in archivos)
+            {
+                if (f.Length == 0) continue;
+                if (f.Length > 15_000_000) return (null, $"«{f.FileName}» pesa más de 15 MB.");
+                var ext = await EuroVip.Helpers.ImagenSegura.ExtensionAsync(f);
+                if (ext is null) return (null, $"«{f.FileName}» no es una imagen JPG, PNG o WebP.");
+                validos.Add((f, ext));
+            }
+            if (validos.Count == 0) return (null, "Elige al menos una imagen.");
+            var etiqueta = (nombre ?? "").Trim(); if (etiqueta.Length > 150) etiqueta = etiqueta[..150];
+            using var cn = _db.Conexion();
+            var id = await cn.ExecuteScalarAsync<int>("INSERT INTO Eurovip.proveedor_solicitud (id_cuenta, tipo, nombre) OUTPUT INSERTED.id_solicitud VALUES (@c, 'imagen', @n)", new { c = cuenta.Id, n = $"{(etiqueta.Length > 0 ? etiqueta : clave)} · {validos.Count} foto(s)" });
+            var dir = DirImagenes(id); Directory.CreateDirectory(dir);
+            var lista = new List<ArchivoSol>(); var n = 0;
+            foreach (var (f, ext) in validos)
+            {
+                n++; int? w = null, h = null;
+                await using (var fs = File.Create(Path.Combine(dir, $"{n}.{ext}"))) await f.CopyToAsync(fs);
+                try { using var st = File.OpenRead(Path.Combine(dir, $"{n}.{ext}")); var info = SkiaSharp.SKBitmap.DecodeBounds(st); if (info.Width > 0) { w = info.Width; h = info.Height; } } catch (Exception) { }
+                lista.Add(new ArchivoSol(n, ext, w, h, f.Length, Path.GetFileName(f.FileName)));
+            }
+            await cn.ExecuteAsync("UPDATE Eurovip.proveedor_solicitud SET datos = @d WHERE id_solicitud = @id", new { id, d = JsonSerializer.Serialize(new { destinoTipo = tipo, clave = clave!.Trim(), nombre = etiqueta, uso, archivos = lista }, new JsonSerializerOptions(JsonSerializerDefaults.Web)) });
+            return (new { ok = true, id, mensaje = $"Listo: pediste agregar {validos.Count} foto(s). Eurovip las revisa y, si están bien, salen en la web." }, null);
+        }
+
+        private async Task<string?> AprobarImagenesAsync(int id, string? datos)
+        {
+            if (string.IsNullOrWhiteSpace(datos)) return "La solicitud no tiene fotos.";
+            using var doc = JsonDocument.Parse(datos); var r = doc.RootElement;
+            string Tx(string k) => r.TryGetProperty(k, out var v) ? v.GetString() ?? "" : "";
+            var tipoMm = Tx("destinoTipo") == "hotel" ? "ALOJAMIENTO" : "DESTINO"; var clave = Tx("clave"); var uso = Tx("uso") is "PORTADA" ? "PORTADA" : "GALERIA";
+            if (!await _mm.ExisteProductoAsync(tipoMm, clave)) return "El hotel o destino de estas fotos ya no existe.";
+            var primera = true;
+            foreach (var a in r.GetProperty("archivos").EnumerateArray())
+            {
+                var ruta = Path.Combine(DirImagenes(id), $"{a.GetProperty("n").GetInt32()}.{a.GetProperty("ext").GetString()}");
+                if (!File.Exists(ruta)) continue;
+                await using var st = File.OpenRead(ruta);
+                await _mm.SubirAsync(tipoMm, clave, uso == "PORTADA" && primera ? "PORTADA" : "GALERIA", st, a.TryGetProperty("original", out var o) ? o.GetString() : null);
+                primera = false;
+            }
+            return null;
+        }
 
         /// <summary>Lo que se puede pedir crear: tipo → catálogo de Herramientas, título e icono.</summary>
         public static readonly IReadOnlyDictionary<string, (string Catalogo, string Titulo, string Icono, string Ayuda)> Tipos = new Dictionary<string, (string, string, string, string)>
@@ -153,6 +220,11 @@ namespace EuroVip.Services
             var s = await cn.QueryFirstOrDefaultAsync<SolicitudFila>("SELECT id_solicitud, tipo, clave, estado FROM Eurovip.proveedor_solicitud WHERE id_solicitud = @id", new { id });
             if (s is null) return "Esa solicitud ya no existe.";
             if (s.Estado == "APROBADA") return "Ya estaba aprobada.";
+            if (s.Tipo == "imagen")
+            {
+                var datosImg = await cn.ExecuteScalarAsync<string?>("SELECT datos FROM Eurovip.proveedor_solicitud WHERE id_solicitud = @id", new { id });
+                if (await AprobarImagenesAsync(id, datosImg) is string errImg) return errImg;
+            }
             if (s.Tipo == "hotel")
                 await cn.ExecuteAsync("UPDATE Eurovip.alojamiento SET activo = 1 WHERE id_idioma = 'ES' AND id_alojamiento = TRY_CAST(JSON_VALUE(@k, '$.id_alojamiento') AS int)", new { k = s.Clave });
             await cn.ExecuteAsync("UPDATE Eurovip.proveedor_solicitud SET estado = 'APROBADA', motivo = NULL, revisado_en = SYSDATETIME(), revisado_por = @u WHERE id_solicitud = @id", new { id, u = usuario });
