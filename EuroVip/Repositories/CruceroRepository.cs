@@ -7,6 +7,8 @@ namespace EuroVip.Repositories
 {
     public interface ICruceroRepository
     {
+        /// <summary>¿La base ya tiene la columna de tasas? (Database/cruceros-tasas.sql)</summary>
+        Task<bool> TasasDisponiblesAsync();
         Task<List<CruceroLista>> ListarAsync();
         Task<CruceroDto?> ObtenerAsync(int id);
         Task<(string Campo, string Mensaje)?> RevisarCodigoMonedaAsync(CruceroDto d);
@@ -43,6 +45,17 @@ namespace EuroVip.Repositories
     public class CruceroRepository : ICruceroRepository
     {
         private readonly ICircuitoRepository _db;
+        // ¿La base ya tiene Eurovip.crucero.tasas (Database/cruceros-tasas.sql)? Se mira una vez por proceso, y otra vez cada 2 minutos mientras no esté.
+        private static bool _hayTasas; private static DateTime _tasasMirado = DateTime.MinValue;
+        public async Task<bool> TasasDisponiblesAsync() { using var cn = _db.Conexion(); return await HayTasasAsync(cn); }
+        private static async Task<bool> HayTasasAsync(System.Data.Common.DbConnection cn)
+        {
+            if (_hayTasas) return true;
+            if (DateTime.UtcNow - _tasasMirado < TimeSpan.FromMinutes(2)) return false;
+            _tasasMirado = DateTime.UtcNow;
+            _hayTasas = await Dapper.SqlMapper.ExecuteScalarAsync<int?>(cn, "SELECT COL_LENGTH('Eurovip.crucero', 'tasas')") is not null;
+            return _hayTasas;
+        }
         public CruceroRepository(ICircuitoRepository db) => _db = db;
 
         public async Task<List<CruceroLista>> ListarAsync()
@@ -102,6 +115,8 @@ namespace EuroVip.Repositories
                 LEFT JOIN Eurovip.crucero_naviera n ON n.id_naviera = b.id_naviera
                 WHERE c.id_crucero = @id", new { id });
             if (c is null) return null;
+            c.Tasas_Disponible = await HayTasasAsync(cn);
+            if (c.Tasas_Disponible) c.Tasas = await cn.ExecuteScalarAsync<decimal?>("SELECT tasas FROM Eurovip.crucero WHERE id_crucero = @id", new { id });
             c.Categorias = (await cn.QueryAsync<int>("SELECT id_categoria FROM Eurovip.crucero_categoria_crucero WHERE id_crucero = @id", new { id })).ToList();
             c.Itinerario = (await cn.QueryAsync<(short Dia, string Puerto, bool Nav, TimeSpan? Lleg, TimeSpan? Sal, string? Desc, string? Img)>(
                 "SELECT dia, puerto, en_navegacion, hora_llegada, hora_salida, descripcion, imagen FROM Eurovip.crucero_itinerario WHERE id_crucero = @id ORDER BY dia", new { id }))
@@ -217,6 +232,9 @@ namespace EuroVip.Repositories
                             @Titulo_Seccion, @Activo, @usuario, @Peso, @Precio_Proveedor, @Codigo_Interno, @Id_Proveedor, @Id_Moneda);
                     SELECT CAST(SCOPE_IDENTITY() AS int);", p, tx);
             }
+            // Tasas por persona (si la base ya tiene la columna): el precio web de cada fila ya viene sumado (base + tasas)
+            if (await HayTasasAsync(cn))
+                await cn.ExecuteAsync("UPDATE Eurovip.crucero SET tasas = @t WHERE id_crucero = @id", new { t = d.Tasas is > 0 ? d.Tasas : null, id }, tx);
             // CAMBIO 130: información para el cliente (incluye y no incluye ya van arriba; se escriben los 6 juntos)
             await EuroVip.Services.InfoCliente.GuardarAsync(cn, "Eurovip.crucero", id, new EuroVip.Services.InfoClienteDto { Incluye = d.Incluye, No_Incluye = d.No_Incluye, Condiciones = d.Condiciones, Documentacion = d.Documentacion, Importante = d.Importante, Oferta_Especial = d.Oferta_Especial }, tx);
 

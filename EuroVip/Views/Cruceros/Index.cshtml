@@ -200,6 +200,14 @@
     .cz-grid th small { display: block; color: var(--ev-muted); font-weight: 700; text-transform: uppercase; font-size: 10.5px; }
     .cz-grid td input { width: 110px; text-align: right; }
     .cz-grid td.f { font-weight: 800; }
+    /* Tasas: precio base + tasas = precio web */
+    .cz-tasas { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; padding: 14px 16px; margin: 0 0 12px; border-radius: 16px; background: linear-gradient(120deg, #F2FFFC, #E6FBF7); border: 1px solid #CDEBE6; }
+    .cz-tasas .cz-c { flex: 0 0 auto; }
+    .cz-tasas .cz-dinero input { width: 130px; }
+    .cz-tasas .formula { flex: 1; min-width: 220px; font-weight: 700; font-size: 13px; color: #20413D; line-height: 1.4; }
+    .cz-tasas .formula b { color: var(--ev-deep); }
+    .cz-web { display: block; margin-top: 3px; font-size: 11.5px; font-weight: 800; color: var(--ev-deep); text-align: right; white-space: nowrap; }
+    .cz-web.sin { color: var(--ev-muted); font-weight: 600; }
     .cz-grid tr.off td.f { text-decoration: line-through; opacity: .6; }
     /* Resumen antes de guardar */
     .cz-res { display: grid; gap: 10px; }
@@ -659,7 +667,7 @@
     }
 
     // ===================== EDITOR =====================
-    const vacio = () => ({ id_Crucero: null, titulo: '', subtitulo: '', id_Barco: null, naviera_Nombre: '', barco_Nombre: '', puerto_Salida: '', puerto_Llegada: '', noches: null, codigo: '', codigo_Interno: '', id_Proveedor: '', id_Moneda: 'DOP',
+    const vacio = () => ({ id_Crucero: null, titulo: '', subtitulo: '', id_Barco: null, naviera_Nombre: '', barco_Nombre: '', puerto_Salida: '', puerto_Llegada: '', noches: null, codigo: '', codigo_Interno: '', id_Proveedor: '', id_Moneda: 'DOP', tasas: null, tasas_Disponible: !!D.tasasDisponible,
         descripcion: '', incluye: '', no_Incluye: '', titulo_Seccion: '', activo: true, categorias: D.categorias.length === 1 ? [D.categorias[0].id_Categoria] : [], categorias_Nuevas: [],
         itinerario: [], paradas: [], secciones: [], cubiertas: [], cabinas: [], salidas: [], tarifas: [], precios: [] });
 
@@ -1126,12 +1134,13 @@
     function pintarPrecios() {
         C.salidas.sort((a, b) => a.fecha.localeCompare(b.fecha));
         if (tarSel && !C.tarifas.some(f => f.clave === tarSel)) tarSel = C.tarifas[0]?.clave || null;
-        const pr = new Map(C.precios.map(p => [`${p.salida}|${p.tarifa}|${p.cabina}`, p.precio_Pp]));
+        const tasa = C.tasas_Disponible ? (Number(C.tasas) || 0) : 0;
+        const pr = new Map(C.precios.map(p => [`${p.salida}|${p.tarifa}|${p.cabina}`, p.precio_Pp]));   // precio WEB guardado; el campo muestra el BASE = web - tasas
         const tipos = CATS.flatMap(k => C.cabinas.filter(t => t.categoria === k));
         const n = noches();
         const tar = tarSel || 'auto';
         const libres = CABINAS_SUG.filter(s => !C.cabinas.some(t => (t.nombre || '').trim().toLowerCase() === s.n.toLowerCase()));
-        $('#ePrecios').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Agrega las fechas de salida y escribe el precio <b>por persona</b> de cada tipo de cabina (base 2 personas compartiendo). ${opc}</span></div>
+        $('#ePrecios').innerHTML = `<div class="cz-intro"><i class="bi bi-info-circle"></i><span>Agrega las fechas de salida y escribe el <b>precio base por persona</b> de cada tipo de cabina (base 2 personas compartiendo)${C.tasas_Disponible ? ' y, arriba, las <b>tasas</b>: el <b>precio web</b> es el precio base + las tasas' : ''}. ${opc}</span></div>
             <div class="cz-blq"><h3><i class="bi bi-calendar3"></i> Fechas de salida ${n ? `<small>la llegada = salida + ${n} noches</small>` : ''}</h3>
                 <div class="cz-fechas2">
                     <div class="cz-fcaja"><b><i class="bi bi-calendar-plus"></i> Una fecha</b>
@@ -1147,10 +1156,13 @@
                         <button type="button" class="ev-btn ghost" data-pr="serie"><i class="bi bi-calendar-plus"></i> Agregar todas</button></div>
                 </div>
             </div>
-            <div class="cz-blq"><h3><i class="bi bi-currency-dollar"></i> Precios por persona en ${EV.simbolo(C.id_Moneda || 'DOP')} <span class="sp"></span>
+            <div class="cz-blq"><h3><i class="bi bi-currency-dollar"></i> ${C.tasas_Disponible ? 'Precio base' : 'Precios'} por persona en ${EV.simbolo(C.id_Moneda || 'DOP')} <span class="sp"></span>
                 <label class="cz-c" style="flex-direction:row;align-items:center;gap:6px" title="Moneda de todos los precios del crucero"><span>Moneda</span><select data-b="id_Moneda">${(window._czMonedas || ['DOP', 'USD', 'EUR']).map(m => `<option value="${esc(m)}" ${m === (C.id_Moneda || 'DOP').trim() ? 'selected' : ''}>${esc(m)} · ${esc(EV.simbolo(m))}</option>`).join('')}</select></label>
                 ${C.tarifas.length > 1 ? `<label class="cz-c" style="flex-direction:row;align-items:center;gap:6px"><span>Tarifa</span><select id="prTarifa">${C.tarifas.map(f => `<option value="${f.clave}" ${f.clave === tarSel ? 'selected' : ''}>${esc(f.codigo || f.nombre || '¿?')}</option>`).join('')}</select></label>` : ''}
                 ${C.salidas.length > 1 && tipos.length ? '<button type="button" class="ev-btn ghost sm" data-pr="copiar"><i class="bi bi-files"></i> Copiar la 1.ª fecha a todas</button>' : ''}</h3>
+                ${C.tasas_Disponible ? `<div class="cz-tasas"><label class="cz-c"><span><i class="bi bi-receipt"></i> Tasas por persona</span>
+                        <div class="cz-dinero"><b>${EV.simbolo(C.id_Moneda || 'DOP')}</b><input type="number" min="0" step="0.01" id="prTasas" value="${C.tasas > 0 ? C.tasas : ''}" placeholder="0"></div></label>
+                    <div class="formula"><b>Precio base</b> + <b>Tasas</b> = <b>Precio web</b><br><span style="font-weight:600;color:var(--ev-muted)">Las tasas se suman a cada precio. Debajo de cada precio base ves el precio web que saldrá en la web.</span></div></div>` : ''}
                 <div class="cz-barra" style="margin-bottom:10px"><span class="cz-c" style="flex-direction:row;align-items:center;gap:8px"><span>Agregar otra columna (tipo de cabina)</span>
                     <select id="prNuevaCol"><option value="">Elige…</option>${libres.map(s => `<option value="${esc(s.n)}">${CAT_CORTO[s.k]} · ${esc(s.n)}</option>`).join('')}<option value="__otro">Otro (escribir nombre)…</option></select></span>
                     <button type="button" class="ev-btn ghost sm" data-pr="col"><i class="bi bi-plus-lg"></i> Agregar columna</button></div>
@@ -1158,7 +1170,7 @@
                   : !tipos.length ? '<p class="ui-help" style="margin:0">Agrega tipos de cabina: aquí arriba («Agregar otra columna») o en el paso 6.</p>'
                   : `<div style="overflow-x:auto"><table class="cz-grid"><thead><tr><th>Salida</th>${tipos.map(t => `<th style="--c:${COLOR_CAT[t.categoria]}"><small><i class="bi ${ICONO_CAT[t.categoria]}"></i> ${CAT_CORTO[t.categoria]}</small>${(t.nombre || '').trim().toLowerCase() === CAT_CORTO[t.categoria].toLowerCase() ? '' : esc(t.nombre || '')}</th>`).join('')}<th></th></tr></thead><tbody>
                      ${C.salidas.map(s => `<tr class="${s.activo ? '' : 'off'}"><td class="f">${fechaCorta(s.fecha)}${n ? ` <small style="color:var(--ev-muted);font-weight:600">→ ${fechaCorta(masDias(s.fecha, n))}</small>` : ''}${s.fecha <= hoy ? ' <small style="color:#B54708">(pasada)</small>' : ''}</td>
-                        ${tipos.map(t => `<td><div class="cz-dinero"><b>${EV.simbolo(C.id_Moneda || 'DOP')}</b><input type="number" min="0" step="0.01" data-precio="${s.clave}|${tar}|${t.clave}" value="${pr.get(`${s.clave}|${tarSel}|${t.clave}`) ?? ''}" placeholder="0"></div></td>`).join('')}
+                        ${tipos.map(t => `<td><div class="cz-dinero"><b>${EV.simbolo(C.id_Moneda || 'DOP')}</b><input type="number" min="0" step="0.01" data-precio="${s.clave}|${tar}|${t.clave}" value="${pr.has(`${s.clave}|${tarSel}|${t.clave}`) ? redondear(pr.get(`${s.clave}|${tarSel}|${t.clave}`) - tasa) : ''}" placeholder="0"></div>${C.tasas_Disponible ? `<small class="cz-web ${pr.has(`${s.clave}|${tarSel}|${t.clave}`) ? '' : 'sin'}" data-web="${s.clave}|${tar}|${t.clave}">${pr.has(`${s.clave}|${tarSel}|${t.clave}`) ? 'Web ' + EV.simbolo(C.id_Moneda || 'DOP') + ' ' + fmtWeb(pr.get(`${s.clave}|${tarSel}|${t.clave}`)) : 'Web —'}</small>` : ''}</td>`).join('')}
                         <td style="white-space:nowrap"><button type="button" class="ui-ibtn" data-pr="act" data-k="${s.clave}" title="${s.activo ? 'Desactivar esta fecha' : 'Activar esta fecha'}"><i class="bi ${s.activo ? 'bi-pause' : 'bi-play'}"></i></button>
                             <button type="button" class="ui-ibtn danger" data-pr="qsal" data-k="${s.clave}" title="Quitar fecha"><i class="bi bi-x-lg"></i></button></td></tr>`).join('')}
                      </tbody></table></div>`}
@@ -1172,7 +1184,14 @@
             </div></details>`;
     }
 
+    const fmtWeb = n => EV.fmt(n, Number.isInteger(n) ? 0 : 2);
+    const redondear = n => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+    // El valor escrito es el PRECIO BASE; lo que se guarda (precio_Pp) es el PRECIO WEB = base + tasas
     function ponerPrecio(k, v) {
+        const tasa = C.tasas_Disponible ? (Number(C.tasas) || 0) : 0;
+        v = v > 0 ? redondear(v + tasa) : 0;
+        const web = document.querySelector('[data-web="' + k + '"]');
+        if (web) { web.textContent = v > 0 ? 'Web ' + EV.simbolo(C.id_Moneda || 'DOP') + ' ' + fmtWeb(v) : 'Web —'; web.classList.toggle('sin', !(v > 0)); }
         let [s, f, t] = k.split('|');
         if (f === 'auto') {   // primer precio sin tarifas: se crea BEST_PRICE
             if (!C.tarifas.length) C.tarifas.push({ clave: nuevaClave('f'), codigo: 'BEST_PRICE', nombre: 'BEST_PRICE', descripcion: '' });
@@ -1383,6 +1402,16 @@
             } else if (t.dataset.cab) {
                 const k = C.cabinas.find(x => x.clave === t.dataset.cab).cabinas[+t.dataset.i];
                 k[t.dataset.campo] = t.dataset.campo === 'cubierta' ? (t.value === '' ? null : Number(t.value)) : t.value;
+            } else if (t.id === 'prTasas') {
+                // Al cambiar las tasas, cada precio web se mueve la diferencia (el precio base de cada uno se queda igual)
+                const antes = Number(C.tasas) || 0, ahora = t.value === '' ? 0 : Math.max(0, Number(t.value));
+                C.tasas = ahora > 0 ? ahora : null;
+                C.precios.forEach(p => { if (p.precio_Pp > 0) p.precio_Pp = redondear(Math.max(0, p.precio_Pp - antes) + ahora); });
+                $$('[data-precio]').forEach(i => {
+                    const w = document.querySelector('[data-web="' + i.dataset.precio + '"]'); if (!w) return;
+                    const b = i.value === '' ? 0 : Number(i.value);
+                    w.textContent = b > 0 ? 'Web ' + EV.simbolo(C.id_Moneda || 'DOP') + ' ' + fmtWeb(redondear(b + ahora)) : 'Web —'; w.classList.toggle('sin', !(b > 0));
+                });
             } else if (t.dataset.precio) ponerPrecio(t.dataset.precio, t.value === '' ? 0 : Number(t.value));
             else if (t.id === 'pPeso' || t.id === 'pProveedor') { const p = EVPrioridad.leer($('#edPrio')); C.peso = p.Peso; C.precio_Proveedor = p.Precio_Proveedor; }
         };

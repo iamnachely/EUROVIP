@@ -56,7 +56,7 @@ crucero_naviera ─< crucero_barco ─< crucero >─< crucero_categoria   (por c
 | `crucero_cabina` | id_cabina | tipo de cabina, cubierta (opcional), número (único por tipo), disponible |
 | `crucero_salida` | id_salida | fecha de salida (única por crucero), activo. La llegada es la salida + noches |
 | `crucero_tarifa` | id_tarifa | código (único por crucero), nombre, descripción, orden |
-| `crucero_precio` | (id_salida, id_tarifa, id_cabina_tipo) | precio_pp (> 0) |
+| `crucero_precio` | (id_salida, id_tarifa, id_cabina_tipo) | precio_pp (> 0) = PRECIO WEB por persona = precio base + `crucero.tasas` (ver `Docs/cruceros-tasas-precio-base.md`) |
 
 Al borrar un crucero se borran en cascada todas sus partes. Sus fotos de `multimedia` las borra la app.
 

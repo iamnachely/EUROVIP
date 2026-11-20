@@ -144,6 +144,13 @@ namespace EuroVip.Models
         [Range(1, 999, ErrorMessage = "La prioridad va de 1 a 999")] public short? Peso { get; set; }
         /// <summary>Precio del proveedor en su web (informativo: nuestro precio no cambia).</summary>
         [Range(0, 100_000_000, ErrorMessage = "El precio del proveedor tiene que ser 0 o más")] public decimal? Precio_Proveedor { get; set; }
+        /// <summary>
+        /// Tasas por persona (20/11/2026): el precio que escribe la persona es el PRECIO BASE y el precio web (Eurovip.crucero_precio.precio_pp) es
+        /// precio base + tasas. Aquí solo va la tasa; «Precio_Pp» de cada precio ya viene sumado. null = sin tasas.
+        /// </summary>
+        [Range(0, 10_000_000, ErrorMessage = "Las tasas tienen que ser 0 o más")] public decimal? Tasas { get; set; }
+        /// <summary>Solo lectura: false mientras la base de datos no tenga la columna Eurovip.crucero.tasas (Database/cruceros-tasas.sql); entonces la pantalla no muestra las tasas.</summary>
+        public bool Tasas_Disponible { get; set; }
         public List<int> Categorias { get; set; } = new();
         /// <summary>Categorías nuevas escritas en el editor (se crean al guardar).</summary>
         public List<string> Categorias_Nuevas { get; set; } = new();

@@ -40,7 +40,8 @@ namespace EuroVip.Controllers
                 navieras = await _repo.NavierasAsync(),
                 barcos = await _repo.BarcosAsync(),
                 categorias = await _repo.CategoriasAsync(),
-                categoriasCabina = CruceroValores.CategoriasCabina
+                categoriasCabina = CruceroValores.CategoriasCabina,
+                tasasDisponible = await _repo.TasasDisponiblesAsync()   // tasas por persona: precio base + tasas = precio web
             });
         }
 
