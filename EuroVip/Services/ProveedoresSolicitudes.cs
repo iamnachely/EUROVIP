@@ -70,11 +70,14 @@ namespace EuroVip.Services
         public static readonly string[] CategoriasSugerencia = { "sugerencia", "problema", "pregunta", "felicitacion" };
 
         /// <summary>El proveedor deja una sugerencia, un problema, una pregunta o un comentario para Eurovip (se guarda como una solicitud más, sin cambiar la base).</summary>
-        public async Task<(object? Resultado, string? Error)> CrearSugerenciaAsync(ProveedorCuenta cuenta, string? categoria, string? asunto, string? texto)
+        public async Task<(object? Resultado, string? Error)> CrearSugerenciaAsync(ProveedorCuenta cuenta, string? categoria, string? asunto, string? texto, Dictionary<string, int>? valoracion = null)
         {
             categoria = (categoria ?? "sugerencia").Trim().ToLowerInvariant();
             if (!CategoriasSugerencia.Contains(categoria)) categoria = "sugerencia";
+            var claves = new[] { "general", "facilidad", "velocidad", "claridad", "atencion" };
+            valoracion = (valoracion ?? new()).Where(x => claves.Contains(x.Key) && x.Value is >= 1 and <= 5).ToDictionary(x => x.Key, x => x.Value);
             asunto = (asunto ?? "").Trim(); texto = (texto ?? "").Trim();
+            if (valoracion.Count > 0 && asunto.Length < 3) asunto = "Mi valoración"; if (valoracion.Count > 0 && texto.Length < 10) texto = "Valoración con estrellas.";
             if (asunto.Length < 3) return (null, "Escribe un título corto (al menos 3 letras).");
             if (texto.Length < 10) return (null, "Cuéntanos un poco más (al menos 10 letras).");
             if (asunto.Length > 150) asunto = asunto[..150]; if (texto.Length > 3000) texto = texto[..3000];
@@ -83,7 +86,7 @@ namespace EuroVip.Services
             if (await cn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Eurovip.proveedor_solicitud WHERE id_cuenta = @c AND tipo = 'sugerencia' AND creado_en > DATEADD(MINUTE, -1, SYSDATETIME())", new { c = cuenta.Id }) >= 3)
                 return (null, "Enviaste varios mensajes seguidos. Espera un minuto y vuelve a intentarlo.");
             var id = await cn.ExecuteScalarAsync<int>("INSERT INTO Eurovip.proveedor_solicitud (id_cuenta, tipo, nombre, datos) OUTPUT INSERTED.id_solicitud VALUES (@c, 'sugerencia', @n, @d)",
-                new { c = cuenta.Id, n = asunto, d = JsonSerializer.Serialize(new { categoria, texto }) });
+                new { c = cuenta.Id, n = asunto, d = JsonSerializer.Serialize(new { categoria, texto, valoracion }) });
             return (new { ok = true, id, mensaje = "¡Gracias! Eurovip recibió tu mensaje y te responderá aquí." }, null);
         }
 

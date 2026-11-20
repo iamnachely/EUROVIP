@@ -397,6 +397,25 @@
     .sg-pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; } .sg-pasos li span { display: block; height: 6px; border-radius: 99px; background: #E2EDEB; } .sg-pasos li.h span { background: var(--c); } .sg-pasos li.a span { background: repeating-linear-gradient(45deg, var(--c) 0 5px, #fff 5px 10px); }
     .sg-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; } .sg-thumbs figure { margin: 0; width: 120px; border-radius: 12px; overflow: hidden; border: 3px solid #DCE8E6; position: relative; background: #000; } .sg-thumbs img { width: 100%; height: 84px; object-fit: cover; display: block; } .sg-thumbs figcaption { font-size: 11px; font-weight: 800; padding: 3px 6px; background: #fff; display: flex; justify-content: space-between; }
     .sg-thumbs figure.buena { border-color: #16A34A; } .sg-thumbs figure.normal { border-color: #F0A800; } .sg-thumbs figure.mala { border-color: #D92D20; }
+    /* Tickets de los proveedores */
+    .tkb-cols { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(290px, 1fr); gap: 14px; overflow-x: auto; padding-bottom: 12px; align-items: start; }
+    .tkb-col { background: #EAF5F3; border-radius: 22px; padding: 10px; } .tkb-col .sg-col-cab .ic { color: var(--c); } .tkb-col .sg-col-cab .n { background: var(--c); }
+    .tkb-card { text-align: left; border: 1px solid var(--ev-line); border-left: 5px solid var(--c); border-radius: 18px; background: #fff; padding: 12px 14px; display: grid; gap: 7px; cursor: pointer; font: inherit; color: inherit; transition: transform .15s, box-shadow .15s; animation: sgEntra .35s ease both; }
+    .tkb-card:hover { transform: translateY(-3px); box-shadow: 0 16px 28px -18px var(--c); } .tkb-card.p3 { background: #FFFBFA; border-color: #FDA29B; border-left-color: #F04438; } .tkb-card.p2 { border-left-color: #F79009; }
+    .tkb-card .cod { font-family: ui-monospace, Consolas, monospace; font-weight: 800; font-size: 12px; color: var(--ev-muted); } .tkb-card b { font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; } .tkb-card small { color: var(--ev-muted); font-size: 12px; }
+    .tkb-caja { width: min(1320px, 100%); height: min(880px, 100%); background: #fff; border-radius: 26px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 50px 100px -30px rgba(11,18,21,.8); }
+    .tkb-cab { display: flex; align-items: center; gap: 14px; padding: 14px 20px; background: linear-gradient(120deg, #0B1215, #123B3A); color: #fff; } .tkb-cab > div { flex: 1; min-width: 0; display: grid; } .tkb-cab b { font-size: 17px; } .tkb-cab small { color: rgba(255,255,255,.7); }
+    .tkb-cab button { border: 0; width: 36px; height: 36px; border-radius: 12px; background: rgba(255,255,255,.14); color: #fff; cursor: pointer; font-size: 16px; }
+    .tkb-cuerpo { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; } .tkb-chat { display: flex; flex-direction: column; min-height: 0; background: #ECE5DD; }
+    .tkb-lado { border-left: 1px solid var(--ev-line); overflow: auto; padding: 16px; display: grid; gap: 14px; align-content: start; background: #fff; }
+    .tkb-lado h4 { margin: 0 0 4px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ev-muted); } .tkb-lado .ui-input { width: 100%; }
+    .tkb-desc { background: var(--ev-surface-2); border-radius: 14px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; max-height: 170px; overflow: auto; }
+    .tkb-adj { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; } .tkb-adj .img { width: 150px; height: 100px; border-radius: 12px; overflow: hidden; border: 2px solid rgba(0,0,0,.08); display: block; } .tkb-adj .img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .tkb-adj .doc { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: rgba(0,0,0,.06); color: inherit; text-decoration: none; max-width: 260px; } .tkb-adj .doc > i:first-child { font-size: 24px; color: var(--ev-deep); } .tkb-adj .doc span { display: grid; min-width: 0; } .tkb-adj .doc b { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tkb-adj .doc small { color: var(--ev-muted); }
+    .tkb-arch { display: flex; gap: 6px; flex-wrap: wrap; } .tkb-arch span { background: #fff; border: 1px solid #D5DBDF; border-radius: 99px; padding: 3px 4px 3px 12px; font-size: 12px; font-weight: 700; display: inline-flex; gap: 6px; align-items: center; } .tkb-arch button { border: 0; background: #EEF2F6; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; line-height: 1; }
+    .tkb-est { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; } .tkb-est button { border: 1.5px solid var(--ev-line); background: #fff; border-radius: 12px; padding: 8px 6px; font: inherit; font-weight: 800; font-size: 12.5px; cursor: pointer; } .tkb-est button.on { background: var(--ev-ink); color: #fff; border-color: var(--ev-ink); }
+    .tkb-est2 { display: flex; gap: 3px; color: #F59E0B; font-size: 22px; }
+    @@media (max-width: 900px) { .tkb-cuerpo { grid-template-columns: 1fr; overflow: auto; } .tkb-lado { border-left: 0; border-top: 1px solid var(--ev-line); } }
     @@media (max-width: 900px) {
         .sg-hoy { grid-template-columns: 1fr; }
         .sg-split { grid-template-columns: 1fr; height: auto; } .sg-split .sg-main { height: 70vh; } .sg-split.hilo .sg-lado { display: none; } .sg-split:not(.hilo) .sg-main { display: none; }
@@ -426,6 +445,7 @@
     <button type="button" data-tab="tablero"><i class="bi bi-kanban"></i> Tablero</button>
     <button type="button" data-tab="lista"><i class="bi bi-list-task"></i> Todas las cargas</button>
     <button type="button" data-tab="chats"><i class="bi bi-chat-dots"></i> Mensajes <b class="sg-n" id="sgNChats" hidden>0</b></button>
+    <button type="button" data-tab="tickets"><i class="bi bi-ticket-detailed"></i> Tickets <b class="sg-n" id="sgNTk" hidden>0</b></button>
     <button type="button" data-tab="prov"><i class="bi bi-people"></i> Proveedores</button>
     <button type="button" data-tab="sol"><i class="bi bi-plus-square-dotted"></i> Datos pedidos <b class="sg-n" id="sgNSol" hidden>0</b></button>
 </nav>
@@ -468,6 +488,28 @@
         <div class="sg-main" id="sgChatMain"><div class="sg-main-vacio"><i class="bi bi-chat-square-text"></i><b>Elige una conversación</b><p>Cada carga tiene su chat con el proveedor y sus notas internas.</p></div></div>
     </div>
 </section>
+
+<section class="sg-sec" id="tab-tickets">
+    <div class="sg-kpis" id="tkKpis"></div>
+    <div id="tkAviso" class="hp-aviso ama" hidden><i class="bi bi-info-circle"></i><span>Los <b>tickets</b> todavía no están activados en este servidor (falta aplicar <code>Database/proveedor-tickets.sql</code>).</span></div>
+    <div class="sg-barra">
+        <input class="ui-input q" id="tkQ" type="search" placeholder="Buscar por código (TCK-00012), título o proveedor…" aria-label="Buscar tickets">
+        <select class="ui-input" id="tkCat" aria-label="Tipo"><option value="">Todos los tipos</option><option value="error">Error en pantalla</option><option value="fallo">Algo no funciona</option><option value="carga">Problema con una carga</option><option value="acceso">No puede entrar</option><option value="duda">Duda</option><option value="otro">Otro</option></select>
+        <label class="sg-check"><input type="checkbox" id="tkMias"> Solo los míos</label>
+    </div>
+    <div class="tkb-cols" id="tkCols"><div class="ui-skel" style="height:260px"></div></div>
+</section>
+
+<div class="sg-sim tkb" id="tkVer" hidden><div class="tkb-caja">
+    <div class="tkb-cab"><span class="sg-av g" id="tkAv"></span><div><b id="tkTit">Ticket</b><small id="tkSub"></small></div><button type="button" id="tkCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button></div>
+    <div class="tkb-cuerpo">
+        <div class="tkb-chat"><div class="sg-msgs" id="tkMsgs" style="flex:1;min-height:0"></div>
+            <div class="sg-comp"><div class="sg-modo"><button type="button" data-tkm="msg" class="on"><i class="bi bi-chat-text"></i> Responder al proveedor</button><button type="button" data-tkm="nota"><i class="bi bi-lock"></i> Nota interna</button></div>
+                <div class="tkb-arch" id="tkArchLista"></div>
+                <div class="sg-caja" id="tkCaja"><button type="button" class="ev-btn ghost sm" id="tkAdjBtn" title="Adjuntar archivos"><i class="bi bi-paperclip"></i></button><input type="file" id="tkArch" multiple hidden accept=".png,.jpg,.jpeg,.webp,.pdf,.xlsx,.xls,.docx,.doc,.csv,.txt">
+                    <textarea rows="1" id="tkTexto" maxlength="6000" placeholder="Escribe al proveedor… (Ctrl+Enter envía)"></textarea><button type="button" class="sg-enviar" id="tkEnviar" aria-label="Enviar"><i class="bi bi-send-fill"></i></button></div></div></div>
+        <aside class="tkb-lado" id="tkLado"></aside>
+    </div></div></div>
 
 <section class="sg-sec" id="tab-prov">
     <div class="sg-barra">
@@ -753,7 +795,8 @@
         caja.innerHTML = r.items.map(s => {
             const [ico, nombre] = SOL[s.tipo] || ['bi-box', s.tipo];
             let datos = '';
-            try { const d = JSON.parse(s.datos || '{}'); if (s.tipo === 'sugerencia') { const CAT = { sugerencia: '💡 Sugerencia', problema: '⚠️ Problema', pregunta: '❓ Pregunta', felicitacion: '🎉 Comentario' }; datos = `<b>${CAT[d.categoria] || 'Mensaje'}</b><div style="white-space:pre-line;margin-top:4px">${esc(d.texto)}</div>`; } else if (s.tipo === 'imagen') { const q = a => { const l = Math.max(a.ancho || 0, a.alto || 0), c = Math.min(a.ancho || 0, a.alto || 0); return l >= 1600 && c >= 900 ? 'buena' : l >= 1000 && c >= 600 ? 'normal' : 'mala'; };
+            try { const d = JSON.parse(s.datos || '{}'); if (s.tipo === 'sugerencia') { const CAT = { sugerencia: '💡 Sugerencia', problema: '⚠️ Problema', pregunta: '❓ Pregunta', felicitacion: '🎉 Comentario' }; const est = n => '<span style="color:#F59E0B">' + '★'.repeat(n) + '</span><span style="color:#CBD5E1">' + '★'.repeat(5 - n) + '</span>'; const V = d.valoracion || {}; const NV = { general: 'General', facilidad: 'Facilidad', velocidad: 'Rapidez', claridad: 'Claridad', atencion: 'Atención' };
+                datos = `<b>${CAT[d.categoria] || 'Mensaje'}</b>${V.general ? ' · ' + est(V.general) : ''}<div style="white-space:pre-line;margin-top:4px">${esc(d.texto)}</div>` + (Object.keys(V).filter(k => k !== 'general').length ? '<div style="margin-top:4px;font-size:12px;color:#3C5B57">' + Object.entries(V).filter(([k]) => k !== 'general').map(([k, v]) => (NV[k] || k) + ' ' + est(v)).join(' · ') + '</div>' : ''); } else if (s.tipo === 'imagen') { const q = a => { const l = Math.max(a.ancho || 0, a.alto || 0), c = Math.min(a.ancho || 0, a.alto || 0); return l >= 1600 && c >= 900 ? 'buena' : l >= 1000 && c >= 600 ? 'normal' : 'mala'; };
                 datos = `<b>${d.destinoTipo === 'hotel' ? 'Hotel' : 'Destino'}:</b> ${esc(d.nombre || d.clave)} · uso: ${d.uso === 'PORTADA' ? 'la primera es portada' : 'galería'}<div class="sg-thumbs">${(d.archivos || []).map(a => `<a href="/uploads/proveedores/imagenes/${s.id_Solicitud}/${a.n}.${esc(a.ext)}" target="_blank" rel="noopener"><figure class="${q(a)}"><img src="/uploads/proveedores/imagenes/${s.id_Solicitud}/${a.n}.${esc(a.ext)}" alt="" loading="lazy"><figcaption><span>${q(a)}</span><span>${a.ancho || '?'}×${a.alto || '?'}</span></figcaption></figure></a>`).join('')}</div>`; } else datos = Object.entries(d).filter(([k, v]) => v !== '' && v !== null && k !== 'activo').map(([k, v]) => esc(k.replace(/^id_/, '').replace('_', ' ')) + ': ' + esc(v)).join(' · '); } catch { }
             const acc = s.estado === 'PENDIENTE'
                 ? (s.tipo === 'sugerencia'
@@ -807,7 +850,7 @@
         document.querySelectorAll('#sgTabs [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
         document.querySelectorAll('.sg-sec').forEach(s => s.classList.toggle('on', s.id === 'tab-' + t));
         if (empujar) { const u = new URL(location.href); u.searchParams.set('tab', t); history.replaceState(null, '', u); }
-        if (t === 'hoy') pintarHoy(); else if (t === 'tablero') tablero(); else if (t === 'chats') bandeja(); else if (t === 'prov') proveedores();
+        if (t === 'hoy') pintarHoy(); else if (t === 'tablero') tablero(); else if (t === 'chats') bandeja(); else if (t === 'prov') proveedores(); else if (t === 'tickets') tickets();
         else if (t === 'lista' && !cargadas.lista) { cargadas.lista = 1; }
     }
     $('#sgTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) pestana(b.dataset.tab); });
@@ -1172,6 +1215,95 @@
     async function cargarLogos() { try { const r = await EV.api('/Herramientas/ProveedorFichas'); fichas = r.items; r.items.forEach(p => { if (p.logo) logos[p.id] = p.logo; }); } catch { } }
 
 
+    // ---------------- tickets de los proveedores ----------------
+    const TK_COL = [['ABIERTO', 'Abiertos', 'bi-inbox', '#2F6FD8', ['ABIERTO']], ['EN_PROCESO', 'En proceso', 'bi-gear-wide-connected', '#7A5AF8', ['EN_PROCESO']], ['ESPERANDO', 'Esperando al proveedor', 'bi-hourglass-split', '#F79009', ['ESPERANDO']], ['RESUELTO', 'Resueltos', 'bi-check2-circle', '#12B76A', ['RESUELTO', 'CERRADO']]];
+    const TK_CAT = { error: ['bi-bug', 'Error en pantalla'], fallo: ['bi-exclamation-octagon', 'Algo no funciona'], carga: ['bi-box-seam', 'Problema con una carga'], acceso: ['bi-key', 'No puede entrar'], duda: ['bi-question-circle', 'Duda'], otro: ['bi-three-dots', 'Otro'] };
+    const TK_EST = { ABIERTO: 'Abierto', EN_PROCESO: 'En proceso', ESPERANDO: 'Esperando al proveedor', RESUELTO: 'Resuelto', CERRADO: 'Cerrado' };
+    const TK_PRI = ['Baja', 'Normal', 'Alta', 'Urgente'];
+    const ICO_ARCH = { pdf: 'bi-file-earmark-pdf', xlsx: 'bi-file-earmark-excel', xls: 'bi-file-earmark-excel', csv: 'bi-file-earmark-spreadsheet', docx: 'bi-file-earmark-word', doc: 'bi-file-earmark-word', txt: 'bi-file-earmark-text' };
+    const bytesTxt = b => b > 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB';
+    let tkDatos = null, tkId = null, tkDet = null, tkModo = 'msg', tkArchivos = [];
+    const estrellasHtml = n => '<span class="tkb-est2">' + [1, 2, 3, 4, 5].map(i => '<i class="bi ' + (i <= n ? 'bi-star-fill' : 'bi-star') + '"></i>').join('') + '</span>';
+    async function resumenTickets() {
+        try {
+            const r = await EV.api('/Herramientas/ProveedorTickets?estado=&q=');
+            const s = r.resumen || {}; $('#tkAviso').hidden = r.activo !== false;
+            const nb = $('#sgNTk'); nb.textContent = s.abiertos || 0; nb.hidden = !s.abiertos;
+            $('#tkKpis').innerHTML = !r.activo ? '' : [
+                ['', 'bi-ticket-detailed', s.abiertos || 0, 'Tickets abiertos'], [s.sinRespuesta ? 'ama' : '', 'bi-bell', s.sinRespuesta || 0, 'Sin respuesta todavía'], [s.vencidos ? 'rojo' : '', 'bi-alarm-fill', s.vencidos || 0, 'Vencidos (+' + PLAZO + ' días)'],
+                ['azul', 'bi-lightning-charge', s.horasPrimeraRespuesta == null ? '—' : dur(s.horasPrimeraRespuesta), 'Primera respuesta (promedio)'], ['verde', 'bi-star-fill', s.estrellas == null ? '—' : (Math.round(s.estrellas * 10) / 10) + ' ★', (s.calificados || 0) + ' calificaciones (90 días)']
+            ].map(([c, i, n, tx]) => '<div class="sg-kpi ' + c + '"><i class="bi ' + i + '"></i><b>' + n + '</b><small>' + tx + '</small></div>').join('');
+            return r;
+        } catch { return null; }
+    }
+    async function tickets() {
+        await cargarEquipo();
+        const q = new URLSearchParams({ q: $('#tkQ').value.trim(), categoria: $('#tkCat').value, asignado: $('#tkMias').checked ? yo : '' });
+        let r; try { r = await EV.api('/Herramientas/ProveedorTickets?' + q); } catch { return; }
+        tkDatos = r; $('#tkAviso').hidden = r.activo !== false; if (r.activo === false) { $('#tkCols').innerHTML = ''; $('#tkKpis').innerHTML = ''; return; }
+        const s = r.resumen || {}; resumenTickets();
+        $('#tkCols').innerHTML = TK_COL.map(([k, tit, ic, col, estados]) => {
+            const l = r.items.filter(x => estados.includes(x.estado));
+            const cards = l.map((x, i) => { const c = TK_CAT[x.categoria] || TK_CAT.otro, abierto = !['RESUELTO', 'CERRADO'].includes(x.estado);
+                return '<button type="button" class="tkb-card p' + x.prioridad + '" style="--c:' + col + ';animation-delay:' + Math.min(i, 8) * 30 + 'ms" data-tk="' + x.id_Ticket + '">'
+                    + '<div class="sg-card-top">' + av(x.cuenta, 0, x.id_Cuenta) + '<div><span class="cod">' + esc(x.codigo) + '</span><b>' + esc(x.asunto) + '</b><small>' + esc(x.cuenta || '') + '</small></div>' + (x.ultimo_Tipo === 'PROVEEDOR' && abierto ? '<span class="sg-punto" title="El proveedor escribió"></span>' : '') + '</div>'
+                    + '<div class="sg-card-pies"><span class="sg-chip"><i class="bi ' + c[0] + '"></i> ' + c[1] + '</span>' + (x.prioridad >= 2 ? '<span class="sg-chip ' + (x.prioridad === 3 ? 'rojo' : 'ama') + '"><i class="bi bi-flag-fill"></i> ' + TK_PRI[x.prioridad] + '</span>' : '') + (x.asignado_A ? '<span class="sg-chip azul"><i class="bi bi-person-check"></i> ' + esc(nombreDe(x.asignado_A)) + '</span>' : '') + (x.calificacion ? '<span class="sg-chip ama"><i class="bi bi-star-fill"></i> ' + x.calificacion + '</span>' : '') + '</div>'
+                    + '<div class="sg-card-pies">' + (abierto ? slaChip(x.creado_En) : '') + '<small>actualizado hace ' + hace(x.actualizado_En) + ' · ' + x.mensajes + ' msj</small></div></button>'; }).join('');
+            return '<div class="tkb-col" style="--c:' + col + '"><div class="sg-col-cab"><span class="ic"><i class="bi ' + ic + '"></i></span><b>' + tit + '</b><span class="n">' + l.length + '</span></div><div class="sg-col-cuerpo">' + (cards || '<div class="sg-vacio">Nada aquí.</div>') + '</div></div>';
+        }).join('');
+    }
+    $('#tkQ').addEventListener('input', EV.debounce(tickets, 250)); $('#tkCat').addEventListener('change', tickets); $('#tkMias').addEventListener('change', tickets);
+    $('#tkCols').addEventListener('click', e => { const b = e.target.closest('[data-tk]'); if (b) abrirTicket(+b.dataset.tk); });
+
+    async function abrirTicket(id) {
+        tkId = id; tkArchivos = []; tkModo = 'msg'; $('#tkVer').hidden = false; $('#tkMsgs').innerHTML = '<div class="sg-main-vacio"><i class="bi bi-hourglass-split"></i></div>';
+        await cargarTicket();
+    }
+    async function cargarTicket() {
+        let r; try { r = await EV.api('/Herramientas/ProveedorTicket?id=' + tkId); } catch { $('#tkVer').hidden = true; return; }
+        tkDet = r; const t = r.ticket, c = TK_CAT[t.categoria] || TK_CAT.otro, cerrado = ['RESUELTO', 'CERRADO'].includes(t.estado);
+        $('#tkAv').outerHTML = av(t.cuenta, 1, t.id_Cuenta).replace('<span class="sg-av g', '<span id="tkAv" class="sg-av g');
+        $('#tkTit').textContent = t.codigo + ' · ' + t.asunto; $('#tkSub').textContent = (t.cuenta || '') + ' · ' + c[1] + ' · creado ' + fh(t.creado_En);
+        let ultimoDia = '';
+        $('#tkMsgs').innerHTML = r.mensajes.map(m => { const dia = diaTxt(m.creado_En), sep = dia !== ultimoDia ? '<div class="sg-dia">' + dia + '</div>' : ''; ultimoDia = dia;
+            if (m.tipo === 'SISTEMA') return sep + '<div class="sg-sis">' + esc(nombreDe(m.autor)) + ' · ' + esc(m.texto) + ' · ' + hm(m.creado_En) + '</div>';
+            let adj = []; try { adj = m.adjuntos ? JSON.parse(m.adjuntos) : []; } catch { }
+            const adjH = adj.length ? '<div class="tkb-adj">' + adj.map(a => { const u = '/Herramientas/ProveedorTicketArchivo?id=' + tkId + '&archivo=' + a.archivo; return ['png', 'jpg', 'jpeg', 'webp'].includes(a.tipo) ? '<a class="img" href="' + u + '" target="_blank" rel="noopener"><img src="' + u + '" alt="' + esc(a.nombre) + '"></a>' : '<a class="doc" href="' + u + '" download="' + esc(a.nombre) + '"><i class="bi ' + (ICO_ARCH[a.tipo] || 'bi-file-earmark') + '"></i><span><b>' + esc(a.nombre) + '</b><small>' + bytesTxt(a.bytes) + '</small></span><i class="bi bi-download"></i></a>'; }).join('') + '</div>' : '';
+            if (m.tipo === 'NOTA') return sep + '<div class="sg-msg NOTA"><div class="qn"><i class="bi bi-lock-fill"></i> Nota interna · ' + esc(nombreDe(m.autor)) + '</div>' + esc(m.texto || '') + adjH + '<div class="tm">' + hm(m.creado_En) + '</div></div>';
+            const eur = m.tipo === 'EUROVIP';
+            return sep + '<div class="sg-msg ' + m.tipo + '"><div class="qn">' + esc(eur ? nombreDe(m.autor) + ' · Eurovip' : m.autor) + '</div>' + esc(m.texto || '') + adjH + '<div class="tm">' + hm(m.creado_En) + (eur ? ' <i class="bi bi-check2-all ok"></i>' : '') + '</div></div>'; }).join('');
+        const ms = $('#tkMsgs'); ms.scrollTop = ms.scrollHeight;
+        const opcionesEq = [...new Set([...equipoFull.map(x => x.userName), t.asignado_A].filter(Boolean))];
+        $('#tkLado').innerHTML = '<div><h4>Estado</h4><div class="tkb-est">' + ['ABIERTO', 'EN_PROCESO', 'ESPERANDO', 'RESUELTO'].map(e => '<button type="button" data-tke="' + e + '" class="' + (t.estado === e ? 'on' : '') + '">' + TK_EST[e] + '</button>').join('') + '</div></div>'
+            + '<div><h4>Prioridad</h4><select class="ui-input" id="tkPri">' + TK_PRI.map((p, i) => '<option value="' + i + '" ' + (t.prioridad === i ? 'selected' : '') + '>' + p + '</option>').join('') + '</select></div>'
+            + '<div><h4>Lo atiende</h4><div style="display:flex;gap:6px"><select class="ui-input" id="tkAsig"><option value="">Sin asignar</option>' + opcionesEq.map(u => '<option value="' + esc(u) + '" ' + (u === t.asignado_A ? 'selected' : '') + '>' + esc(nombreDe(u)) + (u === yo ? ' (tú)' : '') + '</option>').join('') + '</select>' + (t.asignado_A === yo ? '' : '<button type="button" class="ev-btn ghost sm" id="tkMia">Mío</button>') + '</div></div>'
+            + '<div><h4>Plazo de respuesta</h4>' + (cerrado ? '<span class="sg-sla verde"><i class="bi bi-check2-circle"></i> Resuelto' + (t.resuelto_En ? ' ' + fh(t.resuelto_En) : '') + '</span>' : slaChip(t.creado_En)) + '<small style="display:block;color:var(--ev-muted);margin-top:4px">' + (t.primera_Respuesta_En ? 'Primera respuesta: ' + fh(t.primera_Respuesta_En) : 'Todavía sin primera respuesta') + '</small></div>'
+            + (t.codigo_Carga ? '<div><h4>Carga relacionada</h4><a class="ev-btn ghost sm" href="/Herramientas/CargasProveedores?tab=lista&carga=' + t.id_Carga + '"><i class="bi bi-box-arrow-up-right"></i> ' + esc(t.codigo_Carga) + '</a></div>' : '')
+            + '<div><h4>Lo que contó el proveedor</h4><div class="tkb-desc">' + esc(t.descripcion) + '</div></div>'
+            + (t.calificacion ? '<div><h4>Calificación del proveedor</h4>' + estrellasHtml(t.calificacion) + (t.calificacion_Texto ? '<div class="tkb-desc" style="margin-top:6px">' + esc(t.calificacion_Texto) + '</div>' : '') + '</div>' : '');
+        pintarArch(); modoTk();
+    }
+    function pintarArch() { $('#tkArchLista').innerHTML = tkArchivos.map((f, i) => '<span>' + esc(f.name) + ' · ' + bytesTxt(f.size) + '<button type="button" data-quitar="' + i + '" aria-label="Quitar">×</button></span>').join(''); }
+    function modoTk() { document.querySelectorAll('[data-tkm]').forEach(b => b.classList.toggle('on', b.dataset.tkm === tkModo)); $('#tkCaja').classList.toggle('nota', tkModo === 'nota'); $('#tkTexto').placeholder = tkModo === 'msg' ? 'Escribe al proveedor… (Ctrl+Enter envía)' : 'Escribe una nota para tu equipo (el proveedor no la ve)…'; }
+    document.querySelectorAll('[data-tkm]').forEach(b => b.addEventListener('click', () => { tkModo = b.dataset.tkm; modoTk(); }));
+    $('#tkAdjBtn').addEventListener('click', () => $('#tkArch').click());
+    $('#tkArch').addEventListener('change', e => { tkArchivos = [...tkArchivos, ...e.target.files].slice(0, 5); e.target.value = ''; pintarArch(); });
+    $('#tkArchLista').addEventListener('click', e => { const b = e.target.closest('[data-quitar]'); if (b) { tkArchivos.splice(+b.dataset.quitar, 1); pintarArch(); } });
+    async function enviarTicket() {
+        const texto = $('#tkTexto').value.trim(); if (!texto && !tkArchivos.length) { $('#tkTexto').focus(); return; }
+        const fd = new FormData(); fd.append('id', tkId); fd.append('texto', texto); fd.append('nota', tkModo === 'nota'); tkArchivos.forEach(f => fd.append('archivos', f));
+        try { await EV.post('/Herramientas/ProveedorTicketMensaje', fd); } catch { return; }
+        $('#tkTexto').value = ''; tkArchivos = []; await cargarTicket(); tickets();
+    }
+    $('#tkEnviar').addEventListener('click', enviarTicket);
+    $('#tkTexto').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); enviarTicket(); } });
+    async function gestionTicket(c) { try { await EV.post('/Herramientas/ProveedorTicketGestion', { id: tkId, ...c }); } catch { return; } await cargarTicket(); tickets(); }
+    $('#tkLado').addEventListener('click', e => { const b = e.target.closest('[data-tke]'); if (b) gestionTicket({ estado: b.dataset.tke }); if (e.target.closest('#tkMia')) gestionTicket({ asignado: yo, cambiaAsignado: true }); });
+    $('#tkLado').addEventListener('change', e => { if (e.target.id === 'tkPri') gestionTicket({ prioridad: +e.target.value }); if (e.target.id === 'tkAsig') gestionTicket({ asignado: e.target.value, cambiaAsignado: true }); });
+    $('#tkCerrar').addEventListener('click', () => { $('#tkVer').hidden = true; });
+    $('#tkVer').addEventListener('mousedown', e => { if (e.target === $('#tkVer')) $('#tkVer').hidden = true; });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#tkVer').hidden) $('#tkVer').hidden = true; });
+
     // ---------------- control de calidad ----------------
     let calActual = null, navIds = [];
     async function calidad(c) {
@@ -1225,8 +1357,8 @@
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); pal.hidden ? abrirPal() : cerrarPal(); return; }
         if (e.key === 'Escape' && !pal.hidden) { cerrarPal(); return; }
         if (e.target.matches('input,textarea,select') || e.ctrlKey || e.altKey || e.metaKey || !pal.hidden) return;
-        const tabs = ['hoy', 'tablero', 'lista', 'chats', 'prov', 'sol']; const n = +e.key;
-        if (n >= 1 && n <= 6 && !$('#hpVer').classList.contains('open')) pestana(tabs[n - 1]); else if (e.key === '/') { e.preventDefault(); abrirPal(); }
+        const tabs = ['hoy', 'tablero', 'lista', 'chats', 'tickets', 'prov', 'sol']; const n = +e.key;
+        if (n >= 1 && n <= 7 && !$('#hpVer').classList.contains('open')) pestana(tabs[n - 1]); else if (e.key === '/') { e.preventDefault(); abrirPal(); }
     });
 
     // ---------------- exportar lo que se ve (Excel) ----------------
@@ -1245,7 +1377,7 @@
     $('#hpRecargar').addEventListener('click', () => { kdatos = null; fichas = []; const t = document.querySelector('#sgTabs .on')?.dataset.tab || 'hoy'; pestana(t, false); cargarChats(); solicitudes(); listar(true); });
     setInterval(() => { if (!document.hidden) cargarChats(); }, 60000);
     cargarLogos().then(() => { if (document.querySelector('#tab-lista.on, #tab-tablero.on')) { pintarLista(); } });
-    cargarChats();
+    cargarChats(); resumenTickets();
     resumen.then(() => pestana(params.get('tab') && document.getElementById('tab-' + params.get('tab')) ? params.get('tab') : 'hoy', false));
 
     // Abrir directo (campana: /Herramientas/CargasProveedores?carga=12)

@@ -268,13 +268,63 @@ namespace EuroVip.Controllers
             return Json(r);
         }
 
-        public sealed class SugerenciaDto { public string? Categoria { get; set; } public string? Asunto { get; set; } public string? Texto { get; set; } }
+        // ---------- Tickets (20/11/2026): reportar un error o fallo con documentos y capturas ----------
+        [HttpGet("tickets")]
+        public async Task<IActionResult> Tickets([FromServices] ProveedoresTickets tk)
+        {
+            var (items, conteo, activo) = await tk.ListarAsync(Cuenta.Id, null, null, null, null);
+            return Json(new { items, conteo, activo });
+        }
+
+        [HttpGet("tickets/{id:int}")]
+        public async Task<IActionResult> Ticket(int id, [FromServices] ProveedoresTickets tk)
+        {
+            var (t, m) = await tk.DetalleAsync(id, Cuenta.Id);
+            return t is null ? NotFound(new { mensaje = "Ese ticket no existe." }) : Json(new { ticket = t, mensajes = m });
+        }
+
+        [HttpPost("tickets")]
+        [RequestSizeLimit(60_000_000)]
+        public async Task<IActionResult> TicketCrear([FromForm] string? categoria, [FromForm] string? asunto, [FromForm] string? descripcion, [FromForm] int prioridad, [FromForm] int? idCarga, [FromForm] List<IFormFile> archivos, [FromServices] ProveedoresTickets tk)
+        {
+            var (r, error) = await tk.CrearAsync(Cuenta, categoria, asunto, descripcion, prioridad, idCarga, archivos);
+            if (r is null) return BadRequest(new { mensaje = error });
+            await Auditar("Proveedor_Ticket_Crear", new { categoria, asunto });
+            return Json(r);
+        }
+
+        [HttpPost("tickets/{id:int}/mensajes")]
+        [RequestSizeLimit(60_000_000)]
+        public async Task<IActionResult> TicketMensaje(int id, [FromForm] string? texto, [FromForm] List<IFormFile> archivos, [FromServices] ProveedoresTickets tk)
+        {
+            if (await tk.MensajeAsync(id, "PROVEEDOR", Cuenta.Nombre, texto, archivos, Cuenta.Id) is string error) return BadRequest(new { mensaje = error });
+            return Json(new { ok = true });
+        }
+
+        public sealed class TicketEstadoDto { public bool Resuelto { get; set; } }
+        [HttpPost("tickets/{id:int}/estado")]
+        public async Task<IActionResult> TicketEstado(int id, [FromBody] TicketEstadoDto dto, [FromServices] ProveedoresTickets tk) =>
+            await tk.ProveedorEstadoAsync(id, Cuenta.Id, dto.Resuelto, Cuenta.Nombre) is string error ? BadRequest(new { mensaje = error }) : Json(new { ok = true });
+
+        public sealed class TicketCalificarDto { public int Estrellas { get; set; } public string? Texto { get; set; } }
+        [HttpPost("tickets/{id:int}/calificar")]
+        public async Task<IActionResult> TicketCalificar(int id, [FromBody] TicketCalificarDto dto, [FromServices] ProveedoresTickets tk) =>
+            await tk.CalificarAsync(id, Cuenta.Id, dto.Estrellas, dto.Texto) is string error ? BadRequest(new { mensaje = error }) : Json(new { ok = true, mensaje = "¡Gracias por calificar!" });
+
+        [HttpGet("tickets/{id:int}/archivo/{archivo}")]
+        public async Task<IActionResult> TicketArchivo(int id, string archivo, [FromServices] ProveedoresTickets tk)
+        {
+            var (ruta, nombre, tipo) = await tk.ArchivoAsync(id, archivo, Cuenta.Id);
+            return ruta is null ? NotFound() : PhysicalFile(ruta, tipo!, nombre);
+        }
+
+        public sealed class SugerenciaDto { public string? Categoria { get; set; } public string? Asunto { get; set; } public string? Texto { get; set; } public Dictionary<string, int>? Valoracion { get; set; } }
 
         /// <summary>Sugerencia, problema, pregunta o comentario para Eurovip.</summary>
         [HttpPost("solicitudes/sugerencia")]
         public async Task<IActionResult> SolicitudSugerencia([FromBody] SugerenciaDto dto)
         {
-            var (r, error) = await _sol.CrearSugerenciaAsync(Cuenta, dto.Categoria, dto.Asunto, dto.Texto);
+            var (r, error) = await _sol.CrearSugerenciaAsync(Cuenta, dto.Categoria, dto.Asunto, dto.Texto, dto.Valoracion);
             if (r is null) return BadRequest(new { mensaje = error });
             await Auditar("Proveedor_Sugerencia", new { dto.Categoria, dto.Asunto });
             return Json(r);

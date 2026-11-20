@@ -420,6 +420,47 @@ namespace EuroVip.Controllers
             return Json(new { ok = true, url, mensaje = "Logo guardado." });
         }
 
+        // ---------- Tickets de los proveedores (20/11/2026) ----------
+        private ProveedoresTickets Tk => HttpContext.RequestServices.GetRequiredService<ProveedoresTickets>();
+
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorTickets(string? estado, string? categoria, string? asignado, string? q, int? cuenta)
+        {
+            var (items, conteo, activo) = await Tk.ListarAsync(cuenta, estado, categoria, asignado, q);
+            return Json(new { items, conteo, activo, resumen = await Tk.ResumenAsync(), yo = Yo });
+        }
+
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorTicket(int id)
+        {
+            var (t, m) = await Tk.DetalleAsync(id, null);
+            return t is null ? NotFound(new { mensaje = "Ese ticket ya no existe." }) : Json(new { ticket = t, mensajes = m, yo = Yo });
+        }
+
+        /// <summary>Responder al proveedor (nota = false) o dejar una nota interna (nota = true). Multipart: id, texto, nota, archivos.</summary>
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores), RequestSizeLimit(60_000_000)]
+        public async Task<IActionResult> ProveedorTicketMensaje([FromForm] int id, [FromForm] string? texto, [FromForm] bool nota, [FromForm] List<IFormFile> archivos)
+        {
+            if (await Tk.MensajeAsync(id, nota ? "NOTA" : "EUROVIP", Yo, texto, archivos, null) is string error) return BadRequest(new { mensaje = error });
+            return Json(new { ok = true });
+        }
+
+        public sealed class TicketGestionDto { public int Id { get; set; } public string? Estado { get; set; } public int? Prioridad { get; set; } public string? Asignado { get; set; } public bool CambiaAsignado { get; set; } }
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorTicketGestion([FromBody] TicketGestionDto dto)
+        {
+            if (await Tk.GestionarAsync(dto.Id, dto.Estado, dto.Prioridad, dto.Asignado, dto.CambiaAsignado, Yo) is string error) return BadRequest(new { mensaje = error });
+            await Auditar("Proveedor_Ticket_Gestion", new { dto.Id, dto.Estado, dto.Prioridad, dto.Asignado });
+            return Json(new { ok = true });
+        }
+
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorTicketArchivo(int id, string archivo)
+        {
+            var (ruta, nombre, tipo) = await Tk.ArchivoAsync(id, archivo, null);
+            return ruta is null ? NotFound() : PhysicalFile(ruta, tipo!, nombre);
+        }
+
         public sealed class GestionDto { public int Id { get; set; } public string? Asignado { get; set; } public int Prioridad { get; set; } }
 
         [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]

@@ -18,3 +18,4 @@ EuroVip/wwwroot/imagenes/**/*
 
 # Datos personales de Visual Studio (historial de publicación)
 *.pubxml.user
+EuroVip/App_Data/tickets/

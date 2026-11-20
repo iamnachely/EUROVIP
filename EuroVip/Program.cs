@@ -78,7 +78,8 @@ builder.Services.AddHostedService<EuroVip.Services.AgenciaProgramadorWorker>();
 builder.Services.AddScoped<EuroVip.Services.GuardadoProductos>();
 builder.Services.AddScoped<EuroVip.Services.ProveedoresCarga>();
 builder.Services.AddScoped<EuroVip.Services.ProveedoresSeguimiento>();   // tablero, seguimiento del día, chats, notas internas y responsable de las cargas
-builder.Services.AddScoped<EuroVip.Services.ProveedoresSolicitudes>();   // pedir que creen un hotel, destino, aeropuerto o habitación que falta
+builder.Services.AddScoped<EuroVip.Services.ProveedoresSolicitudes>();
+builder.Services.AddScoped<EuroVip.Services.ProveedoresTickets>();   // tickets de los proveedores (errores y fallos con documentos)   // pedir que creen un hotel, destino, aeropuerto o habitación que falta
 builder.Services.AddScoped<EuroVip.Services.ProveedoresExcel>();   // fase 2: plantillas y lectura de Excel del proveedor (sin guardar)
 builder.Services.AddHostedService<EuroVip.Services.ProveedoresCargaWorker>();
 builder.Services.AddSingleton<EuroVip.Services.IProgresoCargas, EuroVip.Services.ProgresoCargas>();   // barra de progreso de las cargas
