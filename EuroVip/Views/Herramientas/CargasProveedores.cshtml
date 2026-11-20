@@ -66,7 +66,9 @@
     #hpVer .hp-linea b { font-size: 13px; color: var(--ev-text); margin-bottom: 1px; }
 
     /* Columnas y secciones como tarjetas */
-    #hpVer .hp-det { grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; }
+    #hpVer .hp-det { grid-template-columns: minmax(0, 1fr) 420px; gap: 24px; }
+    #hpVer.max { width: calc(100vw - 8px) !important; } #hpVer.max .hp-det { grid-template-columns: minmax(0, 1fr) 520px; }
+    #hpVer .sg-hilo-det { height: 640px; }
     #hpVer .hp-det > div:last-child { position: sticky; top: 0; display: grid; gap: 14px; align-content: start; }
     #hpVer .hp-sec { margin: 22px 0 10px; font-size: 15.5px; letter-spacing: -.2px; }
     #hpVer .hp-sec > i { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--ev-ink); color: var(--ev-aqua); font-size: 14px; }
@@ -126,7 +128,7 @@
     .hp-sol-fila .acc { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
     .hp-sol-datos { margin-top: 4px; font-size: 12.5px; color: #3C5B57; }
     @@media (max-width: 700px) { .hp-sol-fila { grid-template-columns: auto minmax(0,1fr); } .hp-sol-fila .acc { grid-column: 1 / -1; justify-content: flex-start; } }
-    @@media (max-width: 1100px) { #hpVer .hp-det { grid-template-columns: 1fr; } #hpVer .hp-det > div:last-child { position: static; } }
+    @@media (max-width: 1100px) { #hpVer.max .hp-det, #hpVer .hp-det { grid-template-columns: 1fr; } #hpVer .hp-det > div:last-child { position: static; } }
     @@media (max-width: 640px) {
         #hpVer .ui-dh { padding: 18px 16px 16px; } #hpVer .ui-db { padding: 16px 14px 28px; }
         #hpVer .hp-linea { grid-template-columns: 1fr 1fr; row-gap: 14px; } #hpVer .hp-linea div::after { display: none; }
@@ -389,10 +391,11 @@
     <div class="sg-dock-cuerpo" id="sgDockCuerpo"></div>
 </div>
 
-<aside class="ui-drawer" id="hpVer" aria-hidden="true" style="width:min(1100px, calc(100vw - 24px))">
+<aside class="ui-drawer" id="hpVer" aria-hidden="true" style="width:min(1560px, calc(100vw - 24px))">
     <div class="ui-dh">
         <div class="ev-module-icon" style="width:46px;height:46px"><i class="bi bi-inboxes" id="hpVerIco"></i></div>
         <div style="min-width:0"><h2 id="hpVerTitulo">Carga</h2><small id="hpVerSub"></small></div>
+        <button class="ui-ibtn" type="button" id="hpVerMax" aria-label="Pantalla completa" title="Pantalla completa"><i class="bi bi-arrows-fullscreen"></i></button>
         <button class="ui-ibtn x" type="button" id="hpVerCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="ui-db" id="hpVerCuerpo"></div>
@@ -479,6 +482,7 @@
     // ---------------- detalle ----------------
     const visor = EV.drawer($('#hpVer'));
     $('#hpVerCerrar').addEventListener('click', () => visor.cerrar());
+    $('#hpVerMax').addEventListener('click', () => { const m = $('#hpVer').classList.toggle('max'); $('#hpVerMax').querySelector('i').className = 'bi ' + (m ? 'bi-fullscreen-exit' : 'bi-arrows-fullscreen'); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && visor.abierto()) visor.cerrar(); });
 
     async function abrir(id) {
