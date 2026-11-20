@@ -132,28 +132,215 @@
         #hpVer .hp-linea { grid-template-columns: 1fr 1fr; row-gap: 14px; } #hpVer .hp-linea div::after { display: none; }
         #hpVer .ui-dh h2 { font-size: 20px; }
     }
+
+    /* =====================================================================================================================
+       20/11/2026 · Centro de cargas: pestañas, Hoy, tablero, mensajes tipo WhatsApp, proveedores. Prefijo sg-.
+       ===================================================================================================================== */
+    .sg-tabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 6px; margin: 0 0 16px; background: #fff; border: 1px solid var(--ev-line); border-radius: 20px; box-shadow: var(--ev-shadow); position: sticky; top: 8px; z-index: 20; }
+    .sg-tabs button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 0; border-radius: 14px; background: transparent; font: inherit; font-weight: 800; font-size: 14px; color: var(--ev-muted); cursor: pointer; transition: all .15s; }
+    .sg-tabs button:hover { background: #F0FAF8; color: var(--ev-text); }
+    .sg-tabs button.on { background: var(--ev-ink); color: #fff; box-shadow: 0 10px 20px -12px rgba(11,18,21,.8); }
+    .sg-tabs button.on i { color: var(--ev-aqua); }
+    .sg-n { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 99px; display: inline-grid; place-items: center; background: #F04438; color: #fff; font-size: 12px; }
+    .sg-sec { display: none; } .sg-sec.on { display: block; animation: sgEntra .3s ease both; }
+    @@keyframes sgEntra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .sg-vacio { padding: 26px 14px; text-align: center; color: var(--ev-muted); font-weight: 600; font-size: 13.5px; border: 2px dashed var(--ev-line); border-radius: 16px; }
+    .sg-av { --h: 180; width: 40px; height: 40px; border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: hsl(var(--h) 55% 22%); background: hsl(var(--h) 70% 88%); border: 2px solid #fff; box-shadow: 0 2px 8px -3px rgba(11,18,21,.35); }
+    .sg-av.g { width: 54px; height: 54px; font-size: 18px; }
+
+    /* ---------- Hoy ---------- */
+    .sg-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .sg-kpi { text-align: left; border: 1px solid var(--ev-line); border-radius: 20px; padding: 14px 16px; background: #fff; box-shadow: var(--ev-shadow); position: relative; overflow: hidden; font: inherit; color: inherit; }
+    button.sg-kpi { cursor: pointer; transition: transform .15s; } button.sg-kpi:hover { transform: translateY(-3px); }
+    .sg-kpi i { position: absolute; right: 12px; top: 10px; font-size: 26px; opacity: .18; }
+    .sg-kpi b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; }
+    .sg-kpi small { color: var(--ev-muted); font-weight: 700; font-size: 12.5px; }
+    .sg-kpi.rojo { background: linear-gradient(135deg, #FEF3F2, #fff); border-color: #FDA29B; } .sg-kpi.rojo b { color: #B42318; }
+    .sg-kpi.ama { background: linear-gradient(135deg, #FFFAEB, #fff); border-color: #FEDF89; } .sg-kpi.ama b { color: #B54708; }
+    .sg-kpi.verde { background: linear-gradient(135deg, #ECFDF3, #fff); border-color: #ABEFC6; } .sg-kpi.verde b { color: #067647; }
+    .sg-kpi.azul { background: linear-gradient(135deg, #EFF8FF, #fff); border-color: #B2DDFF; } .sg-kpi.azul b { color: #175CD3; }
+    .sg-hoy { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .sg-panel { background: #fff; border: 1px solid var(--ev-line); border-radius: 22px; padding: 16px 18px; box-shadow: var(--ev-shadow); min-width: 0; }
+    .sg-panel > h3 { margin: 0 0 10px; font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .sg-panel > h3 i { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--ev-ink); color: var(--ev-aqua); font-size: 14px; }
+    .sg-panel.ancho { grid-column: 1 / -1; }
+    .sg-fila { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 8px; border: 0; background: transparent; border-radius: 14px; font: inherit; color: inherit; cursor: pointer; }
+    .sg-fila:hover { background: #F0FAF8; }
+    .sg-fila > div { flex: 1; min-width: 0; display: grid; }
+    .sg-fila b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .sg-fila small { color: var(--ev-muted); font-size: 12.5px; }
+    .sg-fila .cuando { font-size: 12px; font-weight: 800; color: #B54708; background: #FEF0C7; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+    .sg-fila .cuando.v { color: #5925DC; background: #F4EBFF; } .sg-fila .cuando.g { color: #067647; background: #DCFCE7; }
+    .sg-mov { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; max-height: 460px; overflow: auto; }
+    .sg-mov li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: flex-start; padding: 10px 6px; border-bottom: 1px dashed var(--ev-line); cursor: pointer; }
+    .sg-mov li:hover { background: #F7FCFB; }
+    .sg-mov .pt { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; font-size: 15px; background: #EEF2F6; color: #475467; }
+    .sg-mov .pt.ok { background: #DCFCE7; color: #067647; } .sg-mov .pt.mal { background: #FEE4E2; color: #B42318; } .sg-mov .pt.az { background: #E0EAFF; color: #3538CD; } .sg-mov .pt.ama { background: #FEF0C7; color: #B54708; } .sg-mov .pt.vio { background: #F4EBFF; color: #6941C6; }
+    .sg-mov b { font-size: 13.5px; } .sg-mov span { display: block; color: var(--ev-muted); font-size: 12.5px; overflow-wrap: anywhere; }
+    .sg-mov time { font-size: 12px; font-weight: 700; color: var(--ev-muted); white-space: nowrap; text-align: right; }
+
+    /* ---------- Tablero ---------- */
+    .sg-barra { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+    .sg-barra .ui-input { width: auto; min-width: 170px; }
+    .sg-barra .q { flex: 1; min-width: 220px; }
+    .sg-check { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13.5px; padding: 8px 14px; border: 1.5px solid var(--ev-line); border-radius: 14px; background: #fff; cursor: pointer; }
+    .sg-check input { accent-color: #0E8F86; }
+    .sg-kan { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 1fr); gap: 14px; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x proximity; align-items: start; }
+    .sg-col { background: #EAF5F3; border-radius: 22px; padding: 10px; scroll-snap-align: start; min-width: 0; }
+    .sg-col-cab { display: flex; align-items: center; gap: 10px; padding: 6px 8px 10px; }
+    .sg-col-cab .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: #fff; color: var(--c, #0E8F86); font-size: 16px; }
+    .sg-col-cab b { flex: 1; font-size: 14.5px; } .sg-col-cab b small { display: block; font-weight: 600; font-size: 11.5px; color: var(--ev-muted); }
+    .sg-col-cab .n { min-width: 28px; height: 28px; padding: 0 9px; border-radius: 99px; display: grid; place-items: center; background: var(--c, #0E8F86); color: #fff; font-size: 13px; font-weight: 800; }
+    .sg-col-cuerpo { display: grid; gap: 10px; max-height: 70vh; overflow: auto; padding: 2px; }
+    .sg-card { text-align: left; border: 1px solid var(--ev-line); border-left: 5px solid var(--c, #0E8F86); border-radius: 18px; background: #fff; padding: 12px 14px; display: grid; gap: 8px; cursor: pointer; font: inherit; color: inherit; box-shadow: 0 1px 2px rgba(11,18,21,.05); transition: transform .15s, box-shadow .15s; animation: sgEntra .35s ease both; }
+    .sg-card:hover { transform: translateY(-3px); box-shadow: 0 16px 28px -18px var(--c, #0E8F86); }
+    .sg-card.u1 { border-color: #FEDF89; border-left-color: #F79009; } .sg-card.u2 { border-color: #FDA29B; border-left-color: #F04438; background: #FFFBFA; }
+    .sg-card-top { display: flex; gap: 10px; align-items: center; }
+    .sg-card-top > div { min-width: 0; display: grid; flex: 1; }
+    .sg-card-top b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .sg-card-top small { color: var(--ev-muted); font-size: 12px; }
+    .sg-card .av { width: 34px; height: 34px; font-size: 12px; }
+    .sg-card-pies { display: flex; flex-wrap: wrap; gap: 6px; }
+    .sg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 99px; background: #F1F5F4; font-size: 12px; font-weight: 700; color: #3C5B57; }
+    .sg-chip.rojo { background: #FEE4E2; color: #B42318; } .sg-chip.ama { background: #FEF0C7; color: #B54708; } .sg-chip.vio { background: #F4EBFF; color: #6941C6; } .sg-chip.verde { background: #DCFCE7; color: #067647; } .sg-chip.azul { background: #E0EAFF; color: #3538CD; }
+    .sg-punto { width: 10px; height: 10px; border-radius: 50%; background: #25D366; box-shadow: 0 0 0 3px rgba(37,211,102,.25); flex: none; }
+
+    /* ---------- Mensajes (tipo WhatsApp) ---------- */
+    .sg-split { display: grid; grid-template-columns: 360px minmax(0, 1fr); background: #fff; border: 1px solid var(--ev-line); border-radius: 24px; overflow: hidden; box-shadow: var(--ev-shadow); height: min(78vh, 760px); }
+    .sg-lado { border-right: 1px solid var(--ev-line); display: flex; flex-direction: column; min-width: 0; background: #fff; }
+    .sg-lado-cab { padding: 14px; border-bottom: 1px solid var(--ev-line); display: grid; gap: 10px; background: #F7FCFB; }
+    .sg-lado-cab h3 { margin: 0; font-size: 17px; font-weight: 800; }
+    .sg-lado-lista { overflow: auto; flex: 1; }
+    .sg-chat { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border: 0; border-bottom: 1px solid #EEF4F3; background: #fff; font: inherit; color: inherit; cursor: pointer; }
+    .sg-chat:hover { background: #F5FBFA; } .sg-chat.on { background: #E3F6F2; }
+    .sg-chat > div { flex: 1; min-width: 0; display: grid; gap: 1px; }
+    .sg-chat .l1 { display: flex; justify-content: space-between; gap: 8px; } .sg-chat .l1 b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sg-chat time { font-size: 11.5px; color: var(--ev-muted); font-weight: 700; white-space: nowrap; } .sg-chat.nuevo time { color: #128C4A; }
+    .sg-chat .l2 { display: flex; align-items: center; gap: 6px; color: var(--ev-muted); font-size: 12.5px; } .sg-chat .l2 span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sg-chat .l3 { font-size: 11.5px; color: #0E8F86; font-weight: 800; }
+    .sg-badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; display: grid; place-items: center; background: #25D366; color: #fff; font-size: 11.5px; font-weight: 800; }
+    .sg-main { min-width: 0; display: flex; flex-direction: column; background: #ECE5DD; }
+    .sg-main-vacio { margin: auto; text-align: center; color: #667781; padding: 20px; }
+    .sg-main-vacio i { font-size: 58px; color: #B7C4C0; display: block; }
+
+    .sg-hilo { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+    .sg-hilo-cab { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #F0F2F5; border-bottom: 1px solid #DDE3E6; }
+    .sg-hilo-cab > div { flex: 1; min-width: 0; display: grid; }
+    .sg-hilo-cab b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .sg-hilo-cab small { color: #667781; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sg-hilo-cab .ev-btn { flex: none; }
+    .sg-fijada { display: flex; gap: 8px; align-items: center; padding: 8px 14px; background: #FFF8D6; border-bottom: 1px solid #F3E2A0; font-size: 12.5px; font-weight: 700; color: #6B5400; }
+    .sg-fijada span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sg-msgs { flex: 1; min-height: 0; overflow: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; background-color: #ECE5DD; background-image: radial-gradient(rgba(11,18,21,.045) 1.2px, transparent 1.2px); background-size: 18px 18px; }
+    .sg-dia { align-self: center; margin: 10px 0 6px; padding: 4px 12px; border-radius: 10px; background: #fff; color: #54656F; font-size: 12px; font-weight: 700; box-shadow: 0 1px 1px rgba(11,18,21,.12); }
+    .sg-sis { align-self: center; max-width: 90%; margin: 4px 0; padding: 5px 12px; border-radius: 10px; background: #FFF3C4; color: #54491A; font-size: 12px; font-weight: 700; text-align: center; box-shadow: 0 1px 1px rgba(11,18,21,.1); }
+    .sg-msg { max-width: min(78%, 560px); padding: 7px 10px 6px; border-radius: 12px; font-size: 14px; line-height: 1.4; box-shadow: 0 1px 1px rgba(11,18,21,.14); position: relative; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
+    .sg-msg .qn { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 800; margin-bottom: 2px; white-space: normal; }
+    .sg-msg .tm { display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin-top: 2px; font-size: 11px; color: #667781; white-space: normal; }
+    .sg-msg .tm .ok { color: #53BDEB; font-size: 14px; }
+    .sg-msg.PROVEEDOR { align-self: flex-start; background: #fff; border-top-left-radius: 2px; }
+    .sg-msg.PROVEEDOR .qn { color: #0E7C74; }
+    .sg-msg.EUROVIP { align-self: flex-end; background: #D9FDD3; border-top-right-radius: 2px; }
+    .sg-msg.EUROVIP .qn { color: #1D6B34; }
+    .sg-msg.NOTA { align-self: flex-end; background: #FFF1B8; border: 1.5px dashed #E0B400; border-top-right-radius: 2px; }
+    .sg-msg.NOTA .qn { color: #8A6A00; } .sg-msg.NOTA.fij { box-shadow: 0 0 0 2px #F5C400; }
+    .sg-msg .acc { display: none; gap: 2px; position: absolute; right: 6px; top: -14px; background: #fff; border-radius: 10px; padding: 2px; box-shadow: 0 2px 8px rgba(11,18,21,.25); }
+    .sg-msg:hover .acc { display: flex; } .sg-msg .acc button { border: 0; background: transparent; padding: 3px 6px; border-radius: 8px; cursor: pointer; color: #54656F; }
+    .sg-msg .acc button:hover { background: #F0F2F5; }
+    .sg-comp { background: #F0F2F5; padding: 8px 12px 10px; border-top: 1px solid #DDE3E6; display: grid; gap: 8px; }
+    .sg-modo { display: flex; gap: 6px; }
+    .sg-modo button { border: 0; padding: 6px 12px; border-radius: 99px; background: transparent; font: inherit; font-weight: 800; font-size: 12.5px; color: #54656F; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+    .sg-modo button.on { background: #D9FDD3; color: #1D6B34; } .sg-modo button.on[data-modo="nota"] { background: #FFF1B8; color: #8A6A00; }
+    .sg-rapidas { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+    .sg-rapidas button { flex: none; border: 1px solid #D5DBDF; background: #fff; border-radius: 99px; padding: 4px 11px; font: inherit; font-size: 12px; font-weight: 700; color: #3B4A54; cursor: pointer; white-space: nowrap; }
+    .sg-rapidas button:hover { background: #E3F6F2; border-color: #9BD8CF; }
+    .sg-caja { display: flex; gap: 8px; align-items: flex-end; }
+    .sg-caja textarea { flex: 1; resize: none; min-height: 42px; max-height: 120px; border: 0; border-radius: 22px; padding: 10px 16px; font: inherit; font-size: 14px; background: #fff; outline: 0; }
+    .sg-caja.nota textarea { background: #FFFBE0; }
+    .sg-enviar { width: 44px; height: 44px; border-radius: 50%; border: 0; background: #0E8F86; color: #fff; font-size: 18px; cursor: pointer; flex: none; display: grid; place-items: center; }
+    .sg-enviar:hover { background: #0B766E; } .sg-caja.nota .sg-enviar { background: #D4A000; }
+
+    /* Ventana flotante de mensajes */
+    .sg-fab { position: fixed; right: 22px; bottom: 22px; z-index: 900; width: 60px; height: 60px; border-radius: 50%; border: 0; background: linear-gradient(135deg, #0E8F86, #0B1215); color: #fff; font-size: 26px; cursor: pointer; box-shadow: 0 16px 32px -12px rgba(11,18,21,.7); display: grid; place-items: center; transition: transform .15s; }
+    .sg-fab:hover { transform: scale(1.06); }
+    .sg-fab .sg-n { position: absolute; top: -4px; right: -4px; border: 2px solid #fff; }
+    .sg-dock { position: fixed; right: 22px; bottom: 96px; z-index: 901; width: min(400px, calc(100vw - 24px)); height: min(620px, calc(100vh - 120px)); background: #fff; border-radius: 24px; border: 1px solid var(--ev-line); box-shadow: 0 30px 70px -20px rgba(11,18,21,.6); display: none; flex-direction: column; overflow: hidden; }
+    .sg-dock.on { display: flex; animation: sgEntra .25s ease both; }
+    .sg-dock.grande { width: min(860px, calc(100vw - 24px)); }
+    .sg-dock-cab { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--ev-ink); color: #fff; }
+    .sg-dock-cab b { flex: 1; font-size: 15px; } .sg-dock-cab button { border: 0; width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,.12); color: #fff; cursor: pointer; }
+    .sg-dock-cab button:hover { background: rgba(255,255,255,.25); }
+    .sg-dock-cuerpo { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .sg-dock-cuerpo .sg-lado { border: 0; flex: 1; min-height: 0; }
+
+    /* ---------- Proveedores ---------- */
+    .sg-provs { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+    .sg-prov { background: #fff; border: 1px solid var(--ev-line); border-radius: 24px; padding: 16px; box-shadow: var(--ev-shadow); display: grid; gap: 12px; animation: sgEntra .35s ease both; }
+    .sg-prov.off { opacity: .65; }
+    .sg-prov-cab { display: flex; gap: 12px; align-items: center; } .sg-prov-cab > div { flex: 1; min-width: 0; display: grid; }
+    .sg-prov-cab b { font-size: 16px; } .sg-prov-cab small { color: var(--ev-muted); font-size: 12.5px; }
+    .sg-contacto { display: grid; gap: 4px; font-size: 13px; } .sg-contacto a { color: #0E7C74; font-weight: 700; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; } .sg-contacto span { display: inline-flex; gap: 8px; align-items: center; color: #3C5B57; }
+    .sg-contacto i { width: 18px; color: var(--ev-muted); }
+    .sg-estbar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: #EEF2F1; }
+    .sg-estbar span { min-width: 6px; }
+    .sg-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .sg-nums div { background: #F5FBFA; border-radius: 12px; padding: 7px 10px; } .sg-nums b { display: block; font-size: 18px; } .sg-nums small { color: var(--ev-muted); font-size: 11.5px; font-weight: 700; }
+    .sg-prov-pie { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Seguimiento dentro de la carga */
+    .sg-seg { background: #fff; border: 1px solid var(--ev-line); border-radius: 18px; padding: 12px 14px; display: grid; gap: 10px; box-shadow: var(--ev-shadow); }
+    .sg-seg h4 { margin: 0; font-size: 14px; font-weight: 800; display: flex; gap: 8px; align-items: center; }
+    .sg-seg label { font-size: 12px; font-weight: 800; color: var(--ev-muted); display: block; margin-bottom: 4px; }
+    .sg-prio { display: flex; gap: 6px; } .sg-prio button { flex: 1; border: 1.5px solid var(--ev-line); background: #fff; border-radius: 12px; padding: 7px 6px; font: inherit; font-weight: 800; font-size: 12.5px; cursor: pointer; }
+    .sg-prio button.on[data-p="0"] { background: #EEF2F6; border-color: #98A2B3; } .sg-prio button.on[data-p="1"] { background: #FEF0C7; border-color: #F79009; color: #B54708; } .sg-prio button.on[data-p="2"] { background: #FEE4E2; border-color: #F04438; color: #B42318; }
+    .sg-hilo-det { height: 560px; border: 1px solid var(--ev-line); border-radius: 20px; overflow: hidden; box-shadow: var(--ev-shadow); }
+
+    @@media (max-width: 900px) {
+        .sg-hoy { grid-template-columns: 1fr; }
+        .sg-split { grid-template-columns: 1fr; height: auto; } .sg-split .sg-main { height: 70vh; } .sg-split.hilo .sg-lado { display: none; } .sg-split:not(.hilo) .sg-main { display: none; }
+        .sg-tabs { position: static; } .sg-tabs button { padding: 9px 12px; font-size: 13px; }
+    }
 </style>
 }
 
 <div class="hp-cab ev-rise">
     <img src="/img/ava/robot-escritorio.jpg" alt="">
     <div>
-        <h2>Cargas de proveedores</h2>
-        <p>Lo que cargan las empresas proveedoras NO sale en la web hasta que tú lo apruebas. Abre una carga para ver sus productos y su
-           flyer, hablar con el proveedor, <b>aprobarla y activarla ya</b>, <b>programarla</b> (con la fecha que sugiere o la tuya),
-           <b>devolvérsela</b> para que cambie algo o <b>rechazarla</b>.</p>
+        <h2>Centro de cargas de proveedores</h2>
+        <p>Lo que cargan las empresas proveedoras NO sale en la web hasta que lo apruebas. Aquí ves <b>lo de hoy</b>, el <b>tablero</b> de cada carga,
+           los <b>mensajes</b> con los proveedores, sus <b>fichas</b> y los datos que piden crear. Abre una carga para revisarla, hablar con el
+           proveedor y dejar <b>notas internas</b> para tu equipo.</p>
     </div>
     <div class="acc">
         <a class="ev-btn ghost sm" href="/Herramientas/Index?tab=htCuentas"><i class="bi bi-briefcase"></i> Cuentas de proveedores</a>
         <button type="button" class="ev-btn ghost sm" id="hpRecargar"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
     </div>
 </div>
+
+<nav class="sg-tabs ev-rise" id="sgTabs" role="tablist" aria-label="Secciones">
+    <button type="button" data-tab="hoy" class="on"><i class="bi bi-sun"></i> Hoy</button>
+    <button type="button" data-tab="tablero"><i class="bi bi-kanban"></i> Tablero</button>
+    <button type="button" data-tab="lista"><i class="bi bi-list-task"></i> Todas las cargas</button>
+    <button type="button" data-tab="chats"><i class="bi bi-chat-dots"></i> Mensajes <b class="sg-n" id="sgNChats" hidden>0</b></button>
+    <button type="button" data-tab="prov"><i class="bi bi-people"></i> Proveedores</button>
+    <button type="button" data-tab="sol"><i class="bi bi-plus-square-dotted"></i> Datos pedidos <b class="sg-n" id="sgNSol" hidden>0</b></button>
+</nav>
+
+<section class="sg-sec on" id="tab-hoy">
+    <div class="sg-kpis" id="sgHoyKpis"><div class="ui-skel" style="height:90px"></div><div class="ui-skel" style="height:90px"></div><div class="ui-skel" style="height:90px"></div></div>
+    <div class="sg-hoy" id="sgHoy"></div>
+</section>
+
+<section class="sg-sec" id="tab-tablero">
+    <div class="sg-barra">
+        <input class="ui-input q" id="sgKQ" type="search" placeholder="Buscar por código, título o proveedor…" aria-label="Buscar en el tablero">
+        <select class="ui-input" id="sgKModulo" aria-label="Módulo"><option value="">Todos los módulos</option></select>
+        <select class="ui-input" id="sgKCuenta" aria-label="Proveedor"><option value="">Todos los proveedores</option></select>
+        <label class="sg-check"><input type="checkbox" id="sgKMias"> Solo las mías</label>
+    </div>
+    <div id="sgAvisoSeg" class="hp-aviso ama" hidden><i class="bi bi-info-circle"></i><span>El <b>responsable</b>, la <b>prioridad</b> y las <b>notas internas</b> todavía no están activados en este servidor (falta aplicar <code>Database/proveedor-seguimiento.sql</code>). Lo demás funciona igual.</span></div>
+    <div class="sg-kan" id="sgKan"><div class="ui-skel" style="height:300px"></div></div>
+</section>
+
+<section class="sg-sec" id="tab-lista">
 <div class="hp-kpis ev-rise" id="hpKpis" style="grid-template-columns:repeat(7,minmax(0,1fr))"></div>
-<details class="hp-sol ev-rise" id="hpSol">
-    <summary><span class="ico"><i class="bi bi-plus-square-dotted"></i></span>
-        <span>Solicitudes de datos <small>Hoteles, destinos, aeropuertos y habitaciones que los proveedores pidieron crear</small></span><span class="n cero" id="hpSolN">0</span></summary>
-    <div class="hp-sol-lista" id="hpSolLista"></div>
-</details>
 <div class="hp-fil">
     <input class="ui-input q" id="hpQ" type="search" placeholder="Buscar por código, título, proveedor o correo…" aria-label="Buscar cargas">
     <select class="ui-input" id="hpModulo" aria-label="Módulo"><option value="">Todos los módulos</option></select>
@@ -162,6 +349,45 @@
 <div id="hpProgramador" class="hp-aviso azul" hidden></div>
 <div class="hp-lista" id="hpLista"><div class="ui-skel" style="height:140px"></div><div class="ui-skel" style="height:140px"></div></div>
 <div class="hp-mas"><button type="button" class="ev-btn ghost sm" id="hpMas" hidden><i class="bi bi-chevron-down"></i> Ver más</button></div>
+</section>
+
+<section class="sg-sec" id="tab-chats">
+    <div class="sg-split" id="sgSplit">
+        <div class="sg-lado">
+            <div class="sg-lado-cab"><h3><i class="bi bi-chat-dots"></i> Conversaciones</h3>
+                <input class="ui-input" id="sgChatQ" type="search" placeholder="Buscar proveedor o código…" aria-label="Buscar conversaciones"></div>
+            <div class="sg-lado-lista" id="sgChatLista"></div>
+        </div>
+        <div class="sg-main" id="sgChatMain"><div class="sg-main-vacio"><i class="bi bi-chat-square-text"></i><b>Elige una conversación</b><p>Cada carga tiene su chat con el proveedor y sus notas internas.</p></div></div>
+    </div>
+</section>
+
+<section class="sg-sec" id="tab-prov">
+    <div class="sg-barra">
+        <input class="ui-input q" id="sgPQ" type="search" placeholder="Buscar proveedor, correo o teléfono…" aria-label="Buscar proveedores">
+        <select class="ui-input" id="sgPEstado" aria-label="Estado de la cuenta"><option value="">Todas las cuentas</option><option value="1">Activas</option><option value="0">Desactivadas</option><option value="p">Con cargas por revisar</option></select>
+    </div>
+    <div class="sg-provs" id="sgProvs"></div>
+</section>
+
+<section class="sg-sec" id="tab-sol">
+<details class="hp-sol ev-rise" id="hpSol" open>
+    <summary><span class="ico"><i class="bi bi-plus-square-dotted"></i></span>
+        <span>Solicitudes de datos <small>Hoteles, destinos, aeropuertos y habitaciones que los proveedores pidieron crear</small></span><span class="n cero" id="hpSolN">0</span></summary>
+    <div class="hp-sol-lista" id="hpSolLista"></div>
+</details>
+</section>
+
+<button type="button" class="sg-fab" id="sgFab" aria-label="Abrir mensajes"><i class="bi bi-chat-dots-fill"></i><b class="sg-n" id="sgFabN" hidden>0</b></button>
+<div class="sg-dock" id="sgDock" role="dialog" aria-label="Mensajes de los proveedores">
+    <div class="sg-dock-cab">
+        <button type="button" id="sgDockAtras" hidden aria-label="Volver"><i class="bi bi-arrow-left"></i></button>
+        <b id="sgDockTit"><i class="bi bi-chat-dots"></i> Mensajes</b>
+        <button type="button" id="sgDockGrande" aria-label="Agrandar" title="Agrandar"><i class="bi bi-arrows-angle-expand"></i></button>
+        <button type="button" id="sgDockCerrar" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="sg-dock-cuerpo" id="sgDockCuerpo"></div>
+</div>
 
 <aside class="ui-drawer" id="hpVer" aria-hidden="true" style="width:min(1100px, calc(100vw - 24px))">
     <div class="ui-dh">
@@ -320,16 +546,14 @@
             <div class="hp-det">
                 <div style="min-width:0">
                     <div class="hp-sec" style="margin-top:0"><i class="bi bi-box-seam"></i> Productos (${productos.length})</div>${tablaProd}${tablaPub}
-                    <div class="hp-sec"><i class="bi bi-chat-left-text"></i> Conversación con el proveedor</div>
-                    <div class="hp-chat" id="hpChat">${chat(comentarios)}</div>
-                    <div class="hp-escribir"><textarea class="ui-input" id="hpTexto" rows="2" maxlength="2000" placeholder="Escribe al proveedor (lo verá en su carga)…"></textarea>
-                        <button type="button" class="ev-btn" data-acc="comentar"><i class="bi bi-send"></i> Enviar</button></div>
+                    <div class="hp-sec"><i class="bi bi-chat-left-text"></i> Conversación y notas internas</div>
+                    <div class="sg-hilo-det" id="sgHiloDet"></div>
                     <details style="margin-top:16px"><summary style="cursor:pointer;font-weight:700;color:var(--ev-muted)">Ver los datos tal como los envió el proveedor (JSON)</summary>
                         <pre style="max-height:360px;overflow:auto;background:var(--ev-surface-2);border:1px solid var(--ev-line);border-radius:14px;padding:12px;font-size:12px">${esc(JSON.stringify(datos, null, 2))}</pre></details>
                 </div>
-                <div>${flyer}${acciones}</div>
+                <div><div class="sg-seg" id="sgSegCarga"></div>${flyer}${acciones}</div>
             </div>`;
-        const ch = $('#hpChat'); ch.scrollTop = ch.scrollHeight;
+        montarHilo($('#sgHiloDet'), c.id, { cab: false, alCambiar: cargarChats }); seguimientoCarga(c);
         // Si la imagen del flyer no carga (archivo borrado o movido), un aviso claro en vez del texto suelto
         document.querySelectorAll('[data-flyer-img]').forEach(im => im.addEventListener('error', () => {
             const a = im.closest('a'); if (a) a.outerHTML = '<div class="roto"><i class="bi bi-image-alt"></i><span>No se pudo mostrar el flyer.<br>Pulsa «Regenerar» para crearlo de nuevo.</span></div>';
@@ -387,7 +611,7 @@
         let r;
         try { r = await EV.api('/Herramientas/ProveedorSolicitudes'); } catch { return; }
         const pend = (r.conteo && r.conteo.PENDIENTE) || 0;
-        const n = $('#hpSolN'); n.textContent = pend; n.classList.toggle('cero', pend === 0);
+        const n = $('#hpSolN'); n.textContent = pend; n.classList.toggle('cero', pend === 0); const nb = $('#sgNSol'); nb.textContent = pend; nb.hidden = !pend;
         const caja = $('#hpSolLista');
         if (!r.items.length) { caja.innerHTML = '<div class="ui-empty"><i class="bi bi-inbox big"></i><p>Los proveedores todavía no pidieron crear ningún dato.</p></div>'; return; }
         if (pend > 0) $('#hpSol').open = true;
@@ -419,6 +643,256 @@
         } catch { /* EV.post ya mostró el aviso */ }
     });
     solicitudes();
+
+    // =====================================================================================================================
+    // Centro de cargas (20/11/2026): pestañas, Hoy, tablero, mensajes tipo WhatsApp (con notas internas), ventana flotante y fichas.
+    // =====================================================================================================================
+    const hm = d => d ? new Date(d).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+    const diaTxt = d => { const x = new Date(d), h = new Date(); const a = new Date(h.getFullYear(), h.getMonth(), h.getDate()), b = new Date(x.getFullYear(), x.getMonth(), x.getDate()); const n = Math.round((a - b) / 864e5);
+        return n === 0 ? 'Hoy' : n === 1 ? 'Ayer' : x.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }); };
+    const hace = d => { const m = Math.max(0, Math.round((Date.now() - new Date(d)) / 60000)); return m < 1 ? 'ahora' : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`; };
+    const corto = (t, n = 70) => { t = String(t || ''); return t.length > n ? t.slice(0, n) + '…' : t; };
+    const iniciales = n => (String(n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('') || '?').toUpperCase();
+    const av = (n, g) => { let h = 0; for (const c of String(n || '?')) h = (h * 31 + c.charCodeAt(0)) % 360; return `<span class="sg-av${g ? ' g' : ''}" style="--h:${h}">${esc(iniciales(n))}</span>`; };
+    const COL = { PENDIENTE: '#F79009', DEVUELTA: '#D444A0', RECHAZADA: '#F04438', PROGRAMADA: '#7A5AF8', ACTIVA: '#12B76A', BORRADOR: '#98A2B3' };
+    const pk = (o, k) => o?.[k] ?? o?.[k[0].toLowerCase() + k.slice(1)] ?? 0;
+    let gest = {}, equipo = [], yo = '', segActivo = true, chats = [], fichas = [], visto = {};
+    try { visto = JSON.parse(localStorage.getItem('hpVisto') || '{}'); } catch { }
+    const marcarVisto = (id, fecha) => { if (!fecha) return; visto[id] = fecha; try { localStorage.setItem('hpVisto', JSON.stringify(visto)); } catch { } };
+    const sinLeer = c => c.ultimo_Autor === 'PROVEEDOR' && (!visto[c.id] || new Date(c.ultima_Fecha) > new Date(visto[c.id]));
+
+    // ---------------- pestañas ----------------
+    const cargadas = {};
+    function pestana(t, empujar = true) {
+        document.querySelectorAll('#sgTabs [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+        document.querySelectorAll('.sg-sec').forEach(s => s.classList.toggle('on', s.id === 'tab-' + t));
+        if (empujar) { const u = new URL(location.href); u.searchParams.set('tab', t); history.replaceState(null, '', u); }
+        if (t === 'hoy') pintarHoy(); else if (t === 'tablero') tablero(); else if (t === 'chats') bandeja(); else if (t === 'prov') proveedores();
+        else if (t === 'lista' && !cargadas.lista) { cargadas.lista = 1; }
+    }
+    $('#sgTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) pestana(b.dataset.tab); });
+
+    // ---------------- Hoy ----------------
+    const EV_TXT = { CREADA: ['creó la carga', 'bi-plus-circle', ''], ENVIADA: ['la envió a revisión', 'bi-send', 'az'], PENDIENTE: ['la envió a revisión', 'bi-send', 'az'], RECHAZADA: ['la rechazó', 'bi-x-octagon', 'mal'], DEVUELTA: ['la devolvió', 'bi-arrow-return-left', 'ama'],
+        PROGRAMADA: ['la aprobó y programó', 'bi-calendar-check', 'vio'], ACTIVA: ['la aprobó', 'bi-check2-circle', 'ok'], EN_WEB: ['Publicada en la web', 'bi-globe2', 'ok'], MENSAJE_PROVEEDOR: ['escribió', 'bi-chat-left-text', 'az'], MENSAJE_EUROVIP: ['respondió', 'bi-reply', ''] };
+    async function pintarHoy() {
+        let r;
+        try { r = await EV.api('/Herramientas/ProveedorDia'); } catch { $('#sgHoyKpis').innerHTML = ''; $('#sgHoy').innerHTML = '<div class="sg-vacio sg-panel ancho">No se pudo cargar el seguimiento del día.</div>'; return; }
+        const n = r.numeros || {}, g = k => pk(n, k);
+        const k = (cls, ic, num, txt, tab) => `<${tab ? 'button type="button" data-ir="' + tab + '"' : 'div'} class="sg-kpi ${cls}"><i class="bi ${ic}"></i><b>${EV.fmt(num)}</b><small>${txt}</small></${tab ? 'button' : 'div'}>`;
+        $('#sgHoyKpis').innerHTML = k(g('PorRevisar') ? 'ama' : '', 'bi-hourglass-split', g('PorRevisar'), 'Por revisar', 'tablero') + k(g('Atrasadas') ? 'rojo' : '', 'bi-alarm', g('Atrasadas'), 'Esperando más de 24 h', 'tablero')
+            + k('azul', 'bi-send', g('EnviadasHoy'), 'Enviadas hoy') + k('verde', 'bi-check2-circle', g('RevisadasHoy'), 'Revisadas hoy') + k('verde', 'bi-globe2', g('ActivadasHoy'), 'Activadas hoy')
+            + k('azul', 'bi-calendar-check', g('SalenHoy'), 'Salen hoy') + k('', 'bi-calendar-plus', g('SalenManana'), 'Salen mañana')
+            + k(g('ConError') ? 'rojo' : '', 'bi-exclamation-octagon', g('ConError'), 'Con error al publicar') + k(r.datosPendientes ? 'ama' : '', 'bi-plus-square-dotted', r.datosPendientes, 'Datos pedidos', 'sol');
+        const fila = (c, cuando, cls) => `<button type="button" class="sg-fila" data-carga="${c.id}">${av(c.cuenta)}<div><b>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''}</b><small>${esc(c.cuenta || '')} · ${esc((modulos[c.modulo] || {}).nombre || c.modulo)}</small></div><span class="cuando ${cls || ''}">${cuando}</span></button>`;
+        const lista = (arr, f, vacio) => arr.length ? arr.map(f).join('') : `<div class="sg-vacio">${vacio}</div>`;
+        const mov = r.actividad.map(e => { const t = EV_TXT[e.tipo] || [e.tipo, 'bi-dot', '']; const quien = e.tipo === 'EN_WEB' ? '' : esc(e.quien || e.cuenta || '');
+            return `<li data-carga="${e.id_Carga}"><span class="pt ${t[2]}"><i class="bi ${t[1]}"></i></span><div><b>${quien} ${e.tipo === 'EN_WEB' ? t[0] : t[0]}</b><span>${esc(e.codigo)} · ${esc(e.cuenta || '')}${e.texto ? ' · “' + esc(corto(e.texto, 90)) + '”' : ''}</span></div><time>${diaTxt(e.fecha)}<br>${hm(e.fecha)}</time></li>`; }).join('');
+        $('#sgHoy').innerHTML = `
+            <div class="sg-panel"><h3><i class="bi bi-alarm"></i> Por revisar (las más antiguas primero)</h3>${lista(r.atrasadas, c => fila(c, 'hace ' + hace(c.fecha)), '¡Nada pendiente! Todo está revisado.')}</div>
+            <div class="sg-panel"><h3><i class="bi bi-chat-left-dots"></i> Mensajes sin responder</h3>${lista(r.sinResponder, c => fila(c, 'hace ' + hace(c.fecha), 'g'), 'Todos los mensajes están respondidos.')}</div>
+            <div class="sg-panel"><h3><i class="bi bi-calendar-check"></i> Salen pronto en la web</h3>${lista(r.salen, c => fila(c, fh(c.fecha), 'v'), 'No hay cargas programadas.')}</div>
+            <div class="sg-panel"><h3><i class="bi bi-activity"></i> Movimiento reciente</h3><ul class="sg-mov">${mov || '<div class="sg-vacio">Todavía no hay movimiento.</div>'}</ul></div>`;
+    }
+    document.addEventListener('click', e => {
+        const ir = e.target.closest('[data-ir]'); if (ir) { pestana(ir.dataset.ir); return; }
+        const c = e.target.closest('[data-carga]'); if (c && c.closest('#tab-hoy, #sgKan, #sgProvs')) abrir(+c.dataset.carga);
+    });
+
+    // ---------------- Tablero ----------------
+    const KCOLS = [['PENDIENTE', 'Por revisar', 'Esperan a Eurovip', 'bi-hourglass-split', ['PENDIENTE']], ['DEVUELTA', 'Con el proveedor', 'Devueltas o rechazadas', 'bi-arrow-return-left', ['DEVUELTA', 'RECHAZADA']],
+        ['PROGRAMADA', 'Programadas', 'Aprobadas, salen solas', 'bi-calendar-check', ['PROGRAMADA']], ['ACTIVA', 'En la web', 'Las más recientes', 'bi-globe2', ['ACTIVA']], ['BORRADOR', 'Borradores', 'Aún sin enviar', 'bi-pencil', ['BORRADOR']]];
+    let kdatos = null;
+    async function tablero(recargar) {
+        if (!kdatos || recargar) {
+            const pide = (e, tam) => EV.api('/Herramientas/ProveedoresCargas?' + new URLSearchParams({ estado: e, tam, pagina: 1 })).catch(() => ({ items: [], total: 0 }));
+            const [a, b, c, d, e, f, g] = await Promise.all([pide('PENDIENTE', 100), pide('DEVUELTA', 50), pide('RECHAZADA', 50), pide('PROGRAMADA', 100), pide('ACTIVA', 30), pide('BORRADOR', 30), EV.api('/Herramientas/ProveedorGestiones').catch(() => ({ items: [], equipo: [], activo: false }))]);
+            kdatos = { PENDIENTE: a, DEVUELTA: b, RECHAZADA: c, PROGRAMADA: d, ACTIVA: e, BORRADOR: f };
+            gest = Object.fromEntries((g.items || []).map(x => [x.id_Carga, x])); equipo = g.equipo || []; yo = g.yo || ''; segActivo = !!g.activo;
+            $('#sgAvisoSeg').hidden = segActivo;
+            if (!$('#sgKModulo').dataset.ok) { $('#sgKModulo').dataset.ok = 1; $('#sgKModulo').insertAdjacentHTML('beforeend', Object.values(modulos).map(m => `<option value="${esc(m.clave)}">${esc(m.nombre)}</option>`).join('')); }
+            if (!$('#sgKCuenta').dataset.ok) { $('#sgKCuenta').dataset.ok = 1; EV.api('/Herramientas/ProveedoresCuentas').then(r => $('#sgKCuenta').insertAdjacentHTML('beforeend', r.cuentas.map(x => `<option value="${x.id}">${esc(x.nombre)}</option>`).join(''))).catch(() => { }); }
+        }
+        pintarTablero();
+    }
+    function pintarTablero() {
+        const q = $('#sgKQ').value.trim().toLowerCase(), mod = $('#sgKModulo').value, cu = $('#sgKCuenta').value, mias = $('#sgKMias').checked;
+        const ok = c => (!mod || c.modulo === mod) && (!cu || String(c.id_Cuenta) === cu) && (!q || `${c.codigo} ${c.titulo || ''} ${c.cuenta || ''}`.toLowerCase().includes(q)) && (!mias || (gest[c.id] || {}).asignado_A === yo);
+        $('#sgKan').innerHTML = KCOLS.map(([clave, tit, sub, ic, estados]) => {
+            const todas = estados.flatMap(e => (kdatos[e] || {}).items || []).filter(ok);
+            const total = estados.reduce((s, e) => s + ((kdatos[e] || {}).total || 0), 0);
+            todas.sort((x, y) => ((gest[y.id] || {}).prioridad || 0) - ((gest[x.id] || {}).prioridad || 0) || new Date(x.fecha_Solicitud || x.creado_En) - new Date(y.fecha_Solicitud || y.creado_En));
+            const cards = todas.map((c, i) => {
+                const g = gest[c.id] || {}, m = modulos[c.modulo] || { nombre: c.modulo, icono: 'bi-box' }, chat = chats.find(x => x.id === c.id);
+                const desde = c.estado === 'PENDIENTE' ? `<span class="sg-chip ${Date.now() - new Date(c.fecha_Solicitud) > 864e5 ? 'rojo' : 'ama'}"><i class="bi bi-clock"></i> hace ${hace(c.fecha_Solicitud)}</span>`
+                    : c.estado === 'PROGRAMADA' ? `<span class="sg-chip vio"><i class="bi bi-calendar-check"></i> ${fh(c.activar_En)}</span>` : c.estado === 'ACTIVA' ? `<span class="sg-chip verde"><i class="bi bi-globe2"></i> ${fh(c.fecha_Activacion)}</span>`
+                    : `<span class="sg-chip"><i class="bi bi-clock-history"></i> ${hace(c.actualizado_En || c.creado_En)}</span>`;
+                return `<button type="button" class="sg-card u${g.prioridad || 0}" style="--c:${COL[c.estado]};animation-delay:${Math.min(i, 8) * 30}ms" data-carga="${c.id}">
+                    <div class="sg-card-top">${av(c.cuenta)}<div><b>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''}</b><small>${esc(c.cuenta || '')}</small></div>${chat && sinLeer(chat) ? '<span class="sg-punto" title="Mensaje sin leer"></span>' : ''}</div>
+                    <div class="sg-card-pies"><span class="sg-chip"><i class="bi ${esc(m.icono)}"></i> ${esc(m.nombre)}</span><span class="sg-chip">${EV.fmt(c.productos)} prod.</span>${c.precio_Desde ? `<span class="sg-chip">desde ${EV.dinero(c.precio_Desde, c.moneda)}</span>` : ''}
+                        ${c.estado === 'DEVUELTA' ? '<span class="sg-chip ama">Devuelta</span>' : c.estado === 'RECHAZADA' ? '<span class="sg-chip rojo">Rechazada</span>' : ''}${c.error ? '<span class="sg-chip rojo"><i class="bi bi-exclamation-octagon"></i> error</span>' : ''}</div>
+                    <div class="sg-card-pies">${desde}${g.prioridad === 2 ? '<span class="sg-chip rojo"><i class="bi bi-flag-fill"></i> Urgente</span>' : g.prioridad === 1 ? '<span class="sg-chip ama"><i class="bi bi-flag-fill"></i> Alta</span>' : ''}${g.asignado_A ? `<span class="sg-chip azul"><i class="bi bi-person-check"></i> ${esc(g.asignado_A)}</span>` : ''}</div></button>`;
+            }).join('');
+            return `<div class="sg-col" style="--c:${COL[estados[0]]}"><div class="sg-col-cab"><span class="ic"><i class="bi ${ic}"></i></span><b>${tit}<small>${sub}</small></b><span class="n">${total}</span></div>
+                <div class="sg-col-cuerpo">${cards || '<div class="sg-vacio">Nada aquí.</div>'}</div></div>`;
+        }).join('');
+    }
+    ['#sgKQ'].forEach(s => $(s).addEventListener('input', EV.debounce(pintarTablero, 200)));
+    ['#sgKModulo', '#sgKCuenta', '#sgKMias'].forEach(s => $(s).addEventListener('change', pintarTablero));
+
+    // ---------------- Hilo de mensajes (WhatsApp) ----------------
+    const RAPIDAS = ['Gracias, la estamos revisando.', 'Falta el precio de algunas fechas.', 'Por favor confirma las fechas de salida.', '¿Puedes enviar mejores fotos?', 'Aprobada, sale en la web en la fecha indicada.'];
+    async function montarHilo(el, id, op = {}) {
+        let st = { carga: null, coms: [], notas: [], activo: true, yo: '' }, modo = 'msg';
+        const cargar = async () => {
+            const [d, n] = await Promise.all([EV.api('/Herramientas/ProveedorCarga?id=' + id), EV.api('/Herramientas/ProveedorNotas?id=' + id).catch(() => ({ items: [], activo: false, yo: '' }))]);
+            st = { carga: d.carga, coms: d.comentarios || [], notas: n.items || [], activo: n.activo, yo: n.yo };
+            const ult = st.coms.filter(x => x.autor === 'PROVEEDOR').pop(); if (ult) marcarVisto(id, ult.fecha);
+            pintar();
+        };
+        const items = () => {
+            const c = st.carga, a = [];
+            a.push({ t: 'sis', f: c.creado_En, x: `Carga creada por ${c.cuenta || 'el proveedor'}` });
+            if (c.fecha_Solicitud) a.push({ t: 'sis', f: c.fecha_Solicitud, x: 'Enviada a revisión' });
+            if (c.fecha_Revision) a.push({ t: 'sis', f: c.fecha_Revision, x: `${UNO[c.estado] || c.estado} · revisó ${c.revisado_Por || 'Eurovip'}` });
+            if (c.fecha_Activacion) a.push({ t: 'sis', f: c.fecha_Activacion, x: 'Publicada en la web' });
+            st.coms.forEach(m => a.push({ t: 'msg', f: m.fecha, m }));
+            st.notas.forEach(n => a.push({ t: 'nota', f: n.creado_En, n }));
+            return a.sort((x, y) => new Date(x.f) - new Date(y.f));
+        };
+        const pintar = () => {
+            const c = st.carga, m = modulos[c.modulo] || { nombre: c.modulo, icono: 'bi-box' }; let ultimoDia = '';
+            const cuerpo = items().map(i => {
+                const dia = diaTxt(i.f), sep = dia !== ultimoDia ? `<div class="sg-dia">${dia}</div>` : ''; ultimoDia = dia;
+                if (i.t === 'sis') return `${sep}<div class="sg-sis">${esc(i.x)} · ${hm(i.f)}</div>`;
+                if (i.t === 'nota') { const n = i.n; return `${sep}<div class="sg-msg NOTA${n.fijada ? ' fij' : ''}"><div class="qn"><i class="bi bi-lock-fill"></i> Nota interna · ${esc(n.autor)}${n.fijada ? ' · <i class="bi bi-pin-angle-fill"></i>' : ''}</div>${esc(n.texto)}<div class="tm">${hm(n.creado_En)}</div>
+                    <div class="acc"><button type="button" data-fijar="${n.id}" data-v="${n.fijada ? 0 : 1}" title="${n.fijada ? 'Soltar' : 'Fijar'}"><i class="bi bi-pin-angle"></i></button>${n.autor === st.yo ? `<button type="button" data-borrar="${n.id}" title="Borrar"><i class="bi bi-trash"></i></button>` : ''}</div></div>`; }
+                const x = i.m, eur = x.autor === 'EUROVIP';
+                return `${sep}<div class="sg-msg ${esc(x.autor)}"><div class="qn">${esc(x.nombre)}${eur ? ' · Eurovip' : ''}</div>${esc(x.texto)}<div class="tm">${hm(x.fecha)}${eur ? ' <i class="bi bi-check2-all ok"></i>' : ''}</div></div>`;
+            }).join('');
+            const fij = st.notas.filter(n => n.fijada).pop();
+            el.innerHTML = `<div class="sg-hilo">
+                ${op.cab ? `<div class="sg-hilo-cab">${op.atras ? '<button type="button" class="ui-ibtn" data-atras aria-label="Volver"><i class="bi bi-arrow-left"></i></button>' : ''}${av(c.cuenta)}<div><b>${esc(c.cuenta || '')}</b><small>${esc(c.codigo)}${c.titulo ? ' · ' + esc(c.titulo) : ''} · ${esc(m.nombre)} · ${UNO[c.estado] || esc(c.estado)}</small></div>
+                    <button type="button" class="ev-btn ghost sm" data-abrir="${c.id}"><i class="bi bi-box-arrow-up-right"></i> Abrir carga</button></div>` : ''}
+                ${fij ? `<div class="sg-fijada"><i class="bi bi-pin-angle-fill"></i><span>${esc(fij.texto)}</span></div>` : ''}
+                <div class="sg-msgs" data-msgs>${cuerpo}</div>
+                <div class="sg-comp"><div class="sg-modo"><button type="button" data-modo="msg" class="${modo === 'msg' ? 'on' : ''}"><i class="bi bi-chat-text"></i> Responder al proveedor</button><button type="button" data-modo="nota" class="${modo === 'nota' ? 'on' : ''}"><i class="bi bi-lock"></i> Nota interna</button></div>
+                    ${modo === 'msg' ? `<div class="sg-rapidas">${RAPIDAS.map(r => `<button type="button" data-rapida="${esc(r)}">${esc(corto(r, 38))}</button>`).join('')}</div>` : '<div class="sg-sis" style="align-self:flex-start;margin:0">🔒 Solo la ve el equipo de Eurovip. El proveedor nunca la ve.</div>'}
+                    <div class="sg-caja ${modo === 'nota' ? 'nota' : ''}"><textarea rows="1" data-texto maxlength="2000" placeholder="${modo === 'msg' ? 'Escribe al proveedor… (Enter envía, Shift+Enter nueva línea)' : 'Escribe una nota para tu equipo…'}"></textarea>
+                    <button type="button" class="sg-enviar" data-enviar aria-label="Enviar"><i class="bi bi-send-fill"></i></button></div></div></div>`;
+            const ms = el.querySelector('[data-msgs]'); ms.scrollTop = ms.scrollHeight;
+        };
+        const enviar = async () => {
+            const ta = el.querySelector('[data-texto]'), texto = ta.value.trim(); if (!texto) { ta.focus(); return; }
+            try {
+                if (modo === 'msg') { const r = await EV.post('/Herramientas/ProveedorCargaComentar', { id, texto }); st.coms = r.comentarios; }
+                else { const r = await EV.post('/Herramientas/ProveedorNotaCrear', { id, texto }); st.notas = r.items; }
+            } catch { return; }
+            pintar(); el.querySelector('[data-texto]').focus(); op.alCambiar?.();
+        };
+        el.onclick = async e => {
+            const b = e.target.closest('button, a'); if (!b) return;
+            if (b.dataset.modo) { modo = b.dataset.modo; const t = el.querySelector('[data-texto]').value; pintar(); el.querySelector('[data-texto]').value = t; }
+            else if (b.dataset.rapida) { const ta = el.querySelector('[data-texto]'); ta.value = b.dataset.rapida; ta.focus(); }
+            else if (b.dataset.enviar !== undefined) enviar();
+            else if (b.dataset.abrir) { op.abrir ? op.abrir(+b.dataset.abrir) : abrir(+b.dataset.abrir); }
+            else if (b.dataset.atras !== undefined) op.atras?.();
+            else if (b.dataset.fijar) { try { const r = await EV.post(`/Herramientas/ProveedorNotaFijar?id=${b.dataset.fijar}&carga=${id}&fijada=${b.dataset.v === '1'}`, {}); st.notas = r.items; pintar(); } catch { } }
+            else if (b.dataset.borrar) { if (await EV.confirmar({ titulo: '¿Borrar la nota?', si: 'Sí, borrar', peligro: true, icono: 'trash', texto: 'Se borra para todo el equipo.' })) try { const r = await EV.post(`/Herramientas/ProveedorNotaBorrar?id=${b.dataset.borrar}&carga=${id}`, {}); st.notas = r.items; pintar(); } catch { } }
+        };
+        el.onkeydown = e => { if (e.target.matches('[data-texto]') && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } };
+        el.innerHTML = '<div class="sg-main-vacio"><i class="bi bi-hourglass-split"></i></div>';
+        try { await cargar(); } catch (er) { el.innerHTML = `<div class="sg-main-vacio"><i class="bi bi-exclamation-triangle"></i><p>${esc(er.message || 'No se pudo abrir la conversación.')}</p></div>`; }
+    }
+
+    // ---------------- bandeja de mensajes ----------------
+    const listaChats = (q, activo) => {
+        q = (q || '').trim().toLowerCase();
+        const l = chats.filter(c => !q || `${c.codigo} ${c.titulo || ''} ${c.cuenta || ''} ${c.ultimo_Texto || ''}`.toLowerCase().includes(q));
+        return l.length ? l.map(c => { const nu = sinLeer(c), m = modulos[c.modulo] || { nombre: c.modulo };
+            return `<button type="button" class="sg-chat ${nu ? 'nuevo' : ''} ${activo === c.id ? 'on' : ''}" data-chat="${c.id}">${av(c.cuenta, 1)}<div><div class="l1"><b>${esc(c.cuenta || '')}</b><time>${diaTxt(c.ultima_Fecha) === 'Hoy' ? hm(c.ultima_Fecha) : diaTxt(c.ultima_Fecha)}</time></div>
+                <div class="l2"><span>${c.ultimo_Autor === 'EUROVIP' ? '<i class="bi bi-check2-all" style="color:#53BDEB"></i> ' : ''}${esc(corto(c.ultimo_Texto, 60))}</span>${nu ? '<b class="sg-badge">●</b>' : ''}</div>
+                <div class="l3">${esc(c.codigo)} · ${esc(m.nombre)} · ${UNO[c.estado] || esc(c.estado)}</div></div></button>`; }).join('')
+            : '<div class="sg-vacio" style="margin:14px">Todavía no hay conversaciones. Escribe desde una carga y aparecerá aquí.</div>';
+    };
+    async function cargarChats() {
+        try { const r = await EV.api('/Herramientas/ProveedorChats'); chats = r.items || []; yo = r.yo || yo; } catch { }
+        const n = chats.filter(sinLeer).length;
+        [['#sgNChats', n], ['#sgFabN', n]].forEach(([s, v]) => { const x = $(s); x.textContent = v; x.hidden = !v; });
+        $('#sgChatLista').innerHTML = listaChats($('#sgChatQ').value, chatActivo);
+        if (dockAbierto && !dockHilo) $('#sgDockLista') && ($('#sgDockLista').innerHTML = listaChats($('#sgDockQ')?.value));
+    }
+    let chatActivo = null;
+    async function bandeja() { await cargarChats(); }
+    function abrirChat(id) {
+        chatActivo = id; $('#sgSplit').classList.add('hilo'); $('#sgChatLista').innerHTML = listaChats($('#sgChatQ').value, id);
+        montarHilo($('#sgChatMain'), id, { cab: true, atras: () => { $('#sgSplit').classList.remove('hilo'); }, alCambiar: cargarChats, abrir: n => abrir(n) }).then(cargarChats);
+    }
+    $('#sgChatLista').addEventListener('click', e => { const b = e.target.closest('[data-chat]'); if (b) abrirChat(+b.dataset.chat); });
+    $('#sgChatQ').addEventListener('input', EV.debounce(() => { $('#sgChatLista').innerHTML = listaChats($('#sgChatQ').value, chatActivo); }, 150));
+
+    // ---------------- ventana flotante ----------------
+    let dockAbierto = false, dockHilo = null;
+    function dockLista() {
+        dockHilo = null; $('#sgDockAtras').hidden = true; $('#sgDockTit').innerHTML = '<i class="bi bi-chat-dots"></i> Mensajes';
+        $('#sgDockCuerpo').innerHTML = `<div class="sg-lado"><div class="sg-lado-cab"><input class="ui-input" id="sgDockQ" type="search" placeholder="Buscar proveedor o código…" aria-label="Buscar"></div><div class="sg-lado-lista" id="sgDockLista">${listaChats('')}</div></div>`;
+        $('#sgDockQ').addEventListener('input', EV.debounce(() => { $('#sgDockLista').innerHTML = listaChats($('#sgDockQ').value); }, 150));
+    }
+    $('#sgFab').addEventListener('click', async () => { dockAbierto = !dockAbierto; $('#sgDock').classList.toggle('on', dockAbierto); if (dockAbierto) { dockLista(); await cargarChats(); $('#sgDockLista').innerHTML = listaChats(''); } });
+    $('#sgDockCerrar').addEventListener('click', () => { dockAbierto = false; $('#sgDock').classList.remove('on'); });
+    $('#sgDockGrande').addEventListener('click', () => $('#sgDock').classList.toggle('grande'));
+    $('#sgDockAtras').addEventListener('click', () => { dockLista(); });
+    $('#sgDockCuerpo').addEventListener('click', e => { const b = e.target.closest('[data-chat]'); if (!b) return; const id = +b.dataset.chat; dockHilo = id; $('#sgDockAtras').hidden = false; const c = chats.find(x => x.id === id);
+        $('#sgDockTit').textContent = c ? c.cuenta : 'Conversación'; const cont = $('#sgDockCuerpo'); cont.innerHTML = '<div class="sg-main" style="flex:1;min-height:0"></div>';
+        montarHilo(cont.firstChild, id, { cab: false, alCambiar: cargarChats }).then(cargarChats); });
+
+    // ---------------- Proveedores (fichas) ----------------
+    async function proveedores() {
+        if (!fichas.length) { try { fichas = (await EV.api('/Herramientas/ProveedorFichas')).items; } catch { $('#sgProvs').innerHTML = '<div class="sg-vacio">No se pudo cargar.</div>'; return; } }
+        pintarProv();
+    }
+    function pintarProv() {
+        const q = $('#sgPQ').value.trim().toLowerCase(), f = $('#sgPEstado').value;
+        const l = fichas.filter(p => (!q || `${p.nombre} ${p.email || ''} ${p.telefono || ''} ${p.proveedor || ''}`.toLowerCase().includes(q)) && (!f || (f === 'p' ? p.pendiente > 0 : String(p.activo ? 1 : 0) === f)));
+        $('#sgProvs').innerHTML = l.length ? l.map((p, i) => {
+            const barra = ['borrador', 'pendiente', 'devuelta', 'rechazada', 'programada', 'activa'].map(k => `<span style="flex:${p[k]};background:${COL[k.toUpperCase()]}" title="${k}: ${p[k]}"></span>`).join('');
+            const tel = (p.telefono || '').replace(/[^\d+]/g, '');
+            return `<div class="sg-prov ${p.activo ? '' : 'off'}" style="animation-delay:${Math.min(i, 10) * 30}ms">
+                <div class="sg-prov-cab">${av(p.nombre, 1)}<div><b>${esc(p.nombre)}</b><small>${esc(p.proveedor || p.id_Proveedor || '')}</small></div><span class="sg-chip ${p.activo ? 'verde' : 'rojo'}">${p.activo ? 'Activa' : 'Desactivada'}</span></div>
+                <div class="sg-contacto">${p.email ? `<a href="mailto:${esc(p.email)}"><i class="bi bi-envelope"></i> ${esc(p.email)}</a>` : ''}${tel ? `<a href="https://wa.me/${tel.replace('+', '')}" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i> ${esc(p.telefono)}</a>` : ''}
+                    <span><i class="bi bi-calendar3"></i> Cuenta desde ${fh(p.fecha_Alta).split(',')[0]}</span><span><i class="bi bi-clock-history"></i> Última actividad: ${p.ultima_Actividad ? 'hace ' + hace(p.ultima_Actividad) : '—'}</span></div>
+                <div class="sg-prov-pie">${String(p.modulos || '').split(',').filter(Boolean).map(m => `<span class="sg-chip"><i class="bi ${esc((modulos[m] || {}).icono || 'bi-box')}"></i> ${esc((modulos[m] || {}).nombre || m)}</span>`).join('') || '<span class="sg-chip rojo">Sin módulos</span>'}</div>
+                ${p.cargas ? `<div class="sg-estbar">${barra}</div>` : ''}
+                <div class="sg-nums"><div><b>${p.cargas}</b><small>Cargas</small></div><div><b>${p.pendiente}</b><small>Por revisar</small></div><div><b>${p.activa}</b><small>En la web</small></div>
+                    <div><b>${p.devuelta + p.rechazada}</b><small>Con el proveedor</small></div><div><b>${EV.fmt(p.productos)}</b><small>Productos</small></div><div><b>${p.mensajes}</b><small>Mensajes</small></div></div>
+                <div class="sg-prov-pie"><button type="button" class="ev-btn sm" data-ver-cargas="${p.id}"><i class="bi bi-collection"></i> Ver sus cargas</button><a class="ev-btn ghost sm" href="/Herramientas/Index?tab=htCuentas"><i class="bi bi-pencil"></i> Editar cuenta</a></div></div>`;
+        }).join('') : '<div class="sg-vacio">No hay proveedores con ese filtro.</div>';
+    }
+    $('#sgPQ').addEventListener('input', EV.debounce(pintarProv, 200)); $('#sgPEstado').addEventListener('change', pintarProv);
+    $('#sgProvs').addEventListener('click', e => { const b = e.target.closest('[data-ver-cargas]'); if (!b) return; $('#hpCuenta').value = b.dataset.verCargas; filtro = ''; pintarConteo(conteo); pestana('lista'); listar(true); });
+
+    // ---------------- responsable y prioridad dentro de la carga ----------------
+    async function seguimientoCarga(c) {
+        const caja = document.getElementById('sgSegCarga'); if (!caja) return;
+        let g = {}, lista = equipo;
+        try { const r = await EV.api('/Herramientas/ProveedorGestiones'); gest = Object.fromEntries((r.items || []).map(x => [x.id_Carga, x])); equipo = r.equipo || []; yo = r.yo || yo; segActivo = !!r.activo; g = gest[c.id] || {}; lista = equipo; } catch { }
+        const nombres = [...new Set([...lista, g.asignado_A].filter(Boolean))];
+        caja.innerHTML = `<h4><i class="bi bi-person-workspace"></i> Seguimiento interno</h4>
+            ${segActivo ? '' : '<div class="hp-aviso ama" style="font-size:12.5px">Todavía no está activado en este servidor.</div>'}
+            <div><label for="sgResp">Responsable</label><div style="display:flex;gap:6px"><select class="ui-input" id="sgResp"><option value="">Sin asignar</option>${nombres.map(n => `<option ${n === g.asignado_A ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+                <button type="button" class="ev-btn ghost sm" id="sgMia">Asignármela</button></div></div>
+            <div><label>Prioridad</label><div class="sg-prio">${[['0', 'Normal'], ['1', 'Alta'], ['2', 'Urgente']].map(([p, t]) => `<button type="button" data-p="${p}" class="${String(g.prioridad || 0) === p ? 'on' : ''}">${t}</button>`).join('')}</div></div>`;
+        const guardar = async (asignado, prioridad) => { try { await EV.post('/Herramientas/ProveedorGestionGuardar', { id: c.id, asignado, prioridad }); g = { ...g, asignado_A: asignado || null, prioridad }; gest[c.id] = { id_Carga: c.id, ...g }; EV.toast('Guardado.'); if (kdatos) pintarTablero(); } catch { } };
+        $('#sgResp').addEventListener('change', e => guardar(e.target.value, g.prioridad || 0));
+        $('#sgMia').addEventListener('click', () => { if (!$('#sgResp').querySelector(`option[value="${CSS.escape(yo)}"]`) && ![...$('#sgResp').options].some(o => o.value === yo)) $('#sgResp').insertAdjacentHTML('beforeend', `<option>${esc(yo)}</option>`); $('#sgResp').value = yo; guardar(yo, g.prioridad || 0); });
+        caja.querySelector('.sg-prio').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; caja.querySelectorAll('.sg-prio button').forEach(x => x.classList.toggle('on', x === b)); guardar($('#sgResp').value, +b.dataset.p); });
+    }
+
+    // ---------------- arranque ----------------
+    $('#hpRecargar').addEventListener('click', () => { kdatos = null; fichas = []; const t = document.querySelector('#sgTabs .on')?.dataset.tab || 'hoy'; pestana(t, false); cargarChats(); solicitudes(); listar(true); });
+    setInterval(() => { if (!document.hidden) cargarChats(); }, 60000);
+    cargarChats();
+    resumen.then(() => pestana(params.get('tab') && document.getElementById('tab-' + params.get('tab')) ? params.get('tab') : 'hoy', false));
 
     // Abrir directo (campana: /Herramientas/CargasProveedores?carga=12)
     const carga = +params.get('carga');

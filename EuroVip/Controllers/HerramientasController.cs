@@ -368,6 +368,70 @@ namespace EuroVip.Controllers
             return Json(new { ok = true, mensaje = "Rechazada: el proveedor verá tu motivo." });
         }
 
+        // ---------- Seguimiento interno de las cargas (20/11/2026): día, chats, fichas, notas internas y responsable ----------
+        private ProveedoresSeguimiento Seg => HttpContext.RequestServices.GetRequiredService<ProveedoresSeguimiento>();
+        private string Yo => User.Identity?.Name ?? "desconocido";
+
+        /// <summary>Seguimiento del día: números de hoy, atrasadas, lo que sale pronto, mensajes sin responder y el movimiento reciente.</summary>
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorDia() => Json(await Seg.DiaAsync());
+
+        /// <summary>Bandeja de chats: una conversación por carga, la última primero.</summary>
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorChats() => Json(new { items = await Seg.ChatsAsync(), yo = Yo });
+
+        /// <summary>Toda la información de cada proveedor: contacto, módulos y cuántas cargas tiene en cada estado.</summary>
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorFichas() => Json(new { items = await Seg.FichasAsync() });
+
+        /// <summary>Responsable y prioridad de las cargas, y quiénes del equipo se pueden elegir.</summary>
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorGestiones()
+        {
+            var g = await Seg.GestionesAsync();
+            var equipo = g.Select(x => x.Asignado_A).Append(Yo).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x).ToList();
+            return Json(new { items = g, equipo, yo = Yo, activo = await Seg.DisponibleAsync() });
+        }
+
+        public sealed class GestionDto { public int Id { get; set; } public string? Asignado { get; set; } public int Prioridad { get; set; } }
+
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorGestionGuardar([FromBody] GestionDto dto)
+        {
+            if (await Seg.GuardarGestionAsync(dto.Id, dto.Asignado, dto.Prioridad, Yo) is string error) return BadRequest(new { mensaje = error });
+            await AuditarCarga("Proveedor_Carga_Gestion", dto.Id, new { dto.Asignado, dto.Prioridad });
+            return Json(new { ok = true, mensaje = "Guardado." });
+        }
+
+        [HttpGet, AccesoEstricto, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorNotas(int id) => Json(new { items = await Seg.NotasAsync(id), yo = Yo, activo = await Seg.DisponibleAsync() });
+
+        public sealed class NotaDto { public int Id { get; set; } public string? Texto { get; set; } public bool Fijada { get; set; } }
+
+        /// <summary>Nota INTERNA de la carga: solo la ve el equipo de Eurovip, nunca el proveedor. Id = la carga.</summary>
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorNotaCrear([FromBody] NotaDto dto)
+        {
+            if (await Prov.CargaAsync(dto.Id) is null) return NotFound(new { mensaje = "Esa carga ya no existe." });
+            if (await Seg.NotaAsync(dto.Id, Yo, dto.Texto) is string error) return BadRequest(new { mensaje = error });
+            return Json(new { ok = true, items = await Seg.NotasAsync(dto.Id) });
+        }
+
+        /// <summary>Fijar o soltar una nota (Id = la nota). Devuelve las notas de la carga (CargaId).</summary>
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorNotaFijar(int id, int carga, bool fijada)
+        {
+            if (await Seg.FijarNotaAsync(id, fijada) is string error) return BadRequest(new { mensaje = error });
+            return Json(new { ok = true, items = await Seg.NotasAsync(carga) });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken, ModuloAccion(Modulos.CargasProveedores)]
+        public async Task<IActionResult> ProveedorNotaBorrar(int id, int carga)
+        {
+            if (await Seg.BorrarNotaAsync(id, Yo) is string error) return BadRequest(new { mensaje = error });
+            return Json(new { ok = true, items = await Seg.NotasAsync(carga) });
+        }
+
         public sealed class ComentarioRevisionDto
         {
             public int Id { get; set; }
