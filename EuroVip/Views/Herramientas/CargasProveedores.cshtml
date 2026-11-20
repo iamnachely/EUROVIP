@@ -36,6 +36,86 @@
     .hp-escribir { display: flex; gap: 8px; align-items: flex-end; margin-top: 10px; }
     .hp-escribir textarea { flex: 1; min-height: 44px; }
     .hp-sec { margin: 18px 0 8px; font-weight: 800; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+
+    /* ===== Detalle de la carga (20/11/2026: más claro y más bonito) ===== */
+    #hpVer { background: #F6FBFA; }
+    #hpVer .ui-dh { background: linear-gradient(120deg, #E6FFFA 0%, #D3F8F2 55%, #C4F3EC 100%); border-bottom: 1px solid #CDEBE6; padding: 22px 32px 20px; align-items: flex-start; gap: 16px; }
+    #hpVer .ui-dh .ev-module-icon { width: 58px !important; height: 58px !important; border-radius: 18px; font-size: 26px; box-shadow: 0 10px 24px -10px rgba(14,143,134,.7); background: var(--ev-ink); color: var(--ev-aqua); }
+    #hpVer .ui-dh h2 { font-size: 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    #hpVer .ui-dh h2 .hp-est { font-size: 11.5px; padding: 5px 12px; box-shadow: 0 2px 6px rgba(11,18,21,.08); }
+    .hp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .hp-chips span { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.75); border: 1px solid rgba(14,143,134,.2); border-radius: 99px; padding: 4px 11px; font-size: 12.5px; font-weight: 700; color: #20413D; }
+    .hp-chips i { color: var(--ev-deep); }
+    #hpVer .ui-dh .x { background: #fff; }
+    #hpVer .ui-db { padding: 22px 32px 34px; }
+
+    /* Avisos */
+    #hpVer .hp-aviso { align-items: flex-start; border: 1px solid transparent; border-radius: 16px; padding: 13px 16px; box-shadow: 0 1px 2px rgba(11,18,21,.04); }
+    #hpVer .hp-aviso > i { font-size: 18px; margin-top: 1px; }
+    #hpVer .hp-aviso.rojo { border-color: #FDA29B; } #hpVer .hp-aviso.ama { border-color: #FDE68A; } #hpVer .hp-aviso.azul { border-color: #C7D2FE; } #hpVer .hp-aviso.verde { border-color: #ABEFC6; }
+
+    /* Línea de tiempo: 4 pasos con su punto */
+    #hpVer .hp-linea { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 0 0 22px; background: #fff; border: 1px solid var(--ev-line); border-radius: 20px; padding: 16px 8px 14px; box-shadow: var(--ev-shadow); position: relative; }
+    #hpVer .hp-linea div { border: 0; padding: 28px 14px 0; position: relative; min-width: 0; font-size: 12px; line-height: 1.35; color: var(--ev-muted); }
+    #hpVer .hp-linea div::before { content: ""; position: absolute; top: 2px; left: 14px; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 3px solid #D3E3E0; z-index: 1; }
+    #hpVer .hp-linea div::after { content: ""; position: absolute; top: 8px; left: 30px; right: -14px; height: 3px; background: #E2EFED; }
+    #hpVer .hp-linea div:last-child::after { display: none; }
+    #hpVer .hp-linea div.ok { color: var(--ev-text); }
+    #hpVer .hp-linea div.ok::before { background: var(--ev-teal); border-color: #fff; box-shadow: 0 0 0 3px rgba(43,212,196,.35); }
+    #hpVer .hp-linea div.ok::after { background: linear-gradient(90deg, var(--ev-teal), #CFF5F0); }
+    #hpVer .hp-linea b { font-size: 13px; color: var(--ev-text); margin-bottom: 1px; }
+
+    /* Columnas y secciones como tarjetas */
+    #hpVer .hp-det { grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; }
+    #hpVer .hp-det > div:last-child { position: sticky; top: 0; display: grid; gap: 14px; align-content: start; }
+    #hpVer .hp-sec { margin: 22px 0 10px; font-size: 15.5px; letter-spacing: -.2px; }
+    #hpVer .hp-sec > i { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--ev-ink); color: var(--ev-aqua); font-size: 14px; }
+    #hpVer .hp-sec[style*="margin-top:0"] { margin-top: 0 !important; }
+
+    /* Tabla de productos */
+    #hpVer .ui-table-wrap { background: #fff; border: 1px solid var(--ev-line); border-radius: 18px; overflow: hidden; box-shadow: var(--ev-shadow); }
+    #hpVer .ui-table thead th { background: #EEF8F6; color: #3C5B57; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; padding: 11px 14px; }
+    #hpVer .ui-table tbody td { padding: 13px 14px; border-top: 1px solid #EDF4F3; font-size: 13.5px; }
+    #hpVer .ui-table tbody tr:hover td { background: #F5FCFB; }
+    #hpVer .ui-table tbody td:first-child { color: var(--ev-muted); font-weight: 800; width: 44px; }
+    #hpVer .ui-table td.num { font-weight: 800; white-space: nowrap; }
+
+    /* Conversación */
+    #hpVer .hp-chat { background: #fff; border: 1px solid var(--ev-line); border-radius: 20px; padding: 16px; gap: 12px; box-shadow: var(--ev-shadow); min-height: 96px; }
+    #hpVer .hp-msg { box-shadow: 0 2px 8px -4px rgba(11,18,21,.25); }
+    #hpVer .hp-msg.EUROVIP { background: linear-gradient(135deg, #0B1215, #1B262B); }
+    #hpVer .hp-escribir { background: #fff; border: 1px solid var(--ev-line); border-radius: 18px; padding: 10px; box-shadow: var(--ev-shadow); align-items: stretch; }
+    #hpVer .hp-escribir textarea { border: 0; background: #F5FBFA; border-radius: 12px; resize: vertical; }
+    #hpVer .hp-escribir .ev-btn { align-self: flex-end; min-height: 44px; }
+    #hpVer details > summary { outline: none; }
+
+    /* Flyer */
+    #hpVer .hp-flyer { background: #fff; border-radius: 22px; box-shadow: var(--ev-shadow); padding: 12px 12px 4px; }
+    #hpVer .hp-flyer .tit { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; padding: 2px 4px 10px; }
+    #hpVer .hp-flyer .tit i { color: var(--ev-deep); }
+    #hpVer .hp-flyer img { border-radius: 14px; box-shadow: 0 8px 24px -12px rgba(11,18,21,.45); background: #EEF8F6; min-height: 120px; }
+    #hpVer .hp-flyer .acc { padding: 12px 0 8px; }
+    #hpVer .hp-flyer .roto { display: grid; place-items: center; gap: 6px; text-align: center; padding: 26px 14px; border-radius: 14px; background: #F5FBFA; border: 1.5px dashed #BFE0DB; color: var(--ev-muted); font-weight: 700; font-size: 13px; }
+    #hpVer .hp-flyer .roto i { font-size: 30px; color: var(--ev-deep); }
+
+    /* Acciones de revisión */
+    #hpVer .hp-sug { border-radius: 16px; }
+    #hpVer .hp-accion { border-radius: 18px; box-shadow: var(--ev-shadow); border: 1px solid var(--ev-line); transition: box-shadow .2s, transform .2s; }
+    #hpVer .hp-accion:hover { box-shadow: 0 14px 30px -14px rgba(14,143,134,.4); }
+    #hpVer .hp-accion > summary { padding: 14px 16px; font-size: 14.5px; }
+    #hpVer .hp-accion > summary i:first-child { width: 38px; height: 38px; border-radius: 12px; font-size: 18px; flex: none; }
+    #hpVer .hp-accion.verde { border-color: #A6E9C2; }
+    #hpVer .hp-accion.verde[open] { background: linear-gradient(180deg, #F3FFF8, #fff); }
+    #hpVer .hp-accion .cuerpo .ev-btn { min-height: 46px; font-size: 14.5px; border-radius: 14px; }
+    #hpVer .hp-accion.verde .cuerpo .ev-btn { background: linear-gradient(135deg, #0B1215, #1B262B); color: #fff; box-shadow: 0 10px 22px -10px rgba(11,18,21,.6); }
+    #hpVer pre { border-radius: 14px; }
+
+    @@media (max-width: 1100px) { #hpVer .hp-det { grid-template-columns: 1fr; } #hpVer .hp-det > div:last-child { position: static; } }
+    @@media (max-width: 640px) {
+        #hpVer .ui-dh { padding: 18px 16px 16px; } #hpVer .ui-db { padding: 16px 14px 28px; }
+        #hpVer .hp-linea { grid-template-columns: 1fr 1fr; row-gap: 14px; } #hpVer .hp-linea div::after { display: none; }
+        #hpVer .ui-dh h2 { font-size: 20px; }
+    }
 </style>
 }
 
@@ -171,7 +251,7 @@
         const m = modulos[c.modulo] || { nombre: c.modulo, icono: 'bi-box' };
         $('#hpVerIco').className = 'bi ' + m.icono;
         $('#hpVerTitulo').innerHTML = `Carga ${esc(c.codigo)} <span class="hp-est ${esc(c.estado)}" style="vertical-align:middle">${UNO[c.estado] || esc(c.estado)}</span>`;
-        $('#hpVerSub').textContent = `${m.nombre} · ${c.cuenta || ''} (${c.email || ''}) · proveedor ${c.proveedor || c.id_Proveedor || ''}${c.titulo ? ' · ' + c.titulo : ''}`;
+        $('#hpVerSub').innerHTML = `<div class="hp-chips"><span><i class="bi ${esc(m.icono)}"></i> ${esc(m.nombre)}</span><span><i class="bi bi-person-badge"></i> ${esc(c.cuenta || '')}</span>${c.email ? `<span><i class="bi bi-envelope"></i> ${esc(c.email)}</span>` : ''}${(c.proveedor || c.id_Proveedor) ? `<span><i class="bi bi-building"></i> Proveedor ${esc(c.proveedor || c.id_Proveedor)}</span>` : ''}${c.titulo ? `<span><i class="bi bi-tag"></i> ${esc(c.titulo)}</span>` : ''}</div>`;
         const avisos = [];
         if (c.error) avisos.push(`<div class="hp-aviso rojo"><i class="bi bi-exclamation-octagon"></i><span><b>No se pudo publicar:</b> ${esc(c.error)}</span></div>`);
         if (c.estado === 'RECHAZADA') avisos.push(`<div class="hp-aviso ama"><i class="bi bi-x-octagon"></i><span><b>Rechazada</b> por ${esc(c.revisado_Por || '')} el ${fh(c.fecha_Revision)}. <b>Motivo:</b> ${esc(c.motivo || '')}${c.instrucciones ? ` · <b>Qué hacer:</b> ${esc(c.instrucciones)}` : ''}</span></div>`);
@@ -186,7 +266,7 @@
         const tablaPub = pub.length ? `<div class="hp-sec"><i class="bi bi-globe2"></i> Publicado en la web (${pub.length})</div><div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Tipo</th><th>N.º</th><th>Nombre</th><th class="num">Precio</th><th>A la venta</th></tr></thead><tbody>${
             pub.map(x => `<tr><td>${TABLAS[x.tabla] || esc(x.tabla)}</td><td>${x.id_Registro}</td><td>${esc(x.nombre || '')}</td><td class="num">${x.precio != null ? EV.dinero(x.precio, x.moneda) : '—'}</td><td>${x.activo === true ? '<i class="bi bi-check-circle-fill" style="color:#16A34A"></i> Sí' : x.activo === false ? 'Desactivado' : 'Ya no existe'}</td></tr>`).join('')
         }</tbody></table></div>` : '';
-        const flyer = c.flyer ? `<div class="hp-flyer"><a href="${esc(c.flyer)}" target="_blank" rel="noopener"><img src="${esc(c.flyer)}?v=${encodeURIComponent(c.actualizado_En || '')}" alt="Flyer de la carga ${esc(c.codigo)}"></a>
+        const flyer = c.flyer ? `<div class="hp-flyer"><div class="tit"><i class="bi bi-image"></i> Flyer de la carga</div><a href="${esc(c.flyer)}" target="_blank" rel="noopener"><img src="${esc(c.flyer)}?v=${encodeURIComponent(c.actualizado_En || '')}" alt="" data-flyer-img></a>
             <div class="acc"><a class="ev-btn ghost sm" href="${esc(c.flyer)}" target="_blank" rel="noopener"><i class="bi bi-arrows-fullscreen"></i> Verlo grande</a><a class="ev-btn ghost sm" href="${esc(c.flyer)}" download><i class="bi bi-download"></i> Descargar</a><button type="button" class="ev-btn ghost sm" data-acc="flyer"><i class="bi bi-arrow-repeat"></i> Regenerar</button></div>
             ${c.flyer_Datos ? '<div style="padding:0 10px 10px;font-size:12px;font-weight:700;color:var(--ev-muted)"><i class="bi bi-pencil"></i> El proveedor editó este flyer.</div>' : ''}</div>`
             : `<div class="ui-empty"><i class="bi bi-image big"></i><p>${c.estado === 'BORRADOR' ? 'El flyer se genera cuando el proveedor envía la carga a revisión.' : 'Sin flyer.'}</p>${c.estado !== 'BORRADOR' ? '<button type="button" class="ev-btn ghost sm" data-acc="flyer"><i class="bi bi-magic"></i> Generar flyer</button>' : ''}</div>`;
@@ -229,6 +309,10 @@
                 <div>${flyer}${acciones}</div>
             </div>`;
         const ch = $('#hpChat'); ch.scrollTop = ch.scrollHeight;
+        // Si la imagen del flyer no carga (archivo borrado o movido), un aviso claro en vez del texto suelto
+        document.querySelectorAll('[data-flyer-img]').forEach(im => im.addEventListener('error', () => {
+            const a = im.closest('a'); if (a) a.outerHTML = '<div class="roto"><i class="bi bi-image-alt"></i><span>No se pudo mostrar el flyer.<br>Pulsa «Regenerar» para crearlo de nuevo.</span></div>';
+        }, { once: true }));
     }
 
     $('#hpVerCuerpo').addEventListener('click', async e => {
