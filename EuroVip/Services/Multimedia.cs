@@ -329,9 +329,13 @@ namespace EuroVip.Services
         {
             var t = Tipo(tipo) ?? throw new InvalidOperationException("Tipo de producto desconocido.");
             using var cn = _db.Conexion();
-            var filas = await cn.QueryAsync<(string Clave, string Ruta)>("SELECT clave, ruta FROM Eurovip.vMultimedia WHERE tipo = @tipo AND uso = 'PORTADA'", new { tipo = t.Tipo });
+            // 26/11/2026: la clave sale de la columna PROPIA del tipo (id_inicio, id_hotel, id_destino…), la misma con la que lee el editor,
+            // y no de la columna calculada «clave» de la vista: en una base con la vista vieja esa columna no incluía id_inicio y las
+            // tarjetas de la Home salían sin foto aunque la foto existía. (t.Columna es un nombre fijo del código, no un dato del usuario.)
+            var filas = await cn.QueryAsync<(string? Clave, string? Ruta)>(
+                $"SELECT CAST(v.{t.Columna} AS nvarchar(200)) AS clave, v.ruta FROM Eurovip.vMultimedia v WHERE v.tipo = @tipo AND v.uso = 'PORTADA' AND v.{t.Columna} IS NOT NULL ORDER BY v.orden, v.id", new { tipo = t.Tipo });
             var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var (c, r) in filas) d[c.Trim()] = UrlV(r);
+            foreach (var (c, r) in filas) if (c is not null && r is not null) d.TryAdd(c.Trim(), UrlV(r));   // si hay varias portadas, vale la primera
             return d;
         }
 

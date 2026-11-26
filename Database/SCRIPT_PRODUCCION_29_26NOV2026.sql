@@ -1,6 +1,6 @@
 /* ============================================================================
    SCRIPT UNICO PARA EL 10.10.10.29 (TropitoursVDT, esquema Eurovip) - 26/11/2026
-   Se puede correr varias veces. Orden: 1) contenedor por hotel  2) codigos de HOTELES ONLINE  3) la web lista solo los hoteles de cada tarjeta  4) presupuestos EVA/EVF
+   Se puede correr varias veces. Orden: 1) contenedor por hotel  2) codigos de HOTELES ONLINE  3) la web lista solo los hoteles de cada tarjeta  4) presupuestos EVA/EVF  5) vista de fotos
    Correr ANTES de publicar BackEurovip, la API y la web nuevos.
    ============================================================================ */
 /* ============================================================================
@@ -348,4 +348,23 @@ IF COL_LENGTH(N'Eurovip.erp_presupuesto', N'sigla') IS NULL
 GO
 
 SELECT CASE WHEN COL_LENGTH(N'Eurovip.erp_presupuesto', N'sigla') IS NOT NULL THEN 'OK: columna sigla creada' ELSE 'FALTA la columna' END AS estado;
+GO
+
+-- ================= 5) VISTA DE FOTOS: la clave incluye también las tarjetas de la Home (id_inicio) =================
+/* Si en el 29 la vista Eurovip.vMultimedia es una versión anterior, la columna «clave» no incluía id_inicio y las tarjetas de la
+   Home salían sin foto aunque la foto existía. Esta es la definición actual (igual a la de Desarrollo). Idempotente y solo cambia la vista. */
+USE [TropitoursVDT];
+GO
+CREATE OR ALTER VIEW Eurovip.vMultimedia
+AS
+SELECT m.id, m.id_imagen, m.tipo, m.uso, m.orden, m.texto_alternativo,
+       m.id_alojamiento, m.nombre_circuito, m.id_excursion, m.id_traslado, m.id_destino, m.id_pais, m.id_hotel, m.id_crucero, m.id_inicio,
+       COALESCE(CAST(m.id_alojamiento AS varchar(50)), m.nombre_circuito, CAST(m.id_excursion AS varchar(50)), CAST(m.id_traslado AS varchar(50)),
+                m.id_destino, m.id_pais, CAST(m.id_hotel AS varchar(50)), CAST(m.id_crucero AS varchar(50)), CAST(m.id_inicio AS varchar(50))) AS clave,
+       i.ruta_relativa + i.nombre_archivo + '.' + i.extension AS ruta,
+       i.nombre_original, i.tamano_bytes, i.ancho, i.alto, i.creado_utc
+  FROM Eurovip.multimedia m
+  JOIN Eurovip.imagen i ON i.id = m.id_imagen;
+GO
+SELECT tipo, COUNT(*) AS portadas, SUM(CASE WHEN clave IS NULL THEN 1 ELSE 0 END) AS sin_clave FROM Eurovip.vMultimedia WHERE uso = 'PORTADA' GROUP BY tipo;   -- sin_clave debe ser 0 en todos
 GO
