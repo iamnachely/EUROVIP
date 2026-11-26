@@ -14,6 +14,9 @@ namespace EuroVip.Controllers
         private static readonly string[] Dominios = { "fotos.eurovip.com.do", "fotos.grupovdt.com", "fotos.tropitours.com",
             // fotos de proveedores que salen en las tarjetas (circuitos del mundo, hoteles): pesan 1-2 MB cada una
             "res.cloudinary.com", "www.yourjumbo.com", "bokun.s3.amazonaws.com", "d2poxrheyfxwbo.cloudfront.net" };
+        // 26/11/2026: además de la memoria, cada miniatura se guarda en disco (carpeta temporal del servidor): se genera UNA vez y sobrevive a
+        // reinicios del sitio y al reciclaje del grupo de aplicaciones, que vaciaban la memoria y obligaban a regenerar las ~100 fotos.
+        private static readonly string Carpeta = Path.Combine(Path.GetTempPath(), "eurovip-mini");
         private static readonly SemaphoreSlim Cupo = new(8, 8);   // máximo 8 reducciones a la vez (no saturar el servidor)
         private readonly IHttpClientFactory _http;
         private readonly IMemoryCache _cache;
@@ -22,27 +25,44 @@ namespace EuroVip.Controllers
         public MiniController(IHttpClientFactory http, IMemoryCache cache, ILogger<MiniController> logger)
         { _http = http; _cache = cache; _logger = logger; }
 
-        [HttpGet]
+        // Ruta explícita: la ruta por defecto del sitio es Auth/Login, así que «/Mini» a secas daba 404 (solo «/Mini/Index» funcionaba)
+        [HttpGet("/Mini")]
         public async Task<IActionResult> Index(string? u, int w = 480, CancellationToken ct = default)
         {
             if (!Uri.TryCreate(u, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps
                 || !Dominios.Contains(uri.Host, StringComparer.OrdinalIgnoreCase)) return BadRequest();
             w = Math.Clamp(w, 96, 1200);
             var clave = $"mini:{w}:{uri.AbsoluteUri}";
+            var archivo = Path.Combine(Carpeta, Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(clave))) + ".webp");
             try
             {
                 if (!_cache.TryGetValue(clave, out byte[]? bytes) || bytes is null)
                 {
-                    await Cupo.WaitAsync(ct);
-                    try
+                    if (System.IO.File.Exists(archivo))
                     {
-                        var origen = await _http.CreateClient("fotos").GetByteArrayAsync(uri, ct);
-                        bytes = Reducir(origen, w);
+                        try { bytes = await System.IO.File.ReadAllBytesAsync(archivo, ct); } catch (IOException) { bytes = null; }
                     }
-                    finally { Cupo.Release(); }
-                    _cache.Set(clave, bytes, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(6), Size = null });
+                    if (bytes is null)
+                    {
+                        await Cupo.WaitAsync(ct);
+                        try
+                        {
+                            var origen = await _http.CreateClient("fotos").GetByteArrayAsync(uri, ct);
+                            bytes = Reducir(origen, w);
+                        }
+                        finally { Cupo.Release(); }
+                        try   // guardar en disco sin que un fallo de escritura afecte a la respuesta
+                        {
+                            Directory.CreateDirectory(Carpeta);
+                            var tmp = archivo + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                            await System.IO.File.WriteAllBytesAsync(tmp, bytes, ct);
+                            System.IO.File.Move(tmp, archivo, overwrite: true);
+                        }
+                        catch (Exception ex) { _logger.LogDebug(ex, "No se pudo guardar la miniatura en disco"); }
+                    }
+                    _cache.Set(clave, bytes, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(12), Size = null });
                 }
-                Response.Headers.CacheControl = "private, max-age=86400";
+                Response.Headers.CacheControl = "private, max-age=604800";   // 7 días en el navegador
                 return File(bytes, "image/webp");
             }
             catch (OperationCanceledException) { throw; }
