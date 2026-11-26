@@ -74,26 +74,31 @@ namespace EuroVip.Repositories
             using var cn = _db.Conexion();
             // Arregla las tarjetas EXCURSION / TRASLADO de la Home que falten o estén desactualizadas (no escribe si están bien)
             await cn.ExecuteAsync("Eurovip.spSincronizaInicio", commandType: System.Data.CommandType.StoredProcedure);
-            var conts = (await cn.QueryAsync<HwContenedor>(@"
+            // 26/11/2026: las cuatro lecturas (contenedores, tarjetas, slides y destinos de slides) corren A LA VEZ, cada una con su conexión
+            Task<List<T>> Q<T>(string sql, object? prm = null) => Task.Run(async () => { using var c = _db.Conexion(); return (await c.QueryAsync<T>(sql, prm)).ToList(); });
+            var tConts = Q<HwContenedor>(@"
                 SELECT id_contenedor AS Id_Contenedor, nombre AS Nombre, posicion AS Posicion, CAST(ISNULL(estado, 1) AS bit) AS Estado, prioridad AS Prioridad
-                FROM Eurovip.contenedores WHERE UPPER(id_idioma) = @Idioma ORDER BY posicion, id_contenedor", new { Idioma })).ToList();
-            var tarjetas = (await cn.QueryAsync<HwTarjeta>(SelTarjeta + @"
+                FROM Eurovip.contenedores WHERE UPPER(id_idioma) = @Idioma ORDER BY posicion, id_contenedor", new { Idioma });
+            var tTarjetas = Q<HwTarjeta>(SelTarjeta + @"
                 WHERE i.id_idioma = @Idioma AND NOT (i.tipo_servicio = 'CIRCUITO_MUNDO' AND i.programa_codigo IS NOT NULL)   -- CAMBIO 135: se ve la tarjeta del destino; sus circuitos de Yourttoo se eligen en Circuitos
-                ORDER BY ISNULL(i.posicion_destino, 9999), i.id_destino", new { Idioma })).ToList();
+                ORDER BY ISNULL(i.posicion_destino, 9999), i.id_destino", new { Idioma });
+            var tSlides = Q<HwSlide>(@"
+                SELECT c.id_carrusel AS Id_Carrusel, c.orden AS Orden, RTRIM(c.orientacion) AS Orientacion, c.ruta AS Ruta, c.activo AS Activo, c.url AS Url,
+                       CAST(CASE WHEN EXISTS (SELECT 1 FROM Eurovip.carrusel x WHERE x.ruta = c.ruta AND x.id_idioma = c.id_idioma AND x.formato = '2') THEN 1 ELSE 0 END AS bit) AS TieneTablet,
+                       CAST(CASE WHEN EXISTS (SELECT 1 FROM Eurovip.carrusel x WHERE x.ruta = c.ruta AND x.id_idioma = c.id_idioma AND x.formato = '3') THEN 1 ELSE 0 END AS bit) AS TieneMovil
+                FROM Eurovip.carrusel c WHERE c.id_idioma = @Idioma AND ISNULL(c.formato, '1') = '1'
+                ORDER BY c.activo DESC, c.orden, c.id_carrusel", new { Idioma });
+            var tDest = Q<HwSlideDestino>(@"
+                SELECT id AS Id, id_carrusel AS Id_Carrusel, origen AS Origen, destino AS Destino, precio AS Precio, id_campanya AS Id_Campanya, regimen AS Regimen
+                FROM Eurovip.carrucelDestino ORDER BY id");
+            await Task.WhenAll(tConts, tTarjetas, tSlides, tDest);
+            var conts = tConts.Result; var tarjetas = tTarjetas.Result;
             var porCont = conts.ToDictionary(c => c.Id_Contenedor);
             var sin = new List<HwTarjeta>();
             foreach (var t in tarjetas)
                 if (t.Id_Contenedor is int ic && porCont.TryGetValue(ic, out var c)) c.Tarjetas.Add(t); else sin.Add(t);
 
-            var slides = (await cn.QueryAsync<HwSlide>(@"
-                SELECT c.id_carrusel AS Id_Carrusel, c.orden AS Orden, RTRIM(c.orientacion) AS Orientacion, c.ruta AS Ruta, c.activo AS Activo, c.url AS Url,
-                       CAST(CASE WHEN EXISTS (SELECT 1 FROM Eurovip.carrusel x WHERE x.ruta = c.ruta AND x.id_idioma = c.id_idioma AND x.formato = '2') THEN 1 ELSE 0 END AS bit) AS TieneTablet,
-                       CAST(CASE WHEN EXISTS (SELECT 1 FROM Eurovip.carrusel x WHERE x.ruta = c.ruta AND x.id_idioma = c.id_idioma AND x.formato = '3') THEN 1 ELSE 0 END AS bit) AS TieneMovil
-                FROM Eurovip.carrusel c WHERE c.id_idioma = @Idioma AND ISNULL(c.formato, '1') = '1'
-                ORDER BY c.activo DESC, c.orden, c.id_carrusel", new { Idioma })).ToList();
-            var dest = (await cn.QueryAsync<HwSlideDestino>(@"
-                SELECT id AS Id, id_carrusel AS Id_Carrusel, origen AS Origen, destino AS Destino, precio AS Precio, id_campanya AS Id_Campanya, regimen AS Regimen
-                FROM Eurovip.carrucelDestino ORDER BY id")).ToLookup(d => d.Id_Carrusel);
+            var slides = tSlides.Result; var dest = tDest.Result.ToLookup(d => d.Id_Carrusel);
             foreach (var s in slides) s.Destinos = dest[s.Id_Carrusel].ToList();
 
             return new HwDatos { Contenedores = conts, SinContenedor = sin, Slides = slides };

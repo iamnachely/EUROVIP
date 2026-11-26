@@ -11,8 +11,10 @@ namespace EuroVip.Controllers
     /// </summary>
     public class MiniController : Controller
     {
-        private static readonly string[] Dominios = { "fotos.eurovip.com.do", "fotos.grupovdt.com", "fotos.tropitours.com" };
-        private static readonly SemaphoreSlim Cupo = new(4, 4);   // máximo 4 reducciones a la vez (no saturar el servidor)
+        private static readonly string[] Dominios = { "fotos.eurovip.com.do", "fotos.grupovdt.com", "fotos.tropitours.com",
+            // fotos de proveedores que salen en las tarjetas (circuitos del mundo, hoteles): pesan 1-2 MB cada una
+            "res.cloudinary.com", "www.yourjumbo.com", "bokun.s3.amazonaws.com", "d2poxrheyfxwbo.cloudfront.net" };
+        private static readonly SemaphoreSlim Cupo = new(8, 8);   // máximo 8 reducciones a la vez (no saturar el servidor)
         private readonly IHttpClientFactory _http;
         private readonly IMemoryCache _cache;
         private readonly ILogger<MiniController> _logger;

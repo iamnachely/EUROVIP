@@ -50,12 +50,18 @@ namespace EuroVip.Controllers
         [HttpGet, ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]   // tras mover una tarjeta se ve lo guardado
         public async Task<IActionResult> Datos()
         {
-            var d = await _repo.DatosAsync();
+            // 26/11/2026: los tres grupos de consultas (tarjetas y slides, fotos y «fuera de la Home») van A LA VEZ, no una tras otra:
+            // la pantalla esperaba la suma de todas (≈3 s) y ahora espera solo la más lenta.
+            var tDatos = _repo.DatosAsync();
+            var tFotos = FotosAsync();
+            var tFuera = _repo.FueraDeHomeAsync();   // qué no sale en la Home y por qué (aviso en la pantalla)
+            await Task.WhenAll(tDatos, tFotos, tFuera);
+            var d = tDatos.Result;
             d.Imagenes = new HwImagenes { Web = Slider("Url"), Tablet = Slider("UrlMd"), Movil = Slider("UrlSm") };
             foreach (var s in d.Slides) s.Version = VersionSlide(s.Ruta);
-            var f = await FotosAsync();
+            var f = tFotos.Result;
             foreach (var t in d.Contenedores.SelectMany(c => c.Tarjetas).Concat(d.SinContenedor)) PonerImagen(t, f);
-            d.Fuera = await _repo.FueraDeHomeAsync();   // qué no sale en la Home y por qué (aviso en la pantalla)
+            d.Fuera = tFuera.Result;
             return Json(d);
         }
 
@@ -73,7 +79,12 @@ namespace EuroVip.Controllers
         /// Foto_Tipo / Foto_Clave dicen qué fotos se cambian al pulsar la tarjeta.
         /// </summary>
         private sealed record Fotos(IReadOnlyDictionary<string, string> Hoteles, IReadOnlyDictionary<string, string> Tarjetas, IReadOnlyDictionary<string, string> Destinos);
-        private async Task<Fotos> FotosAsync() => new(await _mm.PortadasAsync("HOTEL"), await _mm.PortadasAsync("INICIO"), await _mm.PortadasAsync("DESTINO"));
+        private async Task<Fotos> FotosAsync()
+        {
+            var h = _mm.PortadasAsync("HOTEL"); var i = _mm.PortadasAsync("INICIO"); var d = _mm.PortadasAsync("DESTINO");   // a la vez
+            await Task.WhenAll(h, i, d);
+            return new(h.Result, i.Result, d.Result);
+        }
 
         private void PonerImagen(HwTarjeta t, Fotos f)
         {

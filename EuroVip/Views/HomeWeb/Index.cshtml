@@ -372,7 +372,7 @@ const HW = (() => {
     const img = (ruta, d = dev) => !ruta ? '' : `${{ web: D.imagenes.web, tablet: D.imagenes.tablet, movil: D.imagenes.movil }[d]}/${encodeURIComponent(ruta)}?v=${(D.slides || []).find(s => s.ruta === ruta)?.version || '0'}`;
     // t.imagen la calcula el servidor desde las carpetas del proyecto (fotos de Hoteles y portadas de Circuitos)
     // 26/11/2026: las fotos de las tarjetas se piden como miniatura liviana (/Mini) y no a tamaño completo (200-300 KB cada una)
-    const mini = (u, w = 480) => u && /^https:\/\/fotos\.(eurovip\.com\.do|grupovdt\.com|tropitours\.com)\//i.test(u) ? '/Mini?w=' + w + '&u=' + encodeURIComponent(u) : u;
+    const mini = (u, w = 480) => u && /^https:\/\/(fotos\.(eurovip\.com\.do|grupovdt\.com|tropitours\.com)|res\.cloudinary\.com|www\.yourjumbo\.com|bokun\.s3\.amazonaws\.com|d2poxrheyfxwbo\.cloudfront\.net)\//i.test(u) ? '/Mini?w=' + w + '&u=' + encodeURIComponent(u) : u;
     const carat = t => t.imagen || (t.caratulaDestino && (EV.esUrl(t.caratulaDestino) || t.caratulaDestino.startsWith('/')) ? t.caratulaDestino : null);
     const tipoChip = { OFERTA: 'Solo Hotel', PAQUETES: 'Paquetes', CIRCUITO: 'Circuito', HOTEL: 'Hotel', EXCURSION: 'Excursiones', TRASLADO: 'Traslados', CRUCERO: 'Cruceros', COMBINADO: 'Combinado', CIRCUITO_MUNDO: 'Circuitos por destino' };
 
