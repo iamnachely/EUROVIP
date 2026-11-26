@@ -371,6 +371,8 @@ const HW = (() => {
     // ?v= = versión del slide (hora de sus imágenes): al reemplazarlas cambia y el navegador trae la nueva en vez de la de su caché
     const img = (ruta, d = dev) => !ruta ? '' : `${{ web: D.imagenes.web, tablet: D.imagenes.tablet, movil: D.imagenes.movil }[d]}/${encodeURIComponent(ruta)}?v=${(D.slides || []).find(s => s.ruta === ruta)?.version || '0'}`;
     // t.imagen la calcula el servidor desde las carpetas del proyecto (fotos de Hoteles y portadas de Circuitos)
+    // 26/11/2026: las fotos de las tarjetas se piden como miniatura liviana (/Mini) y no a tamaño completo (200-300 KB cada una)
+    const mini = (u, w = 480) => u && /^https:\/\/fotos\.(eurovip\.com\.do|grupovdt\.com|tropitours\.com)\//i.test(u) ? '/Mini?w=' + w + '&u=' + encodeURIComponent(u) : u;
     const carat = t => t.imagen || (t.caratulaDestino && (EV.esUrl(t.caratulaDestino) || t.caratulaDestino.startsWith('/')) ? t.caratulaDestino : null);
     const tipoChip = { OFERTA: 'Solo Hotel', PAQUETES: 'Paquetes', CIRCUITO: 'Circuito', HOTEL: 'Hotel', EXCURSION: 'Excursiones', TRASLADO: 'Traslados', CRUCERO: 'Cruceros', COMBINADO: 'Combinado', CIRCUITO_MUNDO: 'Circuitos por destino' };
 
@@ -461,7 +463,7 @@ const HW = (() => {
     const cardHtml = t => {
         const c = carat(t), sin = sinSeccion(t);
         return `<div class="hw-card ${t.estado ? '' : 'oculta'} ${t.peso ? 'ev-con-prioridad' : ''}" data-t="${t.id}" title="Clic para editar · arrastra para mover">
-            <div class="img">${c ? `<img src="${esc(c)}" alt="" loading="lazy" onerror="this.remove()">` : esc(EV.iniciales(t.id_Destino))}
+            <div class="img">${c ? `<img src="${esc(mini(c))}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : esc(EV.iniciales(t.id_Destino))}
                 <div class="chips"><span>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</span>${t.vigente === false ? '<span class="mal">Ya no se vende</span>' : ''}${t.estado ? '' : `<span class="oc">${sin ? 'Oculta · sin sección' : 'Oculta'}</span>`}</div>
                 <div class="acc"><button type="button" class="edt" data-foto="${t.id}" title="Cambiar la foto" aria-label="Cambiar la foto"><i class="bi bi-camera"></i></button>
                     <button type="button" class="edt" title="Editar tarjeta" aria-label="Editar tarjeta"><i class="bi bi-pencil"></i></button>
@@ -930,7 +932,7 @@ const HW = (() => {
             && (!est || (est === 'v' ? t.vigente === false : String(+t.estado) === est)));
         $('#tLista').innerHTML = !filas.length ? '<div class="ui-empty"><i class="bi bi-postcard big"></i><h3>No hay tarjetas con esos filtros</h3><p>Pulsa "Traer ofertas a la Home" para llenarla con lo que está a la venta.</p></div>'
             : `<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th></th><th>Destino</th><th>Tipo</th><th>Origen</th><th>Campaña</th><th class="num">Precio</th><th>Sección</th><th>Pos.</th><th>Visible</th><th></th></tr></thead><tbody>
-              ${filas.map(t => `<tr data-tt="${t.id}" style="cursor:pointer"><td>${carat(t) ? `<img class="hw-mini" src="${esc(carat(t))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<span class="hw-mini"></span>'}</td>
+              ${filas.map(t => `<tr data-tt="${t.id}" style="cursor:pointer"><td>${carat(t) ? `<img class="hw-mini" src="${esc(mini(carat(t), 160))}" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">` : '<span class="hw-mini"></span>'}</td>
                 <td><b>${esc(t.tipo_Servicio === 'CIRCUITO' ? t.descripcion : t.id_Destino)}</b>${t.vigente === false ? ' <span class="ui-chip" style="background:#FEE4E2;color:#B42318;padding:2px 8px;font-size:11px">ya no se vende</span>' : ''}<br><small style="color:var(--ev-muted)">${t.id_Servicio > 0 ? '#' + t.id_Servicio : 'manual'}</small></td>
                 <td>${tipoChip[t.tipo_Servicio] || esc(t.tipo_Servicio)}</td><td>${esc(t.origen)}</td><td>${esc(t.campanya || t.id_Campanya)}</td>
                 <td class="num">${t.precioWeb ? EV.dinero(t.precioWeb, (t.id_Moneda || 'DOP').trim()) : '—'}</td><td>${esc(t.contenedor || '—')}</td><td>${t.posicion_Destino ?? '—'}</td>
