@@ -148,43 +148,58 @@ namespace EuroVip.Controllers
                 var wb = doc.AddWorkbookPart();
                 wb.Workbook = new Workbook();
                 var st = wb.AddNewPart<WorkbookStylesPart>();
-                st.Stylesheet = new Stylesheet(
-                    new Fonts(new Font(), new Font(new Bold())),
-                    new Fills(new Fill(new PatternFill { PatternType = PatternValues.None }), new Fill(new PatternFill { PatternType = PatternValues.Gray125 })),
-                    new Borders(new Border()),
-                    new CellFormats(new CellFormat(), new CellFormat { NumberFormatId = 14, ApplyNumberFormat = true, FontId = 1, ApplyFont = true }, new CellFormat { FontId = 1, ApplyFont = true }));
+                st.Stylesheet = ExcelTabla.Estilos();   // 26/11/2026: mismo diseño que el resto de las plantillas (colores de Eurovip, bordes, filas alternas)
                 var ws = wb.AddNewPart<WorksheetPart>();
                 var data = new SheetData();
-                ws.Worksheet = new Worksheet(new Columns(new Column { Min = 1, Max = 1, Width = 34, CustomWidth = true }, new Column { Min = 2, Max = 2, Width = 16, CustomWidth = true }, new Column { Min = 3, Max = 3, Width = 10, CustomWidth = true }, new Column { Min = 4, Max = 11, Width = 13, CustomWidth = true }), data);
-                wb.Workbook.AppendChild(new Sheets(new Sheet { Id = wb.GetIdOfPart(ws), SheetId = 1, Name = "Ofertas" }));
+                const int FilasCaptura = 30;   // los ejemplos y filas vacías con el mismo diseño: se ve dónde escribir
+                var anchos = new[] { 40d, 16, 10, 15, 15, 15, 15, 15, 15 };
+                var columnas = new Columns();
+                for (var c = 0; c < anchos.Length; c++) columnas.Append(new Column { Min = (uint)(c + 1), Max = (uint)(c + 1), Width = anchos[c], CustomWidth = true });
+                ws.Worksheet = new Worksheet(
+                    new SheetProperties(new PageSetupProperties { FitToPage = true }) { TabColor = new TabColor { Rgb = "FF0B2E6B" } },
+                    new SheetViews(new SheetView(new Pane { HorizontalSplit = 1, VerticalSplit = 1, TopLeftCell = "B2", ActivePane = PaneValues.BottomRight, State = PaneStateValues.Frozen }) { WorkbookViewId = 0, TabSelected = true }),
+                    columnas, data);
+                ws.Worksheet.Append(new MergeCells(new MergeCell { Reference = $"A{FilasCaptura + 3}:I{FilasCaptura + 3}" }) { Count = 1 });
+                var hojas = wb.Workbook.AppendChild(new Sheets(new Sheet { Id = wb.GetIdOfPart(ws), SheetId = 1, Name = "Ofertas" }));
 
                 string Ref(int col, int fila) => $"{(char)('A' + col - 1)}{fila}";
                 var primera = DateTime.Today.AddDays(((int)DayOfWeek.Saturday - (int)DateTime.Today.DayOfWeek + 7) % 7 + 7);
                 var fechas = Enumerable.Range(0, 6).Select(i => primera.AddDays(i * 7)).ToList();
 
-                var enc = new Row { RowIndex = 1 };
-                enc.Append(new Cell { CellReference = "A1", DataType = CellValues.String, CellValue = new CellValue("Hotel (nombre como en Eurovip)"), StyleIndex = 2 });
-                enc.Append(new Cell { CellReference = "B1", DataType = CellValues.String, CellValue = new CellValue("Estado"), StyleIndex = 2 });
-                enc.Append(new Cell { CellReference = "C1", DataType = CellValues.String, CellValue = new CellValue("Cupo"), StyleIndex = 2 });   // CAMBIO 132: habitaciones para vender por fecha
+                var enc = new Row { RowIndex = 1, Height = 34, CustomHeight = true };
+                enc.Append(new Cell { CellReference = "A1", DataType = CellValues.String, CellValue = new CellValue("Hotel (nombre como en Eurovip)"), StyleIndex = ExcelTabla.E.EncabezadoIzq });
+                enc.Append(new Cell { CellReference = "B1", DataType = CellValues.String, CellValue = new CellValue("Estado"), StyleIndex = ExcelTabla.E.Encabezado });
+                enc.Append(new Cell { CellReference = "C1", DataType = CellValues.String, CellValue = new CellValue("Cupo"), StyleIndex = ExcelTabla.E.Encabezado });   // CAMBIO 132: habitaciones para vender por fecha
                 for (var i = 0; i < fechas.Count; i++)
-                    enc.Append(new Cell { CellReference = Ref(i + 4, 1), StyleIndex = 1, CellValue = new CellValue(fechas[i].ToOADate().ToString(CultureInfo.InvariantCulture)) });
+                    enc.Append(new Cell { CellReference = Ref(i + 4, 1), StyleIndex = ExcelTabla.E.FechaEncabezado, CellValue = new CellValue(fechas[i].ToOADate().ToString(CultureInfo.InvariantCulture)) });
                 data.Append(enc);
 
                 var ejemplos = new[] { ("Riu Palace Bavaro", 1290m), ("Barcelo Bavaro Palace - All Inclusive", 1150m) };
-                for (var h = 0; h < ejemplos.Length; h++)
+                for (var h = 0; h < FilasCaptura; h++)
                 {
+                    var alt = h % 2 == 1;
+                    var txt = alt ? ExcelTabla.E.TextoAlt : ExcelTabla.E.Texto;
                     var row = new Row { RowIndex = (uint)(h + 2) };
-                    row.Append(new Cell { CellReference = Ref(1, h + 2), DataType = CellValues.String, CellValue = new CellValue(ejemplos[h].Item1) });
-                    if (estados.ElementAtOrDefault(h) is { } ej) row.Append(new Cell { CellReference = Ref(2, h + 2), DataType = CellValues.String, CellValue = new CellValue(ej.Nombre) });
-                    if (h == 0) row.Append(new Cell { CellReference = Ref(3, h + 2), CellValue = new CellValue("10") });   // ejemplo: 10 habitaciones por fecha; vacío = sin límite
-                    for (var i = 0; i < fechas.Count; i++)
-                        row.Append(i == 3
-                            ? new Cell { CellReference = Ref(i + 4, h + 2), DataType = CellValues.String, CellValue = new CellValue("//") }
-                            : new Cell { CellReference = Ref(i + 4, h + 2), CellValue = new CellValue((ejemplos[h].Item2 + i * 20).ToString(CultureInfo.InvariantCulture)) });
+                    if (h < ejemplos.Length)
+                    {
+                        row.Append(new Cell { CellReference = Ref(1, h + 2), DataType = CellValues.String, StyleIndex = txt, CellValue = new CellValue(ejemplos[h].Item1) });
+                        row.Append(estados.ElementAtOrDefault(h) is { } ej
+                            ? new Cell { CellReference = Ref(2, h + 2), DataType = CellValues.String, StyleIndex = txt, CellValue = new CellValue(ej.Nombre) }
+                            : new Cell { CellReference = Ref(2, h + 2), StyleIndex = txt });
+                        row.Append(h == 0
+                            ? new Cell { CellReference = Ref(3, h + 2), StyleIndex = txt, CellValue = new CellValue("10") }   // ejemplo: 10 habitaciones por fecha; vacío = sin límite
+                            : new Cell { CellReference = Ref(3, h + 2), StyleIndex = txt });
+                        for (var i = 0; i < fechas.Count; i++)
+                            row.Append(i == 3
+                                ? new Cell { CellReference = Ref(i + 4, h + 2), DataType = CellValues.String, StyleIndex = txt, CellValue = new CellValue("//") }
+                                : new Cell { CellReference = Ref(i + 4, h + 2), StyleIndex = alt ? ExcelTabla.E.PrecioAlt : ExcelTabla.E.Precio, CellValue = new CellValue((ejemplos[h].Item2 + i * 20).ToString(CultureInfo.InvariantCulture)) });
+                    }
+                    else
+                        for (var c = 1; c <= 3 + fechas.Count; c++) row.Append(new Cell { CellReference = Ref(c, h + 2), StyleIndex = c > 3 ? (alt ? ExcelTabla.E.PrecioAlt : ExcelTabla.E.Precio) : txt });
                     data.Append(row);
                 }
-                var nota = new Row { RowIndex = 5 };
-                nota.Append(new Cell { CellReference = "A5", DataType = CellValues.String, CellValue = new CellValue("Nota: el precio es el TOTAL que paga el cliente. Escribe // o deja vacío si esa fecha no se vende. Estado (opcional): Confirmada, Bajo petición… (columna B). Cupo (opcional): cuántas habitaciones hay para vender en cada fecha; vacío = sin límite.") });
+                var nota = new Row { RowIndex = FilasCaptura + 3, Height = 48, CustomHeight = true };
+                nota.Append(new Cell { CellReference = $"A{FilasCaptura + 3}", DataType = CellValues.String, StyleIndex = ExcelTabla.E.Nota, CellValue = new CellValue("Nota: el precio es el TOTAL que paga el cliente. Escribe // o deja vacío si esa fecha no se vende. Estado (opcional): Confirmada, Bajo petición… (columna B). Cupo (opcional): cuántas habitaciones hay para vender en cada fecha; vacío = sin límite.") });
                 data.Append(nota);
                 // Lista desplegable del Estado (B2:B500): solo avisa si se escribe otro (al subirlo se busca el parecido)
                 var lista = string.Join(",", estados.Select(e => e.Nombre.Replace(",", " ").Replace("\"", "")));
@@ -196,6 +211,19 @@ namespace EuroVip.Controllers
                         PromptTitle = "Estado (opcional)", Prompt = "Confirmada, Bajo petición… o déjalo vacío.",
                         SequenceOfReferences = new ListValue<StringValue> { InnerText = "B2:B500" }, Formula1 = new Formula1("\"" + lista + "\"")
                     }) { Count = 1 });
+                ws.Worksheet.Append(new PageMargins { Left = 0.4, Right = 0.4, Top = 0.6, Bottom = 0.6, Header = 0.3, Footer = 0.3 });
+                ws.Worksheet.Append(new PageSetup { Orientation = OrientationValues.Landscape, FitToHeight = 0 });
+                ExcelTabla.AgregarAyuda(wb, hojas, 2, "Instrucciones", new[] { "Qué", "Cómo" }, new List<object?[]>
+                {
+                    new object?[] { "Hotel", "Columna A: un hotel por fila, con el nombre como está en Eurovip. Si no lo reconocemos, al subir el Excel te mostramos los parecidos para elegir." },
+                    new object?[] { "Fechas", "Fila 1, desde la columna D: una fecha de salida por columna. Puedes cambiarlas o agregar más a la derecha." },
+                    new object?[] { "Precio", "Debajo de cada fecha, el precio TOTAL que paga el cliente por esa estancia (solo el número, sin símbolo)." },
+                    new object?[] { "Sin venta", "Escribe // o deja la celda vacía si esa fecha no se vende." },
+                    new object?[] { "Estado (opcional)", "Columna B: Confirmada, Bajo petición… Elige de la lista o déjalo vacío." },
+                    new object?[] { "Cupo (opcional)", "Columna C: cuántas habitaciones hay para vender en cada fecha. Vacío = sin límite." },
+                    new object?[] { "", "" },
+                    new object?[] { "Importante", "No cambies el orden de las columnas A, B y C. Borra los ejemplos de arriba y escribe tus hoteles. Al subirlo verás todo en la pantalla antes de guardar." },
+                }, new double[] { 22, 110 });
                 wb.Workbook.Save();
             }
             return ms.ToArray();
