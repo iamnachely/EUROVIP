@@ -49,6 +49,14 @@
     .of-precio-vivo span { padding: 5px 10px; border-radius: 10px; background: var(--ev-surface); border: 1px solid var(--ev-line); }
     .of-precio-vivo .eq { background: var(--ev-ink); color: var(--ev-aqua); border-color: var(--ev-ink); font-size: 16px; }
     /* ---- vista «Por hotel» ---- */
+    .of-dchips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+    .of-dchip { border: 1px solid var(--ev-line); background: #fff; border-radius: 999px; padding: 8px 14px; font: inherit; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .of-dchip b { background: var(--ev-line); border-radius: 999px; padding: 1px 8px; font-size: 12px; }
+    .of-dchip:hover { border-color: var(--ev-ink); }
+    .of-dchip.on { background: var(--ev-ink); color: #fff; border-color: var(--ev-ink); } .of-dchip.on b { background: rgba(255,255,255,.2); }
+    .of-dgrupo { margin-bottom: 28px; } .of-dgrupo[hidden] { display: none; }
+    .of-dtit { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 18px; font-weight: 800; letter-spacing: -.4px; }
+    .of-dtit small { color: var(--ev-muted); font-weight: 600; font-size: 13px; margin-left: 6px; }
     .of-hgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 16px; }
     .of-hcard { background: var(--ev-surface); border: 1px solid var(--ev-line); border-radius: 22px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column;
         transition: transform .25s var(--ev-ease), box-shadow .25s; text-align: left; padding: 0; font: inherit; color: inherit; }
@@ -71,6 +79,12 @@
     .oc-cab { display: flex; gap: 14px; align-items: center; }
     .oc-cab .th { width: 58px; height: 58px; border-radius: 16px; overflow: hidden; background: var(--ev-grad); flex-shrink: 0; display: grid; place-items: center; font-weight: 900; }
     .oc-cab .th img { width: 100%; height: 100%; object-fit: cover; }
+    .oc-cab .th { position: relative; cursor: pointer; }
+    .oc-cab .th .cam { position: absolute; right: 3px; bottom: 3px; width: 24px; height: 24px; border-radius: 8px; background: rgba(11,18,21,.8); color: #fff; display: grid; place-items: center; font-size: 12px; }
+    .of-portada { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; padding: 16px; background: rgba(11,18,21,.45); backdrop-filter: blur(3px); }
+    .of-portada .box { width: min(720px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; background: var(--ev-surface); border-radius: 28px; padding: 28px 30px; box-shadow: var(--ev-shadow-lg); }
+    .of-portada h3 { margin: 0 0 4px; font-size: 21px; font-weight: 800; letter-spacing: -.5px; } .of-portada p { margin: 0 0 16px; color: var(--ev-muted); font-weight: 600; font-size: 13.5px; }
+    .of-portada .pie { display: flex; justify-content: flex-end; margin-top: 16px; }
     .oc { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; align-items: start; }
     .oc-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
     .oc-nav b { font-size: 17px; font-weight: 800; letter-spacing: -.3px; flex: 1; min-width: 0; text-align: center; }
@@ -227,9 +241,18 @@
             <label class="ui-switch" style="margin-top:12px"><input type="checkbox" id="ePrioTodas" checked><span class="tr"></span> Aplicar a todas las fechas de este hotel</label>
         </div>
         <div class="ui-sec">
-            <div class="ui-sec-t"><span>5</span> Estado y datos de la carga</div>
+            <div class="ui-sec-t"><span>5</span> Datos de la oferta</div>
             <label class="ui-switch" style="margin-bottom:14px"><input type="checkbox" id="eActivo"><span class="tr"></span> Activa (se vende)</label>
             <div id="eInfo"></div>
+        </div>
+        <!-- 26/11/2026: lo que antes era una sola pestaña larga se reparte en tres pestañas -->
+        <div class="ui-sec" id="eSecProv">
+            <div class="ui-sec-t"><span>6</span> Proveedor, estado y Home</div>
+            <div id="eProvBody"></div>
+        </div>
+        <div class="ui-sec" id="eSecOrig">
+            <div class="ui-sec-t"><span>7</span> Origen y vuelos</div>
+            <div id="eOrigBody"></div>
         </div>
         <!-- Información para el cliente: tab propio, con barra de formato (se guarda como HTML) -->
         <div class="ui-sec" id="eInfoPane">
@@ -250,6 +273,7 @@
 <script src="~/js/eurovip-quien.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-carga.js" asp-append-version="true"></script>
 <script src="~/js/eurovip-prioridad.js" asp-append-version="true"></script>
+<script src="~/js/eurovip-multimedia.js" asp-append-version="true"></script>
 <script>
 const TIPO = '@tipo', ES_PAQ = TIPO === 'PAQUETES', QS = '@qs', LISTA = '@lista', NOMBRE = '@nombre', OFS = '@ofs', OF1 = '@of1', OF1M = ES_PAQ ? 'Paquete' : 'Oferta';
 const OF = (() => {
@@ -355,7 +379,7 @@ const OF = (() => {
             const hoy = new Date(), m0 = hoy.getFullYear() * 12 + hoy.getMonth();
             const meses = h => { const a = new Date(dia(h.primera) + 'T00:00:00'), b = new Date(dia(h.ultima) + 'T00:00:00'), ia = a.getFullYear() * 12 + a.getMonth(), ib = b.getFullYear() * 12 + b.getMonth();
                 return Array.from({ length: 12 }, (_, i) => { const k = m0 + i; return `<i class="${k >= ia && k <= ib ? 'si' : ''}" title="${new Date(Math.floor(k / 12), k % 12, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}">${MESES[k % 12]}</i>`; }).join(''); };
-            $('#ofLista').innerHTML = `<div class="of-hgrid">${hs.map(h => `<button type="button" class="of-hcard ${h.peso ? 'ev-con-prioridad' : ''}" data-hotel="${h.id_Alojamiento}">
+            const cardH = h => `<button type="button" class="of-hcard ${h.peso ? 'ev-con-prioridad' : ''}" data-hotel="${h.id_Alojamiento}">
                 <div class="ft">${EV.esUrl(h.caratula) ? `<img src="${esc(h.caratula)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(EV.iniciales(h.hotel))}
                     ${h.peso ? `<span class="es">${EVPrioridad.estrella(h.peso, true)}</span>` : ''}
                     <span class="pr"><small>desde</small>${EV.dinero(h.precioDesde, h.id_Moneda)}</span></div>
@@ -363,8 +387,34 @@ const OF = (() => {
                     <div class="meta">${h.estados > 1 ? chipEstado('Varios estados') : chipEstado(h.estado_Oferta)}<span><i class="bi bi-geo-alt-fill"></i> ${esc(h.destino || '—')}</span><span>${h.ofertas} ${OF1}${h.ofertas === 1 ? '' : 's'}</span>
                         ${h.activas < h.ofertas ? `<span>${h.ofertas - h.activas} inactiva${h.ofertas - h.activas === 1 ? '' : 's'}</span>` : ''}${h.conVuelo ? '<span><i class="bi bi-airplane"></i> con vuelo</span>' : ''}${h.regimenes ? `<span>${esc(h.regimenes)}</span>` : ''}</div>
                     <div class="of-meses" aria-label="Meses con salidas">${meses(h)}</div>
-                    <div class="ver"><span>${EV.fecha(dia(h.primera))} → ${EV.fecha(dia(h.ultima))}</span><span><i class="bi bi-calendar3"></i> Ver calendario</span></div></div></button>`).join('')}</div>`;
+                    <div class="ver"><span>${EV.fecha(dia(h.primera))} → ${EV.fecha(dia(h.ultima))}</span><span><i class="bi bi-calendar3"></i> Ver calendario</span></div></div></button>`;
+            // 26/11/2026: la lista se divide por DESTINO; los chips filtran (solo en pantalla, no recargan)
+            const grupos = new Map();
+            const norm = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(), vistos = new Map();
+            hs.forEach(h => { const n = (h.destino || 'Sin destino').trim(), c = norm(n); if (!vistos.has(c)) vistos.set(c, n); const k = vistos.get(c); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(h); });
+            const nombres = [...grupos.keys()].sort((x, y) => x.localeCompare(y, 'es'));
+            if (!nombres.includes(st.destSec)) st.destSec = '';
+            $('#ofLista').innerHTML = `<div class="of-dchips" role="tablist" aria-label="Filtrar por destino"><button type="button" class="of-dchip ${st.destSec === '' ? 'on' : ''}" data-dsec="">Todos <b>${hs.length}</b></button>${nombres.map(n => `<button type="button" class="of-dchip ${st.destSec === n ? 'on' : ''}" data-dsec="${esc(n)}"><i class="bi bi-geo-alt-fill"></i> ${esc(n)} <b>${grupos.get(n).length}</b></button>`).join('')}</div>`
+                + nombres.map(n => `<section class="of-dgrupo" data-dgrupo="${esc(n)}" ${st.destSec && st.destSec !== n ? 'hidden' : ''}><h3 class="of-dtit"><i class="bi bi-geo-alt-fill"></i> ${esc(n)} <small>${grupos.get(n).length} hotel${grupos.get(n).length === 1 ? '' : 'es'}</small></h3><div class="of-hgrid">${grupos.get(n).map(cardH).join('')}</div></section>`).join('');
+            $$('.of-dchip').forEach(c => c.onclick = () => { st.destSec = c.dataset.dsec; $$('.of-dchip').forEach(x => x.classList.toggle('on', x === c)); $$('.of-dgrupo').forEach(g => g.hidden = !!st.destSec && g.dataset.dgrupo !== st.destSec); });
         } catch (e) { $('#ofLista').innerHTML = `<div class="ui-empty"><h3>No pudimos cargar los hoteles</h3><p>${esc(e.message)}</p><button type="button" class="ev-btn" onclick="OF.recargar()"><i class="bi bi-arrow-clockwise"></i> Reintentar</button></div>`; }
+    }
+
+    /** 26/11/2026: cambiar la imagen de portada del HOTEL (Eurovip.alojamiento.caratula + multimedia) desde el calendario. Cada foto se guarda al momento. */
+    function abrirPortada(o) {
+        const ov = document.createElement('div');
+        ov.className = 'of-portada';
+        ov.innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-label="Portada del hotel"><h3>Portada de ${esc(o.hotel)}</h3>
+            <p>Es la foto que representa al hotel en la lista y en la web. Se guarda al momento, sin pulsar «Guardar».</p><div id="ofPortadaMm"></div>
+            <div class="pie"><button type="button" class="ev-btn" id="ofPortadaOk"><i class="bi bi-check2-circle"></i> Listo</button></div></div>`;
+        document.body.appendChild(ov);
+        let cambio = false;
+        const cerrar = () => { ov.remove(); document.removeEventListener('keydown', tecla, true); if (cambio) { cargar(); if (cal && cal.hotel === o.id_Alojamiento) abrirCal(o.id_Alojamiento, cal.dia); } };
+        const tecla = e => { if (e.key === 'Escape') { e.stopPropagation(); cerrar(); } };
+        document.addEventListener('keydown', tecla, true);
+        ov.addEventListener('mousedown', e => { if (e.target === ov) cerrar(); });
+        $('#ofPortadaOk', ov).onclick = cerrar;
+        EVMultimedia.montar($('#ofPortadaMm', ov), { tipo: 'ALOJAMIENTO', clave: o.id_Alojamiento, portada: true, intermedia: false, galeria: false, nombre: 'el hotel', alCambiar: () => { cambio = true; } });
     }
 
     /** Abre el calendario de un hotel (fecha = día a mostrar seleccionado). */
@@ -381,12 +431,36 @@ const OF = (() => {
             $('#cCab').innerHTML = `<div class="th">${EV.esUrl(o.caratula) ? `<img src="${esc(o.caratula)}" alt="">` : esc(EV.iniciales(o.hotel))}</div>
                 <div style="min-width:0"><h2 style="margin:0;font-size:21px;font-weight:800;letter-spacing:-.5px">${esc(o.hotel)}</h2>
                 <small style="color:var(--ev-muted);font-weight:600">${esc(o.destino || '')} · ${ofs.length} ${OF1}${ofs.length === 1 ? '' : 's'} en ${porDia.size} fecha${porDia.size === 1 ? '' : 's'} · ${cal.min != null ? `desde ${EV.dinero(cal.min, o.id_Moneda)}` : 'sin precio activo'}</small></div>`;
+            const th = $('#cCab .th');
+            if (th && o.id_Alojamiento) {
+                th.title = 'Cambiar la imagen de portada del hotel';
+                th.insertAdjacentHTML('beforeend', '<span class="cam"><i class="bi bi-camera-fill"></i></span>');
+                th.onclick = () => abrirPortada(o);
+            }
             pintarCal();
             // CAMBIO 131: estado de TODAS las fechas del hotel (Confirmada, Bajo petición…), con «Nuevo estado»
             const idsEst = [...new Set(ofs.map(x => x.id_Estado ?? ''))];
             const cajaEst = document.createElement('div'); cajaEst.className = 'ui-f'; cajaEst.style.cssText = 'min-width:240px;margin:0 0 0 auto;align-self:center';
             cajaEst.innerHTML = '<label>Estado del hotel <em>todas sus fechas</em></label><select id="cEstado"></select>';
             $('#cCab').appendChild(cajaEst);
+            // 26/11/2026: en qué contenedor de la Home se agrupa este hotel (todas sus fechas)
+            const idsCont = [...new Set(ofs.map(x => x.id_Contenedor_Inicio ?? ''))];
+            const cajaCont = document.createElement('div'); cajaCont.className = 'ui-f'; cajaCont.style.cssText = 'min-width:240px;margin:0 8px 0 0;align-self:center';
+            cajaCont.innerHTML = '<label>Se agrupa en <em>contenedor de la Home</em></label><select id="cContenedor"><option value="">Automático (por destino)</option></select>';
+            $('#cCab').insertBefore(cajaCont, cajaEst);
+            try {
+                const lc = await fetch('/Hoteles/Contenedores').then(r => r.json());
+                const sc = $('#cContenedor');
+                sc.innerHTML = (idsCont.length > 1 ? '<option value="__varios">— Varios —</option>' : '') + '<option value="">Automático (por destino)</option>' + lc.map(c => '<option value="' + c.id_Contenedor + '">' + String(c.nombre).replace(/</g, '&lt;') + '</option>').join('');
+                sc.value = idsCont.length > 1 ? '__varios' : String(idsCont[0] ?? '');
+                sc.addEventListener('change', async e => {
+                    const v = e.target.value; if (v === '__varios') return;
+                    const nombre = e.target.selectedOptions[0]?.textContent || '';
+                    if (!await EV.confirmar({ titulo: 'Contenedor del hotel', texto: v ? '¿Agrupar este hotel en «' + nombre + '» (todas sus fechas)?' : '¿Volver a agrupar este hotel solo, por destino?', si: 'Sí, aplicar' })) { e.target.value = idsCont.length > 1 ? '__varios' : String(idsCont[0] ?? ''); return; }
+                    try { const r = await EV.post('/Ofertas/ContenedorHotel', { Aloj: hotel, Tipo: TIPO, Id_Contenedor: v ? +v : null }); EV.toast(r.mensaje, 'ok'); abrirCal(hotel, cal?.dia); cargar(); }
+                    catch (err) { EV.toast(err.message, 'err'); }
+                });
+            } catch { /* sin lista de contenedores: queda en automático */ }
             await EVCodigo.estados($('#cEstado'), idsEst.length === 1 ? idsEst[0] : '', { vacio: idsEst.length > 1 ? '— Varios estados —' : '— Sin estado —' });
             $('#cEstado').addEventListener('change', async e => {
                 const v = e.target.value, nombre = e.target.selectedOptions[0]?.textContent || '';
@@ -518,6 +592,14 @@ const OF = (() => {
                     <td>${EV.fecha(v.fecha_Salida.slice(0, 10))} ${esc(v.hora_Salida)}</td><td>${EV.fecha(v.fecha_Regreso.slice(0, 10))} ${esc(v.hora_Regreso)}</td></tr>`).join('')}</tbody></table></div>
                     <div class="ui-help" style="margin-top:8px">Si cambias la fecha de entrada, los vuelos se mueven los mismos días.</div>` : '<div class="ui-chip ghost"><i class="bi bi-bus-front"></i> ' + OF1M + ' sin vuelo</div>'}
                 `;
+            {
+                // bloques: 0 nombre/códigos · 1 moneda, proveedor, contenedor, estado · 2 origen · 3 cargada por · 4+ vuelos
+                const k = [...$('#eInfo').children], prov = $('#eProvBody'), orig = $('#eOrigBody');
+                prov.replaceChildren(); orig.replaceChildren();
+                if (k[1]) prov.append(k[1]);
+                if (k[2]) orig.append(k[2]);
+                k.slice(4).forEach(x => orig.append(x));
+            }
             // Información para el cliente: mismos ids de antes (eIncluye…), ahora con barra de formato y en su propio tab
             $('#eInfoCli').innerHTML = EVCodigo.info({ Incluye: nota('Incluye'), No_Incluye: nota('No incluye'), Condiciones: np.c, Documentacion: np.d, Importante: np.i, Oferta_Especial: nota('Oferta') },
                 { plano: true, titulo: '', ids: { Incluye: 'eIncluye', No_Incluye: 'eNoIncluye', Condiciones: 'eCondiciones', Documentacion: 'eDocs', Importante: 'eImportante', Oferta_Especial: 'eOfertaEsp' } });

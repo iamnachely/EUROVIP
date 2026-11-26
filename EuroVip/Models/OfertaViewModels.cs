@@ -112,6 +112,8 @@ namespace EuroVip.Models
 
     public class OfertaItem
     {
+        /// <summary>Contenedor (sección de la Home) elegido para este hotel; null = automático (agrupa por destino donde ya está).</summary>
+        public int? Id_Contenedor_Inicio { get; set; }
         /// <summary>«Bloques de hoteles» (CAMBIO 132): suma del cupo de sus habitaciones (null = sin límite) y lo vendido.</summary>
         public int? Cupo_Total { get; set; }
         public int? Cupo_Vendido { get; set; }
@@ -192,8 +194,6 @@ namespace EuroVip.Models
     {
         public string Id_Proveedor { get; set; } = "";
         public string? Id_Pais_Origen { get; set; }
-        /// <summary>Contenedor (sección de la Home) elegido para este hotel; null = automático (agrupa por destino donde ya está).</summary>
-        public int? Id_Contenedor_Inicio { get; set; }
         public List<OfertaHabitacionDetalle> HabitacionesDetalle { get; set; } = new();
         public List<OfertaTasa> TasasDetalle { get; set; } = new();
         public List<OfertaNota> Notas { get; set; } = new();

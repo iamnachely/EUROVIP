@@ -398,6 +398,109 @@
         setTimeout(() => c.remove(), 4800);
     };
 
+    // ---------------- modal grande con pestañas (EV.gm) ----------------
+    // 26/11/2026: todo panel de formulario (.ui-drawer con 2 o más secciones .ui-sec) se muestra como un modal GRANDE y centrado:
+    // a la izquierda una ilustración, el título y las pestañas (una por sección: NADA queda oculto ni plegado); a la derecha, el formulario.
+    // Se activa solo al abrir el panel. Para dejar un panel como estaba: data-gm="off". Las pestañas se rehacen si el contenido cambia.
+    const GM_IMG = ['chico-tablet', 'robot', 'chico-verde'];
+    const GM_ICONOS = ['bi-calendar2-week', 'bi-cash-coin', 'bi-door-open', 'bi-star', 'bi-toggle2-on', 'bi-info-circle', 'bi-card-text', 'bi-images', 'bi-airplane', 'bi-geo-alt'];
+    EV.gm = (() => {
+        const visible = s => !s.hidden && s.style.display !== 'none';
+        const secciones = db => [...db.children].filter(c => (c.matches('.ui-sec') || c.matches('details.ui-pleg')) && visible(c));
+        const etiqueta = s => {
+            const t = s.querySelector(':scope > .ui-sec-t, :scope > summary') || s.querySelector('.ui-sec-t');
+            if (!t) return 'Sección';
+            const c = t.cloneNode(true);
+            c.querySelectorAll('small, .ui-opc, span:first-child, i, button, input, select').forEach(x => x.remove());
+            return c.textContent.replace(/\s+/g, ' ').trim() || 'Sección';
+        };
+        const opcional = s => !!s.querySelector(':scope > .ui-sec-t .ui-opc, :scope > summary .ui-opc');
+        const firma = db => secciones(db).map(s => etiqueta(s)).join('|');
+
+        function activar(el, i) {
+            const db = $(':scope > .ui-db', el); if (!db) return;
+            const lista = secciones(db);
+            if (!lista.length) return;
+            i = Math.max(0, Math.min(i, lista.length - 1));
+            el._gmI = i;
+            lista.forEach((s, k) => { s.classList.toggle('gm-oculta', k !== i); if (s.matches('details')) s.open = true; });
+            $$all('.ui-plegado', db).forEach(x => x.classList.remove('ui-plegado')); $$all('.ui-mas', db).forEach(b => b.remove());
+            $$all('details', db).forEach(d => { d.open = true; });   // «nada oculto»: los desplegables («Más opciones»…) quedan abiertos
+            $$all('.gm-tab', el).forEach((b, k) => { b.classList.toggle('on', k === i); b.setAttribute('aria-selected', k === i ? 'true' : 'false'); });
+            const prev = $('.gm-prev', el), sig = $('.gm-next', el);
+            if (prev) prev.disabled = i === 0;
+            if (sig) sig.disabled = i === lista.length - 1;
+            db.scrollTop = 0;
+        }
+        const $$all = (s, el) => [...el.querySelectorAll(s)];
+
+        function pintarTabs(el) {
+            const db = $(':scope > .ui-db', el); if (!db) return;
+            // lo de tabsInfo (dos pestañas viejas arriba) sobra: ahora la información del cliente es una pestaña más
+            db.classList.remove('ev-tabs-info'); db.removeAttribute('data-ev-tab');
+            $(':scope > .ev-info-tabs', db)?.remove();
+            $$all('[data-ev-pane-info]', db).forEach(x => x.removeAttribute('data-ev-pane-info'));
+            const lista = secciones(db);
+            const nav = $('.gm-tabs', el);
+            nav.innerHTML = lista.map((s, k) => '<button type="button" class="gm-tab" role="tab" data-i="' + k + '"><span class="gm-n"><i class="bi ' + GM_ICONOS[k % GM_ICONOS.length] + '"></i></span><span class="gm-l">' + EV.esc(etiqueta(s)) + (opcional(s) ? '<small>Opcional</small>' : '') + '</span></button>').join('');
+            el._gmFirma = firma(db);
+            activar(el, Math.min(el._gmI || 0, Math.max(0, lista.length - 1)));
+            $$all('.gm-oculta', db).forEach(x => { if (!lista.includes(x)) x.classList.remove('gm-oculta'); });
+        }
+        function titulo(el) {
+            const h = $(':scope > .ui-dh h2', el), s = $(':scope > .ui-dh small', el);
+            $('.gm-t', el).textContent = h ? h.textContent.trim() : '';
+            $('.gm-s', el).textContent = s ? s.textContent.trim() : '';
+        }
+        function errores(el) {
+            const db = $(':scope > .ui-db', el); if (!db) return;
+            const lista = secciones(db);
+            let primero = -1;
+            $$all('.gm-tab', el).forEach((b, k) => {
+                const mal = !!lista[k]?.querySelector('.err, .ev-cod-mal');
+                b.classList.toggle('mal', mal);
+                if (mal && primero < 0) primero = k;
+            });
+            // si el error está en otra pestaña, se lleva al usuario a la primera con error
+            if (primero >= 0 && !lista[el._gmI]?.querySelector('.err, .ev-cod-mal')) activar(el, primero);
+        }
+
+        function preparar(el) {
+            const db = $(':scope > .ui-db', el);
+            if (!db || el.dataset.gm === 'off') return;
+            if (!el.classList.contains('gm')) {
+                if (secciones(db).length < 2) return;      // no es un formulario por secciones
+                el.classList.add('gm');
+                const img = GM_IMG[(el.id || '').length % GM_IMG.length];
+                const hero = document.createElement('div');
+                hero.className = 'gm-hero';
+                hero.innerHTML = '<div class="gm-marca"><i class="bi bi-airplane-engines"></i> EuroVip</div>'
+                    + '<h3 class="gm-t"></h3><p class="gm-s"></p><nav class="gm-tabs" role="tablist" aria-label="Secciones del formulario"></nav>'
+                    + '<div class="gm-img"><img src="/img/gm/' + img + '.jpg" alt="" loading="lazy" onerror="this.parentNode.remove()"></div>';
+                el.prepend(hero);
+                hero.addEventListener('click', e => { const b = e.target.closest('.gm-tab'); if (b) activar(el, +b.dataset.i); });
+                const df = $(':scope > .ui-df', el);
+                if (df) {
+                    const nav = document.createElement('div');
+                    nav.className = 'gm-nav';
+                    nav.innerHTML = '<button type="button" class="ev-btn ghost gm-prev"><i class="bi bi-arrow-left"></i> Anterior</button><button type="button" class="ev-btn ghost gm-next">Siguiente <i class="bi bi-arrow-right"></i></button>';
+                    df.prepend(nav);
+                    nav.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; activar(el, (el._gmI || 0) + (b.classList.contains('gm-next') ? 1 : -1)); });
+                }
+                let t;
+                new MutationObserver(() => {
+                    clearTimeout(t);
+                    t = setTimeout(() => { if (firma(db) !== el._gmFirma) { pintarTabs(el); } titulo(el); errores(el); }, 120);
+                }).observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
+            }
+            el._gmI = 0;
+            pintarTabs(el); titulo(el);
+            // el contenido de algunos paneles se llena justo después de abrir
+            setTimeout(() => { if (firma(db) !== el._gmFirma) pintarTabs(el); titulo(el); }, 350);
+        }
+        return { preparar, activar };
+    })();
+
     // ---------------- drawer ----------------
     // Panel lateral. Si el usuario escribió o cambió algo dentro y lo intenta cerrar (X, Esc, clic fuera,
     // Cancelar) sin guardar, pregunta antes de perder los cambios. Un guardado correcto (EV.post) lo deja limpio.
@@ -413,7 +516,7 @@
         el.addEventListener('ev-cambio', () => { if (el.classList.contains('open')) sucio = true; });
         const cerrarYa = () => { sucio = false; bd.classList.remove('open'); el.classList.remove('open'); document.body.style.overflow = ''; };
         const api = {
-            abrir() { sucio = false; bd.classList.add('open'); el.classList.add('open'); document.body.style.overflow = 'hidden'; },
+            abrir() { sucio = false; bd.classList.add('open'); el.classList.add('open'); document.body.style.overflow = 'hidden'; try { EV.gm.preparar(el); } catch (e) { console.warn('EV.gm', e); } },
             /** cerrar(true) cierra sin preguntar (por ejemplo después de guardar). */
             async cerrar(forzar) {
                 if (!el.classList.contains('open')) return;
@@ -505,7 +608,7 @@
         return (l?.textContent || 'Campo').replace(/[*:]/g, '').replace(/\s+/g, ' ').trim();
     };
     EV.plegar = (raiz = document) => {
-        const cands = [...raiz.querySelectorAll(CAMPO)].filter(f => esOpcional(f) && !f.closest('.ui-modal, [data-siempre], [data-abierto]'));
+        const cands = [...raiz.querySelectorAll(CAMPO)].filter(f => esOpcional(f) && !f.closest('.ui-modal, .ui-drawer.gm, [data-siempre], [data-abierto]'));   // en el modal grande con pestañas nada se esconde
         // primero mostrar lo que ya no debe estar escondido (se le cargó un dato o tiene error)
         cands.filter(f => f.classList.contains('ui-plegado') && (tieneDato(f) || f.classList.contains('err'))).forEach(f => f.classList.remove('ui-plegado'));
         const grupos = new Map();

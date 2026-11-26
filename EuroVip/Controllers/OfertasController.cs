@@ -47,6 +47,17 @@ namespace EuroVip.Controllers
             await Auditar("Oferta_EstadoHotel", Array.Empty<int>(), dto);
             return Json(new { ok = true, cambiadas = n, mensaje = n == 0 ? "Ese hotel no tiene fechas cargadas." : $"Estado puesto en {n} fecha(s) del hotel." });
         }
+        public sealed record ContenedorHotelDto(int Aloj, string? Tipo, int? Id_Contenedor);
+
+        /// <summary>26/11/2026: elige en qué contenedor de la Home sale el destino de este hotel (todas sus fechas); null = automático, por destino.</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ContenedorHotel([FromBody] ContenedorHotelDto dto)
+        {
+            var mal = await _repo.ContenedorHotelAsync(dto.Aloj, dto.Tipo, dto.Id_Contenedor);
+            if (mal is not null) return BadRequest(new { mensaje = mal });
+            await Auditar("Oferta_ContenedorHotel", Array.Empty<int>(), dto);
+            return Json(new { ok = true, mensaje = dto.Id_Contenedor is null ? "Ahora el hotel se agrupa solo, por destino." : "Listo: el hotel se agrupa en el contenedor elegido." });
+        }
         /// <summary>Calendario de un hotel: todas sus ofertas (con los filtros de Listar) por fecha de entrada.</summary>
         [HttpGet] public async Task<IActionResult> Calendario(int hotel, [FromQuery] OfertaFiltro f) => Json(await _repo.CalendarioAsync(hotel, f));
 

@@ -12,6 +12,7 @@ namespace EuroVip.Repositories
         Task<IEnumerable<OfertaHotel>> HotelesAsync(OfertaFiltro f);
         /// <summary>CAMBIO 131: pone el mismo estado (o ninguno) a todas las ofertas/paquetes de un hotel. Devuelve cuántas cambió.</summary>
         Task<int> EstadoHotelAsync(int aloj, string? tipo, int? idEstado);
+        Task<string?> ContenedorHotelAsync(int aloj, string? tipo, int? idContenedor);
         Task<IEnumerable<OfertaItem>> CalendarioAsync(int hotel, OfertaFiltro f);
         Task<OfertaEstadisticas> EstadisticasAsync(string? tipo = null);
         Task<OfertaDetalle?> ObtenerAsync(int id);
@@ -64,7 +65,7 @@ namespace EuroVip.Repositories
             WHERE s.id_tipo_servicio IN @tipos AND s.id_idioma = 'ES'";
 
         private const string Columnas = @"
-            s.id_servicio AS Id_Servicio, s.nombre AS Nombre, a.id_alojamiento AS Id_Alojamiento, a.nombre AS Hotel, a.caratula AS Caratula,
+            s.id_servicio AS Id_Servicio, s.id_contenedor_inicio AS Id_Contenedor_Inicio, s.nombre AS Nombre, a.id_alojamiento AS Id_Alojamiento, a.nombre AS Hotel, a.caratula AS Caratula,
             COALESCE(sdx.destino, a.id_destino) AS Destino, COALESCE(sdx.id_pais_destino, a.id_pais) AS Id_Pais, sd.id_regimen AS Id_Regimen, r.descripcion AS Regimen,
             sd.desde AS Desde, sd.hasta AS Hasta, ISNULL(sd.noches, s.noches) AS Noches, s.id_campanya AS Id_Campanya, ca.nombre AS Campanya,
             s.id_moneda AS Id_Moneda, s.precio_base AS Precio_Base, s.descuento AS Descuento, Eurovip.fnTotalTasa(s.id_servicio) AS Tasas,
@@ -121,6 +122,23 @@ namespace EuroVip.Repositories
                 UPDATE s SET id_estado_oferta = @idEstado
                   FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
                  WHERE sd.id_alojamiento = @aloj AND s.id_idioma = 'ES' AND s.id_tipo_servicio = @tipo", new { aloj, tipo = TipoDe(tipo), idEstado });
+        }
+
+        /// <summary>26/11/2026: contenedor de la Home donde sale el destino de este hotel (todas sus fechas); null = automático, por destino.
+        /// Devuelve un error en texto o null si salió bien; refresca las tarjetas de la Home.</summary>
+        public async Task<string?> ContenedorHotelAsync(int aloj, string? tipo, int? idContenedor)
+        {
+            using var cn = _db.Conexion();
+            await cn.OpenAsync();
+            if (idContenedor is int c && await cn.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM Eurovip.contenedores WHERE id_contenedor = @c AND id_idioma = 'es' AND estado = 1", new { c }) == 0)
+                return "Ese contenedor no existe.";
+            var ids = (await cn.QueryAsync<int>(@"SELECT s.id_servicio FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
+                                                   WHERE sd.id_alojamiento = @aloj AND s.id_idioma = 'ES' AND s.id_tipo_servicio = @tipo", new { aloj, tipo = TipoDe(tipo) })).ToList();
+            if (ids.Count == 0) return "Ese hotel no tiene fechas cargadas.";
+            var claves = await ClavesVitrinaAsync(cn, null, ids);
+            await cn.ExecuteAsync("UPDATE Eurovip.servicio SET id_contenedor_inicio = @idContenedor WHERE id_servicio IN @ids", new { idContenedor, ids });
+            await RefrescarVitrinaAsync(claves);
+            return null;
         }
 
         public async Task<IEnumerable<OfertaHotel>> HotelesAsync(OfertaFiltro f)
@@ -202,7 +220,7 @@ namespace EuroVip.Repositories
         {
             using var cn = _db.Conexion();
             var o = await cn.QueryFirstOrDefaultAsync<OfertaDetalle>(
-                $"SELECT {Columnas}, s.id_Proveedor AS Id_Proveedor, s.id_contenedor_inicio AS Id_Contenedor_Inicio, COALESCE(v.id_pais_origen, so.id_pais_origen) AS Id_Pais_Origen {Base} AND s.id_servicio = @id", new { id, tipos = Tipos });
+                $"SELECT {Columnas}, s.id_Proveedor AS Id_Proveedor, COALESCE(v.id_pais_origen, so.id_pais_origen) AS Id_Pais_Origen {Base} AND s.id_servicio = @id", new { id, tipos = Tipos });
             if (o is null) return null;
             using var m = await cn.QueryMultipleAsync(@"
                 SELECT ah.id_habitacion AS Id_Habitacion, ah.nombre AS Nombre, ah.id_tipo_habitacion AS Id_Tipo_Habitacion, sh.precio AS Precio,
