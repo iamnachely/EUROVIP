@@ -1383,7 +1383,7 @@ const HX = (() => {
         if (!home) { toast('Escribe el destino de la web donde saldrán los hoteles (paso 3).', 'err'); $('#bxHome').focus(); return; }
         const btn = $('#bxCargar'); btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Cargando…';
         try {
-            const r = await api('/Hoteles/BmCargar', { method: 'POST', body: JSON.stringify({ codigos: [...bx.sel.keys()], destino: home, pais: bx.pais, regimen: $('#bxReg').value, visible: $('#bxVis').checked }) });
+            const r = await api('/Hoteles/BmCargar', { method: 'POST', body: JSON.stringify({ codigos: [...bx.sel.keys()], destinoBm: bx.destino, destino: home, pais: bx.pais, regimen: $('#bxReg').value, visible: $('#bxVis').checked }) });
             bxMostrarResultado(r);
             toast(r.mensaje, r.guardados === r.total ? 'ok' : 'err');
             r.resultado.filter(x => x.ok).forEach(x => bx.sel.delete(x.codigo));
@@ -1465,12 +1465,12 @@ const HX = (() => {
         const poner = (n, v) => { const el = campo(n); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
         poner('Id_Destino', h.nombre);
         if (dest) poner('CaratulaDestino', dest.corto);
-        poner('CodigoHotel', h.codigo);
+        poner('CodigoHotel', bm.destino);   // 26/11/2026: el código es el id del DESTINO de Booking Motor (como en ViajeVDT), no el del hotel
         poner('Noches', '');   // los hoteles de Booking Motor van SIN noches (pedido de la usuaria 20/11/2026)
         frm.dispatchEvent(new Event('change', { bubbles: true }));
         $$('.hx-bm-h').forEach(b => b.classList.toggle('on', JSON.parse(b.dataset.bm).codigo === h.codigo));
         const el = $('#bmElegido'); el.hidden = false;
-        el.innerHTML = `<i class="bi bi-check-circle-fill"></i> Completado con «${esc(h.nombre)}» (código ${esc(h.codigo)}${dest ? ', destino ' + esc(dest.corto) : ''}). Falta elegir el régimen.`;
+        el.innerHTML = `<i class="bi bi-check-circle-fill"></i> Completado con «${esc(h.nombre)}» (código de destino ${esc(bm.destino)}${dest ? ', destino ' + esc(dest.corto) : ''}). Falta elegir el régimen.`;
         campo('Regimen').focus();
     }
     function bmIniciar() {

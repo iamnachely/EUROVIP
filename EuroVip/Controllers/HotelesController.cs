@@ -68,14 +68,17 @@ namespace EuroVip.Controllers
         public Task<IActionResult> BmBuscar(string destino, string? q, int pagina) => BM(async () =>
         {
             var b = _bm.Buscar(destino, q, pagina);
-            var cargados = await _repo.CodigosCargadosAsync();
+            // 26/11/2026: el código que se guarda es el del DESTINO de Booking Motor (varios hoteles lo comparten), así que «ya cargado» se decide por nombre.
+            var cargados = (await _repo.NombresAsync()).Select(ExcelTabla.Clave).ToHashSet();
             return new { b.Listo, b.Cargados, b.TotalDestino, b.Total, b.Pagina, b.Paginas, b.Error,
-                         hoteles = b.Hoteles.Select(h => new { h.Codigo, h.Nombre, h.Imagen, h.Estrellas, h.Direccion, cargado = cargados.Contains(h.Codigo.ToLowerInvariant()) }) };
+                         hoteles = b.Hoteles.Select(h => new { h.Codigo, h.Nombre, h.Imagen, h.Estrellas, h.Direccion, cargado = cargados.Contains(ExcelTabla.Clave(h.Nombre)) }) };
         });
 
         public sealed class BmCargarDto
         {
             public List<string>? Codigos { get; set; }
+            /// <summary>Id numérico del DESTINO de Booking Motor elegido (ej. 603258): es el código que va en la descripción («Régimen -603258»), igual que en ViajeVDT.</summary>
+            public string? DestinoBm { get; set; }
             /// <summary>Destino de la Home donde salen (uno que exista en Herramientas › Destinos).</summary>
             public string? Destino { get; set; }
             public string? Pais { get; set; }
@@ -95,6 +98,8 @@ namespace EuroVip.Controllers
             if (!_bm.Configurado) return StatusCode(503, new { mensaje = "Booking Motor no está configurado en este servidor." });
             var codigos = (d.Codigos ?? new()).Select(c => (c ?? "").Trim().ToLowerInvariant()).Where(c => c.Length > 0).Distinct().Take(60).ToList();
             if (codigos.Count == 0) return BadRequest(new { mensaje = "Elige al menos un hotel." });
+            var codigoBm = new string((d.DestinoBm ?? "").Where(char.IsAsciiDigit).ToArray());
+            if (codigoBm.Length == 0) return BadRequest(new { mensaje = "Falta el destino de Booking Motor: vuelve a elegirlo (paso 2)." });
             var destino = ReglasDatos.Limpiar(d.Destino);
             if (string.IsNullOrWhiteSpace(destino)) return BadRequest(new { mensaje = "Elige el destino de la Home donde saldrán los hoteles." });
             var regimen = Regimenes.FirstOrDefault(r => r.Equals((d.Regimen ?? "").Trim(), StringComparison.OrdinalIgnoreCase)) ?? "Solo Habitación";
@@ -109,17 +114,15 @@ namespace EuroVip.Controllers
             if (camp is null) return BadRequest(new { mensaje = "No hay una campaña General en español. Créala primero." });
 
             var existentes = (await _repo.NombresAsync()).Select(ExcelTabla.Clave).ToHashSet();
-            var yaCodigos = await _repo.CodigosCargadosAsync();
             var resultado = new List<object>();
             var guardados = 0;
             foreach (var codigo in codigos)
             {
                 var h = await _bm.HotelAsync(codigo);
                 if (h is null) { resultado.Add(new { codigo, ok = false, mensaje = "Booking Motor no tiene ese hotel." }); continue; }
-                if (yaCodigos.Contains(codigo)) { resultado.Add(new { codigo, nombre = h.Nombre, ok = false, mensaje = "Ya está cargado (mismo código)." }); continue; }
                 var dto = new HotelGuardarDto
                 {
-                    Id_Destino = h.Nombre, CaratulaDestino = destino, Descripcion = $"{regimen} -{h.Codigo}", Id_Idioma = HotelRepository.IdiomaHotel,
+                    Id_Destino = h.Nombre, CaratulaDestino = destino, Descripcion = $"{regimen} -{codigoBm}", Id_Idioma = HotelRepository.IdiomaHotel,
                     Id_Campanya = camp.Id_Campanya, Id_Moneda = "DOP", Noches = null, Id_Pais_Origen = "DO", Origen = "Santo Domingo",
                     Id_PaisDestino = pais, Id_Contenedor = cont?.Id_Contenedor, Posicion_Destino = 1, Estado = d.Visible
                 };
@@ -143,8 +146,8 @@ namespace EuroVip.Controllers
                     }
                     catch (Exception ex) { _logger.LogInformation(ex, "Booking Motor: foto del hotel {Codigo} no guardada", codigo); }
                     await PorDefectoAsync(TipoMm, id, dto.CaratulaDestino, foto || _img.Buscar(TipoImagen, dto.Id_Destino) is not null);
-                    await Auditar("Hotel_Crear", id, new { dto, origen = "BookingMotor", codigo });
-                    existentes.Add(ExcelTabla.Clave(dto.Id_Destino)); yaCodigos.Add(codigo); guardados++;
+                    await Auditar("Hotel_Crear", id, new { dto, origen = "BookingMotor", codigo, destinoBm = codigoBm });
+                    existentes.Add(ExcelTabla.Clave(dto.Id_Destino)); guardados++;
                     resultado.Add(new { codigo, nombre = h.Nombre, ok = true, id, foto, mensaje = foto ? "Cargado con su foto." : "Cargado (sin foto)." });
                 }
                 catch (Exception ex)
