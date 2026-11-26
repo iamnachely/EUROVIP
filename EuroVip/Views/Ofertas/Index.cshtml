@@ -504,6 +504,7 @@ const OF = (() => {
                 <div class="ui-row">
                     <div class="ui-f"><label for="eMoneda">Moneda</label><select id="eMoneda"><option value="DOP">DOP · RD$</option></select></div>
                     <div class="ui-f"><label for="eProveedor">Proveedor <em>de dónde sale la oferta</em></label><select id="eProveedor"><option value="">— Sin proveedor —</option></select></div>
+                    <div class="ui-f"><label for="eContenedor">Contenedor en la Home <em>automático = por destino · todas las fechas de este hotel</em></label><select id="eContenedor"><option value="">Automático (por destino)</option></select></div>
                     <div class="ui-f"><label for="eEstado">Estado <em>Confirmada, Bajo petición… · opcional</em></label><select id="eEstado"></select>
                         <label class="ui-switch" style="margin-top:6px"><input type="checkbox" id="eEstadoTodas"><span class="tr"></span> El mismo en todas las fechas de este hotel</label></div>
                 </div>
@@ -524,6 +525,12 @@ const OF = (() => {
             EVCodigo.monedas($('#eMoneda'), (o.id_Moneda || 'DOP').trim()).catch(() => { });
             EVCodigo.proveedores($('#eProveedor'), (o.id_Proveedor || '').trim(), { vacio: '— Elige el proveedor —' }).catch(() => { });
             EVCodigo.estados($('#eEstado'), o.id_Estado ?? '').catch(() => { });   // CAMBIO 131
+            // 26/11/2026: contenedor de la Home donde sale el destino de este hotel
+            fetch('/Hoteles/Contenedores').then(r => r.json()).then(l => {
+                const s = $('#eContenedor');
+                s.innerHTML = '<option value="">Automático (por destino)</option>' + l.map(c => '<option value="' + c.id_Contenedor + '">' + String(c.nombre).replace(/</g, '&lt;') + '</option>').join('');
+                s.value = o.id_Contenedor_Inicio == null ? '' : String(o.id_Contenedor_Inicio);
+            }).catch(() => { });
             $('#ePaisOrigen').value = (o.id_Pais_Origen || '').trim().toUpperCase();
             EVCodigo.origen($('#ePaisOrigen'), $('#eOrigen'), { opcional: true }); $('#ePaisOrigen').value = (o.id_Pais_Origen || '').trim().toUpperCase(); $('#eOrigen').evOrigen?.poner(o.origen || '');   // ciudad: Tom Select
             EVCodigo.campo($('#eCodigoInterno'), { producto: TIPO, clave: () => actual?.codigo ?? '', anterior: () => actual?.codigo_Interno ?? '' });   // CAMBIO 128
@@ -554,7 +561,7 @@ const OF = (() => {
             ...EVPrioridad.leer($('#ePrio')), PrioridadTodas: $('#ePrioTodas').checked,
             // punto 7
             Nombre: $('#eNombre').value.trim() || null, Codigo: $('#eCodigo').value.trim() || null, CodigoInterno: $('#eCodigoInterno').value.trim() || null, Id_Moneda: $('#eMoneda').value || null,
-            Id_Proveedor: $('#eProveedor').value || null, Id_Estado: $('#eEstado').value ? +$('#eEstado').value : null, EstadoTodas: $('#eEstadoTodas').checked, CambiarOrigen: true, Id_Pais_Origen: $('#ePaisOrigen').value || null, Origen: $('#eOrigen').value.trim() || null,
+            Id_Proveedor: $('#eProveedor').value || null, Id_Estado: $('#eEstado').value ? +$('#eEstado').value : null, EstadoTodas: $('#eEstadoTodas').checked, CambiarContenedor: true, Id_Contenedor_Inicio: $('#eContenedor').value ? +$('#eContenedor').value : null, CambiarOrigen: true, Id_Pais_Origen: $('#ePaisOrigen').value || null, Origen: $('#eOrigen').value.trim() || null,
             Textos: { Incluye: $('#eIncluye').value, No_Incluye: $('#eNoIncluye').value, Nota: $('#eCondiciones').value, Documentacion: $('#eDocs').value, Importante: $('#eImportante').value, Oferta_Especial: $('#eOfertaEsp').value }
         };
         if (dto.Origen && !dto.Id_Pais_Origen) { EV.toast('Elige el país de origen (o borra la ciudad).', 'err'); return; }

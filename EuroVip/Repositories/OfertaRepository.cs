@@ -202,7 +202,7 @@ namespace EuroVip.Repositories
         {
             using var cn = _db.Conexion();
             var o = await cn.QueryFirstOrDefaultAsync<OfertaDetalle>(
-                $"SELECT {Columnas}, s.id_Proveedor AS Id_Proveedor, COALESCE(v.id_pais_origen, so.id_pais_origen) AS Id_Pais_Origen {Base} AND s.id_servicio = @id", new { id, tipos = Tipos });
+                $"SELECT {Columnas}, s.id_Proveedor AS Id_Proveedor, s.id_contenedor_inicio AS Id_Contenedor_Inicio, COALESCE(v.id_pais_origen, so.id_pais_origen) AS Id_Pais_Origen {Base} AND s.id_servicio = @id", new { id, tipos = Tipos });
             if (o is null) return null;
             using var m = await cn.QueryMultipleAsync(@"
                 SELECT ah.id_habitacion AS Id_Habitacion, ah.nombre AS Nombre, ah.id_tipo_habitacion AS Id_Tipo_Habitacion, sh.precio AS Precio,
@@ -239,6 +239,9 @@ namespace EuroVip.Repositories
             if (await cn.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM Eurovip.campanya WHERE id_campanya = @c AND id_idioma = 'ES'", new { c = d.Id_Campanya }, tx) == 0)
                 return "Esa campaña no existe.";
 
+            if (d.CambiarContenedor && d.Id_Contenedor_Inicio is int idCont
+                && await cn.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM Eurovip.contenedores WHERE id_contenedor = @c AND id_idioma = 'es' AND estado = 1", new { c = idCont }, tx) == 0)
+                return "Ese contenedor no existe.";
             var claves = await ClavesVitrinaAsync(cn, tx, new[] { d.Id_Servicio });
             var tasas = d.Suplementos.Sum(x => x.Valor);
 
@@ -319,6 +322,12 @@ namespace EuroVip.Repositories
                       FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
                      WHERE sd.id_alojamiento = @aloj AND s.id_idioma = 'ES' AND s.id_servicio <> @id
                        AND s.id_tipo_servicio = (SELECT id_tipo_servicio FROM Eurovip.servicio WHERE id_servicio = @id);
+                -- 26/11/2026: contenedor de la Home elegido para el hotel (todas sus fechas); NULL = automático
+                IF @cambiarCont = 1
+                    UPDATE s SET id_contenedor_inicio = @cont
+                      FROM Eurovip.servicio s JOIN Eurovip.servicio_detalle sd ON sd.id_servicio = s.id_servicio AND sd.secuencia = 1
+                     WHERE sd.id_alojamiento = @aloj AND s.id_idioma = 'ES'
+                       AND s.id_tipo_servicio = (SELECT id_tipo_servicio FROM Eurovip.servicio WHERE id_servicio = @id);
                 -- «Aplicar a todas las fechas de este hotel»: las demás ofertas/paquetes del mismo hotel y tipo
                 IF @todas = 1
                     UPDATE s SET peso = @peso, precio_proveedor = @prov
@@ -330,7 +339,8 @@ namespace EuroVip.Repositories
                 DELETE FROM Eurovip.servicio_habitacion WHERE id_servicio = @id;
                 DELETE FROM Eurovip.servicio_tasa WHERE id_Servicio = @id;",
                 new { id = d.Id_Servicio, pb = d.PrecioTotal - tasas, desc = d.Descuento, camp = d.Id_Campanya, activo = d.Activo, noches = d.Noches, reg = d.Id_Regimen, desde = d.Desde.Date,
-                      peso = d.Peso, prov = d.Precio_Proveedor, todas = d.PrioridadTodas, aloj = actual.Aloj, est = d.Id_Estado, estTodas = d.EstadoTodas }, tx);
+                      peso = d.Peso, prov = d.Precio_Proveedor, todas = d.PrioridadTodas, aloj = actual.Aloj, est = d.Id_Estado, estTodas = d.EstadoTodas,
+                      cambiarCont = d.CambiarContenedor, cont = d.Id_Contenedor_Inicio }, tx);
             foreach (var h in d.Habitaciones.DistinctBy(x => x.Id_Habitacion))
             {
                 await cn.ExecuteAsync("Eurovip.InsertarServicioHabitacion",

@@ -192,6 +192,8 @@ namespace EuroVip.Models
     {
         public string Id_Proveedor { get; set; } = "";
         public string? Id_Pais_Origen { get; set; }
+        /// <summary>Contenedor (sección de la Home) elegido para este hotel; null = automático (agrupa por destino donde ya está).</summary>
+        public int? Id_Contenedor_Inicio { get; set; }
         public List<OfertaHabitacionDetalle> HabitacionesDetalle { get; set; } = new();
         public List<OfertaTasa> TasasDetalle { get; set; } = new();
         public List<OfertaNota> Notas { get; set; } = new();
@@ -204,6 +206,9 @@ namespace EuroVip.Models
         /// <summary>Estado (CAMBIO 131), opcional; EstadoTodas = el mismo en todas las fechas de este hotel.</summary>
         public int? Id_Estado { get; set; }
         public bool EstadoTodas { get; set; }
+        /// <summary>26/11/2026: contenedor de la Home donde sale el destino de este hotel (null = automático). Se aplica a todas las fechas del hotel.</summary>
+        public int? Id_Contenedor_Inicio { get; set; }
+        public bool CambiarContenedor { get; set; }
         public int Id_Servicio { get; set; }
         [Range(1, 999999, ErrorMessage = "Precio inválido")] public decimal PrecioTotal { get; set; }
         [Range(0, 100, ErrorMessage = "Descuento de 0 a 100")] public decimal Descuento { get; set; }
