@@ -1,6 +1,6 @@
 /* ============================================================================
    SCRIPT UNICO PARA EL 10.10.10.29 (TropitoursVDT, esquema Eurovip) - 26/11/2026
-   Se puede correr varias veces. Orden: 1) contenedor por hotel  2) codigos de HOTELES ONLINE  3) la web lista solo los hoteles de cada tarjeta
+   Se puede correr varias veces. Orden: 1) contenedor por hotel  2) codigos de HOTELES ONLINE  3) la web lista solo los hoteles de cada tarjeta  4) presupuestos EVA/EVF
    Correr ANTES de publicar BackEurovip, la API y la web nuevos.
    ============================================================================ */
 /* ============================================================================
@@ -323,4 +323,29 @@ END
 GO
 -- Verificación: debe decir 1
 SELECT CASE WHEN OBJECT_DEFINITION(OBJECT_ID(N'Eurovip.spPortalListarPublico')) LIKE N'%cg.id_contenedor_inicio%' THEN 1 ELSE 0 END AS aplicado;
+GO
+
+-- ================= 4) PRESUPUESTOS: CODIGO EVA / EVF =================
+USE [TropitoursVDT];
+GO
+/* =====================================================================================
+   017_presupuesto_sigla.sql  ·  TropitoursVDT  ·  Gestión (ERP en la web), Presupuestos
+   26/11/2026. Para correr en el 10.10.10.29 (TropitoursVDT). Idempotente.
+
+   Qué hace (solo una columna NUEVA):
+     Eurovip.erp_presupuesto.sigla (char(3), NULL): EVA = presupuesto hecho por un usuario Agencia o Comercial;
+     EVF = hecho por un Freelancer. El código del presupuesto pasa de «PRE-00123» a «EVA-00123» / «EVF-00123».
+
+   Compatibilidad:
+     - api/EuroVip.Gestion comprueba si la columna existe: hasta aplicar este script todo sigue igual (PRE-).
+     - Los presupuestos que ya existen quedan con sigla NULL y conservan su código PRE-. Solo los NUEVOS llevan EVA/EVF.
+   ===================================================================================== */
+SET XACT_ABORT ON;
+GO
+
+IF COL_LENGTH(N'Eurovip.erp_presupuesto', N'sigla') IS NULL
+    ALTER TABLE Eurovip.erp_presupuesto ADD sigla char(3) NULL;
+GO
+
+SELECT CASE WHEN COL_LENGTH(N'Eurovip.erp_presupuesto', N'sigla') IS NOT NULL THEN 'OK: columna sigla creada' ELSE 'FALTA la columna' END AS estado;
 GO
