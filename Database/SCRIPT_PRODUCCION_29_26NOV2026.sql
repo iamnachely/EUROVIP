@@ -1,9 +1,7 @@
 /* ============================================================================
-   SCRIPT PARA EL 10.10.10.29 (TropitoursVDT, esquema Eurovip) - 26/11/2026
-   Reúne los 2 cambios de base de datos de hoy. Se puede correr varias veces.
-   1) Contenedor por hotel (columna + funciones + spActualizaInicio)
-   2) Código de los 9 hoteles de HOTELES ONLINE = id de destino de Booking Motor
-   Correr ANTES de publicar el BackEurovip nuevo.
+   SCRIPT UNICO PARA EL 10.10.10.29 (TropitoursVDT, esquema Eurovip) - 26/11/2026
+   Se puede correr varias veces. Orden: 1) contenedor por hotel  2) codigos de HOTELES ONLINE  3) la web lista solo los hoteles de cada tarjeta
+   Correr ANTES de publicar BackEurovip, la API y la web nuevos.
    ============================================================================ */
 /* ============================================================================
    EUROVIP - Ofertas/Hoteles: elegir en QUÉ CONTENEDOR sale cada oferta (agrupa por destino)
@@ -238,7 +236,7 @@ UNION ALL SELECT 'fnServicioMinimoContenedor', CASE WHEN OBJECT_ID('Eurovip.fnSe
 UNION ALL SELECT 'spActualizaInicio', CASE WHEN OBJECT_DEFINITION(OBJECT_ID('Eurovip.spActualizaInicio')) LIKE '%@elegidos%' THEN 'OK' ELSE 'FALTA' END;
 GO
 
--- ================= 2) CÓDIGOS DE HOTELES ONLINE =================
+-- ================= 2) CODIGOS DE HOTELES ONLINE =================
 /* ============================================================================
    EUROVIP - Corregir el código de los hoteles de «HOTELES ONLINE» (Booking Motor)
    SERVIDOR: 10.10.10.29  |  BASE: TropitoursVDT  |  ESQUEMA: Eurovip
@@ -281,4 +279,48 @@ SELECT id_servicio, LTRIM(RTRIM(id_destino)) AS hotel, descripcion
   FROM Eurovip.inicio WHERE tipo_servicio = 'HOTEL' AND id_contenedor = 47 ORDER BY id_servicio;
 
 COMMIT;   -- revisa el resultado de arriba; si algo no cuadra, cambia COMMIT por ROLLBACK
+GO
+
+-- ================= 3) LA WEB LISTA SOLO LOS HOTELES DE CADA TARJETA =================
+/* ============================================================================
+   EUROVIP - La web lista, en cada tarjeta de la Home, SOLO los hoteles de su contenedor
+   SERVIDOR: 10.10.10.29  |  BASE: TropitoursVDT  |  ESQUEMA: Eurovip        Fecha: 26/11/2026
+   REQUIERE haber corrido antes AGRUPAR_HOTELES_POR_CONTENEDOR.sql (columna servicio.id_contenedor_inicio).
+
+   QUÉ HACE: agrega al final del conjunto 1 (hoteles) de Eurovip.spPortalListarPublico la columna id_contenedor_inicio
+   (el contenedor que se eligió para el hotel; NULL = automático). La API y la web ya la leen: si no está, todo sigue igual.
+   Parcha el texto actual del procedimiento (no lo reemplaza entero), así respeta la versión que haya en el 29.
+   Se puede correr varias veces: si ya tiene la columna, no hace nada.
+   ============================================================================ */
+USE [TropitoursVDT];
+SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
+GO
+IF COL_LENGTH('Eurovip.servicio', 'id_contenedor_inicio') IS NULL
+    RAISERROR('Falta la columna Eurovip.servicio.id_contenedor_inicio: corre primero AGRUPAR_HOTELES_POR_CONTENEDOR.sql', 16, 1);
+GO
+DECLARE @d nvarchar(max) = OBJECT_DEFINITION(OBJECT_ID(N'Eurovip.spPortalListarPublico'));
+DECLARE @m1 nvarchar(max) = N'sd.incluye, sd.no_incluye, sd.oferta_especial, sd.nota, pw.peso';
+DECLARE @m2 nvarchar(max) = N'AND s.activo = 1 AND (s.baja IS NULL OR s.baja > @Hoy) AND d.desde > @Hoy) pw';
+IF @d IS NULL
+    PRINT 'ERROR: no existe Eurovip.spPortalListarPublico';
+ELSE IF @d LIKE N'%id_contenedor_inicio%'
+    PRINT 'Ya estaba aplicado: no se cambia nada.';
+ELSE IF CHARINDEX(@m1, @d) = 0 OR CHARINDEX(@m2, @d) = 0
+    PRINT 'AVISO: el procedimiento del 29 tiene otro texto del esperado. No se cambió nada; avísame para ajustarlo.';
+ELSE
+BEGIN
+    SET @d = REPLACE(@d, @m1, @m1 + N', cg.id_contenedor_inicio');
+    SET @d = REPLACE(@d, @m2, @m2 + NCHAR(13) + NCHAR(10) + N'      OUTER APPLY (SELECT MAX(s.id_contenedor_inicio) AS id_contenedor_inicio   -- 26/11/2026: contenedor elegido para el hotel
+                     FROM Eurovip.servicio_detalle d
+                     JOIN Eurovip.servicio s ON s.id_servicio = d.id_servicio
+                    WHERE d.id_alojamiento = a.id_alojamiento AND d.id_idioma = a.id_idioma
+                      AND s.activo = 1 AND (s.baja IS NULL OR s.baja > @Hoy)) cg');
+    -- de CREATE a ALTER (conserva permisos)
+    SET @d = STUFF(@d, CHARINDEX(N'CREATE', @d), 6, N'ALTER');
+    EXEC (@d);
+    PRINT 'Listo: spPortalListarPublico ahora devuelve id_contenedor_inicio por hotel.';
+END
+GO
+-- Verificación: debe decir 1
+SELECT CASE WHEN OBJECT_DEFINITION(OBJECT_ID(N'Eurovip.spPortalListarPublico')) LIKE N'%cg.id_contenedor_inicio%' THEN 1 ELSE 0 END AS aplicado;
 GO
